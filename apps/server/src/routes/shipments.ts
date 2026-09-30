@@ -15,20 +15,41 @@ import {
   shipmentStatusLabels,
   shipmentUpdateInput,
   shipmentVoidInput,
-  type BoardShipment,
+  shipmentExportQuery,
+  shipmentSearchQuery,
+  type ShipmentSearchQuery,
+  type ShipmentSearchResult,
+  type ShipmentSummary,
   type DispatchBoard,
   type Shipment,
   type ShipmentDetail,
   type ShipmentKind,
 } from "@domy/domain";
-import { and, asc, eq, inArray, lt, ne, notInArray, or, sql } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  like,
+  lt,
+  lte,
+  ne,
+  notInArray,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
+import { alias, type PgColumn } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../app.ts";
 import type { Db, Executor } from "../db/client.ts";
 import {
   carriers,
+  merchantAliases,
   merchants,
   municipalities,
   neighborhoods,
@@ -51,6 +72,7 @@ import {
   resolvePickup,
 } from "../lib/registration.ts";
 import { AppError } from "../lib/errors.ts";
+import { exportTable, findExportRecords, toCsv, toXlsx } from "../lib/export.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
 
 const pickupNeighborhoods = alias(neighborhoods, "pickup_neighborhoods");
@@ -221,6 +243,110 @@ async function referenceNames(db: Executor, changes: [string, [unknown, unknown]
       .where(inArray(pickupPoints.id, ids)),
   ]);
   return new Map(rows.flat().map((row) => [row.id, row.name]));
+}
+
+/** Shipments in the short shape of the board and the history (FR-021, FR-024). */
+async function findSummaries(
+  db: Executor,
+  where: SQL | undefined,
+  order: (SQL | PgColumn)[],
+  limit?: number,
+): Promise<ShipmentSummary[]> {
+  const query = db
+    .select({
+      id: shipments.id,
+      trackingNumber: shipments.trackingNumber,
+      kind: shipments.kind,
+      status: shipments.status,
+      serviceDate: shipments.serviceDate,
+      merchant: { id: merchants.id, name: merchants.name },
+      recipientName: shipments.recipientName,
+      recipientPhone: shipments.recipientPhone,
+      recipientNeighborhood: { id: neighborhoods.id, name: neighborhoods.name },
+      rateZone: { id: rateZones.id, name: rateZones.name },
+      merchantReference: shipments.merchantReference,
+      windowStart: shipments.windowStart,
+      windowEnd: shipments.windowEnd,
+      codAmount: shipments.codAmount,
+      fee: shipments.fee,
+      feeNeedsReview: shipments.feeNeedsReview,
+      registeredAt: shipments.registeredAt,
+    })
+    .from(shipments)
+    .innerJoin(merchants, eq(merchants.id, shipments.merchantId))
+    .leftJoin(neighborhoods, eq(neighborhoods.id, shipments.recipientNeighborhoodId))
+    .leftJoin(rateZones, eq(rateZones.id, shipments.rateZoneId))
+    .where(where)
+    .orderBy(...order)
+    .$dynamic();
+  const rows = await (limit === undefined ? query : query.limit(limit));
+  return rows.map((row) => ({
+    ...row,
+    recipientNeighborhood: present(row.recipientNeighborhood),
+    rateZone: present(row.rateZone),
+    windowStart: row.windowStart?.toISOString() ?? null,
+    windowEnd: row.windowEnd?.toISOString() ?? null,
+    registeredAt: row.registeredAt.toISOString(),
+  }));
+}
+
+/**
+ * History search conditions (FR-024): `q` matches the tracking number, the merchant
+ * reference, the merchant's name or alias, the recipient's name (with typos), or the
+ * recipient's phone (digits only).
+ */
+function searchConditions(db: Executor, query: Omit<ShipmentSearchQuery, "cursor">) {
+  const { q, from, to, status, merchantId, neighborhoodId, feeReview } = query;
+  const term = q ? normalizeText(q) : "";
+  const trackingNumber = q ? normalizeTrackingNumber(q) : null;
+  const digits = q?.replace(/[\s\-()+]/g, "") ?? "";
+  return and(
+    q
+      ? or(
+          trackingNumber ? eq(shipments.trackingNumber, trackingNumber) : undefined,
+          ilike(shipments.merchantReference, `%${q}%`),
+          term
+            ? inArray(
+                shipments.merchantId,
+                db
+                  .select({ id: merchants.id })
+                  .from(merchants)
+                  .where(like(merchants.nameNormalized, `%${term}%`))
+                  .union(
+                    db
+                      .select({ id: merchantAliases.merchantId })
+                      .from(merchantAliases)
+                      .where(like(merchantAliases.aliasNormalized, `%${term}%`)),
+                  ),
+              )
+            : undefined,
+          term ? like(shipments.recipientNameNormalized, `%${term}%`) : undefined,
+          term ? sql`${shipments.recipientNameNormalized} % ${term}` : undefined,
+          /^\d{4,}$/.test(digits) ? like(shipments.recipientPhone, `%${digits}%`) : undefined,
+        )
+      : undefined,
+    from ? gte(shipments.serviceDate, from) : undefined,
+    to ? lte(shipments.serviceDate, to) : undefined,
+    status ? eq(shipments.status, status) : undefined,
+    merchantId ? eq(shipments.merchantId, merchantId) : undefined,
+    neighborhoodId ? eq(shipments.recipientNeighborhoodId, neighborhoodId) : undefined,
+    feeReview ? eq(shipments.feeNeedsReview, true) : undefined,
+  );
+}
+
+const pageSize = 50;
+const newestFirst = [desc(shipments.registeredAt), desc(shipments.id)];
+
+function decodeCursor(cursor: string) {
+  try {
+    const [registeredAt, id] = JSON.parse(Buffer.from(cursor, "base64url").toString()) as [
+      string,
+      string,
+    ];
+    return { registeredAt, id };
+  } catch {
+    throw new AppError("invalid_request", { fields: { cursor: "Página no válida." } });
+  }
 }
 
 const idParam = z.object({ id: z.uuid() });
@@ -400,55 +526,73 @@ export const shipmentRoutes = new Hono<AppEnv>()
     const now = c.get("clock")();
     const today = bogotaToday(now);
     const date = requested ?? today;
-    const rows = await c
-      .get("db")
-      .select({
-        id: shipments.id,
-        trackingNumber: shipments.trackingNumber,
-        kind: shipments.kind,
-        status: shipments.status,
-        serviceDate: shipments.serviceDate,
-        merchant: { id: merchants.id, name: merchants.name },
-        recipientName: shipments.recipientName,
-        recipientNeighborhood: { id: neighborhoods.id, name: neighborhoods.name },
-        rateZone: { id: rateZones.id, name: rateZones.name },
-        windowStart: shipments.windowStart,
-        windowEnd: shipments.windowEnd,
-        codAmount: shipments.codAmount,
-        feeNeedsReview: shipments.feeNeedsReview,
-      })
-      .from(shipments)
-      .innerJoin(merchants, eq(merchants.id, shipments.merchantId))
-      .leftJoin(neighborhoods, eq(neighborhoods.id, shipments.recipientNeighborhoodId))
-      .leftJoin(rateZones, eq(rateZones.id, shipments.rateZoneId))
-      .where(
-        date === today
-          ? or(
-              eq(shipments.serviceDate, date),
-              and(
-                lt(shipments.serviceDate, date),
-                notInArray(shipments.status, ["delivered", "returned", "voided"]),
-              ),
-            )
-          : eq(shipments.serviceDate, date),
-      )
-      .orderBy(
+    const all = await findSummaries(
+      c.get("db"),
+      date === today
+        ? or(
+            eq(shipments.serviceDate, date),
+            and(
+              lt(shipments.serviceDate, date),
+              notInArray(shipments.status, ["delivered", "returned", "voided"]),
+            ),
+          )
+        : eq(shipments.serviceDate, date),
+      [
         asc(shipments.serviceDate),
         sql`${shipments.windowEnd} asc nulls last`,
         asc(shipments.registeredAt),
-      );
-    const all: BoardShipment[] = rows.map((row) => ({
-      ...row,
-      recipientNeighborhood: present(row.recipientNeighborhood),
-      rateZone: present(row.rateZone),
-      windowStart: row.windowStart?.toISOString() ?? null,
-      windowEnd: row.windowEnd?.toISOString() ?? null,
-    }));
+      ],
+    );
     return c.json({
       date,
       serverTime: now.toISOString(),
       ...filterBoard(date, all, filters, now),
     } satisfies DispatchBoard);
+  })
+  // History search, newest first, a page at a time (FR-024, SC-006).
+  .get("/search", validate("query", shipmentSearchQuery), async (c) => {
+    const { cursor, ...query } = c.req.valid("query");
+    const db = c.get("db");
+    const after = cursor ? decodeCursor(cursor) : null;
+    const items = await findSummaries(
+      db,
+      and(
+        searchConditions(db, query),
+        after
+          ? sql`(${shipments.registeredAt}, ${shipments.id}) < (${after.registeredAt}::timestamptz, ${after.id}::uuid)`
+          : undefined,
+      ),
+      newestFirst,
+      pageSize + 1,
+    );
+    const page = items.slice(0, pageSize);
+    const last = page.at(-1);
+    // The shipment of a tracking number comes first (US5 scenario 1).
+    const trackingNumber = query.q ? normalizeTrackingNumber(query.q) : null;
+    const exact = page.findIndex((item) => item.trackingNumber === trackingNumber);
+    if (exact > 0) page.unshift(...page.splice(exact, 1));
+    return c.json({
+      items: page,
+      nextCursor:
+        items.length > pageSize && last
+          ? Buffer.from(JSON.stringify([last.registeredAt, last.id])).toString("base64url")
+          : null,
+    } satisfies ShipmentSearchResult);
+  })
+  // Export of the same search with Spanish headers (FR-025); owner only.
+  .get("/export", requireRole("owner"), validate("query", shipmentExportQuery), async (c) => {
+    const { format, ...query } = c.req.valid("query");
+    const db = c.get("db");
+    const records = await findExportRecords(db, searchConditions(db, query), newestFirst);
+    const table = exportTable(records);
+    const name = `envios-${bogotaToday(c.get("clock")())}.${format}`;
+    c.header("Content-Disposition", `attachment; filename="${name}"`);
+    if (format === "csv") {
+      c.header("Content-Type", "text/csv; charset=utf-8");
+      return c.body(toCsv(table));
+    }
+    c.header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    return c.body(new Uint8Array(await toXlsx(table)));
   })
   .get("/", validate("query", z.object({ trackingNumber: z.string() })), async (c) => {
     const trackingNumber = normalizeTrackingNumber(c.req.valid("query").trackingNumber);

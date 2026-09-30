@@ -79,7 +79,7 @@ describe("GET /api/shipments/board", () => {
     expect(result.counts).toMatchObject({ registered: 2, voided: 1, delivered: 0 });
     expect(result.shipments).toHaveLength(3);
     expect(result.pendingFromPreviousDays).toEqual([]);
-    expect(result.shipments.find((s) => s.id === first.id)).toEqual({
+    expect(result.shipments.find((s) => s.id === first.id)).toMatchObject({
       id: first.id,
       trackingNumber: first.trackingNumber,
       kind: "delivery",

@@ -10,6 +10,18 @@ const router = createRouter({
   routeTree,
   context: { queryClient },
   defaultPreload: "intent",
+  // Search params stay plain text ("?q=3001234567&feeReview=true"): the default parser would
+  // turn them into numbers and booleans. Route schemas validate them.
+  parseSearch: (search) => Object.fromEntries(new URLSearchParams(search)),
+  stringifySearch: (search: Record<string, unknown>) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(search)) {
+      if (value !== undefined)
+        params.set(key, typeof value === "string" ? value : JSON.stringify(value));
+    }
+    const text = params.toString();
+    return text ? `?${text}` : "";
+  },
 });
 
 declare module "@tanstack/react-router" {

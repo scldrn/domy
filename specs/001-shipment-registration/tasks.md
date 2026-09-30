@@ -243,15 +243,15 @@ by recipient phone, verify results and history, and export a spreadsheet with Sp
 
 ### Tests for User Story 5 ⚠️ write first, must fail
 
-- [ ] T082 [P] [US5] Integration tests in `apps/server/tests/shipments-search.test.ts`: tracking number first (normalized input), merchant reference, merchant name or alias, recipient name (trigram) and phone (digits only), neighborhood, status, date range, `feeReview` filter (FR-024, FR-035), newest first, cursor pagination
-- [ ] T083 [P] [US5] Integration tests in `apps/server/tests/shipments-export.test.ts`: owner only (`403` for dispatcher), CSV and `.xlsx` with the Spanish headers and order of contracts/bulk-template.md §Export columns, money as integers, Bogotá dates
-- [ ] T084 [P] [US5] End-to-end test in `apps/web/tests/e2e/history-search.spec.ts`: quickstart scenario 11
+- [X] T082 [P] [US5] Integration tests in `apps/server/tests/shipments-search.test.ts`: tracking number first (normalized input), merchant reference, merchant name or alias, recipient name (trigram) and phone (digits only), neighborhood, status, date range, `feeReview` filter (FR-024, FR-035), newest first, cursor pagination
+- [X] T083 [P] [US5] Integration tests in `apps/server/tests/shipments-export.test.ts`: owner only (`403` for dispatcher), CSV and `.xlsx` with the Spanish headers and order of contracts/bulk-template.md §Export columns, money as integers, Bogotá dates
+- [X] T084 [P] [US5] End-to-end test in `apps/web/tests/e2e/history-search.spec.ts`: quickstart scenario 11
 
 ### Implementation for User Story 5
 
-- [ ] T085 [US5] Implement `GET /api/shipments/search` in `apps/server/src/routes/shipments.ts` (schemas in `packages/domain/src/schemas/search.ts`) until T082 passes
-- [ ] T086 [US5] Implement `apps/server/src/lib/export.ts` (CSV and write-excel-file) and `GET /api/shipments/export` in `apps/server/src/routes/shipments.ts` until T083 passes
-- [ ] T087 [US5] Build `apps/web/src/features/history/search-filters.tsx`, `apps/web/src/features/history/results-table.tsx`, the "Tarifa por revisar" filter, the owner-only export buttons, and the route `apps/web/src/routes/history.tsx` (`/historial`) with filters in typed URL search params, until T084 passes
+- [X] T085 [US5] Implement `GET /api/shipments/search` in `apps/server/src/routes/shipments.ts` (schemas in `packages/domain/src/schemas/search.ts`) until T082 passes
+- [X] T086 [US5] Implement `apps/server/src/lib/export.ts` (CSV and write-excel-file) and `GET /api/shipments/export` in `apps/server/src/routes/shipments.ts` until T083 passes
+- [X] T087 [US5] Build `apps/web/src/features/history/search-filters.tsx`, `apps/web/src/features/history/results-table.tsx`, the "Tarifa por revisar" filter, the owner-only export buttons, and the route `apps/web/src/routes/history.tsx` (`/historial`) with filters in typed URL search params, until T084 passes
 
 **Checkpoint**: disputes are answered from history; data can be exported at any time
 

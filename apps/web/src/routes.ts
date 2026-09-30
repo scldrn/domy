@@ -12,5 +12,6 @@ export const routes = rootRoute("root.tsx", [
     route("/envios/masivo", "shipment-bulk.tsx"),
     route("/envios/$trackingNumber", "shipment-detail.tsx"),
     route("/envios/$trackingNumber/editar", "shipment-edit.tsx"),
+    route("/historial", "history.tsx"),
   ]),
 ]);

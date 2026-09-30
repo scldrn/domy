@@ -233,6 +233,9 @@ importers:
       drizzle-kit:
         specifier: 0.31.11
         version: 0.31.11
+      read-excel-file:
+        specifier: 9.3.10
+        version: 9.3.10
       testcontainers:
         specifier: 12.2.0
         version: 12.2.0
