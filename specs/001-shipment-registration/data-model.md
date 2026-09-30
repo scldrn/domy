@@ -1,0 +1,265 @@
+# Data Model: Shipment Registration and Dispatch Board
+
+Phase 1 of [plan.md](plan.md). PostgreSQL 18, defined with Drizzle and changed only through
+versioned migrations. Conventions (Constitution VIII, III, IV):
+
+- Tables and columns in `snake_case`; tables are plural nouns.
+- Primary keys are UUIDv7 (`id uuid`), time-ordered.
+- Money is `integer` Colombian pesos, never floating point.
+- Instants are `timestamptz` (UTC); calendar days are `date` in `America/Bogota`.
+- Every table has `created_at`; mutable tables add `updated_at`.
+- Nothing operational is deleted: records are deactivated (`is_active = false`) or voided.
+- "Normalized" text means lowercase, without accents or punctuation, and with single spaces
+  (`unaccent` plus the normalization function in `packages/domain`).
+
+## Enumerations
+
+| Enum | Values |
+| --- | --- |
+| `user_role` | `owner`, `dispatcher`, `courier` |
+| `shipment_kind` | `delivery`, `reverse_pickup`, `carrier_handoff`, `errand` |
+| `shipment_status` | `registered`, `assigned`, `dispatched`, `picked_up`, `delivered`, `exception`, `returned`, `voided` |
+| `payment_mode` | `cash_on_delivery`, `recipient_pays_fee`, `merchant_account` |
+| `service_level` | `standard`, `express` |
+| `package_size` | `small`, `medium`, `large`, `extra_large` |
+| `neighborhood_kind` | `neighborhood`, `municipality`, `terminal`, `airport`, `carrier_office` |
+| `rate_entry_kind` | `zone_rate`, `express_surcharge` |
+| `shipment_event_type` | `created`, `updated`, `fee_confirmed`, `voided`, `status_changed` |
+| `audit_action` | `created`, `updated`, `deactivated`, `reactivated` |
+
+UI labels (glossary): Registrado, Asignado, En ruta, Recogido, Entregado, Novedad, Devuelto,
+Anulado · Entrega, Recogida inversa, Entrega a transportadora, Diligencia · Contraentrega,
+Flete al destinatario, Crédito del cliente · Estándar, Exprés · Pequeño, Mediano, Grande,
+Extragrande.
+
+## Access
+
+Better Auth tables, mapped to plural names: `users`, `sessions`, `accounts`,
+`verifications`.
+
+**`users`** — Better Auth columns (`id`, `name`, `email`, `email_verified`, `image`,
+`created_at`, `updated_at`) plus:
+
+| Column | Type | Rules |
+| --- | --- | --- |
+| `role` | `user_role` | Not null; default `courier` |
+| `banned` | boolean | Admin plugin; true = deactivated (FR-032) |
+| `ban_reason`, `ban_expires` | text, timestamptz | Admin plugin |
+| `failed_sign_in_count` | integer | Default 0; reset on success |
+| `locked_until` | timestamptz | Set to now + 15 min on the 5th consecutive failure; cleared by a completed password recovery (FR-033) |
+
+`email` unique, case-insensitive. Passwords have 8–128 characters (FR-030). At least one
+user with role `owner` and `banned = false` must always exist (FR-032), enforced in the same
+transaction that deactivates or demotes. **`sessions`**: `expires_at = created_at + 30
+days`, never extended (FR-033a); a completed password recovery deletes the user's sessions.
+
+## Directories
+
+**`merchants`**
+
+| Column | Type | Rules |
+| --- | --- | --- |
+| `name` | text | Not null; unique by normalized value |
+| `whatsapp_phone` | text | Optional; 10-digit Colombian number, used by feature 004 |
+| `is_active` | boolean | Default true |
+
+**`merchant_aliases`**: `merchant_id` → merchants, `alias` text, `alias_normalized` text
+**unique** among merchants (FR-027: an alias identifies exactly one merchant and may not
+equal another merchant's normalized name; courier aliases are a separate namespace).
+
+**`pickup_points`**
+
+| Column | Type | Rules |
+| --- | --- | --- |
+| `merchant_id` | uuid → merchants | Not null |
+| `label` | text | Not null (e.g., "Bodega Estadio") |
+| `address` | text | Not null |
+| `neighborhood_id` | uuid → neighborhoods | Not null |
+| `instructions` | text | Optional |
+| `is_default` | boolean | Partial unique index: at most one default per merchant; a merchant with active pickup points has exactly one (FR-029) |
+| `is_active` | boolean | Default true |
+
+**`couriers`**: `name` text not null, `phone` text not null, `user_id` uuid → users (unique,
+optional), `is_active` boolean. **`courier_aliases`**: same shape as `merchant_aliases`,
+unique `alias_normalized` among couriers.
+
+**`carriers`**: `name` text unique by normalized value, `is_active` boolean.
+
+## Geography and rates
+
+**`municipalities`**: `name` text unique.
+
+**`rate_zones`**: `name` text unique, `is_active` boolean. Seed: Medellín; Bello–Itagüí;
+Envigado–Sabaneta–La Estrella; Copacabana; San Antonio de Prado; Terminales y aeropuerto.
+
+**`neighborhoods`**
+
+| Column | Type | Rules |
+| --- | --- | --- |
+| `name` | text | Not null |
+| `name_normalized` | text | Unique together with `municipality_id`; trigram index |
+| `municipality_id` | uuid → municipalities | Not null |
+| `rate_zone_id` | uuid → rate_zones | Not null |
+| `kind` | `neighborhood_kind` | Not null |
+| `is_active` | boolean | Default true |
+| `created_by` | uuid → users | Who added it |
+| `needs_review` | boolean | True when added by a dispatcher, until the owner confirms (FR-036) |
+
+Only the owner may change `rate_zone_id` of an existing row (FR-026). Shipments reference
+handoff places through the same table (`kind` in `terminal`, `airport`, `carrier_office`).
+
+**`neighborhood_variants`**: `neighborhood_id` → neighborhoods, `variant_normalized` text
+**unique**, trigram index (e.g., "copàcabana", "terminal del norte").
+
+**`rate_card_entries`** (append-only)
+
+| Column | Type | Rules |
+| --- | --- | --- |
+| `kind` | `rate_entry_kind` | Not null |
+| `merchant_id` | uuid → merchants | Null = standard; set = merchant override |
+| `rate_zone_id` | uuid → rate_zones | Required when `kind = zone_rate`; null when `express_surcharge` |
+| `amount` | integer | `zone_rate` > 0; `express_surcharge` ≥ 0 |
+| `effective_from` | timestamptz | Not null; 00:00 `America/Bogota` of the effective day |
+| `created_by` | uuid → users | Owner only (FR-028) |
+
+Rows are never updated or deleted. The applicable entry is the one with the latest
+`effective_from` not after the registration instant; ties are won by the latest
+`created_at`, which is how a scheduled rate is corrected (FR-028).
+
+**Fee rule** (pure function in `packages/domain`, FR-006, FR-007a, clarification Q2–Q3):
+
+```text
+if kind = errand                → fee is manual (reason required), not flagged for review
+zone      = recipient neighborhood's zone (delivery, reverse pickup) | handoff place's zone (carrier handoff)
+zoneRate  = latest entry ≤ registeredAt for (zone_rate, merchant, zone) ?? same for standard
+surcharge = express ? latest entry ≤ registeredAt for (express_surcharge, merchant) ?? standard : 0
+if zoneRate missing             → manual fee with reason, fee_needs_review = true
+calculatedFee = zoneRate + surcharge   (a merchant surcharge of 0 is a valid override)
+on edit that changes zone or service level → recalculate with the same registeredAt and discard the override
+```
+
+## Shipments
+
+**`shipments`**
+
+| Column | Type | Rules |
+| --- | --- | --- |
+| `tracking_number` | char(8) | Unique; Crockford Base32 (research R6) |
+| `kind` | `shipment_kind` | Not null |
+| `status` | `shipment_status` | Not null; changed only through the lifecycle (below) |
+| `service_date` | date | Not null; default today (Bogotá) |
+| `merchant_id` | uuid → merchants | Not null |
+| `pickup_point_id` | uuid → pickup_points | Optional (null for a one-off address) |
+| `pickup_address`, `pickup_neighborhood_id` | text, uuid | Snapshot of the merchant-side address at registration |
+| `recipient_name` | text | Required for `delivery`, `reverse_pickup` |
+| `recipient_phone` | text | Required for `delivery`, `reverse_pickup`; 10 digits |
+| `recipient_address` | text | Required for `delivery`, `reverse_pickup` (for reverse pickup it is the origin) |
+| `recipient_neighborhood_id` | uuid → neighborhoods | Required for `delivery`, `reverse_pickup`, and `carrier_handoff`, where it is the handoff place (kind `terminal`, `airport`, or `carrier_office`) |
+| `carrier_id`, `destination_town` | uuid, text | Required for `carrier_handoff` |
+| `errand_description` | text | Required for `errand` |
+| `rate_zone_id` | uuid → rate_zones | Snapshot; null only for errands without neighborhood |
+| `service_level` | `service_level` | Default `standard` |
+| `calculated_fee` | integer | Null for errands and missing rates |
+| `fee` | integer | Not null, > 0 |
+| `fee_override_reason` | text | Required when `fee ≠ calculated_fee` or `calculated_fee` is null; 5–200 characters (FR-040) |
+| `fee_needs_review` | boolean | True only when no rate existed, until the owner confirms or corrects the fee (FR-035) |
+| `payment_mode` | `payment_mode` | Not null |
+| `cod_amount` | integer | ≥ 0; see check below |
+| `window_start`, `window_end` | timestamptz | Optional; `window_start < window_end` when both exist |
+| `package_size` | `package_size` | Optional; informative only |
+| `package_count` | integer | Optional; ≥ 1 |
+| `merchant_reference` | text | Optional; indexed with `merchant_id`, `service_date` (FR-013) |
+| `instructions` | text | Optional |
+| `void_reason` | text | Required when `status = voided`; 5–200 characters |
+| `bulk_batch_id` | uuid → bulk_batches | Set when created in bulk |
+| `version` | integer | Optimistic concurrency (research R10) |
+| `registered_at` | timestamptz | Rate card lookup instant (FR-008) |
+| `registered_by` | uuid → users | Not null |
+
+Database checks (Constitution IV):
+
+- `payment_mode = 'cash_on_delivery'` ⇒ `cod_amount > 0`;
+  `recipient_pays_fee` ⇒ `cod_amount = fee`; `merchant_account` ⇒ `cod_amount = 0`.
+- Kind-specific required columns as listed above.
+- `status = 'voided'` ⇔ `void_reason is not null`.
+
+Additional rules: `fee > 0`; the application asks for confirmation when `fee > 100000` or
+`cod_amount > 2000000` (FR-037).
+
+Indexes: `(service_date, status)` for the board; partial index on non-final statuses for
+"Pendientes de días anteriores"; trigram on normalized `recipient_name`; btree on
+`recipient_phone`; `(merchant_id, merchant_reference)`.
+
+**`shipment_events`** (append-only)
+
+| Column | Type | Rules |
+| --- | --- | --- |
+| `shipment_id` | uuid → shipments | Not null |
+| `type` | `shipment_event_type` | Not null |
+| `from_status`, `to_status` | `shipment_status` | Set for `created`, `voided`, `status_changed` |
+| `actor_user_id` | uuid → users | Not null |
+| `occurred_at` | timestamptz | When it happened (device time in feature 003) |
+| `recorded_at` | timestamptz | When the server stored it |
+| `reason` | text | Override or void reason |
+| `changes` | jsonb | `{ field: [old, new] }` for `created` (new only), `updated`, and `fee_confirmed` |
+| `client_event_id` | uuid | Unique, optional; idempotency key reserved for feature 003 |
+
+Written in the same transaction as the shipment change (FR-016).
+
+**`bulk_batches`**: `merchant_id` → merchants, `created_by` → users, `row_count` integer,
+`created_count` integer. A batch is created in one transaction: all confirmed rows or none
+(FR-020).
+
+## Audit of master data
+
+**`audit_events`** (append-only, FR-036)
+
+| Column | Type | Rules |
+| --- | --- | --- |
+| `entity_type` | text | `user`, `merchant`, `pickup_point`, `courier`, `carrier`, `neighborhood`, `rate_zone`, `rate_card_entry` |
+| `entity_id` | uuid | Not null |
+| `action` | `audit_action` | Not null |
+| `actor_user_id` | uuid → users | Not null |
+| `occurred_at` | timestamptz | Not null |
+| `changes` | jsonb | `{ field: [old, new] }` |
+
+Written in the same transaction as the change it records. Visible to the owner only.
+
+## Shipment lifecycle
+
+Declared once in `packages/domain` (Constitution III). This feature implements the
+transitions marked **001**; the others are declared now so every feature shares one
+vocabulary, and are finalized by the features that own them.
+
+| From | To | Trigger | Owner |
+| --- | --- | --- | --- |
+| — | `registered` | Register (single or bulk) | **001** |
+| `registered`, `assigned`, `dispatched` | `voided` | Void with reason | **001** |
+| `registered` | `assigned` | Add to a route | 002 |
+| `assigned` | `registered` | Remove from a route | 002 |
+| `assigned` | `dispatched` | Dispatch route | 002 |
+| `dispatched` | `picked_up` | Courier confirms pickup | 003 |
+| `picked_up` | `delivered` | Courier confirms delivery | 003 |
+| `picked_up` | `exception` | Courier reports a delivery exception | 003 |
+| `exception` | `registered` / `returned` | Dispatcher decides reattempt/reschedule or return to sender | 003 |
+
+- **Editable** (FR-015): `registered`, `assigned`, `dispatched`; every field except
+  `tracking_number`, `merchant_id`, and `kind`. Refused from `picked_up` on.
+- **Final**: `delivered`, `returned`, `voided`.
+- **Pending from previous days** (clarification Q1): `service_date < today` and status not
+  final.
+- **Flags** (FR-022), for statuses `registered`, `assigned`, `dispatched`, `picked_up`,
+  `exception` and `window_end` present: `now ≥ window_end` → late (also when the window
+  belongs to a past day); `window_end − 45 min ≤ now < window_end` → at risk.
+
+## Delivery window presets (FR-010, clarification Q5)
+
+| Preset | `window_start` | `window_end` |
+| --- | --- | --- |
+| Antes de las HH:MM | — | HH:MM |
+| Después de las HH:MM | HH:MM | — |
+| Entre HH:MM y HH:MM | HH:MM | HH:MM |
+| En la mañana | 08:00 | 12:00 |
+| En la tarde | 12:00 | 20:00 |
+
+Times are on the service date in `America/Bogota`, within operating hours 08:00–20:00.

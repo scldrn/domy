@@ -22,6 +22,22 @@ document appear in Spanish between quotes.
 - Q: How long does a dispatcher or owner session stay open in the dispatch panel? → A: Until the user signs out, for at most 30 days.
 - Q: What hours do the "En la mañana" and "En la tarde" delivery windows represent? → A: Operating day 8:00 a. m.–8:00 p. m.; morning 8:00–12:00, afternoon 12:00–20:00.
 
+### Checklist review 2026-09-30
+
+Decisions taken while closing `checklists/core-rules.md`:
+
+- The dispatcher may add neighborhoods with an existing rate zone and edit names and
+  variants; only the owner changes the rate zone of an existing neighborhood (owner
+  decision, CHK027).
+- A carrier handoff takes its rate zone from a catalog handoff place (CHK001).
+- A recalculated fee discards the earlier override (CHK007).
+- Rate card entries are append-only; the most recently added entry wins on the same
+  effective date (CHK005, CHK009).
+- Security defaults: passwords of 8–128 characters, 15-minute lock, 60-minute recovery
+  link, recovery ends sessions, at least one active owner (CHK017–CHK021, CHK025, CHK026).
+- Master data and user changes are audited; recipient data is kept 10 years (CHK022,
+  CHK023).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Register a shipment (Priority: P1)
@@ -70,6 +86,14 @@ with author and time.
 9. **Given** shipment kind "Diligencia", **When** the dispatcher registers it, **Then** no fee
    is calculated, a manual fee and a reason are required, and the shipment is not marked
    for the owner's review.
+10. **Given** a standard express surcharge of COP 4.500, **When** the dispatcher registers an
+    express delivery to the Medellín rate zone for a merchant on the standard rate card,
+    **Then** the fee is COP 17.500.
+11. **Given** a merchant whose express surcharge override is COP 0, **When** an express
+    delivery is registered for it, **Then** the fee equals its zone rate.
+12. **Given** shipment kind "Entrega a transportadora" to the handoff place "Terminal del
+    Norte", **When** it is registered, **Then** the fee is the rate of that place's rate
+    zone and the carrier and destination town are required.
 
 ---
 
@@ -132,8 +156,16 @@ old and new values.
 3. **Given** the dispatcher voids a shipment, **Then** a reason is required, the status
    becomes "Anulado", and the shipment remains searchable; it is never deleted.
 4. **Given** two users edit the same shipment at the same time, **When** the second saves,
-   **Then** the save is refused with a message to review the latest version, and no change
-   is lost silently.
+   **Then** the save is refused with a message to review the latest version, the typed
+   values stay in the form, and no change is lost silently.
+5. **Given** a shipment whose fee was overridden with a reason, **When** the dispatcher
+   changes its neighborhood to one in another rate zone, **Then** the form shows the newly
+   calculated fee, the earlier override is discarded, and a new override requires a new
+   reason.
+6. **Given** a shipment with payment mode "Contraentrega" and COD amount COP 80.000, **When**
+   its fee changes, **Then** the COD amount stays COP 80.000.
+7. **Given** a shipment with an overridden fee, **When** the dispatcher sets the fee back to
+   the calculated value, **Then** no reason is required and the change is recorded.
 
 ---
 
@@ -218,6 +250,13 @@ shipment registered today uses the old rate and one registered tomorrow uses the
    the system refuses it, so every alias identifies exactly one merchant.
 4. **Given** the dispatcher, **When** they try to change the rate card, **Then** the action
    is not available; only the owner can change rates.
+5. **Given** the dispatcher, **When** they add a neighborhood with an existing rate zone,
+   **Then** it is saved and listed for the owner's review; **When** they try to change the
+   rate zone of an existing neighborhood, **Then** the action is not available.
+6. **Given** two rate entries for the same zone with the same effective date, **Then** the
+   one added last applies.
+7. **Given** a merchant with 3 open shipments, **When** it is deactivated, **Then** the
+   system warns about the 3 open shipments, which keep working after confirmation.
 
 ---
 
@@ -239,41 +278,56 @@ dispatch panel at all.
 1. **Given** a deactivated account, **When** its user tries to sign in or has an open
    session, **Then** access is denied immediately.
 2. **Given** a user forgot their password, **When** they request recovery, **Then** they
-   receive an email with a single-use link valid for a limited time.
-3. **Given** five consecutive failed sign-in attempts, **Then** the account is temporarily
-   locked and the user is told when to retry.
+   receive an email with a single-use link valid for 60 minutes.
+3. **Given** five consecutive failed sign-in attempts, **Then** password sign-in is locked
+   for 15 minutes and the user is told when to retry.
 4. **Given** a dispatcher signed in 29 days ago who never signed out, **When** they open the
    panel, **Then** they are still signed in; **Given** 30 days have passed, **Then** they
    must sign in again.
 5. **Given** the owner ends a user's sessions, **Then** that user must sign in again on
    every device.
+6. **Given** a single active owner, **When** they try to deactivate or demote themself,
+   **Then** the system refuses and explains that one active owner is always required.
+7. **Given** a recovery request for an email that is not registered, **Then** the screen
+   shows the same confirmation as for a registered email.
+8. **Given** a locked account, **When** its user completes a password recovery, **Then** the
+   lock is lifted and every earlier session of that user is ended.
 
 ---
 
 ### Edge Cases
 
-- **Neighborhood not in the catalog**: the dispatcher can add it on the spot, choosing its
-  municipality and rate zone; the addition is recorded and visible to the owner.
-- **No rate for the zone** (neither merchant nor standard): the shipment can only be saved
-  with a manual fee and a reason, and is marked for the owner's review.
-- **Rate card changes during the day**: shipments already registered keep their frozen fee.
-- **COD amount above COP 2.000.000**: saving requires an explicit confirmation (the highest
-  collection in 27 months was COP 1.194.700).
-- **Service date on a Sunday or a delivery window already past**: allowed with a warning.
-- **Carrier handoff**: destination is a carrier and a destination town instead of a
-  recipient address; recipient phone is optional.
-- **Reverse pickup**: origin is the recipient's address and destination is the merchant's
-  pickup point; the rate zone is taken from the recipient's neighborhood.
-- **Errand**: requires a description of the task and a manual fee with a reason; recipient
-  fields and neighborhood are optional.
-- **Payment mode "Flete al destinatario" with an overridden fee**: the COD amount follows
-  the final fee.
-- **Session expires while filling a form**: after signing in again, the entered data is
-  still there.
-- **Connection lost in the dispatch panel**: the panel says so clearly, keeps unsaved form
-  data, and never reports a save that did not happen.
-- **Bulk list with unknown columns or over 200 rows**: rejected with an explanation before
-  preview.
+- **EC-01 Neighborhood not in the catalog**: the dispatcher adds it on the spot, choosing
+  its municipality and an existing rate zone; it is listed for the owner's review (FR-026,
+  FR-036).
+- **EC-02 No rate for the zone** (neither merchant nor standard): the shipment is saved
+  only with a manual fee and a reason, and is marked "Tarifa por revisar" (FR-035).
+- **EC-03 Rate card or neighborhood zone changes later**: shipments already registered keep
+  their fee (FR-008).
+- **EC-04 Unusually high amounts**: a COD amount above COP 2.000.000 or a fee above
+  COP 100.000 requires explicit confirmation (FR-037).
+- **EC-05 Service date on a Sunday, or a delivery window already past**: allowed with a
+  warning (FR-010).
+- **EC-06 Carrier handoff**: the destination is a handoff place from the catalog (bus
+  terminal, airport, or carrier office), which gives the rate zone, plus the carrier and
+  the destination town; recipient name and phone are optional (FR-002, FR-006).
+- **EC-07 Reverse pickup**: origin is the recipient's address and destination is the
+  merchant's pickup point; the rate zone comes from the recipient's neighborhood (FR-006).
+- **EC-08 Errand**: requires a description and a manual fee with a reason; recipient
+  fields and neighborhood are optional (FR-007a).
+- **EC-09 Fee changes after registration**: the COD amount follows the payment mode rule
+  (FR-009).
+- **EC-10 Session expired, connection lost, or edit conflict while filling a form**: the
+  typed values stay in the form and no save is reported unless it happened (FR-038).
+- **EC-11 Bulk list with unknown columns or over 200 rows**: rejected with an explanation
+  before the preview (FR-019).
+- **EC-12 Deactivating a record with open shipments**: allowed; open shipments are not
+  affected (FR-029).
+- **EC-13 Pending shipment whose delivery window belongs to a past day**: shown as
+  "Atrasado" (FR-022).
+- **EC-14 Repeated failed sign-ins by a third party**: the legitimate user recovers access
+  through password recovery and keeps any open session (FR-033).
+- **EC-15 Last active owner**: cannot be deactivated or demoted (FR-032).
 
 ## Requirements *(mandatory)*
 
@@ -284,63 +338,101 @@ dispatch panel at all.
 - **FR-001**: The system MUST let the dispatcher and the owner register a shipment of kind
   delivery, reverse pickup, carrier handoff, or errand.
 - **FR-002**: Every shipment MUST record merchant, shipment kind, service date (default
-  today), pickup point, fee, payment mode, COD amount, and status; plus, depending on kind,
-  recipient name and phone, delivery address, neighborhood, municipality, carrier and
-  destination town, or errand description.
+  today), pickup point, fee, payment mode, COD amount, and status; plus, depending on kind:
+  - delivery and reverse pickup: recipient name and phone, address, and neighborhood;
+  - carrier handoff: handoff place (a catalog entry of kind bus terminal, airport, or
+    carrier office), carrier, and destination town;
+  - errand: description of the task.
 - **FR-003**: The system MUST offer merchants by any registered name or alias and fill the
   merchant's default pickup point, which the dispatcher can change to another of its pickup
   points or a one-off address.
-- **FR-004**: The system MUST suggest recipients previously used for the selected merchant
-  and fill their data when chosen.
+- **FR-004**: The system MUST suggest recipients from past shipments of the selected
+  merchant only, searchable by name or phone, and fill their data when chosen. A recipient
+  is identified by phone number.
 - **FR-005**: Neighborhoods MUST be chosen from the catalog, tolerating accents, case, and
   registered spelling variants; the municipality and rate zone follow from the neighborhood.
 - **FR-006**: The system MUST calculate the fee from the rate card in force at registration
   time: the zone rate (the merchant's override for the rate zone if one exists, otherwise
   the standard rate) plus, for express service level, the express surcharge (the
-  merchant's override if one exists, otherwise the standard surcharge). Errands are the
-  exception: their fee is always entered manually (FR-007a).
+  merchant's override if one exists, otherwise the standard surcharge; an override of zero
+  is valid and means express costs that merchant nothing extra). The rate zone comes from
+  the recipient's neighborhood for deliveries and reverse pickups, and from the handoff
+  place for carrier handoffs. Errands are the exception: their fee is always entered
+  manually (FR-007a).
 - **FR-007**: The dispatcher MUST be able to override the calculated fee only with a reason;
   both values are kept.
 - **FR-007a**: For errands, the dispatcher MUST enter the fee manually together with a short
   reason (e.g., the task and distance); it is an expected case and is not marked for the
   owner's review.
-- **FR-008**: The fee MUST NOT change when the rate card changes later; it changes only if
-  the shipment itself is edited in a way that changes its rate zone or service level.
+- **FR-008**: The fee MUST NOT change when the rate card or a neighborhood's rate zone
+  changes later. It is recalculated only when the shipment itself is edited in a way that
+  changes its rate zone or service level, always using the rate card in force at the
+  original registration time. A recalculation discards any earlier override; the dispatcher
+  sees the new fee before saving and may override it again with a reason.
 - **FR-009**: Payment mode MUST set the COD amount: "Contraentrega" requires an amount
   greater than zero; "Flete al destinatario" sets it equal to the fee; "Crédito del cliente"
-  sets it to zero.
+  sets it to zero. When the fee changes later, "Flete al destinatario" follows the final
+  fee and the other two modes keep their COD amount.
 - **FR-010**: Optional fields MUST include delivery window (presets "Antes de las…",
   "Después de las…", "Entre… y…", "En la mañana" = 8:00–12:00, "En la tarde" =
-  12:00–20:00, or explicit times within operating hours 8:00–20:00),
-  package size (small, medium, large, extra large), package count, merchant reference,
-  service level (standard or express), and instructions.
+  12:00–20:00, or explicit times within operating hours 8:00–20:00), package size (small,
+  medium, large, extra large), package count, merchant reference, service level (standard
+  or express), and instructions. A service date on a Sunday or a window already past MUST
+  produce a warning without blocking.
 - **FR-011**: Every shipment MUST get a unique tracking number: short (at most 10
-  characters), easy to read aloud, and without ambiguous characters. It is not the public
-  tracking link, which uses a separate unguessable token (feature 004).
-- **FR-012**: Money MUST be whole Colombian pesos, displayed as "$ 13.000".
+  characters), easy to read aloud, and without ambiguous characters. It is permanent and
+  never reused, including for voided shipments. It is not the public tracking link, which
+  uses a separate unguessable token (feature 004).
+- **FR-012**: Money MUST be whole Colombian pesos, displayed as "$ 13.000". Money fields
+  MUST accept digits with optional "$", dots, and spaces, and reject decimals and negative
+  amounts.
 - **FR-013**: The system MUST warn, without blocking, about a possible duplicate: same
-  merchant, same merchant reference, same service date.
+  merchant and service date with the same merchant reference or, when there is no
+  reference, the same recipient phone.
+- **FR-035**: When no rate exists for the rate zone, the shipment MUST be saved only with a
+  manual fee and a reason and be marked "Tarifa por revisar". The owner MUST be able to
+  filter marked shipments on the board and in history and confirm or correct the fee,
+  which removes the mark and is recorded.
+- **FR-037**: A fee MUST be greater than zero. A fee above COP 100.000 or a COD amount
+  above COP 2.000.000 MUST require explicit confirmation before saving.
+- **FR-040**: Every reason (fee override, errand fee, missing rate, voiding) MUST be a text
+  of 5 to 200 characters.
 
 **Lifecycle and history**
 
-- **FR-014**: A new shipment MUST start in status "Registrado". This feature also defines
-  the transition to "Anulado"; the remaining statuses of the shared lifecycle (§Key
-  Entities) are introduced by features 002 and 003.
-- **FR-015**: While a shipment has not been picked up, the dispatcher MUST be able to edit
-  it or void it; voiding requires a reason. After pickup, both are refused.
-- **FR-016**: Every creation, edit, override, and voiding MUST be recorded with author,
-  time, and old and new values, and shown in the shipment's history.
+- **FR-014**: A new shipment MUST start in status "Registrado". This feature implements two
+  transitions: creation into "Registrado", and voiding into "Anulado" from "Registrado",
+  "Asignado", or "En ruta". The remaining transitions of the shared lifecycle (§Key
+  Entities) are defined by features 002 and 003.
+- **FR-015**: While a shipment is "Registrado", "Asignado", or "En ruta", the dispatcher
+  MUST be able to void it with a reason or edit any field except tracking number, merchant,
+  and shipment kind (to change those, the shipment is voided and registered again). From
+  "Recogido" on, both are refused.
+- **FR-016**: Every creation, edit, override, fee confirmation, and voiding MUST be recorded
+  with author, time, and old and new values, and shown in the shipment's history.
 - **FR-017**: Shipments MUST never be deleted.
 - **FR-018**: Concurrent edits MUST never overwrite each other silently.
+- **FR-036**: Every creation, change, deactivation, and reactivation of users and roles,
+  merchants, pickup points, couriers, carriers, neighborhoods, rate zones, and rate card
+  entries MUST be recorded with author, time, and old and new values, visible to the owner.
+  Neighborhoods added by a dispatcher MUST be listed for the owner's review until the owner
+  confirms them.
+- **FR-038**: When a save fails because the session expired, the connection was lost, or
+  another user changed the record, the values typed MUST remain in the form so the user can
+  retry without retyping, and the system MUST NOT report a save that did not happen.
+- **FR-039**: "Today", service dates, delivery windows, and effective dates MUST be
+  interpreted in Colombian time (`America/Bogota`).
 
 **Bulk registration**
 
 - **FR-019**: The dispatcher MUST be able to register up to 200 shipments for one merchant
   at once by pasting rows or uploading a spreadsheet that follows a published template with
-  Spanish column names.
+  Spanish column names. Lists with unknown columns or more than 200 rows MUST be rejected
+  with an explanation before the preview.
 - **FR-020**: Bulk registration MUST show a row-by-row preview with parsed values,
-  calculated fee, neighborhood matches to confirm, and specific errors, and MUST create only
-  confirmed valid rows, keeping the rest for correction.
+  calculated fee, neighborhood matches to confirm, and specific errors. Confirmation MUST
+  create all confirmed valid rows together or none of them; rows that are invalid or not
+  confirmed stay in the preview for correction.
 
 **Dispatch board**
 
@@ -349,10 +441,12 @@ dispatch panel at all.
   status, delivery window, courier, COD amount, and flags. Today's board MUST also list,
   in a separate section "Pendientes de días anteriores", every shipment from earlier
   service dates that is not delivered, returned, or voided, keeping its original service
-  date.
-- **FR-022**: A shipment not delivered MUST be flagged "En riesgo" from 45 minutes before
-  its latest delivery time and "Atrasado" after it, showing minutes remaining or overdue.
-  Shipments without a latest delivery time are never flagged.
+  date; these shipments are included in today's counts and flags.
+- **FR-022**: A shipment in status "Registrado", "Asignado", "En ruta", "Recogido", or
+  "Novedad" MUST be flagged "En riesgo" from 45 minutes before its latest delivery time and
+  "Atrasado" after it, showing the time remaining or overdue (in days once it exceeds 24
+  hours). Shipments without a latest delivery time, and shipments "Entregado", "Devuelto",
+  or "Anulado", are never flagged.
 - **FR-023**: The board MUST be filterable by status, merchant, courier, rate zone, and
   flags, and MUST reflect changes made by any user within 30 seconds without a reload.
 
@@ -368,28 +462,61 @@ dispatch panel at all.
 
 - **FR-026**: The dispatcher and the owner MUST be able to create, edit, and deactivate
   merchants (name, aliases, WhatsApp contact, pickup points, default pickup point), couriers
-  (name, aliases, phone), carriers, and catalog neighborhoods (name, spelling variants,
-  municipality, rate zone).
-- **FR-027**: Each alias MUST identify exactly one merchant or one courier.
+  (name, aliases, phone), and carriers. Both MUST be able to add catalog neighborhoods
+  (name, municipality, an existing rate zone) and edit their names and spelling variants.
+  Only the owner MUST be able to change the rate zone of an existing neighborhood.
+- **FR-027**: Within its directory, each alias MUST identify exactly one merchant or exactly
+  one courier and MUST NOT equal another record's name. The same text may name a merchant
+  and a courier, because the two directories are never searched together.
 - **FR-028**: Only the owner MUST be able to manage rate zones and the rate card: a standard
   rate per rate zone, one standard express surcharge, and merchant overrides of zone rates
-  and of the express surcharge, each with an effective date, keeping the full history of
-  past rates.
-- **FR-029**: Deactivated records MUST disappear from selection lists and remain in history.
+  and of the express surcharge. Each entry has an effective date, a calendar day that
+  starts at 00:00. Entries are never edited or removed: to correct a scheduled or current
+  rate the owner adds a new entry, and when two entries share an effective date the most
+  recently added applies. The full history of past rates is kept.
+- **FR-029**: Deactivated records MUST disappear from selection lists and remain in history;
+  shipments already open keep working with them. Deactivating a merchant MUST warn with its
+  number of open shipments. A merchant with active pickup points MUST always have exactly
+  one default.
 
 **Access**
 
-- **FR-030**: Every user MUST sign in with email and password and be able to recover access
-  through a single-use link sent by email.
-- **FR-031**: The system MUST support the roles owner, dispatcher, and courier: the owner
-  can do everything in this feature, including users and rate card; the dispatcher can do
-  everything except users and rate card; the courier has no access to the dispatch panel.
-- **FR-032**: Only the owner MUST be able to create, deactivate, and change the role of
-  user accounts; deactivation ends open sessions immediately.
-- **FR-033**: Five consecutive failed sign-in attempts MUST lock the account temporarily.
+- **FR-030**: Every user MUST sign in with email and password and be able to change their
+  own password. Passwords MUST have 8 to 128 characters, with no composition rules. Access
+  MUST be recoverable through a single-use link sent by email, valid for 60 minutes. The
+  recovery screen MUST show the same confirmation whether or not the email is registered.
+  Completing a recovery MUST end all of that user's open sessions and lift any lock.
+- **FR-031**: The system MUST support the roles owner, dispatcher, and courier with the
+  permissions in the table below.
+- **FR-032**: Accounts are created only by the owner; there is no self-registration, and the
+  first owner account is created at installation. Only the owner MUST be able to create
+  accounts, edit their name and email, change their role, and deactivate or reactivate
+  them. After deactivation, the next request from any of that user's sessions MUST be
+  refused. The system MUST always keep at least one active owner: the last active owner
+  cannot be deactivated or demoted.
+- **FR-033**: Five consecutive failed sign-in attempts MUST lock password sign-in for that
+  account for 15 minutes, telling the user when to retry. The lock does not end sessions
+  already open, and a completed password recovery lifts it.
 - **FR-033a**: A dispatcher or owner session MUST last until the user signs out, for at most
   30 days; users MUST be able to sign out, and the owner MUST be able to end any user's
-  open sessions (including when deactivating the account, FR-032).
+  open sessions. The session rule for couriers is defined by feature 003.
+- **FR-041**: Recipients' personal data (name, phone, address) MUST be visible only to the
+  owner and the dispatcher in this feature, MUST NOT appear in system logs, and MUST be
+  kept for 10 years as commercial supporting records (Código de Comercio, art. 60), handled
+  under Ley 1581 de 2012.
+
+| Capability | Owner | Dispatcher | Courier |
+| --- | --- | --- | --- |
+| Register, edit, and void shipments; bulk registration | Yes | Yes | No |
+| Dispatch board, search, shipment history | Yes | Yes | No |
+| Export search results | Yes | No | No |
+| Merchants, pickup points, couriers, carriers | Yes | Yes | No |
+| Add neighborhoods; edit their names and variants | Yes | Yes | No |
+| Change a neighborhood's rate zone; manage rate zones | Yes | No | No |
+| View the rate card and fees | Yes | Yes | No |
+| Change the rate card | Yes | No | No |
+| Review "Tarifa por revisar" and neighborhoods added by dispatchers | Yes | No | No |
+| Users, roles, sessions; history of master data changes | Yes | No | No |
 
 **User interface**
 
@@ -402,7 +529,7 @@ dispatch panel at all.
   merchant, pickup point, destination (recipient and address, carrier and town, or errand
   description), neighborhood, rate zone, fee (calculated, final, override reason), payment
   mode, COD amount, delivery window, size, package count, merchant reference, service level,
-  instructions, status.
+  instructions, status, "Tarifa por revisar" mark.
 - **Shipment lifecycle** (shared by features 001–004): "Registrado" (registered),
   "Asignado" (assigned to a route), "En ruta" (route dispatched), "Recogido" (picked up),
   "Entregado" (delivered), "Novedad" (delivery exception awaiting a decision), "Devuelto"
@@ -410,6 +537,9 @@ dispatch panel at all.
   "Anulado".
 - **Shipment event**: an immutable record of something that happened to a shipment: type,
   author, time, changed values, reason.
+- **Audit event**: an immutable record of a change to a user, merchant, pickup point,
+  courier, carrier, neighborhood, rate zone, or rate card entry: author, time, changed
+  values.
 - **Merchant**: business or person billed for shipments. Name, aliases, WhatsApp contact,
   pickup points (one default), active flag.
 - **Pickup point**: named address of a merchant with neighborhood.
@@ -417,7 +547,8 @@ dispatch panel at all.
   account.
 - **Carrier**: third-party company for carrier handoffs. Name, active flag.
 - **Neighborhood**: catalog entry with spelling variants, municipality, and rate zone.
-  Includes special destinations such as bus terminals and the airport.
+  Includes handoff places: bus terminals, the airport, and carrier offices. Entries added
+  by a dispatcher are pending the owner's review.
 - **Rate zone**: group of neighborhoods sharing a rate (e.g., Medellín; Bello–Itagüí;
   Envigado–Sabaneta–La Estrella; Copacabana; terminals and airport).
 - **Rate card entry**: either a zone rate (fee for one rate zone) or the express surcharge
@@ -434,8 +565,8 @@ dispatch panel at all.
   seconds on average (60 seconds for 9 out of 10).
 - **SC-002**: A dispatcher registers 20 shipments for one merchant from a pasted list in
   under 3 minutes, including review.
-- **SC-003**: 100 % of shipments have a fee from the rate card or an override with a reason;
-  no shipment exists without a fee.
+- **SC-003**: 100 % of shipments have a fee greater than zero, and every fee that does not
+  come from the rate card (override, errand, missing rate) has a reason.
 - **SC-004**: Any change to a shipment is visible on every open dispatch board within 30
   seconds.
 - **SC-005**: 100 % of shipments with a latest delivery time are flagged at risk at least 45
@@ -458,8 +589,10 @@ dispatch panel at all.
 - Package size does not affect the fee (owner decision 2026-09-30); express service level
   adds a fixed surcharge (clarified 2026-09-30; about COP 4.500 in 2026 data).
 - The 45-minute at-risk threshold is a fixed business rule (owner delegated the value).
-- Couriers get accounts in this feature, but their app is feature 003; routes and
-  assignment are feature 002; tracking links and WhatsApp messages are feature 004.
+- Couriers get accounts in this feature, but their app and session rule are feature 003;
+  routes and assignment are feature 002, including removing a voided shipment from its
+  route; tracking links and WhatsApp messages are feature 004.
+- The seed loads a standard express surcharge of COP 4.500, which the owner can change.
 - Finance (cash-up, statements, receivables, payouts) is Phase 2 and out of scope.
 - Operating hours are Monday to Saturday, 8:00 a. m. to 8:00 p. m. (clarified 2026-09-30);
   registering for other days is possible with a warning.
