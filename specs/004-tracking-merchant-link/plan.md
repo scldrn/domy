@@ -78,11 +78,12 @@ specs/004-tracking-merchant-link/
 ├── research.md
 ├── data-model.md
 ├── quickstart.md
-├── quickstart-results.md   # written during validation (tasks)
+├── quickstart-results.md   # written by task T034 during validation
 ├── contracts/
 │   └── http-api.md
 ├── checklists/
-│   └── requirements.md
+│   ├── requirements.md
+│   └── public-pages.md
 └── tasks.md             # created by /speckit-tasks
 ```
 
