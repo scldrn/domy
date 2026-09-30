@@ -1,7 +1,7 @@
 # Domy Constitution
 
 Domy is the operations and tracking system for Santiago Marín's urban courier business
-in Medellín, Colombia: a coordinator panel, a courier mobile web app, and a public
+in Medellín, Colombia: a dispatch panel, a courier mobile web app, and a public
 tracking page. This constitution defines the non-negotiable engineering rules for it.
 
 ## Core Principles
@@ -20,15 +20,15 @@ tracking page. This constitution defines the non-negotiable engineering rules fo
 - A new dependency MUST NOT be added for what the platform, the standard library, an
   already-installed dependency, or a few lines of code can do.
 
-**Rationale**: the client asked for a stable, maintainable product for about 31 services a
+**Rationale**: the client asked for a stable, maintainable product for a few dozen shipments a
 day, not an architecture built for Uber-scale. Every extra moving part is another thing
 that can fail at 7 a.m. with couriers waiting.
 
 ### II. Zero Data Loss in the Field
 
-- Every courier action (pickup, delivery, collected amount, evidence photo, incident)
-  MUST be persisted on the device before any network call, and MUST survive app
-  restarts, loss of signal, and low battery shutdowns.
+- Every courier action (pickup, delivery, COD collection, proof-of-delivery photo,
+  delivery exception) MUST be persisted on the device before any network call, and MUST
+  survive app restarts, loss of signal, and low battery shutdowns.
 - Every mutation sent by a client MUST carry a client-generated UUID. The server MUST
   treat it as an idempotency key: replaying the same action any number of times MUST
   produce exactly one effect.
@@ -43,10 +43,10 @@ happened but was not recorded is a lost payment, a lost collection, and a custom
 
 ### III. Single Source of Truth for Domain Rules
 
-- Every business rule — service states and allowed transitions, service types, money
-  calculations, validation schemas — MUST be defined exactly once in `packages/domain`
-  and imported by both server and web app. Duplicating a rule is a violation.
-- The service lifecycle MUST be an explicit, declared state machine. State changes MUST
+- Every business rule — shipment states and allowed transitions, shipment kinds, payment
+  modes, money calculations, validation schemas — MUST be defined exactly once in
+  `packages/domain` and imported by both server and web app. Duplicating a rule is a violation.
+- The shipment lifecycle MUST be an explicit, declared state machine. State changes MUST
   go through it; direct writes to a status field are forbidden.
 - Money MUST be stored and computed as integer Colombian pesos (COP). Floating point MUST
   NOT be used for money.
@@ -60,7 +60,7 @@ across cells and drifts. The system exists to end that class of error.
 - A state change and its audit event MUST be written in the same database transaction.
 - Every state change MUST record who did it, when, and — when available — where
   (device location at the moment of the action).
-- Operational records (services, routes, events, collections) MUST NOT be hard-deleted.
+- Operational records (shipments, routes, events, COD collections) MUST NOT be hard-deleted.
   They are cancelled or archived with a recorded reason.
 - Integrity rules MUST be enforced in PostgreSQL where it can express them (foreign keys,
   unique constraints, check constraints, not-null), not only in application code.
@@ -87,7 +87,7 @@ data that surfaces days later in a courier's settlement.
 - Every business rule, state transition, money calculation, and sync/idempotency behavior
   MUST have a failing test written before its implementation (red → green → refactor).
 - Tests that touch the database MUST run against a real PostgreSQL instance, never a mock.
-- The critical flows — register service, build and assign route, courier pickup and
+- The critical flows — register shipment, build and dispatch route, courier pickup and
   delivery while offline then sync, public tracking — MUST have end-to-end tests.
 - Tests MUST be deterministic: no dependence on wall-clock time, network, or test order.
 - Plain UI rendering and trivial wiring are exempt from test-first but not from review.
@@ -101,15 +101,17 @@ a silent regression reproduces the exact errors the system was commissioned to r
   No English, no jargon, no raw error codes reach a user.
 - The courier app MUST be mobile-first and operable with one hand: touch targets of at
   least 48×48 CSS px, each primary action (confirm pickup, confirm delivery, report
-  incident) reachable in at most 3 taps from the route screen.
+  delivery exception) reachable in at most 3 taps from the route screen.
 - The courier app MUST work on low-end Android phones (Android 10+ with Chrome) and on
   iPhone (iOS 16+ Safari, installed to the home screen).
 - The public tracking page MUST work without login or installation and MUST expose no
   personal data beyond what the recipient already knows about their own shipment.
 - Every error message MUST say what happened and what the user can do next.
+- Every interface MUST follow `docs/design-system.md` (Material Design 3 over Tailwind CSS
+  and shadcn/ui); deviations require updating that document first.
 - Interfaces MUST meet WCAG 2.2 AA for contrast, labels, and keyboard access.
 
-**Rationale**: the coordinator is overloaded and couriers work on the street; if the tool
+**Rationale**: the dispatcher is overloaded and couriers work on the street; if the tool
 is slower than WhatsApp and a spreadsheet, it will not be adopted.
 
 ### VIII. Absolute Repository Order
@@ -119,8 +121,11 @@ is slower than WhatsApp and a spreadsheet, it will not be adopted.
 - File and folder names use `kebab-case`; React components use `PascalCase` exports;
   variables and functions use `camelCase`; database tables and columns use `snake_case`.
 - Business vocabulary is translated consistently using the glossary kept in
-  `docs/glossary.md` (e.g., recaudo → collection, contraentrega → cash on delivery,
-  mensajero → courier). A term has exactly one English name across the codebase.
+  `docs/glossary.md` (e.g., servicio → shipment, recaudo → COD collection, contraentrega →
+  cash on delivery, mensajero → courier). A term has exactly one English name across the
+  codebase.
+- User-facing text MUST use the professional Spanish term defined in the glossary, never
+  the legacy term (e.g., "Envío", not "Servicio"; "Novedad"; "Prueba de entrega").
 - Formatting and linting are automated and MUST pass with zero warnings. Dead code,
   commented-out code, stray files, and unused dependencies are forbidden.
 - Commits follow Conventional Commits. One feature per branch, named by Spec Kit.
@@ -133,8 +138,8 @@ lets any developer find anything in seconds, years from now.
 
 - Secrets MUST come from environment variables validated at startup and MUST never be
   committed, logged, or sent to the client.
-- Access MUST be role-based (coordinator, courier) and enforced on the server for every
-  request. A courier MUST only see their own routes and services.
+- Access MUST be role-based (owner, dispatcher, courier) and enforced on the server for every
+  request. A courier MUST only see their own routes and shipments.
 - Public tracking links MUST use unguessable random tokens, never sequential identifiers.
 - Passwords and session handling MUST use the vetted authentication library chosen in the
   plan; hand-rolled cryptography is forbidden.
@@ -157,10 +162,12 @@ The stack below is ratified. Replacing any item requires a constitution amendmen
 | API | Hono (with RPC types consumed by the web app) |
 | Database | PostgreSQL, accessed with Drizzle ORM; schema changes only through versioned migrations |
 | Authentication | Better Auth, sessions stored in PostgreSQL |
-| Web app | React + Vite, one PWA serving the coordinator panel, the courier app, and the tracking page |
+| Web app | React + Vite, one PWA serving the dispatch panel, the courier app, and the tracking page |
+| Styling and components | Tailwind CSS + shadcn/ui |
+| Design language | Material Design 3, applied as defined in `docs/design-system.md` |
 | Offline | Service worker for the app shell; IndexedDB outbox of idempotent actions |
 | Validation | Zod |
-| File storage | S3-compatible object storage for evidence photos |
+| File storage | S3-compatible object storage for proof-of-delivery photos |
 | Testing | Vitest (unit and integration against real PostgreSQL), Playwright (end to end) |
 | Deployment | Docker Compose on a single VPS with Caddy (automatic HTTPS) |
 
@@ -214,4 +221,4 @@ Quality gates (all MUST pass before a feature branch is merged):
 - Runtime development guidance for agents lives in `CLAUDE.md` and MUST stay consistent
   with this document.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-29 | **Last Amended**: 2026-09-29
+**Version**: 1.1.0 | **Ratified**: 2026-09-29 | **Last Amended**: 2026-09-30

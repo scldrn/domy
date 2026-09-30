@@ -6,3 +6,6 @@
 
 # Machine-local Claude Code settings
 .claude/settings.local.json
+
+# Client source spreadsheets: contain personal and banking data. Never commit.
+docs/discovery/raw/
