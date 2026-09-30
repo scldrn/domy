@@ -15,6 +15,16 @@ Business context: [business master](../../docs/business-master.md) (§4.4, §7 s
 board, users and roles, audit) and [feature 002](../002-routes-dispatch/spec.md) (routes,
 stops, reassignment, custody, handovers). UI terms appear in Spanish between quotes.
 
+## Clarifications
+
+### Session 2026-09-30
+
+- Q: When the dispatcher dispatches or changes a route, must the courier get a notification on the phone even with the app closed? → A: Yes. A phone notification on dispatch and on every change (shipment added, removed, reassigned, dispatch undone, handover), once the courier has granted the permission; the board still shows whether the courier has seen it.
+- Q: When a delivery fails and will be retried another day, where does the package stay meanwhile? → A: Either the courier keeps it, or the courier hands it to the dispatcher at the office; the business has an office. The dispatcher records the receipt at the office.
+- Q: When the recipient pays the COD amount partly in cash and partly by transfer, must the courier record each part separately? → A: Yes. The app proposes the full amount in cash and lets the courier split it among cash, transfer to the company, and transfer to the merchant (FR-010).
+- Q: If a courier records a delivery or an exception by mistake, who can undo it? → A: Only the owner or the dispatcher, with a reason; the courier asks them (FR-017, FR-035).
+- Q: How long does a courier's session stay open on the phone? → A: The same as the dispatcher's: until the courier signs out, for at most 30 days; then the password is asked again.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Carry out a route (Priority: P1)
@@ -172,6 +182,12 @@ first is "Entregado" with two attempts in its history and the second is "Devuelt
    custody ends.
 6. **Given** a delivered shipment that had one exception before, **Then** its history shows
    two delivery attempts with their times, couriers, and results.
+7. **Given** a shipment in "Novedad" or waiting "En custodia de {courier}", **When** the
+   dispatcher records "Recibido en oficina", **Then** the courier's custody ends, the
+   office holds the package, and the shipment is marked "En oficina".
+8. **Given** a shipment "En oficina" with a new attempt decided, **When** the dispatcher adds
+   it to a route, **Then** the route gets a pickup stop at the office before its delivery
+   stop, and the courier confirms the pickup there like any other.
 
 ---
 
@@ -196,7 +212,8 @@ the first phone is offline and has recorded the pickup, and verify the result.
 
 1. **Given** a route open in the app, **When** the dispatcher adds a shipment, **Then**
    within one minute with signal the courier sees the new stops and a notice "Envío
-   agregado", which stays until the courier taps "Entendido".
+   agregado", which stays until the courier taps "Entendido"; with the app closed, the
+   phone shows a notification.
 2. **Given** the dispatcher removes a shipment, reorders stops, or reassigns a shipment to
    another courier, **Then** the courier sees the route updated and a notice naming the
    change.
@@ -312,13 +329,13 @@ over equal to cash collected minus disbursements.
   the return stop at the next synchronization, with a notice (FR-022, FR-029).
 - **EC-13 New attempt or return when the holding courier has no route in progress**: the
   shipment waits off route under "Sin asignar", marked "En custodia de {courier}", until a
-  route in progress can take it (FR-029–FR-031).
+  route in progress can take it, or until the office receives it (FR-029–FR-031, FR-041).
 - **EC-14 Handover stop on the receiving courier's route never confirmed**: it stays blocked
   and counted on the dispatch board (feature 002, EC-12); the dispatcher can confirm on
   behalf or cancel.
 - **EC-15 Route dispatched while the app is closed**: the courier sees it the next time the
-  app is opened or synchronizes (FR-022; notification outside the app is an open question,
-  see Assumptions).
+  app is opened or synchronizes, and receives a phone notification if they granted the
+  permission (FR-022, FR-040).
 - **EC-16 Reverse pickup with the recipient absent**: reported as a pickup problem; nothing
   is in custody yet (FR-014).
 - **EC-17 Exception of a shipment that was the last pending stop**: the route becomes
@@ -337,8 +354,12 @@ over equal to cash collected minus disbursements.
 - **FR-002**: A courier MUST see only the routes dispatched to them and the shipments on
   those routes, plus packages in their custody. Owner and dispatcher accounts do not use
   the courier app.
-- **FR-003**: A courier session MUST last until the courier signs out, and end after 90 days
-  without use. Deactivating the courier's user ends access at the next request (feature
+- **FR-003**: A courier session MUST last until the courier signs out, for at most 30 days
+  (the same rule as feature 001, FR-033a); then the app asks for the password again. The
+  app MUST warn the courier when 2 days or fewer remain, so they can sign in again before
+  starting a route. A session that expires during a route loses nothing: the route stays
+  visible on the phone, records keep being saved, and they are sent after the courier
+  signs in again (FR-021). Deactivating the courier's user ends access at the next request (feature
   001, FR-032); records made before the deactivation are still accepted.
 - **FR-004**: Signing out MUST be refused while records are pending to synchronize, with an
   explanation. After sign-out the phone keeps no route data.
@@ -445,6 +466,13 @@ over equal to cash collected minus disbursements.
   shipment reassigned to or from another courier, route reassigned, dispatch undone,
   exception decided, record corrected or reverted. A notice stays until the courier taps
   "Entendido"; the acknowledgment is recorded with its time.
+- **FR-040**: The system MUST send a phone notification to the courier, even with the app
+  closed, when a route is dispatched to them and for every later change that produces a
+  notice (FR-027). The app asks for the notification permission once, after sign-in. The
+  notification names the change without personal data of recipients. A notification that
+  cannot be delivered (permission denied, phone off, app not installed where the phone
+  requires it) MUST never block or delay the dispatcher's action; the notice in the app
+  and the acknowledgment on the dispatch board (FR-033) remain the reference.
 - **FR-028**: The receiving courier MUST be able to confirm a pending handover ("Recibí el
   paquete"); custody passes to them and the stop is unblocked (feature 002, FR-025). The
   courier who holds a package with a pending handover sees it as "Entregar a {courier}",
@@ -463,6 +491,19 @@ over equal to cash collected minus disbursements.
 
   Until a decision is made, the shipment stays in "Novedad" on its route and cannot be moved
   or removed (feature 002, Assumptions).
+- **FR-041**: The owner and the dispatcher MUST be able to record "Recibido en oficina" for a
+  package a courier holds after an exception (shipment in "Novedad", or "Recogido" on no
+  route): the courier's custody ends and the office holds the package, with author and
+  time. Only the owner and the dispatcher can record it; the courier sees a notice. From
+  then on:
+  - with a new attempt decided, the shipment is "Registrado" with the office as its pickup
+    place and its service date, and follows the normal flow of feature 002 (any route, a
+    pickup stop at the office, pickup confirmed by the courier);
+  - with a return decided, the route gets a pickup stop at the office before the return
+    stop;
+  - with no decision yet, it stays in "Novedad" marked "En oficina".
+
+  The office has one address, set by the owner.
 - **FR-030**: Completing a return stop MUST capture the received-by name and ask for a photo;
   the shipment becomes "Devuelto" and custody ends. A return stop cannot end in an
   exception: if the merchant is not there, the courier reports a problem with a note
@@ -470,7 +511,8 @@ over equal to cash collected minus disbursements.
 - **FR-031**: Shipments "Recogido" that are on no route MUST be listed under "Sin asignar"
   marked "En custodia de {courier}" with their service date, and MUST be addable only to a
   route in progress, where they get only a delivery stop (or return stop), with a pending
-  handover if the route belongs to another courier.
+  handover if the route belongs to another courier. Shipments held by the office are listed
+  marked "En oficina" and can be added to any route (FR-041).
 - **FR-032**: Every delivery attempt MUST be kept: courier, time, result, reason. The fee of
   a shipment does not change with the number of attempts in this feature.
 
@@ -530,6 +572,9 @@ over equal to cash collected minus disbursements.
   carrier or payee, receipt photo.
 - **Exception decision**: what the dispatcher decided for a shipment in "Novedad": new
   attempt (date, route) or return to sender; author and time.
+- **Office custody**: the office, not a courier, is responsible for a package from "Recibido
+  en oficina" until a courier picks it up there. Custody records therefore name a courier
+  or the office.
 - **Return stop**: a stop at the merchant's pickup point where an undeliverable shipment is
   given back.
 - **Notice**: a change to a courier's route that the courier must see; acknowledged or not,
@@ -539,7 +584,9 @@ over equal to cash collected minus disbursements.
 - **Shipment lifecycle transitions implemented here** (shared lifecycle, feature 001): "En
   ruta" → "Recogido" (pickup); "Recogido" → "Entregado" (delivery); "En ruta" → "Entregado"
   (errand completed); "Recogido" → "Novedad" (exception); "Novedad" → "Recogido" (new
-  attempt, or exception reverted); "Novedad" → "Devuelto" (return stop completed);
+  attempt, or exception reverted, while a courier holds the package); "Novedad" →
+  "Registrado" (new attempt while the office holds the package); "Novedad" → "Devuelto"
+  (return stop completed);
   "Entregado" → "Recogido" and "Devuelto" → "Novedad" (reverted by the dispatcher);
   "Registrado" or "Asignado" → "Recogido" (pickup record that arrives after the dispatcher
   changed the route).
@@ -561,7 +608,7 @@ over equal to cash collected minus disbursements.
 - **SC-006**: Every shipment that was not delivered on the first visit has a recorded
   exception with its reason, so the first-attempt rate can be calculated.
 - **SC-007**: For any shipment, the custody records (pickup, confirmed handovers, delivery
-  or return) leave no interval without a responsible courier, including records that
+  or return) leave no interval without a responsible courier or the office, including records that
   arrived late (extends feature 002, SC-005).
 - **SC-008**: A courier completes their first route in the app after at most 10 minutes of
   explanation.
@@ -580,16 +627,15 @@ over equal to cash collected minus disbursements.
 - Couriers use their own phones, mostly Android, with a recent browser; the app is a web
   app installed from the browser, not a store app (Phase 3).
 - No real-time location sharing: location is captured only with each record (decision #33).
-- Notification outside the app (when it is closed) on dispatch or on a change is **not**
-  included: the courier sees changes when the app is open or opened, and the dispatcher
-  sees on the board whether the courier has seen them. To be confirmed during
-  clarification.
+- Phone notifications depend on the courier granting the permission and, on some phones, on
+  the app being installed on the home screen; they are an aid, never the only way to learn
+  of a change.
 - Who pays for a failed delivery attempt is still open with the owner (business master,
   decision 5c). This feature records every attempt, which is what Phase 2 needs to bill it
   either way; fees do not change here.
 - A package whose delivery failed stays with the courier who holds it until it is delivered,
-  handed over to another courier, or returned to the merchant. The business has no
-  warehouse step.
+  handed over to another courier, returned to the merchant, or received at the office
+  (clarified 2026-09-30). The office is a single place.
 - The exception reasons are the three confirmed by the owner; pickup problems use a free
   note.
 - The cash-up, its reconciliation, and courier pay are Phase 2; "Mi día" is informative.

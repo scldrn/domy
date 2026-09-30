@@ -33,9 +33,9 @@
 
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - Validated 2026-09-30, first iteration: all items pass.
-- Decisions taken as informed defaults and open to `/speckit-clarify`: no notification
-  outside the app; 90-day courier session; the package stays with the courier after an
-  exception; collection split among payment methods; corrections and reverts by the
-  dispatcher only; "installable" is stated as a user-visible property, not a technology.
+- Re-validated 2026-09-30 after `/speckit-clarify` (5 questions): all items pass. Resolved:
+  phone notifications on dispatch and changes (FR-040); the package stays with the courier
+  or is received at the office (FR-041); collection split among payment methods;
+  corrections and reverts by the dispatcher only; 30-day courier session (FR-003).
 - The spec changes features 001 and 002 in four points listed under Assumptions; their
   documents are aligned during `/speckit-plan`.

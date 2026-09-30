@@ -79,6 +79,7 @@ one Spanish name shown to users.
 | review flag | Por revisar | — | Mark on a shipment whose courier record arrived after the dispatcher had changed it; cleared with a note. |
 | not applied | No aplicado | — | Courier record kept in the history that could not change the shipment. |
 | held in custody | En custodia de {mensajero} | — | Picked-up shipment that is on no route and waits with the courier who holds it. |
+| office | Oficina | Oficina | The company's single office, where the dispatcher can receive a package a courier could not deliver ("Recibido en oficina"); the package is then "En oficina". |
 | notice | Aviso | — | Change to a courier's route shown in the app until the courier acknowledges it ("Entendido"). |
 | day summary | Mi día | — | Courier's summary of the day: deliveries, collections by payment method, disbursements, cash to hand over. |
 | transfer receipt | Comprobante de transferencia | — | Photo of the recipient's transfer confirmation. |
