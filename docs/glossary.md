@@ -90,6 +90,10 @@ one Spanish name shown to users.
 | pending from previous days | Pendientes de días anteriores | — | Shipments with an earlier service date that are not delivered, returned, or voided; shown on today's dispatch board. |
 | audit event | Historial de cambios | Trazabilidad | Immutable record of who changed what and when, for shipments and for master data. |
 | tracking page | Página de seguimiento | — | Public page, opened by link, with the shipment's status. |
+| tracking link | Enlace de seguimiento | — | Public address of a shipment's tracking page; carries a secret code. |
+| merchant link | Enlace del cliente | — | Private address of the page listing a merchant's shipments; carries a secret code that can be replaced. |
+| merchant notification | Notificar clientes | "Avisarle al cliente" | Message with the day's tracking links that the dispatcher sends to a merchant from WhatsApp; a shipment included in one is "Notificado". |
+| support contact | Contacto de soporte | — | The company's phone shown on public pages. |
 
 ## Money
 
