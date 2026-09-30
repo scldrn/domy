@@ -12,6 +12,16 @@ Business context: [business master](../../docs/business-master.md) (§4–§7, �
 D-03, D-04, K-01–K-04, M-02). Vocabulary: [glossary](../../docs/glossary.md). UI terms in this
 document appear in Spanish between quotes.
 
+## Clarifications
+
+### Session 2026-09-30
+
+- Q: When a shipment from a previous day is still not delivered, how does it appear on the next day's dispatch board? → A: It appears automatically on today's board in a "Pendientes de días anteriores" section, keeping its original service date.
+- Q: How is the express service level ("turbo", "urgente") priced against each zone's standard rate? → A: Zone rate plus a single fixed express surcharge with an effective date; merchants with special rates may have their own surcharge.
+- Q: How is the fee of an errand (buying an item, making a bank deposit) calculated? → A: Always a manual fee with a reason, set by the dispatcher for each errand.
+- Q: How long does a dispatcher or owner session stay open in the dispatch panel? → A: Until the user signs out, for at most 30 days.
+- Q: What hours do the "En la mañana" and "En la tarde" delivery windows represent? → A: Operating day 8:00 a. m.–8:00 p. m.; morning 8:00–12:00, afternoon 12:00–20:00.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Register a shipment (Priority: P1)
@@ -54,6 +64,12 @@ with author and time.
 7. **Given** a delivery window "Antes de las 5:00 p. m." for today, **When** the shipment is
    saved, **Then** the window is stored as a latest delivery time of 17:00 on the service
    date.
+8. **Given** a delivery window "En la tarde" for today, **When** the shipment is saved,
+   **Then** it is stored as earliest 12:00 and latest 20:00, so it becomes "En riesgo" at
+   19:15 if not delivered.
+9. **Given** shipment kind "Diligencia", **When** the dispatcher registers it, **Then** no fee
+   is calculated, a manual fee and a reason are required, and the shipment is not marked
+   for the owner's review.
 
 ---
 
@@ -86,6 +102,10 @@ shipment "En riesgo", and later "Atrasado", without reloading the page.
    **Then** the board shows the change without a manual reload.
 5. **Given** the dispatcher selects a past or future date, **Then** the board shows that
    day's shipments.
+6. **Given** a shipment with yesterday's service date that is neither delivered, returned,
+   nor voided, **When** the dispatcher opens today's board, **Then** it appears in the
+   section "Pendientes de días anteriores" with its original service date and days pending,
+   and is included in today's counts and flags.
 
 ---
 
@@ -177,8 +197,9 @@ spreadsheet that opens with Spanish headers and the same values.
 The owner and the dispatcher maintain the merchants directory (names, aliases, WhatsApp
 contact, pickup points, default pickup point), the couriers directory (names, aliases,
 phone), the carriers list, and the neighborhood catalog (neighborhood, municipality, rate
-zone, spelling variants). The owner maintains the rate card: standard rates per rate zone
-and service level, merchant-specific overrides, each with an effective date.
+zone, spelling variants). The owner maintains the rate card: a standard rate per rate zone,
+a single express surcharge, and merchant-specific overrides of either, each with an
+effective date.
 
 **Why this priority**: registration depends on this data, but it can be seeded at go-live
 and edited rarely afterwards.
@@ -221,6 +242,11 @@ dispatch panel at all.
    receive an email with a single-use link valid for a limited time.
 3. **Given** five consecutive failed sign-in attempts, **Then** the account is temporarily
    locked and the user is told when to retry.
+4. **Given** a dispatcher signed in 29 days ago who never signed out, **When** they open the
+   panel, **Then** they are still signed in; **Given** 30 days have passed, **Then** they
+   must sign in again.
+5. **Given** the owner ends a user's sessions, **Then** that user must sign in again on
+   every device.
 
 ---
 
@@ -238,7 +264,8 @@ dispatch panel at all.
   recipient address; recipient phone is optional.
 - **Reverse pickup**: origin is the recipient's address and destination is the merchant's
   pickup point; the rate zone is taken from the recipient's neighborhood.
-- **Errand**: requires a description of the task; recipient fields are optional.
+- **Errand**: requires a description of the task and a manual fee with a reason; recipient
+  fields and neighborhood are optional.
 - **Payment mode "Flete al destinatario" with an overridden fee**: the COD amount follows
   the final fee.
 - **Session expires while filling a form**: after signing in again, the entered data is
@@ -268,17 +295,23 @@ dispatch panel at all.
 - **FR-005**: Neighborhoods MUST be chosen from the catalog, tolerating accents, case, and
   registered spelling variants; the municipality and rate zone follow from the neighborhood.
 - **FR-006**: The system MUST calculate the fee from the rate card in force at registration
-  time: the merchant's override for the rate zone and service level if one exists, otherwise
-  the standard rate.
+  time: the zone rate (the merchant's override for the rate zone if one exists, otherwise
+  the standard rate) plus, for express service level, the express surcharge (the
+  merchant's override if one exists, otherwise the standard surcharge). Errands are the
+  exception: their fee is always entered manually (FR-007a).
 - **FR-007**: The dispatcher MUST be able to override the calculated fee only with a reason;
   both values are kept.
+- **FR-007a**: For errands, the dispatcher MUST enter the fee manually together with a short
+  reason (e.g., the task and distance); it is an expected case and is not marked for the
+  owner's review.
 - **FR-008**: The fee MUST NOT change when the rate card changes later; it changes only if
   the shipment itself is edited in a way that changes its rate zone or service level.
 - **FR-009**: Payment mode MUST set the COD amount: "Contraentrega" requires an amount
   greater than zero; "Flete al destinatario" sets it equal to the fee; "Crédito del cliente"
   sets it to zero.
 - **FR-010**: Optional fields MUST include delivery window (presets "Antes de las…",
-  "Después de las…", "Entre… y…", "En la mañana", "En la tarde", or explicit times),
+  "Después de las…", "Entre… y…", "En la mañana" = 8:00–12:00, "En la tarde" =
+  12:00–20:00, or explicit times within operating hours 8:00–20:00),
   package size (small, medium, large, extra large), package count, merchant reference,
   service level (standard or express), and instructions.
 - **FR-011**: Every shipment MUST get a unique tracking number: short (at most 10
@@ -313,7 +346,10 @@ dispatch panel at all.
 
 - **FR-021**: The board MUST show, for a selected date (default today), the count of
   shipments per status and a list with tracking number, merchant, recipient, neighborhood,
-  status, delivery window, courier, COD amount, and flags.
+  status, delivery window, courier, COD amount, and flags. Today's board MUST also list,
+  in a separate section "Pendientes de días anteriores", every shipment from earlier
+  service dates that is not delivered, returned, or voided, keeping its original service
+  date.
 - **FR-022**: A shipment not delivered MUST be flagged "En riesgo" from 45 minutes before
   its latest delivery time and "Atrasado" after it, showing minutes remaining or overdue.
   Shipments without a latest delivery time are never flagged.
@@ -335,9 +371,10 @@ dispatch panel at all.
   (name, aliases, phone), carriers, and catalog neighborhoods (name, spelling variants,
   municipality, rate zone).
 - **FR-027**: Each alias MUST identify exactly one merchant or one courier.
-- **FR-028**: Only the owner MUST be able to manage rate zones and the rate card: standard
-  rates per rate zone and service level, merchant overrides, each with an effective date,
-  keeping the full history of past rates.
+- **FR-028**: Only the owner MUST be able to manage rate zones and the rate card: a standard
+  rate per rate zone, one standard express surcharge, and merchant overrides of zone rates
+  and of the express surcharge, each with an effective date, keeping the full history of
+  past rates.
 - **FR-029**: Deactivated records MUST disappear from selection lists and remain in history.
 
 **Access**
@@ -350,6 +387,9 @@ dispatch panel at all.
 - **FR-032**: Only the owner MUST be able to create, deactivate, and change the role of
   user accounts; deactivation ends open sessions immediately.
 - **FR-033**: Five consecutive failed sign-in attempts MUST lock the account temporarily.
+- **FR-033a**: A dispatcher or owner session MUST last until the user signs out, for at most
+  30 days; users MUST be able to sign out, and the owner MUST be able to end any user's
+  open sessions (including when deactivating the account, FR-032).
 
 **User interface**
 
@@ -380,8 +420,9 @@ dispatch panel at all.
   Includes special destinations such as bus terminals and the airport.
 - **Rate zone**: group of neighborhoods sharing a rate (e.g., Medellín; Bello–Itagüí;
   Envigado–Sabaneta–La Estrella; Copacabana; terminals and airport).
-- **Rate card entry**: fee for a rate zone and service level, standard or for one merchant,
-  with an effective date.
+- **Rate card entry**: either a zone rate (fee for one rate zone) or the express surcharge
+  (fixed amount added for express service level), standard or for one merchant, with an
+  effective date.
 - **User**: person with access. Name, email, role, active flag.
 - **Bulk batch**: one bulk registration: merchant, rows, and per-row outcome.
 
@@ -415,11 +456,11 @@ dispatch panel at all.
   merchants, couriers, and carriers are loaded at go-live from the business master and the
   owner's input; no historical shipments are migrated (migration not contracted).
 - Package size does not affect the fee (owner decision 2026-09-30); express service level
-  may, through the rate card.
+  adds a fixed surcharge (clarified 2026-09-30; about COP 4.500 in 2026 data).
 - The 45-minute at-risk threshold is a fixed business rule (owner delegated the value).
 - Couriers get accounts in this feature, but their app is feature 003; routes and
   assignment are feature 002; tracking links and WhatsApp messages are feature 004.
 - Finance (cash-up, statements, receivables, payouts) is Phase 2 and out of scope.
-- Operating hours are Monday to Saturday; registering for other days is possible with a
-  warning.
+- Operating hours are Monday to Saturday, 8:00 a. m. to 8:00 p. m. (clarified 2026-09-30);
+  registering for other days is possible with a warning.
 - Password recovery email is sent through the system's transactional email service.

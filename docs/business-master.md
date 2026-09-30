@@ -29,8 +29,9 @@ document first. All terms follow the [glossary](glossary.md).
   as the courier in the ledger, the company itself did the shipment. **Confirmed.**
 - The system is named **Domy**; that is the product name users see. Cohex appears as the
   operator (for example, the support contact on the tracking page). **Confirmed.**
-- Operates Monday to Saturday from 8:00 a.m.; no shipment is recorded on any Sunday in 27
-  months of data. **Confirmed.**
+- Operates Monday to Saturday from 8:00 a.m. to 8:00 p.m.; no shipment is recorded on any
+  Sunday in 27 months of data. **Confirmed.** Delivery window presets: "en la mañana" =
+  8:00–12:00, "en la tarde" = 12:00–20:00 (confirmed 2026-09-30).
 - Merchants request shipments by WhatsApp; the dispatcher registers them in a daily sheet,
   builds routes, and dispatches them to couriers. **Confirmed.**
 - Revenue is the fee per shipment. COD collections belong to merchants and are remitted
