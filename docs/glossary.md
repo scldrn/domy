@@ -67,9 +67,21 @@ one Spanish name shown to users.
 | handover | Traspaso | — | Transfer of a picked-up shipment from one courier to another; pending ("Traspaso pendiente") until the receiving courier confirms receipt. |
 | dispatch board | Tablero de despacho | Planilla | Live view of the day: pending, in route, delivered, exceptions, at-risk windows. |
 | delivery attempt | Intento de entrega | — | One visit to deliver. A shipment can have several. |
-| delivery exception | Novedad | Novedad | Event that prevents a normal delivery: recipient absent, wrong address, rejected, and others to be confirmed. |
+| delivery exception | Novedad | Novedad | Event that prevents a normal delivery. Reasons: recipient absent (Destinatario ausente), wrong address (Dirección errada), rejected (Rechazado). |
 | reattempt | Reintento | — | New delivery attempt after an exception. |
 | return to sender | Devolución al remitente | — | Bringing an undeliverable shipment back to the merchant. |
+| exception decision | Decisión de la novedad | — | What the dispatcher decides for a shipment in "Novedad": new attempt ("Nuevo intento", today or another date) or return to sender ("Devolver al remitente"). |
+| return stop | Devolución | — | Stop at the merchant's pickup point where an undeliverable shipment is given back. |
+| pickup problem | Problema de recogida | — | Courier's report that a shipment could not be picked up or an errand could not be done; a flag, not a status. |
+| courier record | Registro del mensajero | — | Something a courier did or reported in the app: pickup, delivery, exception, return, disbursement, handover confirmation. |
+| pending sync | Pendiente por sincronizar | — | Record or photo saved on the phone and not yet received by the system. |
+| recorded by dispatch | Registrado por despacho | — | Mark on a courier record entered by the owner or dispatcher on the courier's behalf. |
+| review flag | Por revisar | — | Mark on a shipment whose courier record arrived after the dispatcher had changed it; cleared with a note. |
+| not applied | No aplicado | — | Courier record kept in the history that could not change the shipment. |
+| held in custody | En custodia de {mensajero} | — | Picked-up shipment that is on no route and waits with the courier who holds it. |
+| notice | Aviso | — | Change to a courier's route shown in the app until the courier acknowledges it ("Entendido"). |
+| day summary | Mi día | — | Courier's summary of the day: deliveries, collections by payment method, disbursements, cash to hand over. |
+| transfer receipt | Comprobante de transferencia | — | Photo of the recipient's transfer confirmation. |
 | proof of delivery | Prueba de entrega | Evidencia, foto | Photo (requested, skippable), received-by name, time, and location captured at delivery. |
 | received-by name | Recibido por | Quien recibe | Name of the person who physically received the shipment. Defaults to the recipient. |
 | at risk | En riesgo | — | Not delivered and less than 45 minutes before the latest delivery time. |
