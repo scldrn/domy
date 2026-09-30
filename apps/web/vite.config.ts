@@ -1,0 +1,31 @@
+import tailwindcss from "@tailwindcss/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import react from "@vitejs/plugin-react";
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "vite";
+import svgr from "vite-plugin-svgr";
+
+export default defineConfig({
+  plugins: [
+    tanstackRouter({
+      target: "react",
+      autoCodeSplitting: true,
+      virtualRouteConfig: "./src/routes.ts",
+      routesDirectory: "./src/routes",
+      generatedRouteTree: "./src/route-tree.gen.ts",
+    }),
+    react(),
+    tailwindcss(),
+    svgr({
+      svgrOptions: { dimensions: false, svgProps: { fill: "currentColor", "aria-hidden": "true" } },
+    }),
+  ],
+  resolve: {
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+  },
+  server: {
+    proxy: {
+      "/api": `http://localhost:${process.env["API_PORT"] ?? "3000"}`,
+    },
+  },
+});
