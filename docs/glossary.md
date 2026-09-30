@@ -59,6 +59,11 @@ one Spanish name shown to users.
 | route | Ruta | Ruta | Ordered stops assigned to one courier. Typically 8–9 deliveries over 2–3 pickups. |
 | stop | Parada | — | A place in a route with one or more tasks (pick up N shipments, deliver one). |
 | dispatch | Despachar | Asignar, "evacuar servicios" | Assigning a route to a courier and releasing it to the courier's phone. |
+| route number | Número de ruta | — | Number that identifies a route within its service date ("Ruta 3"). |
+| route status | Estado de la ruta | — | En preparación (draft), En curso (dispatched), Finalizada (finished), Cancelada (cancelled). |
+| unassigned | Sin asignar | — | Registered shipments that are not on any route. |
+| reassignment | Reasignación | — | Moving a shipment or a whole route to another courier, with a reason. |
+| custody | Custodia | "Quién lo tenía" | Which courier is responsible for a shipment at each moment. |
 | dispatch board | Tablero de despacho | Planilla | Live view of the day: pending, in route, delivered, exceptions, at-risk windows. |
 | delivery attempt | Intento de entrega | — | One visit to deliver. A shipment can have several. |
 | delivery exception | Novedad | Novedad | Event that prevents a normal delivery: recipient absent, wrong address, rejected, and others to be confirmed. |
