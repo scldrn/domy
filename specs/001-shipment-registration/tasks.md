@@ -80,7 +80,7 @@ test harnesses that every user story needs
 - [ ] T024 [P] Define `merchants`, `merchant_aliases`, `pickup_points`, `couriers`, `courier_aliases`, `carriers` in `apps/server/src/db/schema/directories.ts` per data-model.md §Directories: merchant name unique by normalized value; `alias_normalized` unique per directory; partial unique index "at most one default per merchant"; `couriers.user_id` unique optional
 - [ ] T025 [P] Define `municipalities`, `rate_zones`, `neighborhoods`, `neighborhood_variants`, `rate_card_entries` in `apps/server/src/db/schema/geography.ts` per data-model.md §Geography and rates: `name_normalized` unique with `municipality_id`, trigram indexes, `needs_review`, `variant_normalized` unique; rate entries append-only with checks "`zone_rate` > 0; `express_surcharge` ≥ 0" and "`rate_zone_id` required when `kind = zone_rate`; null when `express_surcharge`"
 - [ ] T026 [P] Define `shipments`, `shipment_events`, `bulk_batches` in `apps/server/src/db/schema/shipments.ts` per data-model.md §Shipments, including the checks: "`cash_on_delivery` ⇒ `cod_amount > 0`; `recipient_pays_fee` ⇒ `cod_amount = fee`; `merchant_account` ⇒ `cod_amount = 0`", kind-specific required columns, "`status = 'voided'` ⇔ `void_reason is not null`", `fee > 0`, `window_start < window_end`, `tracking_number` char(8) unique, `client_event_id` unique, and the listed indexes
-- [ ] T027 [P] Define `audit_events` in `apps/server/src/db/schema/audit.ts` per data-model.md §Audit of master data (append-only; `entity_type`, `entity_id`, `action`, `actor_user_id`, `occurred_at`, `changes`)
+- [ ] T027 [P] Define `audit_events` in `apps/server/src/db/schema/audit.ts` per data-model.md §Audit of master data (append-only; `entity_type`, `entity_id`, `action`, `actor_user_id`, `occurred_at`, `changes`, `client_event_id` unique)
 - [ ] T028 Generate and review the first migration in `apps/server/src/db/migrations/` (extensions `unaccent` and `pg_trgm`, all tables, checks, and indexes) and add the `db:generate` and `db:migrate` scripts to `apps/server/package.json`
 
 ### Server skeleton and authentication
@@ -88,7 +88,7 @@ test harnesses that every user story needs
 - [ ] T029 Implement `apps/server/src/lib/errors.ts`: `AppError` with the codes and HTTP statuses of contracts/http-api.md §Conventions, and a Hono error handler returning `{ error: { code, message, fields? } }` with Spanish messages
 - [ ] T030 Implement `apps/server/src/auth.ts`: Better Auth with the Drizzle adapter mapped to the plural tables, email and password with 8–128 characters and sign-up disabled, admin plugin with roles `owner`, `dispatcher`, `courier`, sessions of 30 days with refresh disabled, sessions revoked on password reset
 - [ ] T031 Implement `apps/server/src/lib/auth-guard.ts`: Hono middleware `requireRole(...roles)` that loads the session, refuses banned users, and returns `401 unauthenticated` or `403 forbidden`
-- [ ] T032 Implement `apps/server/src/lib/audit.ts`: `recordAudit(tx, { entityType, entityId, action, actorUserId, changes })` writing to `audit_events` in the caller's transaction
+- [ ] T032 Implement `apps/server/src/lib/audit.ts`: `recordAudit(tx, { entityType, entityId, action, actorUserId, changes })` writing to `audit_events` in the caller's transaction, and `apps/server/src/lib/action-id.ts`: exactly-once helper that returns the current record when a request's `actionId` already exists as an event's `client_event_id` (FR-042)
 - [ ] T033 Implement `apps/server/src/app.ts` (request id, pino logger with redaction of passwords, cookies, and recipient phone, error handler, `/api/auth/*`, route mounting, exported `AppType`, static serving of the built web app in production) and `apps/server/src/index.ts` (entry point)
 - [ ] T034 Create the integration test harness in `apps/server/tests/setup/database.ts` (PostgreSQL 18 Testcontainer per test file, migrations applied, truncate between tests) and `apps/server/tests/setup/app.ts` (app factory, helpers to create and sign in users of each role, fake clock)
 
@@ -186,12 +186,12 @@ reason, and verify both in each shipment's history with author, time, and old an
 
 ### Tests for User Story 3 ⚠️ write first, must fail
 
-- [ ] T070 [P] [US3] Integration tests in `apps/server/tests/shipments-update.test.ts` covering spec US3 scenarios 1–7: recalculation with the original `registered_at`, override discarded, COD rule per payment mode, `409 version_conflict`, `409 invalid_transition` from `picked_up`, fields `trackingNumber`, `merchantId`, `kind` rejected, `updated` event with old and new values, void with reason 5–200 characters, and `POST /:id/confirm-fee` owner-only clearing `fee_needs_review` with a `fee_confirmed` event (FR-035)
+- [ ] T070 [P] [US3] Integration tests in `apps/server/tests/shipments-update.test.ts` covering spec US3 scenarios 1–7: recalculation with the original `registered_at`, override discarded, COD rule per payment mode, `409 version_conflict`, `409 invalid_transition` from `picked_up`, fields `trackingNumber`, `merchantId`, `kind` rejected, `updated` event with old and new values, a repeated `actionId` returning the current shipment without a second event (FR-042), void with reason 5–200 characters, and `POST /:id/confirm-fee` owner-only clearing `fee_needs_review` with a `fee_confirmed` event (FR-035)
 - [ ] T071 [P] [US3] End-to-end test in `apps/web/tests/e2e/edit-void-shipment.spec.ts`: quickstart scenarios 8–9, and the owner confirming a "Tarifa por revisar"
 
 ### Implementation for User Story 3
 
-- [ ] T072 [US3] Add `ShipmentUpdateInput` and `ShipmentVoidInput` to `packages/domain/src/schemas/shipment.ts`
+- [ ] T072 [US3] Add `ShipmentUpdateInput` and `ShipmentVoidInput` (both with `actionId` and `version`) to `packages/domain/src/schemas/shipment.ts`
 - [ ] T073 [US3] Implement `PATCH /api/shipments/:id`, `POST /api/shipments/:id/void`, and `POST /api/shipments/:id/confirm-fee` in `apps/server/src/routes/shipments.ts` (optimistic `version`, lifecycle check, event with diff in the same transaction) until T070 passes
 - [ ] T074 [US3] Build the edit route `apps/web/src/routes/shipment-edit.tsx` (`/envios/$trackingNumber/editar`) reusing the shipment form, `apps/web/src/features/shipments/void-dialog.tsx`, the conflict message that keeps typed values, and `apps/web/src/features/shipments/confirm-fee-dialog.tsx` for the owner, until T071 passes
 
@@ -261,7 +261,7 @@ fees
 - [ ] T089 [P] [US6] Integration tests in `apps/server/tests/couriers-carriers.test.ts`: CRUD, courier alias namespace separate from merchants, deactivation, repeated create with the same `id` stored once (FR-042)
 - [ ] T090 [P] [US6] Integration tests in `apps/server/tests/neighborhoods.test.ts`: dispatcher adds with an existing zone (`needs_review`), edits name and variants, cannot change `rateZoneId` (`403`); owner changes the zone and confirms the review; only the owner deactivates a neighborhood (`403` for the dispatcher); existing shipments keep their fee (FR-008, FR-026, FR-036)
 - [ ] T091 [P] [US6] Integration tests in `apps/server/tests/rate-card.test.ts` covering spec US6 scenarios 1, 4, 6: owner only; effective date at 00:00 Bogotá; future entry not applied before its date; same date → latest added wins; no update or delete; history complete; merchant override of zone rate and of surcharge; a repeated entry with the same `id` is stored once (FR-028, FR-042)
-- [ ] T092 [P] [US6] Integration tests in `apps/server/tests/audit-events.test.ts`: every master data change writes an `audit_events` row with author, time, and old and new values; list is owner-only (FR-036)
+- [ ] T092 [P] [US6] Integration tests in `apps/server/tests/audit-events.test.ts`: every master data change writes an `audit_events` row with author, time, and old and new values; a repeated `actionId` writes one row (FR-042); list is owner-only (FR-036)
 - [ ] T093 [P] [US6] Integration tests in `apps/server/tests/master-data-export.test.ts`: owner only (`403` for dispatcher); CSV with Spanish headers for `merchants` (with aliases and pickup points), `couriers`, `carriers`, `neighborhoods` (with municipality and rate zone), and `rate-card` (with history) (FR-025)
 - [ ] T094 [P] [US6] End-to-end test in `apps/web/tests/e2e/master-data.spec.ts`: quickstart scenarios 12 and 16, and spec US6 scenario 7
 

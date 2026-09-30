@@ -205,7 +205,7 @@ Indexes: `(service_date, status)` for the board; partial index on non-final stat
 | `recorded_at` | timestamptz | When the server stored it |
 | `reason` | text | Override or void reason |
 | `changes` | jsonb | `{ field: [old, new] }` for `created` (new only), `updated`, and `fee_confirmed` |
-| `client_event_id` | uuid | Unique, optional; idempotency key reserved for feature 003 |
+| `client_event_id` | uuid | Unique, optional; the request's `actionId` for edits, voiding, and fee confirmation (FR-042), and the courier app's event identifier in feature 003 |
 
 Written in the same transaction as the shipment change (FR-016).
 
@@ -226,6 +226,7 @@ returns the first result (FR-042).
 | `actor_user_id` | uuid → users | Not null |
 | `occurred_at` | timestamptz | Not null |
 | `changes` | jsonb | `{ field: [old, new] }` |
+| `client_event_id` | uuid | Unique; the request's `actionId` (FR-042) |
 
 Written in the same transaction as the change it records. Visible to the owner only.
 
