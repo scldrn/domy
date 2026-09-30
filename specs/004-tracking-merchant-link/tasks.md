@@ -48,7 +48,7 @@ English kebab-case file names; Spanish URLs mapped in `apps/web/src/routes.ts`.
 ### Tests first
 
 - [ ] T002 [P] Write failing integration tests in `apps/server/tests/secret-codes.test.ts`: every shipment created singly or in bulk gets a 22-character `tracking_code` different from its tracking number; every merchant gets a `link_code`; codes are unique (FR-002, FR-021)
-- [ ] T003 [P] Write failing integration tests in `apps/server/tests/public-protection.test.ts`: `/api/public/*` answers without a session; the 61st request in a minute from one address gets `429` with a Spanish message; every public response carries `Cache-Control: no-store` and `X-Robots-Tag: noindex`; the public web routes carry `X-Robots-Tag: noindex` (FR-011, FR-012)
+- [ ] T003 [P] Write failing integration tests in `apps/server/tests/public-protection.test.ts`: `/api/public/*` answers without a session; the 61st request in a minute from one address gets `429` with a Spanish message; every public response carries `Cache-Control: no-store` and `X-Robots-Tag: noindex`; the public web routes carry `X-Robots-Tag: noindex`; a request with a forged `X-Forwarded-For` behind the proxy is still counted against its real address (FR-011, FR-012)
 
 ### Implementation
 
@@ -99,13 +99,13 @@ shipment
 ### Tests for User Story 2 ⚠️ write first, must fail
 
 - [ ] T017 [P] [US2] Write failing unit tests in `packages/domain/src/merchant-message.test.ts` for `composeMerchantMessage`: greeting with the merchant's name, one entry per shipment (recipient, neighborhood, tracking number, tracking link), the merchant link at the end, count and merchant link only above 20 shipments, voided shipments left out (FR-016)
-- [ ] T018 [P] [US2] Integration tests in `apps/server/tests/notifications.test.ts` covering spec US2 scenarios 1, 3, 4, 7: `GET /api/notifications` lists every merchant with shipments on the date with codes and `notifiedAt`, voided shipments left out; `POST /api/notifications` sets `notified_at` and `notified_by` once, writes `notified` events, and has one effect per `actionId`; `GET /api/shipments/:id` returns `trackingCode` and `notifiedAt`; a courier gets `403` (FR-015, FR-017, FR-018)
+- [ ] T018 [P] [US2] Integration tests in `apps/server/tests/notifications.test.ts` covering spec US2 scenarios 1, 3, 4, 7: `GET /api/notifications` lists every merchant with shipments on the date with codes and `notifiedAt`, voided shipments left out; `POST /api/notifications` sets `notified_at` and `notified_by` once, writes `notified` events, and has one effect per `actionId`; `GET /api/shipments/:id` returns `trackingCode` and `notifiedAt`; `GET /api/shipments/export` includes the column "Notificado"; a courier gets `403` (FR-015, FR-017, FR-018, Constitution IX)
 - [ ] T019 [P] [US2] End-to-end test in `apps/web/tests/e2e/notify-merchants.spec.ts`: quickstart scenarios 9–11, checking the `wa.me` address and message opened, the clipboard, and "Copiar enlace de seguimiento"
 
 ### Implementation for User Story 2
 
 - [ ] T020 [US2] Implement `packages/domain/src/merchant-message.ts` and `packages/domain/src/schemas/notifications.ts` until T017 passes
-- [ ] T021 [US2] Implement `GET` and `POST /api/notifications` in `apps/server/src/routes/notifications.ts` (mounted in `apps/server/src/app.ts`, owner and dispatcher) and the new fields of `GET /api/shipments/:id` in `apps/server/src/routes/shipments.ts`, until T018 passes
+- [ ] T021 [US2] Implement `GET` and `POST /api/notifications` in `apps/server/src/routes/notifications.ts` (mounted in `apps/server/src/app.ts`, owner and dispatcher) and the new fields of `GET /api/shipments/:id` and of the shipment export in `apps/server/src/routes/shipments.ts`, until T018 passes
 - [ ] T022 [US2] Build `apps/web/src/features/notifications/merchant-notify-row.tsx` ("Enviar por WhatsApp" opening `wa.me` in the same tap, "Copiar mensaje", "all the shipments of the date" option, prompt to add a missing WhatsApp number, the notification sent with an `actionId` and retried) and the page `apps/web/src/routes/notify-merchants.tsx` (`/notificar`) with its item in `apps/web/src/routes/panel-layout.tsx` and the reminder when the support contact is not set; add "Copiar enlace de seguimiento" and the notified time to `apps/web/src/features/shipments/shipment-detail.tsx`; until T019 passes
 
 **Checkpoint**: User Stories 1 and 2 give every recipient a link without manual writing
@@ -142,8 +142,8 @@ only that merchant's shipments, shows a delivered one's photo, and lets it see y
 - [ ] T030 [P] Extend `apps/server/tests/role-permissions.test.ts` with every endpoint of contracts/http-api.md: public endpoints without a session and read-only (no mutating method under `/api/public`); notifications and link replacement for owner and dispatcher only (FR-024)
 - [ ] T031 [P] Add `apps/server/tests/public-codes-scan.test.ts` (SC-005): 1,000 random codes against both public endpoints find nothing and all get the same answer
 - [ ] T032 [P] Extend the accessibility checks in `apps/web/tests/e2e/fixtures.ts` to the tracking page, the merchant page, and "Notificar clientes": WCAG 2.2 AA and usability at 320 px (FR-023)
-- [ ] T033 [P] Add to the go-live section of `README.md` the couriers' authorization to show their first name and phone on tracking pages (Ley 1581 de 2012, research R11) and the `PUBLIC_BASE_URL` setting
-- [ ] T034 Run every scenario of `specs/004-tracking-merchant-link/quickstart.md` (1–14) on a phone with mobile data and record the results in `specs/004-tracking-merchant-link/quickstart-results.md`
+- [ ] T033 [P] Add to the go-live section of `README.md` the couriers' authorization to show their first name and phone on tracking pages, required by Constitution VII (v1.2.0) and Ley 1581 de 2012, and the `PUBLIC_BASE_URL` setting
+- [ ] T034 Run every scenario of `specs/004-tracking-merchant-link/quickstart.md` (1–14) on a phone with mobile data measure the time to notify every merchant of a day (SC-001), and record the results in `specs/004-tracking-merchant-link/quickstart-results.md`
 - [ ] T035 Confirm `pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` pass with zero warnings
 
 ---

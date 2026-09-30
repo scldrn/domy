@@ -29,6 +29,7 @@ no es válido".
 ## Changes to earlier contracts
 
 - **`GET /api/shipments/:id`**: gains `trackingCode`, `notifiedAt`, `notifiedBy` (FR-018).
+- **`GET /api/shipments/export`**: gains the column "Notificado" with the time (Constitution IX).
 - **`GET /api/merchants/:id`**: gains `linkCode` (FR-021).
 - **`GET /api/settings`** and **`PATCH /api/settings`** (owner): gain `supportPhone` and
   `companyName` (FR-009).

@@ -60,13 +60,15 @@ clientes") and 3 panel additions
 | IV. Transactional Integrity & Traceability | Notifications write shipment events; replacing a merchant link writes an audit event; nothing is deleted | ✅ |
 | V. Type Safety at Every Boundary | Zod schemas for public responses and panel requests in `packages/domain`; public endpoints serialize only the domain views | ✅ |
 | VI. Test-First Business Logic | The views and the message are written test-first, with every status and kind; integration tests for isolation, expiry, uniform `404`, rate limit, and headers; Playwright for the constitution-named critical flow "public tracking page", including a slow network | ✅ |
-| VII. Effortless UX | Spanish plain-language statuses; tracking page without login or installation, exposing only what the recipient already knows plus what the owner approved (decision #8); M3 design system; 320 px; WCAG 2.2 AA; two taps per merchant | ✅ |
+| VII. Effortless UX | Spanish plain-language statuses; tracking page without login or installation, exposing only what the recipient already knows plus the bounded exception of Principle VII (v1.2.0): the courier's first name and phone while on the way, and the received-by name; M3 design system; 320 px; WCAG 2.2 AA; two taps per merchant | ✅ |
 | VIII. Absolute Repository Order | Files in the places feature 001 defined; new terms in the glossary | ✅ |
-| IX. Security, Privacy & Data Ownership | 128-bit random codes, never the tracking number; merchant links replaceable; photos only through a valid merchant link; `noindex`, `no-store`, uniform `404`, rate limit; couriers' authorization to show their name and phone noted for go-live | ✅ |
+| IX. Security, Privacy & Data Ownership | 128-bit random codes, never the tracking number; merchant links replaceable; photos only through a valid merchant link; `noindex`, `no-store`, uniform `404`, rate limit; couriers' authorization to show their name and phone collected before go-live, as Principle VII requires | ✅ |
 
 **Post-design re-check (after Phase 1)**: ✅ all principles hold. The design needs no new
 table: notifications are shipment events plus two columns, and expiry is derived from the
-event history.
+event history. `/speckit-analyze` found that showing the courier's name and phone and the
+received-by name went beyond Principle VII as written; the constitution was amended to
+v1.2.0 with a bounded exception approved by the owner.
 
 ## Project Structure
 

@@ -66,8 +66,10 @@ statuses, custody, stops, photos, and settings by features
 
 - **Decision**: a fixed-window limit of 60 requests per minute per client address on
   `/api/public/*`, kept in memory in `apps/server/src/lib/rate-limit.ts`; a limited request
-  gets `429` with a Spanish message. The client address comes from Caddy's
-  `X-Forwarded-For`. Unknown, deactivated, and replaced codes all return the same `404`.
+  gets `429` with a Spanish message. The client address is the value of
+  `X-Forwarded-For` set by Caddy, which replaces any value sent by the client (no trusted
+  proxies configured); the server listens only on the internal Docker network, so every
+  request passes through Caddy. Unknown, deactivated, and replaced codes all return the same `404`.
   Public responses carry `Cache-Control: no-store` and `X-Robots-Tag: noindex`, and the
   public web routes are served with `X-Robots-Tag: noindex`.
 - **Rationale**: FR-011, FR-012. One server process (Principle I) makes an in-memory counter
@@ -122,6 +124,6 @@ statuses, custody, stops, photos, and settings by features
 - **Decision**: `company_settings` (feature 003) gains `support_phone` and `company_name`
   (default "Cohex"), edited by the owner on the settings page. Couriers' first names and
   phones are shown to recipients (decision #8); the couriers' authorization for this use
-  of their data is collected by the business when they join (Ley 1581 de 2012) and noted in
-  the go-live checklist.
+  of their data MUST be collected before go-live (Constitution VII, v1.2.0; Ley 1581 de
+  2012) and is part of the go-live checklist.
 - **Rationale**: FR-009; Constitution IX.
