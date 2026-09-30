@@ -11,7 +11,7 @@ import {
 import type { ReactNode } from "react";
 import { ShipmentStatusChip } from "@/components/shipment-status-chip";
 import { Badge } from "@/components/ui/badge";
-import { formatCop, formatDate, formatDateTime, formatTime } from "@/lib/format";
+import { formatCop, formatDate, formatDateTime, formatWindow } from "@/lib/format";
 
 const eventLabels: Record<ShipmentEvent["type"], string> = {
   created: "Creado",
@@ -20,13 +20,6 @@ const eventLabels: Record<ShipmentEvent["type"], string> = {
   voided: "Anulado",
   status_changed: "Cambio de estado",
 };
-
-function windowText(start: string | null, end: string | null): string | null {
-  if (start && end) return `${formatTime(start)} – ${formatTime(end)}`;
-  if (end) return `Antes de las ${formatTime(end)}`;
-  if (start) return `Después de las ${formatTime(start)}`;
-  return null;
-}
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   if (children === null || children === undefined || children === "") return null;
@@ -103,7 +96,7 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         </Section>
 
         <Section title="Detalles">
-          <Row label="Franja">{windowText(shipment.windowStart, shipment.windowEnd)}</Row>
+          <Row label="Franja">{formatWindow(shipment.windowStart, shipment.windowEnd)}</Row>
           <Row label="Tamaño">
             {shipment.packageSize && packageSizeLabels[shipment.packageSize]}
           </Row>

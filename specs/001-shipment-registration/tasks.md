@@ -161,16 +161,21 @@ without reloading
 
 ### Tests for User Story 2 ⚠️ write first, must fail
 
-- [ ] T063 [P] [US2] Unit tests in `packages/domain/src/shipment-flags.test.ts` (FR-022): at risk from 45 minutes before `windowEnd`; late at and after it; only for `registered`, `assigned`, `dispatched`, `picked_up`, `exception`; never without `windowEnd`; past-day windows are late; remaining and overdue time in minutes, in days beyond 24 hours
-- [ ] T064 [P] [US2] Integration tests in `apps/server/tests/board.test.ts`: counts per status, list fields (FR-021), "pendientes de días anteriores" (earlier service date, not final) included in today's counts, filters by status, merchant, courier, rate zone, and flag, other dates, "today" resolved in `America/Bogota` at 19:30 (FR-039), `serverTime` present
-- [ ] T065 [P] [US2] End-to-end test in `apps/web/tests/e2e/dispatch-board.spec.ts`: quickstart scenarios 5–7 (flags with the fake clock, pending section, a change visible within 30 seconds in a second browser)
+- [X] T063 [P] [US2] Unit tests in `packages/domain/src/shipment-flags.test.ts` (FR-022): at risk from 45 minutes before `windowEnd`; late at and after it; only for `registered`, `assigned`, `dispatched`, `picked_up`, `exception`; never without `windowEnd`; past-day windows are late; remaining and overdue time in minutes, in days beyond 24 hours
+- [X] T064 [P] [US2] Integration tests in `apps/server/tests/board.test.ts`: counts per status, list fields (FR-021), "pendientes de días anteriores" (earlier service date, not final) included in today's counts, filters by status, merchant, courier, rate zone, and flag, other dates, "today" resolved in `America/Bogota` at 19:30 (FR-039), `serverTime` present
+- [X] T065 [P] [US2] End-to-end test in `apps/web/tests/e2e/dispatch-board.spec.ts`: quickstart scenarios 5–7 (flags with the fake clock, pending section, a change visible within 30 seconds in a second browser)
 
 ### Implementation for User Story 2
 
-- [ ] T066 [P] [US2] Implement `packages/domain/src/shipment-flags.ts` until T063 passes
-- [ ] T067 [US2] Implement `GET /api/shipments/board` in `apps/server/src/routes/shipments.ts` (`DispatchBoard` schema in `packages/domain/src/schemas/board.ts`) until T064 passes
-- [ ] T068 [P] [US2] Build `apps/web/src/features/board/board-filters.tsx` (status, merchant, courier, rate zone, and flag chips; state in typed URL search params) and `apps/web/src/features/board/status-counts.tsx`
-- [ ] T069 [US2] Build `apps/web/src/features/board/board-table.tsx`, `apps/web/src/features/board/pending-section.tsx`, and the route `apps/web/src/routes/dispatch-board.tsx` (`/`): polling every 20 seconds paused when hidden, flags recomputed every 30 seconds with the corrected clock, date picker, empty and loading states, until T065 passes
+- [X] T066 [P] [US2] Implement `packages/domain/src/shipment-flags.ts` until T063 passes
+- [X] T067 [US2] Implement `GET /api/shipments/board` in `apps/server/src/routes/shipments.ts` (`DispatchBoard` schema in `packages/domain/src/schemas/board.ts`) until T064 passes
+- [X] T068 [P] [US2] Build `apps/web/src/features/board/board-filters.tsx` (status, merchant, courier, rate zone, and flag chips; state in typed URL search params) and `apps/web/src/features/board/status-counts.tsx`
+- [X] T069 [US2] Build `apps/web/src/features/board/board-table.tsx`, `apps/web/src/features/board/pending-section.tsx`, and the route `apps/web/src/routes/dispatch-board.tsx` (`/`): polling every 20 seconds paused when hidden, flags recomputed every 30 seconds with the corrected clock, date picker, empty and loading states, until T065 passes
+
+**Note**: shipments get a courier only through routes (feature 002), so the courier column and
+the courier filter of FR-021 and FR-023 arrive with 002 T030. Board filtering and flags live
+once in `packages/domain/src/dispatch-board.ts` (`filterBoard`), shared by the endpoint and the
+page, which fetches the whole date and recomputes flags every 30 seconds.
 
 **Checkpoint**: User Stories 1 and 2 form the office MVP
 

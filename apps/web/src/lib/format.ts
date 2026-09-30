@@ -36,3 +36,11 @@ export function formatTime(value: Date | string): string {
 export function formatDateTime(value: Date | string): string {
   return `${formatDate(new Date(value))}, ${formatTime(value)}`;
 }
+
+/** "2:30 p. m. – 5:00 p. m.", "Antes de las 5:00 p. m.", or null without a window. */
+export function formatWindow(start: string | null, end: string | null): string | null {
+  if (start && end) return `${formatTime(start)} – ${formatTime(end)}`;
+  if (end) return `Antes de las ${formatTime(end)}`;
+  if (start) return `Después de las ${formatTime(start)}`;
+  return null;
+}

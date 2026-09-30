@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
-import { routes } from "./src/routes";
+import { routes } from "./src/routes.ts";
 
 export default defineConfig({
   plugins: [

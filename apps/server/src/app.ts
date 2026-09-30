@@ -41,6 +41,8 @@ export function createApp(deps: AppDeps) {
       c.set("logger", deps.logger.child({ requestId: c.get("requestId") }));
       const started = performance.now();
       await next();
+      // Clients correct their clock with this header (research R9); it follows the fake clock.
+      c.header("Date", deps.clock().toUTCString());
       c.get("logger").info(
         {
           method: c.req.method,

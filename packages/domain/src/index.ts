@@ -8,3 +8,6 @@ export * from "./text-normalization.ts";
 export * from "./tracking-numbers.ts";
 export * from "./schemas/enums.ts";
 export * from "./schemas/shipment.ts";
+export * from "./shipment-flags.ts";
+export * from "./schemas/board.ts";
+export * from "./dispatch-board.ts";

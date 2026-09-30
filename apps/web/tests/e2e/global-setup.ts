@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { apiPort, webPort } from "./ports";
@@ -107,9 +107,17 @@ export default async function globalSetup() {
   ]);
   if (result.exitCode !== 0) throw new Error(`Test data failed: ${result.output}`);
 
+  // Request logs are discarded (an unread pipe fills up and stalls the servers mid-run). Each
+  // server leads its own process group so teardown also stops what `pnpm exec` started.
+  const options = { stdio: ["ignore", "ignore", "inherit"], detached: true } satisfies SpawnOptions;
   const processes: ChildProcess[] = [
-    spawn("node", ["src/index.ts"], { cwd: serverDir, env: { ...process.env, ...env } }),
+    spawn("node", ["src/index.ts"], {
+      ...options,
+      cwd: serverDir,
+      env: { ...process.env, ...env },
+    }),
     spawn("pnpm", ["exec", "vite", "--port", String(webPort), "--strictPort"], {
+      ...options,
       cwd: webDir,
       env: { ...process.env, API_PORT: String(apiPort) },
     }),
@@ -152,7 +160,7 @@ export default async function globalSetup() {
   await saveStorageState("courier", await signIn("courier@example.com"));
 
   return async () => {
-    for (const child of processes) child.kill();
+    for (const child of processes) if (child.pid) process.kill(-child.pid);
     await container.stop();
   };
 }

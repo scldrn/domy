@@ -120,7 +120,7 @@ verify progress, flags, and the unassigned count within 30 seconds
 
 ### Implementation for User Story 2
 
-- [ ] T030 [US2] Implement `GET /api/routes/board` in `apps/server/src/routes/routes.ts` and the status recalculation used by every transaction that changes a task (`isRouteFinished` → `finished` with a `finished` event) in `apps/server/src/lib/route-status.ts`, and add `routeId` and `routeNumber` to `BoardShipment` in `packages/domain/src/schemas/board.ts` and to `GET /api/shipments/board` in `apps/server/src/routes/shipments.ts`, until T028 passes
+- [ ] T030 [US2] Implement `GET /api/routes/board` in `apps/server/src/routes/routes.ts` and the status recalculation used by every transaction that changes a task (`isRouteFinished` → `finished` with a `finished` event) in `apps/server/src/lib/route-status.ts`, and add `routeId`, `routeNumber`, and `courier` to `BoardShipment` (with the `courierId` filter of 001 FR-023 in `filterBoard`, `packages/domain/src/dispatch-board.ts`) in `packages/domain/src/schemas/board.ts` and to `GET /api/shipments/board` in `apps/server/src/routes/shipments.ts`, until T028 passes
 - [ ] T031 [P] [US2] Build `apps/web/src/features/routes/route-summary-card.tsx` (number, courier, status, progress, "Valor a recaudar", at-risk, late, and pending handover counts)
 - [ ] T032 [US2] Build `apps/web/src/routes/routes-board.tsx` (`/rutas`): routes of the date, "Rutas de días anteriores", "Sin asignar" with its count, polling every 20 seconds, empty states (FR-027); and add the route number column to `apps/web/src/features/board/board-table.tsx`, until T029 passes
 

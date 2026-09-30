@@ -1,0 +1,42 @@
+import { z } from "zod";
+import type { ShipmentStatus } from "../shipment-lifecycle.ts";
+import { shipmentKind, shipmentStatus } from "./enums.ts";
+import { calendarDate } from "./shipment.ts";
+
+/** Board filters (FR-023); `fee_review` marks shipments whose fee the owner must confirm. */
+export const boardFlag = z.enum(["at_risk", "late", "fee_review"]);
+export type BoardFlag = z.infer<typeof boardFlag>;
+
+export const boardQuery = z.object({
+  date: calendarDate.optional(),
+  status: shipmentStatus.optional(),
+  merchantId: z.uuid().optional(),
+  rateZoneId: z.uuid().optional(),
+  flag: boardFlag.optional(),
+});
+export type BoardQuery = z.infer<typeof boardQuery>;
+
+export type BoardShipment = {
+  id: string;
+  trackingNumber: string;
+  kind: z.infer<typeof shipmentKind>;
+  status: ShipmentStatus;
+  serviceDate: string;
+  merchant: { id: string; name: string };
+  recipientName: string | null;
+  recipientNeighborhood: { id: string; name: string } | null;
+  rateZone: { id: string; name: string } | null;
+  windowStart: string | null;
+  windowEnd: string | null;
+  codAmount: number;
+  feeNeedsReview: boolean;
+};
+
+/** The dispatch board of a date (FR-021); `serverTime` corrects the client's clock (R9). */
+export type DispatchBoard = {
+  date: string;
+  serverTime: string;
+  counts: Record<ShipmentStatus, number>;
+  shipments: BoardShipment[];
+  pendingFromPreviousDays: BoardShipment[];
+};

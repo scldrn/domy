@@ -1,20 +1,24 @@
 import {
+  boardQuery,
   bogotaToday,
   calculateFee,
   codAmountError,
   feeQuoteInput,
+  filterBoard,
   generateTrackingNumber,
   normalizeText,
   normalizeTrackingNumber,
   resolveCodAmount,
   shipmentCreateInput,
   windowFromPreset,
+  type BoardShipment,
+  type DispatchBoard,
   type RateEntry,
   type Shipment,
   type ShipmentDetail,
   type ShipmentKind,
 } from "@domy/domain";
-import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -406,6 +410,63 @@ export const shipmentRoutes = new Hono<AppEnv>()
         ),
       );
     return c.json({ trackingNumbers: rows.map((row) => row.trackingNumber) });
+  })
+  // Dispatch board (FR-021–FR-023, FR-039): the date's shipments and, on today's board, the
+  // pending ones of earlier days; filters and flags use the server clock.
+  .get("/board", validate("query", boardQuery), async (c) => {
+    const { date: requested, ...filters } = c.req.valid("query");
+    const now = c.get("clock")();
+    const today = bogotaToday(now);
+    const date = requested ?? today;
+    const rows = await c
+      .get("db")
+      .select({
+        id: shipments.id,
+        trackingNumber: shipments.trackingNumber,
+        kind: shipments.kind,
+        status: shipments.status,
+        serviceDate: shipments.serviceDate,
+        merchant: { id: merchants.id, name: merchants.name },
+        recipientName: shipments.recipientName,
+        recipientNeighborhood: { id: neighborhoods.id, name: neighborhoods.name },
+        rateZone: { id: rateZones.id, name: rateZones.name },
+        windowStart: shipments.windowStart,
+        windowEnd: shipments.windowEnd,
+        codAmount: shipments.codAmount,
+        feeNeedsReview: shipments.feeNeedsReview,
+      })
+      .from(shipments)
+      .innerJoin(merchants, eq(merchants.id, shipments.merchantId))
+      .leftJoin(neighborhoods, eq(neighborhoods.id, shipments.recipientNeighborhoodId))
+      .leftJoin(rateZones, eq(rateZones.id, shipments.rateZoneId))
+      .where(
+        date === today
+          ? or(
+              eq(shipments.serviceDate, date),
+              and(
+                lt(shipments.serviceDate, date),
+                notInArray(shipments.status, ["delivered", "returned", "voided"]),
+              ),
+            )
+          : eq(shipments.serviceDate, date),
+      )
+      .orderBy(
+        asc(shipments.serviceDate),
+        sql`${shipments.windowEnd} asc nulls last`,
+        asc(shipments.registeredAt),
+      );
+    const all: BoardShipment[] = rows.map((row) => ({
+      ...row,
+      recipientNeighborhood: present(row.recipientNeighborhood),
+      rateZone: present(row.rateZone),
+      windowStart: row.windowStart?.toISOString() ?? null,
+      windowEnd: row.windowEnd?.toISOString() ?? null,
+    }));
+    return c.json({
+      date,
+      serverTime: now.toISOString(),
+      ...filterBoard(date, all, filters, now),
+    } satisfies DispatchBoard);
   })
   .get("/", validate("query", z.object({ trackingNumber: z.string() })), async (c) => {
     const trackingNumber = normalizeTrackingNumber(c.req.valid("query").trackingNumber);

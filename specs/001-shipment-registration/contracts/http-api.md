@@ -70,6 +70,7 @@ are `camelCase`.
   alias, recipient name (trigram), and recipient phone (digits only).
 - `serverTime` lets the client correct its clock for flags (research R9).
 - `flag` accepts `at_risk`, `late`, and `fee_review`.
+- `courierId` takes effect with feature 002, when shipments get a courier through routes.
 - `ShipmentUpdateInput` never contains `trackingNumber`, `merchantId`, or `kind` (FR-015).
 
 ## Bulk registration
