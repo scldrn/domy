@@ -64,6 +64,7 @@ one Spanish name shown to users.
 | unassigned | Sin asignar | — | Registered shipments that are not on any route. |
 | reassignment | Reasignación | — | Moving a shipment or a whole route to another courier, with a reason. |
 | custody | Custodia | "Quién lo tenía" | Which courier is responsible for a shipment at each moment. |
+| handover | Traspaso | — | Transfer of a picked-up shipment from one courier to another; pending ("Traspaso pendiente") until the receiving courier confirms receipt. |
 | dispatch board | Tablero de despacho | Planilla | Live view of the day: pending, in route, delivered, exceptions, at-risk windows. |
 | delivery attempt | Intento de entrega | — | One visit to deliver. A shipment can have several. |
 | delivery exception | Novedad | Novedad | Event that prevents a normal delivery: recipient absent, wrong address, rejected, and others to be confirmed. |
