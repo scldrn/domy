@@ -40,7 +40,7 @@ without installation
 
 **Constraints**:
 - Public pages are read-only and expose only the fields of spec FR-003–FR-008, FR-014,
-  FR-018, and FR-019.
+  FR-019, and FR-020.
 - Codes are unguessable; invalid codes always get the same answer.
 - No automatic messages (Phase 3).
 

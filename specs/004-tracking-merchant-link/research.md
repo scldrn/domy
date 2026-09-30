@@ -26,7 +26,7 @@ statuses, custody, stops, photos, and settings by features
   created (single and bulk), and `merchants.link_code` when a merchant is
   created or its link is replaced. Both columns are unique and stored in plain text, because
   the dispatcher copies the links again later.
-- **Rationale**: FR-002, FR-020, Constitution IX ("unguessable random tokens, never
+- **Rationale**: FR-002, FR-021, Constitution IX ("unguessable random tokens, never
   sequential identifiers"). With 128 bits, trying links cannot find one (SC-005). The
   8-character tracking number (40 bits) stays a human reference, not a secret (feature 001,
   R6).
@@ -40,7 +40,7 @@ statuses, custody, stops, photos, and settings by features
   FR-010, and FR-014 for each status and kind: public status text (FR-005), reason text,
   "entregas antes de la tuya", courier's first name and phone (only when FR-007 allows), COD
   amount to pay, expiry. The public endpoint serializes only its result. A second function,
-  `merchantShipmentView`, does the same for the merchant page (FR-018, FR-019).
+  `merchantShipmentView`, does the same for the merchant page (FR-019, FR-020).
 - **Rationale**: SC-004 is verified by unit tests over every status and kind; nothing can
   leak by adding a column to a query (Constitution III and IX).
 
@@ -48,7 +48,8 @@ statuses, custody, stops, photos, and settings by features
 
 - **Decision**: `deliveriesBefore(stops, shipmentId)` in `packages/domain/src/routes.ts`
   counts pending delivery and return stops placed before the shipment's pending delivery
-  stop in the route's order.
+  stop in the route's order (before its pending pickup stop for a reverse pickup not yet
+  picked up).
 - **Rationale**: FR-006 with the stop order of feature 002; completed stops are skipped
   whatever their position (EC-06).
 
@@ -114,7 +115,7 @@ statuses, custody, stops, photos, and settings by features
 - **Decision**: `GET /api/public/merchant/:code/photos/:photoId` streams the object from the
   storage of feature 003 after checking that the photo belongs to a shipment of that
   merchant; there is no other public way to reach a photo.
-- **Rationale**: FR-019, FR-021; business master §4.5 (photos only on the merchant link).
+- **Rationale**: FR-020, FR-022; business master §4.5 (photos only on the merchant link).
 
 ## R11. Settings and privacy
 

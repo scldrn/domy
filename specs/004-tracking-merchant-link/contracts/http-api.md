@@ -14,22 +14,22 @@ no es válido".
 | Method and path | Response |
 | --- | --- |
 | `GET /api/public/tracking/:code` | `PublicTracking` (data-model.md §Public tracking view) (FR-001–FR-014) |
-| `GET /api/public/merchant/:code?date=YYYY-MM-DD` | `MerchantDay` = merchant name, date, shipments, totals, support; `date` defaults to today and must be within the last 30 days (`422 date_out_of_range`) (FR-018) |
-| `GET /api/public/merchant/:code/shipments/:id` | `MerchantShipment` (FR-019); `404` if the shipment is not the merchant's |
-| `GET /api/public/merchant/:code/photos/:photoId` | The image; `404` if the photo is not of the merchant's shipments or no longer exists (FR-019, FR-021) |
+| `GET /api/public/merchant/:code?date=YYYY-MM-DD` | `MerchantDay` = merchant name, date, shipments, totals, support; `date` defaults to today and must be within the last 30 days (`422 date_out_of_range`) (FR-019) |
+| `GET /api/public/merchant/:code/shipments/:id` | `MerchantShipment` (FR-020); `404` if the shipment is not the merchant's or is older than 30 days |
+| `GET /api/public/merchant/:code/photos/:photoId` | The image; `404` if the photo is not of the merchant's shipments or no longer exists (FR-020, FR-022) |
 
 ## Panel endpoints (roles: owner, dispatcher)
 
 | Method and path | Request → Response |
 | --- | --- |
 | `GET /api/notifications?date=YYYY-MM-DD` | → `{ merchants: { merchantId, name, whatsappPhone, linkCode, shipments: { id, trackingNumber, trackingCode, recipientName, neighborhood, notifiedAt }[] }[] }` (FR-015) |
-| `POST /api/notifications` | `{ actionId, shipmentIds }` → `204`; marks them notified (FR-017) |
-| `POST /api/merchants/:id/replace-link` | `{ actionId }` → `Merchant` with the new `linkCode`; audited (FR-020) |
+| `POST /api/notifications` | `{ actionId, shipmentIds }` → `204`; marks them notified; voided shipments are never listed (FR-016, FR-017) |
+| `POST /api/merchants/:id/replace-link` | `{ actionId }` → `Merchant` with the new `linkCode`; audited (FR-021) |
 
 ## Changes to earlier contracts
 
 - **`GET /api/shipments/:id`**: gains `trackingCode`, `notifiedAt`, `notifiedBy` (FR-018).
-- **`GET /api/merchants/:id`**: gains `linkCode` (FR-020).
+- **`GET /api/merchants/:id`**: gains `linkCode` (FR-021).
 - **`GET /api/settings`** and **`PATCH /api/settings`** (owner): gain `supportPhone` and
   `companyName` (FR-009).
 - **Shipment creation** (single and bulk): the server generates `tracking_code`; the

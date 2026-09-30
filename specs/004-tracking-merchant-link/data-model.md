@@ -42,13 +42,13 @@ chose "all the shipments of the date") writes new events and keeps the first
 | `merchantName`, `trackingNumber`, `kind`, `serviceDate`, `window`, `neighborhood`, `support` | Always, unless expired |
 | `statusText` | Always, from the table of spec FR-005 |
 | `reasonText` | Status `exception` without a return decided |
-| `deliveriesBefore` | Status `picked_up` on a route in progress |
+| `deliveriesBefore` | Status `picked_up` on a route in progress; for a reverse pickup, status `dispatched` |
 | `courier: { firstName, phone }` | Status `dispatched` or `picked_up` on a route in progress, no handover pending |
 | `amountToPay` | COD amount > 0 and status not `delivered`, `returned`, or `voided` |
 | `deliveredTo`, `deliveredAt` | Status `delivered` (for a carrier handoff: carrier name and destination town) |
 | `expired: true` | 7 days after the final status (research R5); then only `support` accompanies it |
 
-**Merchant view** (`merchantShipmentView`, FR-018, FR-019): for a date, each shipment's
+**Merchant view** (`merchantShipmentView`, FR-019, FR-020): for a date, each shipment's
 tracking number, merchant reference, recipient's name, neighborhood, status, window, fee
 (`feeToConfirm` while `fee_needs_review`), COD amount, and tracking link; day totals by
 status, of fees, of COD amounts, and of amounts collected by payment method; and, per

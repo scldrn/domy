@@ -186,7 +186,9 @@ and lets the merchant see yesterday.
   shipment and never changes.
 - **FR-003**: The tracking page MUST be in Spanish, under the Domy name, and show: the
   merchant's name, the tracking number, the status in plain words (FR-005), the service
-  date, the delivery window if any, and the support contact (FR-009).
+  date, the delivery window if any, the neighborhood of the recipient's address (for a
+  carrier handoff, the carrier and the destination town), and the support contact
+  (FR-009). Times are shown in Bogotá time as "3:45 p. m.".
 - **FR-004**: The tracking page MUST NOT show the proof-of-delivery photo, the recipient's
   name, phone, or full address, the fee, the pickup address, the history of changes, or
   any other shipment. The destination is shown only as its neighborhood.
@@ -194,7 +196,7 @@ and lets the merchant see yesterday.
 
   | Shipment | Text on the page |
   | --- | --- |
-  | "Registrado" or "Asignado" | "Recibimos tu envío" |
+  | "Registrado" or "Asignado" | "Recibimos tu envío"; "Reprogramado para {date}" after an exception |
   | "En ruta" | "Tu envío va a ser recogido" |
   | "Recogido" on a route in progress | "En camino" |
   | "Recogido" on no route, or held at the office | "Reprogramado" with the service date |
@@ -208,15 +210,21 @@ and lets the merchant see yesterday.
   envío no fue recibido".
 - **FR-006**: While a shipment is "Recogido" on a route in progress, the page MUST show how
   many pending delivery stops come before its own in the route's order, as "{N} entregas
-  antes de la tuya" ("Eres la siguiente entrega" when none), worded as an estimate. It is
-  not shown in any other state.
-- **FR-007**: The page MUST show the first name of the courier responsible for the shipment,
+  antes de la tuya" ("Eres la siguiente entrega" when none), worded as an estimate. For a
+  reverse pickup it is shown while the shipment is "En ruta" and counts the stops before
+  its pickup stop. It is not shown in any other state.
+- **FR-007**: The page MUST show the first name (the first word of the name) of the courier
+  responsible for the shipment,
   with buttons to call and to write on WhatsApp, only while the shipment is "En ruta" or
   "Recogido" on a route in progress and has no handover pending. The courier's phone is
   never shown after delivery, exception, return, or voiding.
-- **FR-008**: Wording MUST adapt to the shipment kind: a reverse pickup says the courier will
-  collect the package from the recipient; a carrier handoff shows "Entregado a la
-  transportadora {carrier}" and the destination town; an errand shows only its status.
+- **FR-008**: Wording MUST adapt to the shipment kind:
+  - a **reverse pickup** reads "Recogeremos el paquete en tu dirección" until it is picked
+    up, then "En camino al remitente", then "Entregado al remitente a las {time}"; "entregas
+    antes de la tuya" counts the stops before its pickup;
+  - a **carrier handoff** reads "Entregado a la transportadora {carrier} para {town}" when
+    delivered; the carrier's own tracking is outside this system;
+  - an **errand** reads "Programada", "En curso", or "Realizada", with no courier queue.
 - **FR-009**: The support contact (a phone number that can be called and written to on
   WhatsApp, and the company name "Cohex") MUST be set by the owner and shown on every
   tracking page and merchant page. While it is not set, no contact buttons are shown.
@@ -224,12 +232,14 @@ and lets the merchant see yesterday.
   became "Entregado", "Devuelto", or "Anulado"; after that it shows only that the link has
   expired, with the support contact. A reverted delivery or return makes the link current
   again.
-- **FR-011**: An invalid link MUST always get the same "enlace no válido" answer. The system
-  MUST limit how many links one origin can try, so codes cannot be found by trial.
+- **FR-011**: An invalid, replaced, or deactivated link MUST always get the same "enlace no
+  válido" answer. The system MUST refuse more than 60 requests a minute from one origin,
+  so codes cannot be found by trial. An expired link reveals nothing about its shipment.
 - **FR-012**: Tracking and merchant pages MUST ask search engines not to list them, and their
   link previews MUST show only the product name.
-- **FR-013**: An open tracking page MUST refresh on its own at least once a minute. It MUST
-  be readable within 3 seconds on a slow mobile connection.
+- **FR-013**: An open tracking page or merchant page MUST refresh on its own at least once
+  a minute. The tracking page MUST be readable within 3 seconds on a weak mobile connection
+  (about 1.5 Mbps with high latency).
 - **FR-014**: When a shipment has a COD amount greater than zero and is not yet delivered,
   returned, or voided, the page MUST show "Valor a pagar al recibir" with the amount.
 
@@ -239,7 +249,7 @@ and lets the merchant see yesterday.
   merchant with shipments, with the number of shipments and how many have not been included
   in a message ("Notificar clientes").
 - **FR-016**: For a merchant, the system MUST compose a message in Spanish with a greeting,
-  one entry per shipment not yet notified (recipient's name, neighborhood, tracking number,
+  one entry per shipment of the date not yet notified and not voided (recipient's name, neighborhood, tracking number,
   tracking link), and the merchant's private link. With more than 20 shipments, the message
   gives the count and the private link instead of the entries. The dispatcher can choose to
   include all the shipments of the date instead of only the new ones.
@@ -258,9 +268,10 @@ and lets the merchant see yesterday.
   tracking number, merchant reference, recipient's name, neighborhood, status, delivery
   window, fee ("por confirmar" while the owner has not confirmed it, feature 001 FR-035),
   COD amount, and a link to each tracking page; with totals by status, the day's totals of
-  fees, COD amounts to collect, and amounts collected by payment method, and a clear
+  fees, COD amounts to collect, and amounts collected by payment method (voided shipments
+  and reverted records excluded), and a clear
   message when there are none. It shows no balance and no netting (Phase 2).
-- **FR-020**: Opening a shipment on the merchant page MUST show: the status with its time,
+- **FR-020**: Opening a shipment of the last 30 days on the merchant page MUST show: the status with its time,
   the received-by name, the proof-of-delivery photos, the amount collected, and for an
   exception its reason, note, and every attempt. A photo that is pending or no longer
   available is replaced by a message. The page never shows the recipient's phone, the
@@ -268,7 +279,8 @@ and lets the merchant see yesterday.
 - **FR-021**: The merchant's private link MUST contain a secret code that cannot be guessed.
   The owner and the dispatcher MUST be able to copy it and to replace it; replacing it
   makes the previous link stop working at once. The replacement is recorded with author
-  and time.
+  and time; the merchant receives the new link in the next message (FR-016). Otherwise a
+  merchant link does not expire.
 - **FR-022**: The private link of a deactivated merchant MUST stop working. Photos on the
   merchant page MUST be reachable only through a valid private link.
 
@@ -297,14 +309,15 @@ and lets the merchant see yesterday.
 - **SC-001**: A dispatcher notifies every merchant of the day in under 2 minutes, with at
   most two taps per merchant.
 - **SC-002**: A tracking page reflects a change of status within 1 minute.
-- **SC-003**: A tracking page is readable within 3 seconds on a slow mobile connection.
+- **SC-003**: A tracking page is readable within 3 seconds on a weak mobile connection
+  (about 1.5 Mbps with high latency).
 - **SC-004**: No tracking page shows information outside the list of FR-003–FR-008 and
   FR-014, verified for every status and shipment kind.
 - **SC-005**: Trying 1,000 random links finds no shipment.
-- **SC-006**: After the first month, the dispatcher answers fewer than one "¿ya salió?"
-  question per ten shipments.
-- **SC-007**: The top merchant checks its day's shipments from its private link without
-  asking the dispatcher.
+- **SC-006**: In a pilot week after the first month, counted by the dispatcher, fewer than
+  one "¿ya salió?" question per ten shipments reaches the dispatcher.
+- **SC-007**: In the same week, the top merchant asks the dispatcher about the status of its
+  shipments less than once a day.
 
 ## Assumptions
 
