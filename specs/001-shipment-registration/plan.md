@@ -53,7 +53,7 @@ domain package)
 - The dispatch panel requires connectivity but never loses form data.
 
 **Scale/Scope**: about 20–40 shipments a day, 1–3 office users, 5–10 couriers, 130 active
-merchants; 7 user stories, 43 functional requirements, about 15 screens
+merchants; 7 user stories, 44 functional requirements, about 15 screens
 
 ## Constitution Check
 
@@ -62,14 +62,14 @@ merchants; 7 user stories, 43 functional requirements, about 15 screens
 | Principle | How this plan complies | Status |
 | --- | --- | --- |
 | I. Simplicity First | One server process (Hono also serves the built web app), one PostgreSQL, no queue or cache. Three workspace packages as ratified. Fuzzy search, idempotency, and audit use database features. No wrappers around Drizzle, Hono, or Better Auth | ✅ |
-| II. Zero Data Loss in the Field | Not a field feature. It reserves `client_event_id` and `occurred_at`/`recorded_at` on events for feature 003. Dispatch panel forms survive failures and expired sessions | ✅ |
+| II. Zero Data Loss in the Field | Every creation carries a client-generated `id` and is idempotent (FR-042); updates and voiding use `version`. Events have `occurred_at` and `recorded_at`, and `client_event_id` is reserved for the courier app (feature 003). Dispatch panel forms survive failures and expired sessions (FR-038). The device-persistence rules apply to feature 003 | ✅ |
 | III. Single Source of Truth | Lifecycle, fee rule, payment modes, delivery windows, flags, tracking numbers, and Zod schemas live in `packages/domain`, imported by server and web. Status changes only through the declared lifecycle. Money is integer COP; timestamps are UTC | ✅ |
 | IV. Transactional Integrity & Traceability | Shipment change and `shipment_events` row in one transaction. Checks for payment mode, kind fields, and voiding. Append-only rate card and events. No deletes | ✅ |
 | V. Type Safety at Every Boundary | Strict TypeScript with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. Zod on every request, env, and file input. Hono RPC types with no duplicate API types | ✅ |
 | VI. Test-First Business Logic | Domain rules written test-first; integration tests on real PostgreSQL; Playwright for this feature's critical flows; injected clock | ✅ |
 | VII. Effortless UX | Spanish glossary terms, M3 design system, keyboard-first registration, 48 dp targets, WCAG 2.2 AA | ✅ |
 | VIII. Absolute Repository Order | kebab-case files, structure below, ESLint and Prettier with zero warnings, Conventional Commits | ✅ |
-| IX. Security, Privacy & Data Ownership | Better Auth (no hand-rolled crypto). Server-side role checks on every route. Env validated at startup. CSV/Excel export. No bank accounts stored. PII kept out of logs | ✅ |
+| IX. Security, Privacy & Data Ownership | Better Auth (no hand-rolled crypto). Server-side role checks on every route. Env validated at startup. Export of shipments (CSV, Excel) and of every master data set (CSV). No bank accounts stored. PII kept out of logs | ✅ |
 
 **Post-design re-check (after Phase 1)**: ✅ all principles still hold.
 - The data model enforces payment-mode and kind rules with database checks.
@@ -87,6 +87,7 @@ specs/001-shipment-registration/
 ├── research.md
 ├── data-model.md
 ├── quickstart.md
+├── quickstart-results.md   # written by task T120 during validation
 ├── contracts/
 │   ├── http-api.md
 │   └── bulk-template.md
@@ -139,6 +140,7 @@ domy/
 │       │   ├── delivery-windows.ts
 │       │   ├── shipment-flags.ts
 │       │   ├── tracking-numbers.ts
+│       │   ├── bogota-time.ts
 │       │   ├── text-normalization.ts
 │       │   ├── money.ts
 │       │   ├── schemas/              # Zod schemas shared by server and web

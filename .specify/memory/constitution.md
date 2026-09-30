@@ -36,7 +36,7 @@ that can fail at 7 a.m. with couriers waiting.
   (server time of receipt). Business logic orders by `occurredAt`.
 - Pending actions MUST sync automatically on app open, on reconnection, and periodically,
   and the courier MUST always see how many actions are pending.
-- Evidence photos MUST be compressed on the device before storage or upload.
+- Proof-of-delivery photos MUST be compressed on the device before storage or upload.
 
 **Rationale**: couriers work in elevators, basements, and dead zones. A delivery that
 happened but was not recorded is a lost payment, a lost collection, and a customer dispute.
@@ -221,4 +221,4 @@ Quality gates (all MUST pass before a feature branch is merged):
 - Runtime development guidance for agents lives in `CLAUDE.md` and MUST stay consistent
   with this document.
 
-**Version**: 1.1.0 | **Ratified**: 2026-09-29 | **Last Amended**: 2026-09-30
+**Version**: 1.1.1 | **Ratified**: 2026-09-29 | **Last Amended**: 2026-09-30

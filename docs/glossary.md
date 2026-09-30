@@ -32,6 +32,7 @@ one Spanish name shown to users.
 | delivery | Entrega | Entrega | Standard kind: pickup point → recipient. |
 | reverse pickup | Recogida inversa (logística inversa) | Devolución | Kind that brings a product from a recipient back to the merchant. |
 | carrier handoff | Entrega a transportadora | Terminal, "se envía por Coonorte" | Kind whose destination is a bus terminal or carrier office; usually includes a disbursement for the shipping cost. |
+| handoff place | Punto de entrega a transportadora | Terminal, oficina | Catalog place where a carrier handoff is delivered: bus terminal, airport, or carrier office. It gives the rate zone. |
 | errand | Diligencia | Compra, consignación | Kind that is not a package movement: buying an item, making a bank deposit. |
 | merchant reference | Referencia del cliente | "D-254", pedido | The merchant's own order identifier, used to match statements. |
 | package size | Tamaño | Pequeño, mediano, grande | Small, medium, large, extra large. May affect the rate. |
@@ -67,6 +68,8 @@ one Spanish name shown to users.
 | received-by name | Recibido por | Quien recibe | Name of the person who physically received the shipment. Defaults to the recipient. |
 | at risk | En riesgo | — | Not delivered and less than 45 minutes before the latest delivery time. |
 | late | Atrasado | — | Not delivered after the latest delivery time. |
+| pending from previous days | Pendientes de días anteriores | — | Shipments with an earlier service date that are not delivered, returned, or voided; shown on today's dispatch board. |
+| audit event | Historial de cambios | Trazabilidad | Immutable record of who changed what and when, for shipments and for master data. |
 | tracking page | Página de seguimiento | — | Public page, opened by link, with the shipment's status. |
 
 ## Money
@@ -74,7 +77,10 @@ one Spanish name shown to users.
 | English (code) | Spanish (UI) | Legacy term | Definition |
 | --- | --- | --- | --- |
 | fee | Tarifa | Valor del servicio, domicilio | Price of a shipment, charged to the merchant. Integer COP, frozen at registration. |
-| rate card | Tarifario | — | Rates by zone, size, and service level; standard plus merchant-specific overrides. |
+| rate card | Tarifario | — | Rate per rate zone plus the express surcharge; standard plus merchant-specific overrides. |
+| express surcharge | Recargo exprés | Turbo, urgente | Fixed amount added to the zone rate for express service level. |
+| effective date | Vigencia | — | Calendar day from which a rate card entry applies. |
+| fee review | Tarifa por revisar | — | Mark on a shipment saved with a manual fee because no rate existed; the owner confirms or corrects it. |
 | COD amount | Valor a recaudar | Recaudo | Amount the merchant instructs the courier to collect at the door. Zero when nothing is collected. |
 | COD collection | Recaudo | Recaudo | Money actually received from the recipient. |
 | payment mode | Modalidad de pago | Contraentrega, solo entrega, prepagado | Preset that fills the COD amount: cash on delivery, recipient pays fee, merchant account. |

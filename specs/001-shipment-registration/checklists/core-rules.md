@@ -104,3 +104,6 @@
   characters (CHK017), merchant and shipment kind not editable after registration (CHK033),
   duplicate warning by recipient phone when there is no reference (CHK036).
 - Data model, contracts, research, and quickstart were updated to match.
+- **2026-09-30, after `/speckit-analyze`**: the spec grew to 44 functional requirements
+  (FR-042 idempotent creation; FR-024, FR-025, FR-026 extended). No checklist item changed
+  state.
