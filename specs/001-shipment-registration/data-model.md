@@ -240,9 +240,12 @@ vocabulary, and are finalized by the features that own them.
 | --- | --- | --- | --- |
 | — | `registered` | Register (single or bulk) | **001** |
 | `registered`, `assigned`, `dispatched` | `voided` | Void with reason | **001** |
-| `registered` | `assigned` | Add to a route | 002 |
-| `assigned` | `registered` | Remove from a route | 002 |
+| `registered` | `assigned` | Add to a route in preparation | 002 |
+| `registered` | `dispatched` | Add to a route in progress | 002 |
+| `assigned` | `registered` | Remove from a route, or route cancelled | 002 |
 | `assigned` | `dispatched` | Dispatch route | 002 |
+| `dispatched` | `registered` | Remove before pickup | 002 |
+| `dispatched` | `assigned` | Undo dispatch | 002 |
 | `dispatched` | `picked_up` | Courier confirms pickup | 003 |
 | `picked_up` | `delivered` | Courier confirms delivery | 003 |
 | `picked_up` | `exception` | Courier reports a delivery exception | 003 |

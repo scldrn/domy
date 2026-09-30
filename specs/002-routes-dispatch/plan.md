@@ -46,7 +46,7 @@ route built and dispatched in under 2 minutes of user time (SC-001)
 - Spanish UI, WCAG 2.2 AA, including keyboard reordering of stops.
 
 **Scale/Scope**: about 3–6 routes a day of 8–9 deliveries over 2–3 pickups; 5 user stories,
-26 functional requirements, 3 screens (routes of the day, route builder and editor, route
+27 functional requirements, 3 screens (routes of the day, route builder and editor, route
 detail)
 
 ## Constitution Check

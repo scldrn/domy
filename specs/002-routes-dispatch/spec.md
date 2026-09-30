@@ -64,6 +64,10 @@ ruta", the route is "En curso" with its number, and every step is in the history
 7. **Given** courier A already has a route in progress, **When** the dispatcher tries to
    dispatch another route to A, **Then** the system refuses and offers to add the shipments
    to A's current route or to keep the new route in preparation.
+8. **Given** a route in preparation, **When** the dispatcher moves a stop using only the
+   keyboard, **Then** the stop changes position under the same rules as dragging.
+9. **Given** a selection of 16 shipments, **When** the dispatcher creates the route, **Then**
+   the system asks for confirmation before creating it.
 
 ---
 
@@ -218,6 +222,12 @@ are "Registrado" again and the route remains in history as "Cancelada".
   and is counted on the board until it is confirmed or cancelled (FR-018, FR-025).
 - **EC-13 Route dispatched by mistake**: while nothing has been picked up, the dispatch can
   be undone in one action (FR-026).
+- **EC-14 Shipment moved again while its handover is pending**: the pending handover is
+  cancelled and a new one starts from the courier who holds the package (FR-025).
+- **EC-15 Picked-up shipment and a route in preparation**: it cannot be moved there, because
+  the route may have no courier to receive it (FR-014).
+- **EC-16 Nothing to show**: no unassigned shipments, no routes, or no active couriers
+  produce a clear message with the next action (FR-027).
 
 ## Requirements *(mandatory)*
 
@@ -226,24 +236,34 @@ are "Registrado" again and the route remains in history as "Cancelada".
 **Building routes**
 
 - **FR-001**: The dispatcher and the owner MUST be able to see, for a service date, the
-  shipments not on any route ("Sin asignar"), grouped by pickup point and by rate zone, with
-  neighborhood, delivery window, COD amount, and flags.
-- **FR-002**: They MUST be able to create a route for a service date from one or more
-  selected shipments. The route gets a number that is unique within its service date, used
-  to name it ("Ruta 3").
-- **FR-003**: Only shipments in status "Registrado" can be added to a route, whatever their
-  service date up to the route's day or, for a route still in progress from an earlier day,
-  up to today; shipments keep their own service date.
+  shipments not on any route ("Sin asignar"), grouped by pickup point and, inside each
+  group, ordered by rate zone and neighborhood, with delivery window, COD amount, and
+  flags. The list MUST be filterable by rate zone and by merchant.
+- **FR-002**: They MUST be able to create a route for today or a future service date, never
+  a past one, from one or more selected shipments. The route gets a number that is unique
+  within its service date, used to name it ("Ruta 3"); a cancelled route keeps its number.
+- **FR-003**: Only shipments in status "Registrado" can be added to a route, and only when
+  their service date is not later than the later of the route's service date and today.
+  Example: a shipment dated yesterday can join today's route; a shipment dated tomorrow
+  cannot. Shipments keep their own service date.
 - **FR-004**: A shipment MUST belong to at most one route that is "En preparación" or "En
-  curso" at any time.
-- **FR-005**: The system MUST build the stops of a route: one pickup stop per distinct
-  pickup address, listing the shipments collected there, and one delivery stop per shipment.
-  For a reverse pickup, the pickup stop is the recipient's address and the delivery stop is
-  the merchant's pickup point; for a carrier handoff, the delivery stop is the handoff
-  place; an errand is a single stop. A route beyond 15 deliveries MUST ask for confirmation.
-- **FR-006**: The dispatcher MUST be able to reorder stops by dragging them, and with the
-  keyboard. A delivery stop MUST stay after the pickup stop of its shipment, and completed
-  stops MUST NOT move.
+  curso" at any time, even when two users act at the same moment.
+- **FR-005**: The system MUST build the stops of a route:
+  - one pickup stop per distinct pickup place, listing the shipments collected there; two
+    shipments share a pickup stop when they have the same pickup point, or the same one-off
+    address and neighborhood;
+  - one delivery stop per shipment, even when several deliveries go to the same place;
+  - for a reverse pickup, the pickup stop is the recipient's address and the delivery stop
+    is the merchant's pickup point; for a carrier handoff, the delivery stop is the handoff
+    place; an errand is a single stop.
+
+  A new route starts with its pickup stops first, then its delivery stops, each in the order
+  in which the shipments were selected. Creating or growing a route beyond 15 shipments MUST
+  ask for confirmation.
+- **FR-006**: In a route "En preparación" or "En curso", the dispatcher MUST be able to
+  reorder stops by dragging them and with the keyboard. A delivery stop MUST stay after the
+  pickup stop of its shipment (this includes reverse pickups); errand stops have no ordering
+  constraint; completed stops MUST NOT move. An invalid move is refused with an explanation.
 - **FR-007**: There is no automatic route optimization: the system groups and lists, and the
   dispatcher decides the order. The order is a recommendation for the courier, who may
   complete any pending stop (feature 003); only the dispatcher and the owner reorder stops.
@@ -252,84 +272,109 @@ are "Registrado" again and the route remains in history as "Cancelada".
 **Assigning and dispatching**
 
 - **FR-008**: The dispatcher MUST be able to set or change the courier of a route in
-  preparation, choosing among active couriers by name or alias.
+  preparation, choosing among active couriers by name or alias. No reason is required; the
+  change is recorded.
 - **FR-009**: Dispatching a route MUST require a courier and at least one shipment. It sets
   the route to "En curso" and its shipments to "En ruta", and makes the route available to
   that courier (feature 003). A courier MUST have at most one route in progress at a time,
-  counting routes of earlier service dates: dispatching a second one is refused, and the
-  dispatcher either adds the shipments to the current route or leaves the new route in
-  preparation. A courier may have any number of routes in preparation.
+  counting routes of earlier service dates, even when two users act at the same moment:
+  dispatching a second one is refused, and the dispatcher either adds the shipments to the
+  current route or leaves the new route in preparation. A courier may have any number of
+  routes in preparation.
 - **FR-010**: Deactivating a courier with routes in preparation or in progress MUST warn with
   their number; the routes stay assigned until the dispatcher reassigns them.
 
 **Adjusting**
 
 - **FR-011**: The dispatcher MUST be able to add shipments to a route in preparation or in
-  progress. An added shipment joins the pending pickup stop of its pickup address if one
-  exists, or gets a new pickup stop, and gets a delivery stop at the end; in a route in
-  progress it becomes "En ruta" directly.
+  progress. An added shipment joins the pending pickup stop of its pickup place if one
+  exists; otherwise it gets a new pickup stop placed at the end, immediately before its new
+  delivery stop, which is placed last. In a route in progress it becomes "En ruta"
+  directly.
 - **FR-012**: The dispatcher MUST be able to remove from a route a shipment that has not been
   picked up; it returns to "Registrado" and its stops are removed, together with a pickup
-  stop left empty. A route in progress whose shipments are all delivered, returned, voided,
-  in "Novedad", or removed becomes "Finalizada".
+  stop left empty. A route in progress becomes "Finalizada" when every one of its shipments
+  is delivered, returned, voided, in "Novedad", or removed, and it has no handover pending.
+  A route that is "Finalizada" or "Cancelada" never reopens: a shipment sent back for a new
+  attempt joins another route.
 - **FR-013**: Voiding a shipment (feature 001) MUST remove it from its route in the same
   operation. Editing the pickup point or address of a shipment on a route MUST update its
   stops.
 
 **Reassigning**
 
-- **FR-014**: The dispatcher MUST be able to reassign a shipment that is "Asignado", "En
-  ruta", or "Recogido" to another route that is in preparation or in progress, with a reason
-  of 5 to 200 characters. A shipment not yet picked up moves with both stops; a shipment
-  already picked up stays "Recogido" and only its delivery stop moves, as a pending
-  handover (FR-025).
-- **FR-015**: The dispatcher MUST be able to reassign a whole route in progress or in
-  preparation to another courier with a reason. Pending stops pass to the new courier;
-  completed stops keep the courier who did them. A route in progress can be reassigned only
-  to a courier without a route in progress; otherwise its shipments are reassigned into
-  that courier's current route (FR-014).
+- **FR-014**: The dispatcher MUST be able to move a shipment that is "Asignado", "En ruta",
+  or "Recogido" to another route, of the same or of another courier, with a reason:
+  - a shipment not yet picked up moves with both stops to a route in preparation or in
+    progress and takes the matching status ("Asignado" or "En ruta");
+  - a shipment already picked up can move only to a route in progress; it stays "Recogido"
+    and only its delivery stop moves. If the target route belongs to another courier, the
+    move creates a pending handover (FR-025); if it belongs to the same courier, no
+    handover is needed.
+- **FR-015**: The dispatcher MUST be able to reassign a whole route in progress to another
+  courier with a reason. Pending stops pass to the new courier; completed stops keep the
+  courier who did them; each shipment the previous courier had picked up and not delivered
+  gets a pending handover (FR-025). The route can be reassigned only to a courier without a
+  route in progress; otherwise its shipments are moved into that courier's current route
+  (FR-014). For a route in preparation, the courier is simply changed (FR-008).
 - **FR-016**: Every reassignment MUST record the previous courier, the new courier, the
-  reason, the author, and the time, in the history of the shipment and of the route.
-- **FR-025**: Reassigning a shipment already picked up MUST create a pending handover
+  reason, the author, and the time, in the history of the shipment and of the route. Every
+  reason in this feature (reassign, undo dispatch, cancel) MUST be a text of 5 to 200
+  characters.
+- **FR-025**: Moving a picked-up shipment to another courier MUST create a pending handover
   ("Traspaso pendiente"): custody stays with the previous courier until the receiving
-  courier confirms receipt (feature 003) or the dispatcher confirms it on their behalf,
-  marked as registered by dispatch. The receiving courier cannot deliver the shipment
-  before confirming. The dispatcher MUST be able to cancel a pending handover, which
-  returns the delivery stop to the previous courier's route. Confirmation and cancellation
-  are recorded with author and time.
+  courier confirms receipt (feature 003) or the owner or dispatcher confirms it on their
+  behalf, marked as registered by dispatch. The receiving courier cannot deliver the
+  shipment before confirming. Only the owner and the dispatcher can cancel a pending
+  handover, which returns the delivery stop to the previous courier's route. Moving the
+  shipment again while a handover is pending cancels it and creates a new one from the
+  courier who holds custody. Requests, confirmations, and cancellations are recorded with
+  author and time.
 
-**Cancelling**
+**Cancelling and undoing**
 
 - **FR-017**: The dispatcher MUST be able to cancel a route in preparation with a reason; its
   shipments return to "Registrado" and the route remains in history as "Cancelada". A route
   in progress cannot be cancelled. Routes are never deleted.
-- **FR-026**: While a route in progress has no completed stop, the dispatcher MUST be able
-  to undo its dispatch with a reason of 5 to 200 characters: the route returns to "En
+- **FR-026**: The dispatcher MUST be able to undo the dispatch of a route in progress with a
+  reason, while none of its stops is completed and none of its shipments has been picked
+  up (including shipments that arrived through a handover): the route returns to "En
   preparación", its shipments return to "Asignado", and it stops being available to the
-  courier. Once any stop is completed, undoing is refused.
+  courier. Otherwise undoing is refused.
 
 **Dispatch board**
 
 - **FR-018**: The dispatch board MUST show, for the selected date, every route with its
   number, courier, status, progress (completed stops out of total), total COD amount to
   collect, the number of its shipments at risk and late, and its handovers pending
-  confirmation, plus the count of shipments "Sin asignar". Today's board MUST also list, in
-  a separate section "Rutas de días anteriores", every route of an earlier service date that
-  is still "En curso"; a route stays "En curso" across days until it meets the "Finalizada"
-  rule (FR-012). Changes MUST appear within 30 seconds without a reload.
+  confirmation, plus the count of shipments "Sin asignar". The total to collect is the sum
+  of the COD amounts of the shipments currently on the route and does not change with
+  progress. Today's board MUST also list, in a separate section "Rutas de días anteriores",
+  every route of an earlier service date that is still "En curso"; a route stays "En curso"
+  across days until it meets the "Finalizada" rule (FR-012). Changes MUST appear within 30
+  seconds without a reload.
 - **FR-019**: Opening a route MUST show its stops in order with address, neighborhood,
-  shipments, delivery windows, and status, and the route's history.
+  shipments, delivery windows, and status, and the route's history. Route history and the
+  custody history of a shipment are visible to the owner and the dispatcher.
+- **FR-027**: The routes screen MUST show a clear message, with the next action available,
+  when there are no unassigned shipments, no routes for the selected date, or no active
+  couriers.
 
 **Integrity and access**
 
 - **FR-020**: Creating a route MUST carry a client-generated identifier, so a repeated
-  request never creates a second route; every other route action MUST have exactly one
+  request never creates a second route. Every other route action (add, remove, reorder, set
+  courier, dispatch, undo dispatch, move a shipment, reassign a route, confirm or cancel a
+  handover, cancel) MUST carry a client-generated action identifier and have exactly one
   effect when repeated (feature 001, FR-042).
-- **FR-021**: Concurrent changes to the same route MUST never overwrite each other silently.
+- **FR-021**: Concurrent changes to the same route MUST never overwrite each other silently:
+  the second change is refused with a message, the screen shows the latest version, and
+  the dispatcher's current selection is kept.
 - **FR-022**: Every route action (create, add, remove, reorder, set courier, dispatch, undo
-  dispatch, reassign, confirm or cancel a handover, cancel) MUST be recorded with author and
-  time in the route's history, and every shipment status change in the shipment's history
-  with the route it refers to.
+  dispatch, move a shipment, reassign a route, request, confirm, or cancel a handover,
+  cancel, and the automatic finish) MUST be recorded with author and time in the route's
+  history, and every shipment status change in the shipment's history with the route it
+  refers to.
 - **FR-023**: Only the owner and the dispatcher MUST be able to view and manage routes in the
   dispatch panel. A courier's access to their own routes is defined by feature 003.
 - **FR-024**: All user-facing text MUST be in Spanish (Colombia) with the glossary's UI
@@ -350,8 +395,10 @@ are "Registrado" again and the route remains in history as "Cancelada".
   (removed, or route cancelled); "Asignado" → "En ruta" (route dispatched); "Registrado" →
   "En ruta" (added to a route in progress); "En ruta" → "Registrado" (removed before
   pickup); "En ruta" → "Asignado" (dispatch undone).
-- **Custody**: which courier is responsible for a shipment at each moment. It changes at
-  pickup and at a confirmed handover, never at the reassignment itself.
+- **Custody**: which courier is responsible for a shipment at each moment. It begins at
+  pickup, passes to another courier only at a confirmed handover (never at the reassignment
+  itself), and ends at delivery or return to the merchant (pickup, delivery, and return are
+  recorded by feature 003).
 - **Handover**: the transfer of a picked-up shipment between couriers. From courier, to
   courier, reason, status (pending, confirmed, cancelled), who confirmed, and when.
 
@@ -361,13 +408,14 @@ are "Registrado" again and the route remains in history as "Cancelada".
 
 - **SC-001**: A dispatcher builds, orders, assigns, and dispatches a route of nine shipments
   from three pickup points in under 2 minutes.
-- **SC-002**: At any moment, 100 % of the day's shipments are either on exactly one active
-  route, in a final status, or counted as "Sin asignar"; none is unaccounted for.
+- **SC-002**: At any moment, every shipment that is not in a final status is either counted
+  as "Sin asignar" or on exactly one route in preparation or in progress.
 - **SC-003**: Route progress and flags on the dispatch board reflect any change within 30
   seconds.
 - **SC-004**: A dispatcher reassigns a shipment to another courier in under 30 seconds.
-- **SC-005**: For any shipment, the history answers "which courier had it, and when" for its
-  whole life, with no gaps.
+- **SC-005**: For any shipment, the ordered custody records (pickup, confirmed handovers,
+  delivery or return) leave no interval between pickup and delivery without a responsible
+  courier.
 - **SC-006**: A dispatcher builds the day's routes without a separate list or spreadsheet.
 
 ## Assumptions
@@ -387,3 +435,10 @@ are "Registrado" again and the route remains in history as "Cancelada".
 - The 15-delivery confirmation threshold is a guard against selection mistakes; typical
   routes have 8–9 deliveries over 2–3 pickups.
 - Finance (COD cash-up per route) is Phase 2; this feature only shows the total to collect.
+- Deferred to feature 003, which must define them consistently with this feature:
+  - what the dispatcher decides for a shipment in "Novedad" (new attempt, reschedule, or
+    return to sender) and the trip back to the merchant for a return; until that decision,
+    a shipment in "Novedad" stays on its route and cannot be moved or removed;
+  - how a courier's action recorded without signal is applied when the dispatcher has
+    meanwhile removed or moved that shipment; the courier's record must never be lost
+    (Constitution II).

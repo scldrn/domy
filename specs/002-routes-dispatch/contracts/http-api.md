@@ -20,10 +20,12 @@ record `id`s.
 | 409 | `courier_busy` | The courier already has a route in progress; includes `routeNumber` (FR-009) |
 | 409 | `invalid_stop_order` | A delivery stop before its pickup stop, or a completed stop moved (FR-006) |
 | 409 | `shipment_picked_up` | Removing a shipment already picked up (FR-012) |
-| 409 | `route_has_completed_stops` | Undoing a dispatch after a stop was completed (FR-026) |
+| 409 | `route_has_completed_stops` | Undoing a dispatch after a stop was completed or while the route holds a picked-up shipment (FR-026) |
+| 409 | `route_not_in_progress` | Moving a picked-up shipment to a route in preparation, or reassigning a whole route that is not in progress (FR-014, FR-015) |
+| 422 | `past_service_date` | Creating a route for a past date (FR-002) |
 | 409 | `route_in_progress` | Cancelling a route in progress (FR-017) |
 | 422 | `courier_required` | Dispatching without a courier (FR-009) |
-| 422 | `confirmation_required` | More than 15 deliveries without `confirmed: true` (FR-005) |
+| 422 | `confirmation_required` | More than 15 shipments without `confirmed: true` (FR-005) |
 
 ## Endpoints
 
@@ -40,8 +42,8 @@ record `id`s.
 | `POST /api/routes/:id/dispatch` | `{ actionId, version }` → `RouteDetail`; `422 courier_required`, `409 courier_busy` (FR-009) |
 | `POST /api/routes/:id/undo-dispatch` | `{ actionId, version, reason }` → `RouteDetail` (FR-026) |
 | `POST /api/routes/:id/cancel` | `{ actionId, version, reason }` → `RouteDetail` (FR-017) |
-| `POST /api/routes/:id/reassign` | `{ actionId, version, courierId, reason }` → `RouteDetail`; creates handovers for picked-up shipments (FR-015, FR-025) |
-| `POST /api/shipments/:id/reassign` | `{ actionId, toRouteId, reason }` → `{ shipment, handover? }` (FR-014, FR-025) |
+| `POST /api/routes/:id/reassign` | `{ actionId, version, courierId, reason }` (route in progress) → `RouteDetail`; creates handovers for picked-up shipments; `409 courier_busy` (FR-015, FR-025) |
+| `POST /api/shipments/:id/reassign` | `{ actionId, toRouteId, reason }` → `{ shipment, handover? }`; a handover is created only for a picked-up shipment moving to another courier, replacing any pending one (FR-014, FR-025) |
 | `POST /api/handovers/:id/confirm` | `{ actionId }` → `Handover` with `resolvedOnBehalf: true` (dispatcher confirms for the courier; the courier's own confirmation is feature 003) |
 | `POST /api/handovers/:id/cancel` | `{ actionId }` → `Handover`; the delivery task returns to the previous route (FR-025) |
 
