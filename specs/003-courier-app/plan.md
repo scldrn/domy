@@ -92,10 +92,12 @@ specs/003-courier-app/
 ├── research.md
 ├── data-model.md
 ├── quickstart.md
+├── quickstart-results.md   # written by task T085 during validation
 ├── contracts/
 │   └── http-api.md
 ├── checklists/
-│   └── requirements.md
+│   ├── requirements.md
+│   └── courier-rules.md
 └── tasks.md             # created by /speckit-tasks
 ```
 
@@ -120,7 +122,7 @@ apps/server/src/
 │   ├── settings.ts                   # company_settings
 │   ├── shipments.ts                  # + held_at_office, return_decided, needs_review
 │   ├── routes.ts                     # + stop kind return, route_tasks.problem_note
-│   └── couriers.ts                   # + last_synced_at
+│   └── directories.ts                # + couriers.last_synced_at
 ├── db/migrations/                    # one new reviewed migration
 ├── routes/
 │   ├── courier.ts                    # /api/courier/*
@@ -135,7 +137,7 @@ apps/server/src/
     ├── push.ts                       # web-push client
     └── storage.ts                    # S3 client: put, get
 
-apps/server/tests/                    # courier-*.test.ts, exception-decision.test.ts, photos.test.ts, setup/storage.ts
+apps/server/tests/                    # courier-*.test.ts, exception-decision.test.ts, office-receipt.test.ts, records-*.test.ts, photos.test.ts, setup/storage.ts
 
 apps/web/src/
 ├── sw.ts                             # service worker: app shell precache, notifications
@@ -171,7 +173,7 @@ apps/web/src/
     ├── location.ts                   # last known position
     └── push.ts                       # permission and subscription
 
-apps/web/tests/e2e/                   # courier-route.spec.ts, courier-offline.spec.ts, courier-exceptions.spec.ts, courier-changes.spec.ts
+apps/web/tests/e2e/                   # courier-*.spec.ts, exception-decision.spec.ts, records-on-behalf.spec.ts
 compose.yaml                          # + MinIO
 .env.example                          # + S3_*, VAPID_*
 ```
