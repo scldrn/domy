@@ -27,7 +27,7 @@ Design 3, PostgreSQL through Drizzle, Better Auth, and business rules in a share
   `write-excel-file`.
 - Web: React 19.3, Vite 8, TanStack Router 1 and TanStack Query 5, React Hook Form 7,
   Tailwind CSS 4.3, shadcn/ui (Base UI), Sonner, Papa Parse, `read-excel-file`,
-  `@material-symbols/svg-400`.
+  `@material-symbols/svg-400` with `vite-plugin-svgr`, `@tanstack/virtual-file-routes`.
 - Shared: Zod 4.
 - Tooling: `@material/material-color-utilities` (token generation), Sentry 11 (optional).
 
@@ -119,7 +119,8 @@ domy/
 │   └── web/
 │       ├── src/
 │       │   ├── main.tsx
-│       │   ├── routes/               # TanStack Router file routes
+│       │   ├── routes.ts             # virtual file routes: Spanish URLs → English route files
+│       │   ├── routes/               # TanStack Router route files
 │       │   ├── features/             # shipments/, board/, bulk/, history/, master-data/, auth/
 │       │   ├── components/ui/        # shadcn/ui components restyled to M3
 │       │   ├── styles/               # tokens.css (generated), globals.css
