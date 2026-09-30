@@ -105,7 +105,12 @@ a silent regression reproduces the exact errors the system was commissioned to r
 - The courier app MUST work on low-end Android phones (Android 10+ with Chrome) and on
   iPhone (iOS 16+ Safari, installed to the home screen).
 - The public tracking page MUST work without login or installation and MUST expose no
-  personal data beyond what the recipient already knows about their own shipment.
+  personal data beyond what the recipient already knows about their own shipment, with one
+  exception approved by the project owner: while the shipment is on its way, the first
+  name of the responsible courier and a phone to reach them; once delivered, the name of
+  the person who received it. Nothing else (no photos, no recipient phone or full address,
+  no fee). The couriers' authorization for this use of their data MUST be collected before
+  go-live (Ley 1581 de 2012).
 - Every error message MUST say what happened and what the user can do next.
 - Every interface MUST follow `docs/design-system.md` (Material Design 3 over Tailwind CSS
   and shadcn/ui); deviations require updating that document first.
@@ -221,4 +226,4 @@ Quality gates (all MUST pass before a feature branch is merged):
 - Runtime development guidance for agents lives in `CLAUDE.md` and MUST stay consistent
   with this document.
 
-**Version**: 1.1.1 | **Ratified**: 2026-09-29 | **Last Amended**: 2026-09-30
+**Version**: 1.2.0 | **Ratified**: 2026-09-29 | **Last Amended**: 2026-09-30

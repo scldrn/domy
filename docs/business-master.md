@@ -391,7 +391,7 @@ Numbering follows the question list of 2026-09-30.
 | 5c | Failed attempt billing | Who absorbs "la ida perdida": the merchant (fee charged) or the business? | **Open** (to verify) |
 | 6 | Proof of delivery | Photo requested but skippable; received-by name always recorded; 12-month retention (§4.4). | Resolved |
 | 7 | Roles | Owner (Santiago, full access), dispatcher (John, operations), courier. | Resolved |
-| 8 | Tracking page | Courier name, courier phone, support contact; no photo (§4.5). | Resolved |
+| 8 | Tracking page | Courier's first name and phone while on the way, received-by name, support contact; no photo (§4.5). Recorded as a bounded exception in Constitution VII (v1.2.0); couriers' authorization required before go-live. | Resolved |
 | 9 | WhatsApp message | To the merchant only (§4.5). | Resolved |
 | 10 | Anchetas | Registered as ordinary deliveries; whose product they are is unknown and does not block Phase 1. | Deferred |
 | 11 | Historical migration | Not contracted for now (§11). | Resolved |
