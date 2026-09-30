@@ -212,7 +212,7 @@ are "Registrado" again and the route remains in history as "Cancelada".
   "Registrado" again it can be added to any route (FR-003).
 - **EC-08 Route left empty**: a route in preparation with no shipments can be cancelled; a
   route in progress with no pending shipments becomes "Finalizada" (FR-012, FR-017).
-- **EC-09 Large selection**: creating or growing a route beyond 15 deliveries asks for
+- **EC-09 Large selection**: creating or growing a route beyond 15 shipments asks for
   confirmation (FR-005).
 - **EC-10 Response lost and the user retries**: no second route and no repeated effect
   (FR-020).
@@ -432,8 +432,8 @@ are "Registrado" again and the route remains in history as "Cancelada".
 - Handing a picked-up package from one courier to another happens in person; the receiving
   courier confirms it in their app (feature 003 provides that action), and the dispatcher
   can confirm on their behalf.
-- The 15-delivery confirmation threshold is a guard against selection mistakes; typical
-  routes have 8–9 deliveries over 2–3 pickups.
+- The 15-shipment confirmation threshold is a guard against selection mistakes; typical
+  routes have 8–9 shipments over 2–3 pickups.
 - Finance (COD cash-up per route) is Phase 2; this feature only shows the total to collect.
 - Deferred to feature 003, which must define them consistently with this feature:
   - what the dispatcher decides for a shipment in "Novedad" (new attempt, reschedule, or

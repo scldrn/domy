@@ -60,7 +60,7 @@ English kebab-case file names; Spanish URLs mapped in `apps/web/src/routes.ts`.
 
 ### Database
 
-- [ ] T009 [P] Define `routes`, `route_stops`, `route_tasks`, `handovers`, `route_events` and their enums in `apps/server/src/db/schema/routes.ts` per data-model.md, including: unique `(service_date, number)`; partial unique index on `(courier_id) WHERE status = 'in_progress'`; checks "`status in ('in_progress', 'finished') ⇒ courier_id is not null`" and "`status = 'cancelled' ⇔ cancel_reason is not null`"; `position` unique with `route_id` (deferrable); unique `(shipment_id, kind)` among tasks of routes `draft` or `in_progress`; partial unique index on `handovers (shipment_id) WHERE status = 'pending'`; `route_events.client_event_id` unique
+- [ ] T009 [P] Define `routes`, `route_stops`, `route_tasks`, `handovers`, `route_events` and their enums in `apps/server/src/db/schema/routes.ts` per data-model.md, including: unique `(service_date, number)`; partial unique index on `(courier_id) WHERE status = 'in_progress'`; checks "`status in ('in_progress', 'finished') ⇒ courier_id is not null`" and "`status = 'cancelled' ⇔ cancel_reason is not null`"; `position` unique with `route_id` (deferrable); partial unique index on `route_tasks (shipment_id, kind) WHERE status = 'pending'`; check "`blocked_by_handover_id is null or status = 'pending'`"; partial unique index on `handovers (shipment_id) WHERE status = 'pending'`; `route_events.client_event_id` unique and optional
 - [ ] T010 [P] Extend `apps/server/src/db/schema/shipments.ts`: `shipments.route_id`, `shipments.custody_courier_id`, the checks "`status = 'registered' ⇒ route_id is null`" and "`status in ('assigned', 'dispatched') ⇒ route_id is not null`", `shipment_events.route_id`, and the values `reassigned`, `handover_confirmed`, `handover_cancelled` in `shipment_event_type`
 - [ ] T011 Generate and review the migration for T009–T010 in `apps/server/src/db/migrations/`
 - [ ] T012 Create `apps/server/tests/setup/routes.ts`: helpers to create a route with shipments through the API, and a test-only helper that sets a task's status and a shipment's `picked_up` status directly, standing in for feature 003
@@ -88,7 +88,7 @@ and history
 - [ ] T015 [P] [US1] Integration tests in `apps/server/tests/shipments-unassigned.test.ts` (FR-001): only `registered` shipments with `service_date ≤` the date, with pickup point, rate zone, neighborhood, delivery window, COD amount, and flags; filters by rate zone and merchant
 - [ ] T016 [P] [US1] Integration tests in `apps/server/tests/routes-create.test.ts` covering spec US1 scenarios 1, 5, 6, 9: stops built per FR-005, shipments become `assigned`, route number unique per service date, `422 past_service_date`, the date rule of FR-003, `409 shipment_not_registered` for a shipment already on a route, `422 confirmation_required` beyond 15 shipments, two simultaneous creations that include the same shipment leave it on exactly one route (FR-004), a repeated create with the same `id` yields one route (FR-020), `created` event with author and time (FR-002, FR-022)
 - [ ] T017 [P] [US1] Integration tests in `apps/server/tests/routes-order-courier.test.ts` covering spec US1 scenarios 2 and 8 at the API level: `PUT /stop-order` accepts a valid order, returns `409 invalid_stop_order` for a delivery before its pickup and for a moved completed stop, `409 version_conflict` on a stale version, a repeated `actionId` has no second effect; `PATCH` sets and changes the courier of a route in preparation without a reason and records it (FR-006, FR-008, FR-021)
-- [ ] T018 [P] [US1] Integration tests in `apps/server/tests/routes-dispatch.test.ts` covering spec US1 scenarios 3, 4, 7: route `in_progress`, shipments `dispatched`, `dispatched` event; `422 courier_required`; `409 courier_busy` with the current route number, including a route in progress from an earlier day and two simultaneous dispatches to the same courier (FR-009)
+- [ ] T018 [P] [US1] Integration tests in `apps/server/tests/routes-dispatch.test.ts` covering spec US1 scenarios 3, 4, 7: route `in_progress`, shipments `dispatched`, `dispatched` event; `422 courier_required`; `422 route_empty` for a route with no shipments; `409 courier_busy` with the current route number, including a route in progress from an earlier day and two simultaneous dispatches to the same courier (FR-009)
 - [ ] T019 [P] [US1] End-to-end test in `apps/web/tests/e2e/route-build-dispatch.spec.ts`: quickstart scenarios 1–5, including reordering with the keyboard only
 
 ### Implementation for User Story 1
@@ -115,12 +115,12 @@ verify progress, flags, and the unassigned count within 30 seconds
 
 ### Tests for User Story 2 ⚠️ write first, must fail
 
-- [ ] T028 [P] [US2] Integration tests in `apps/server/tests/routes-board.test.ts` covering spec US2 scenarios 1–6: summary fields (number, courier, status, completed and total stops, COD to collect as the sum of the route's shipments, at-risk and late counts, pending handovers), `unassignedCount`, progress when stops are completed out of order, automatic `finished` when no task and no handover is pending, routes in progress from earlier dates under `routesFromPreviousDays`, `serverTime` (FR-012, FR-018)
+- [ ] T028 [P] [US2] Integration tests in `apps/server/tests/routes-board.test.ts` covering spec US2 scenarios 1–6: summary fields (number, courier, status, completed and total stops, COD to collect as the sum of the route's shipments, at-risk and late counts, pending handovers), `unassignedCount`, progress when stops are completed out of order, automatic `finished` when no task and no handover is pending, routes in progress from earlier dates under `routesFromPreviousDays`, `serverTime`; and `routeId` and `routeNumber` on each shipment of `GET /api/shipments/board` (FR-012, FR-018)
 - [ ] T029 [P] [US2] End-to-end test in `apps/web/tests/e2e/routes-board.spec.ts`: quickstart scenarios 6–8 (board content, change visible within 30 seconds in a second browser, "Rutas de días anteriores" with the fake clock)
 
 ### Implementation for User Story 2
 
-- [ ] T030 [US2] Implement `GET /api/routes/board` in `apps/server/src/routes/routes.ts` and the status recalculation used by every transaction that changes a task (`isRouteFinished` → `finished` with a `finished` event) in `apps/server/src/lib/route-status.ts`, until T028 passes
+- [ ] T030 [US2] Implement `GET /api/routes/board` in `apps/server/src/routes/routes.ts` and the status recalculation used by every transaction that changes a task (`isRouteFinished` → `finished` with a `finished` event) in `apps/server/src/lib/route-status.ts`, and add `routeId` and `routeNumber` to `BoardShipment` in `packages/domain/src/schemas/board.ts` and to `GET /api/shipments/board` in `apps/server/src/routes/shipments.ts`, until T028 passes
 - [ ] T031 [P] [US2] Build `apps/web/src/features/routes/route-summary-card.tsx` (number, courier, status, progress, "Valor a recaudar", at-risk, late, and pending handover counts)
 - [ ] T032 [US2] Build `apps/web/src/routes/routes-board.tsx` (`/rutas`): routes of the date, "Rutas de días anteriores", "Sin asignar" with its count, polling every 20 seconds, empty states (FR-027); and add the route number column to `apps/web/src/features/board/board-table.tsx`, until T029 passes
 
@@ -138,7 +138,7 @@ reorder two pending stops, and verify statuses, stops, and history
 
 ### Tests for User Story 3 ⚠️ write first, must fail
 
-- [ ] T033 [P] [US3] Integration tests in `apps/server/tests/routes-adjust.test.ts` covering spec US3 scenarios 1–5: added shipment joins the pending pickup stop or gets a new one at the end before its delivery stop; status `assigned` in a draft route and `dispatched` in one in progress; removal returns the shipment to `registered`, deletes its pending tasks and an empty pickup stop; `409 shipment_picked_up`; voiding a shipment removes it from its route in the same transaction; editing its pickup point or address updates its stops; the last removal finishes a route in progress; every action recorded and exactly-once (FR-011, FR-012, FR-013, FR-020, FR-022)
+- [ ] T033 [P] [US3] Integration tests in `apps/server/tests/routes-adjust.test.ts` covering spec US3 scenarios 1–5: added shipment joins the pending pickup stop or gets a new one at the end before its delivery stop; status `assigned` in a draft route and `dispatched` in one in progress; removal returns the shipment to `registered`, deletes its pending tasks and an empty pickup stop; adding is refused with `409 shipment_not_registered` for a shipment already on a route or dated after the rule of FR-003, and with `422 confirmation_required` when the route grows beyond 15 shipments; `409 shipment_picked_up`; `409 shipment_not_movable` for a shipment in "Novedad"; voiding a shipment removes it from its route in the same transaction; editing its pickup point or address updates its stops; the last removal finishes a route in progress; every action recorded and exactly-once (FR-003, FR-005, FR-011, FR-012, FR-013, FR-020, FR-022)
 - [ ] T034 [P] [US3] End-to-end test in `apps/web/tests/e2e/route-adjust.spec.ts`: quickstart scenarios 9–10
 
 ### Implementation for User Story 3
@@ -161,8 +161,8 @@ handover, reassign a whole route, and verify the history shows who had each ship
 
 ### Tests for User Story 4 ⚠️ write first, must fail
 
-- [ ] T038 [P] [US4] Integration tests in `apps/server/tests/shipments-reassign.test.ts` covering spec US4 scenarios 1, 2, 6 and FR-014: a shipment not picked up moves with both stops and takes the target route's status; a picked-up shipment moves only to a route in progress (`409 route_not_in_progress` otherwise) and only with its delivery stop; same courier → no handover; another courier → pending handover; reason of 5–200 characters required; `reassigned` events in the shipment and both routes with previous courier, new courier, reason, author, and time (FR-016)
-- [ ] T039 [P] [US4] Integration tests in `apps/server/tests/handovers.test.ts` covering spec US4 scenarios 3, 4 and FR-025: custody stays with the previous courier while pending; the blocked delivery task cannot be completed; confirmation by owner or dispatcher sets `resolved_on_behalf`, moves custody, and unblocks the task; cancellation returns the delivery task to the previous route; a courier cannot cancel; one pending handover per shipment; moving the shipment again cancels the pending handover and creates a new one from the courier in custody; events recorded
+- [ ] T038 [P] [US4] Integration tests in `apps/server/tests/shipments-reassign.test.ts` covering spec US4 scenarios 1, 2, 6 and FR-014: a shipment not picked up moves with both stops and takes the target route's status; a picked-up shipment moves only to a route in progress (`409 route_not_in_progress` otherwise) and only with its delivery stop; same courier → no handover; another courier → pending handover; `409 shipment_not_movable` for a shipment in "Novedad" or in a final status; reason of 5–200 characters required; the `version` of both routes increments; `reassigned` events in the shipment and both routes with previous courier, new courier, reason, author, and time (FR-016)
+- [ ] T039 [P] [US4] Integration tests in `apps/server/tests/handovers.test.ts` covering spec US4 scenarios 3, 4 and FR-025: custody stays with the previous courier while pending; the blocked delivery task cannot be completed (the database check refuses it); confirmation by owner or dispatcher sets `resolved_on_behalf`, moves custody, and unblocks the task; cancellation returns the delivery task to the previous route; a courier cannot cancel; one pending handover per shipment; moving the shipment again cancels the pending handover and creates a new one from the courier in custody; events recorded
 - [ ] T040 [P] [US4] Integration tests in `apps/server/tests/routes-reassign.test.ts` covering spec US4 scenario 5 and FR-015: pending stops pass to the new courier, completed tasks keep `completed_by_courier_id`, picked-up shipments get pending handovers, `409 courier_busy` when the new courier has a route in progress, `409 route_not_in_progress` for a route in preparation; and FR-010: deactivating a courier returns `openRoutes`
 - [ ] T041 [P] [US4] Integration test in `apps/server/tests/custody-history.test.ts` (SC-005): for a shipment picked up, handed over twice, and delivered, the ordered custody events leave no interval without a responsible courier
 - [ ] T042 [P] [US4] End-to-end test in `apps/web/tests/e2e/route-reassign.spec.ts`: quickstart scenarios 11–13
@@ -172,7 +172,7 @@ handover, reassign a whole route, and verify the history shows who had each ship
 - [ ] T043 [US4] Implement `POST /api/shipments/:id/reassign` in `apps/server/src/routes/shipments.ts` until T038 passes
 - [ ] T044 [US4] Implement `POST /api/handovers/:id/confirm` and `POST /api/handovers/:id/cancel` in `apps/server/src/routes/handovers.ts` until T039 passes
 - [ ] T045 [US4] Implement `POST /api/routes/:id/reassign` in `apps/server/src/routes/routes.ts` and add `openRoutes` to the courier deactivation response in `apps/server/src/routes/couriers.ts`, until T040 and T041 pass
-- [ ] T046 [P] [US4] Build `apps/web/src/features/routes/reassign-dialog.tsx` (target route or courier, reason) and `apps/web/src/features/routes/handover-badge.tsx` ("Traspaso pendiente" with confirm-on-behalf and cancel)
+- [ ] T046 [P] [US4] Build `apps/web/src/features/routes/reassign-dialog.tsx` (target route or courier, reason) and `apps/web/src/features/routes/handover-badge.tsx` ("Traspaso pendiente" with confirm-on-behalf and cancel); and show the open-routes warning when a courier is deactivated in `apps/web/src/features/master-data/couriers/` (FR-010)
 - [ ] T047 [US4] Build `apps/web/src/features/routes/route-history.tsx` (route events and the custody history of a shipment) and wire reassignment into `apps/web/src/routes/route-detail.tsx` and the shipment detail `apps/web/src/features/shipments/shipment-detail.tsx`, until T042 passes
 
 **Checkpoint**: custody of every package is traceable
@@ -203,7 +203,7 @@ nothing picked up; verify statuses and history
 ## Phase 8: Polish & Cross-Cutting Concerns
 
 - [ ] T052 [P] Extend `apps/server/tests/role-permissions.test.ts` with every endpoint of contracts/http-api.md: owner and dispatcher allowed, courier refused; no `DELETE` route registered (FR-023)
-- [ ] T053 [P] Add the invariant test `apps/server/tests/routes-invariants.test.ts` (SC-002): after a random sequence of route actions by two users, every shipment not in a final status is either unassigned or on exactly one route in preparation or in progress, and no courier has two routes in progress
+- [ ] T053 [P] Add the invariant test `apps/server/tests/routes-invariants.test.ts` (SC-002): after a random sequence of route actions by two users, every shipment not in a final status is either unassigned or on exactly one route in preparation or in progress, and no courier has two routes in progress; every action of the sequence is sent twice with the same `actionId` and has exactly one effect, and a stale `version` is always refused with `409 version_conflict` (FR-020, FR-021)
 - [ ] T054 [P] Extend the accessibility checks in `apps/web/tests/e2e/fixtures.ts` to the routes screens: WCAG 2.2 AA, keyboard-only reordering, and usability at 600 px wide (FR-024)
 - [ ] T055 Run every scenario of `specs/002-routes-dispatch/quickstart.md` (1–16) and record the results in `specs/002-routes-dispatch/quickstart-results.md`
 - [ ] T056 Confirm `pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` pass with zero warnings
@@ -223,9 +223,9 @@ nothing picked up; verify statuses and history
 
 - **US1 (P1)**: after Foundational
 - **US2 (P1)**: after US1 (needs routes and dispatch to show)
-- **US3 (P2)**: after US1
-- **US4 (P2)**: after US1; T039 and T041 use the test helper of T012 to mark pickups
-- **US5 (P3)**: after US1
+- **US3 (P2)**: after US1 and T030 (`lib/route-status.ts`)
+- **US4 (P2)**: after US1 and T030; T039 and T041 use the test helper of T012 to mark pickups
+- **US5 (P3)**: after US1 and T030
 
 US3, US4, and US5 are independent of each other.
 
@@ -238,7 +238,7 @@ US3, US4, and US5 are independent of each other.
 
 - Foundational: T002 and T003 together (T004 and T005 extend the same test file, in order); T008–T010 together
 - US1: T015–T019 together; T024–T026 together
-- After US1: US2, US3, US4, and US5 in parallel
+- After US1: US2; after T030: US3, US4, and US5 in parallel
 - Polish: T052–T054 together
 
 ---
