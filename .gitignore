@@ -18,3 +18,6 @@ playwright-report/
 
 # Playwright sessions written by the end-to-end global setup
 apps/web/tests/e2e/.auth/
+
+# TanStack Router generator cache
+.tanstack/

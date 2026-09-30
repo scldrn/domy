@@ -29,7 +29,9 @@ pnpm dev
 ```
 
 The seed prints the first owner's credentials once. The panel runs at
-<http://localhost:5173> and the API at <http://localhost:3000>.
+<http://localhost:5173>, the API at <http://localhost:3000>, and Adminer, a web interface to
+the development database, at <http://localhost:8080> (system PostgreSQL, server `postgres`,
+and the user, password, and database of `.env`).
 
 ## Quality gates
 

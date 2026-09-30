@@ -86,6 +86,27 @@ export default async function globalSetup() {
   const ownerPassword = /Password \(shown once\): (\S+)/.exec(seedOutput)?.[1];
   if (!ownerPassword) throw new Error("The seed did not create the owner account");
 
+  // Merchants and pickup points used by the tests (master data screens come later).
+  const sql = `
+    insert into merchants (id, name, name_normalized, whatsapp_phone)
+      values (gen_random_uuid(), 'Bullish Hype', 'bullish hype', '3000000001');
+    insert into pickup_points (id, merchant_id, label, address, neighborhood_id, is_default)
+      select gen_random_uuid(), m.id, 'Bodega Estadio', 'Cra 70 # 45-10', n.id, true
+      from merchants m, neighborhoods n where m.name = 'Bullish Hype' and n.name = 'El Estadio';
+    insert into pickup_points (id, merchant_id, label, address, neighborhood_id, is_default)
+      select gen_random_uuid(), m.id, 'Bodega Amy', 'Cl 30 # 65-15', n.id, true
+      from merchants m, neighborhoods n where m.name = 'Amy Tecnology' and n.name = 'Laureles';`;
+  const result = await container.exec([
+    "psql",
+    "-U",
+    container.getUsername(),
+    "-d",
+    container.getDatabase(),
+    "-c",
+    sql,
+  ]);
+  if (result.exitCode !== 0) throw new Error(`Test data failed: ${result.output}`);
+
   const processes: ChildProcess[] = [
     spawn("node", ["src/index.ts"], { cwd: serverDir, env: { ...process.env, ...env } }),
     spawn("pnpm", ["exec", "vite", "--port", String(webPort), "--strictPort"], {

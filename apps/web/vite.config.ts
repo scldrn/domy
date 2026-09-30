@@ -4,13 +4,14 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
+import { routes } from "./src/routes";
 
 export default defineConfig({
   plugins: [
     tanstackRouter({
       target: "react",
       autoCodeSplitting: true,
-      virtualRouteConfig: "./src/routes.ts",
+      virtualRouteConfig: routes,
       routesDirectory: "./src/routes",
       generatedRouteTree: "./src/route-tree.gen.ts",
     }),

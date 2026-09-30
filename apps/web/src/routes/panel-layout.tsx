@@ -1,3 +1,4 @@
+import AddBoxIcon from "@material-symbols/svg-400/rounded/add_box.svg?react";
 import DashboardIcon from "@material-symbols/svg-400/rounded/dashboard.svg?react";
 import LogoutIcon from "@material-symbols/svg-400/rounded/logout.svg?react";
 import type { UserRole } from "@domy/domain";
@@ -26,11 +27,17 @@ import {
 } from "@/components/ui/sidebar";
 import { sessionQuery, signOut } from "@/features/auth/session";
 
-type NavigationItem = { to: "/"; label: string; icon: Symbol; roles: UserRole[] };
+type NavigationItem = {
+  to: "/" | "/envios/nuevo";
+  label: string;
+  icon: Symbol;
+  roles: UserRole[];
+};
 
 /** Navigation of the dispatch panel; each feature adds its destinations. */
 const navigation: NavigationItem[] = [
   { to: "/", label: "Tablero", icon: DashboardIcon, roles: ["owner", "dispatcher"] },
+  { to: "/envios/nuevo", label: "Nuevo envío", icon: AddBoxIcon, roles: ["owner", "dispatcher"] },
 ];
 
 export const Route = createFileRoute("/_panel")({

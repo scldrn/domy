@@ -7,6 +7,11 @@ import type { Auth } from "./auth.ts";
 import type { Db } from "./db/client.ts";
 import type { Clock } from "./lib/clock.ts";
 import { handleError } from "./lib/errors.ts";
+import { carrierRoutes } from "./routes/carriers.ts";
+import { merchantRoutes } from "./routes/merchants.ts";
+import { municipalityRoutes, neighborhoodRoutes } from "./routes/neighborhoods.ts";
+import { rateZoneRoutes } from "./routes/rate-zones.ts";
+import { shipmentRoutes } from "./routes/shipments.ts";
 
 export type AppDeps = {
   db: Db;
@@ -47,7 +52,13 @@ export function createApp(deps: AppDeps) {
       );
     })
     .onError(handleError)
-    .on(["GET", "POST"], "/api/auth/*", (c) => deps.auth.handler(c.req.raw));
+    .on(["GET", "POST"], "/api/auth/*", (c) => deps.auth.handler(c.req.raw))
+    .route("/api/shipments", shipmentRoutes)
+    .route("/api/merchants", merchantRoutes)
+    .route("/api/neighborhoods", neighborhoodRoutes)
+    .route("/api/municipalities", municipalityRoutes)
+    .route("/api/carriers", carrierRoutes)
+    .route("/api/rate-zones", rateZoneRoutes);
 
   const { setNow } = deps;
   if (setNow) {

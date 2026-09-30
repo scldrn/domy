@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
@@ -25,6 +26,10 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "error",
       "@typescript-eslint/ban-ts-comment": ["error", { "ts-ignore": true }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { ignoreRestSiblings: true, varsIgnorePattern: "^_", argsIgnorePattern: "^_" },
+      ],
       // TanStack Router redirects and not-found results are thrown by design.
       "@typescript-eslint/only-throw-error": [
         "error",
@@ -38,6 +43,17 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    files: ["apps/web/src/**/*.{ts,tsx}"],
+    ...reactHooks.configs.flat["recommended-latest"],
+  },
+  {
+    // Asymmetric matchers (expect.any, expect.arrayContaining) are typed `any` by design.
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/tests/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "off",
     },
   },
   {

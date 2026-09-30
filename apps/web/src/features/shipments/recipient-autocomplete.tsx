@@ -1,0 +1,46 @@
+import { useFormContext, useWatch } from "react-hook-form";
+import { SearchCombobox } from "@/components/search-combobox";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { searchRecipients, type RecipientOption } from "./api";
+import type { ShipmentFormValues } from "./form-values";
+
+/**
+ * Recipients of the merchant's past shipments, by name or phone; choosing one fills their
+ * data (FR-004).
+ */
+export function RecipientAutocomplete() {
+  const { control, setValue } = useFormContext<ShipmentFormValues>();
+  const merchant = useWatch({ control, name: "merchant" });
+  if (!merchant) return null;
+  return (
+    <Field>
+      <FieldLabel htmlFor="recipient-search">Destinatario anterior (opcional)</FieldLabel>
+      <SearchCombobox<RecipientOption>
+        id="recipient-search"
+        label="Destinatario anterior"
+        queryKey={["recipients", merchant.id]}
+        search={(q) => searchRecipients(merchant.id, q)}
+        value={null}
+        onChange={(recipient) => {
+          if (!recipient) return;
+          setValue("recipientName", recipient.recipientName ?? "");
+          setValue("recipientPhone", recipient.recipientPhone ?? "");
+          setValue("recipientAddress", recipient.recipientAddress ?? "");
+          setValue("recipientNeighborhood", null);
+        }}
+        itemKey={(recipient) => recipient.recipientPhone ?? ""}
+        itemLabel={(recipient) => recipient.recipientName ?? ""}
+        renderItem={(recipient) => (
+          <span className="flex w-full justify-between gap-4">
+            <span>{recipient.recipientName}</span>
+            <span className="text-body-s text-on-surface-variant tabular-nums">
+              {recipient.recipientPhone}
+            </span>
+          </span>
+        )}
+        placeholder="Nombre o teléfono"
+        emptyText="Sin destinatarios anteriores"
+      />
+    </Field>
+  );
+}
