@@ -34,6 +34,7 @@
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 - Validated 2026-09-30, first iteration: all items pass.
 - Decisions taken as informed defaults and open to `/speckit-clarify`: the amount to pay at
-  the door is shown on the tracking page; tracking links expire 30 days after a final
-  status; the merchant page covers the last 30 days and shows no fees; messages list up to
+  the door is shown on the tracking page; tracking links expire 7 days after a final
+  status (clarified); the merchant page covers the last 30 days and shows fees and day totals without balance (clarified); messages list up to
   20 shipments.
+- Re-validated 2026-09-30 after `/speckit-clarify` (4 questions): all items pass.

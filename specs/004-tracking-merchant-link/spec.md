@@ -15,6 +15,15 @@ numbers), [002](../002-routes-dispatch/spec.md) (routes and stop order), and
 [003](../003-courier-app/spec.md) (real statuses, received-by name, photos). UI terms appear
 in Spanish between quotes.
 
+## Clarifications
+
+### Session 2026-09-30
+
+- Q: Must the tracking page show the recipient the amount to pay at the door? → A: Yes, while the shipment is not delivered, returned, or voided: "Valor a pagar al recibir: $ 85.000" (FR-014).
+- Q: How long must a tracking link keep showing information after the shipment is delivered, returned, or voided? → A: 7 days; afterwards the merchant still sees the shipment on its private link (FR-010).
+- Q: On its private link, must the merchant see each shipment's fee and the day's totals? → A: Yes: the fee of each shipment ("por confirmar" while under review) and the day's totals of fees, COD amounts to collect, and amounts collected by payment method; no balance or netting (FR-019).
+- Q: Can the recipient do anything from the tracking page, such as announce an absence or leave instructions? → A: No. The page is read-only; for any request the recipient uses the WhatsApp button to the support contact or, while the shipment is on its way, to the courier (FR-024).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Follow a shipment (Priority: P1)
@@ -114,7 +123,8 @@ and lets the merchant see yesterday.
 
 1. **Given** a merchant with eight shipments today, **When** its private link is opened,
    **Then** the page lists the eight with tracking number, recipient, neighborhood, status,
-   delivery window, and COD amount, and totals by status.
+   delivery window, fee, and COD amount, with totals by status and the day's totals of
+   fees, COD amounts, and amounts collected.
 2. **Given** a delivered shipment on that list, **When** it is opened, **Then** the merchant
    sees the received-by name, the time, the proof-of-delivery photos, and the amount
    collected.
@@ -144,8 +154,9 @@ and lets the merchant see yesterday.
   exception, that a new attempt or a return is under way (FR-005).
 - **EC-06 The courier completes stops out of order**: "entregas antes de la tuya" counts the
   pending delivery stops placed before this one and is worded as an estimate (FR-006).
-- **EC-07 Old link**: 30 days after the shipment reached a final status, the tracking page
-  shows only that the link has expired (FR-010).
+- **EC-07 Old link**: 7 days after the shipment reached a final status, the tracking page
+  shows only that the link has expired; the merchant still sees the shipment on its private
+  link (FR-010).
 - **EC-08 Reverse pickup, carrier handoff, errand**: wording adapts to the kind (FR-008).
 - **EC-09 Someone tries many links**: requests are limited, and an invalid link always gets
   the same answer (FR-011).
@@ -209,9 +220,10 @@ and lets the merchant see yesterday.
 - **FR-009**: The support contact (a phone number that can be called and written to on
   WhatsApp, and the company name "Cohex") MUST be set by the owner and shown on every
   tracking page and merchant page. While it is not set, no contact buttons are shown.
-- **FR-010**: A tracking page MUST show full information until 30 days after the shipment
+- **FR-010**: A tracking page MUST show full information until 7 days after the shipment
   became "Entregado", "Devuelto", or "Anulado"; after that it shows only that the link has
-  expired.
+  expired, with the support contact. A reverted delivery or return makes the link current
+  again.
 - **FR-011**: An invalid link MUST always get the same "enlace no válido" answer. The system
   MUST limit how many links one origin can try, so codes cannot be found by trial.
 - **FR-012**: Tracking and merchant pages MUST ask search engines not to list them, and their
@@ -244,13 +256,15 @@ and lets the merchant see yesterday.
 - **FR-019**: Every merchant MUST have a private link that opens, without signing in, a page
   with that merchant's shipments for a date (today by default, any of the last 30 days):
   tracking number, merchant reference, recipient's name, neighborhood, status, delivery
-  window, COD amount, and a link to each tracking page; with totals by status and a clear
-  message when there are none.
+  window, fee ("por confirmar" while the owner has not confirmed it, feature 001 FR-035),
+  COD amount, and a link to each tracking page; with totals by status, the day's totals of
+  fees, COD amounts to collect, and amounts collected by payment method, and a clear
+  message when there are none. It shows no balance and no netting (Phase 2).
 - **FR-020**: Opening a shipment on the merchant page MUST show: the status with its time,
   the received-by name, the proof-of-delivery photos, the amount collected, and for an
   exception its reason, note, and every attempt. A photo that is pending or no longer
   available is replaced by a message. The page never shows the recipient's phone, the
-  courier's phone, the fee, or another merchant's data.
+  courier's phone, or another merchant's data.
 - **FR-021**: The merchant's private link MUST contain a secret code that cannot be guessed.
   The owner and the dispatcher MUST be able to copy it and to replace it; replacing it
   makes the previous link stop working at once. The replacement is recorded with author
@@ -262,7 +276,8 @@ and lets the merchant see yesterday.
 
 - **FR-023**: All text MUST be in Spanish (Colombia) with the glossary's terms; pages MUST
   follow the design system, work from 320 px wide, and meet WCAG 2.2 AA.
-- **FR-024**: The public pages MUST be read-only: nothing can be changed from them.
+- **FR-024**: The public pages MUST be read-only: nothing can be changed or sent from them.
+  A recipient's requests go through the WhatsApp buttons of FR-007 and FR-009.
 
 ### Key Entities
 
@@ -304,9 +319,7 @@ and lets the merchant see yesterday.
   courier (feature 002).
 - The courier's first name and phone on the tracking page were confirmed by the owner
   (decision #8); they appear only while the courier is on the way.
-- Showing the amount to pay at the door is assumed useful to the recipient and harmless; to
-  be confirmed during clarification.
-- The merchant page shows COD amounts and amounts collected, but no fees or balances:
-  statements are Phase 2.
+- The merchant page shows fees, COD amounts, and amounts collected, but no balance or
+  netting: statements are Phase 2 (clarified 2026-09-30).
 - The support contact is stored with the office address introduced by feature 003.
 - A merchant's self-service portal with sign-in is out of scope (business master, I-08).
