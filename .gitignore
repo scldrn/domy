@@ -1,0 +1,8 @@
+# Local credentials. Never commit or share.
+.env
+
+# OS artifacts
+.DS_Store
+
+# Machine-local Claude Code settings
+.claude/settings.local.json
