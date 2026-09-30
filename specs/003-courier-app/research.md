@@ -205,7 +205,10 @@ npm registry on 2026-09-30.
 
 - **Decision**: Better Auth as in feature 001 (R5): fixed 30-day sessions. The snapshot
   returns `sessionExpiresAt`; the app warns from 2 days before. The courier app works on a
-  loaded route with an expired session; only synchronization asks to sign in again.
+  loaded route with an expired session; only synchronization asks to sign in again. The
+  server answers `401` both for an expired session and for withdrawn access; the phone
+  tells them apart by time: a `401` before the known `sessionExpiresAt` is withdrawn
+  access (FR-004), after it an expired session.
   Sign-out is refused while the outbox is not empty and clears the IndexedDB database.
 - **Rationale**: FR-003, FR-004 (clarification Q5).
 

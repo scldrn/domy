@@ -28,11 +28,10 @@ every mutation.
 
 | Method and path | Request → Response |
 | --- | --- |
-| `GET /api/courier/route` | → `CourierSnapshot` = `{ serverTime, sessionExpiresAt, route: CourierRoute \| null, handoversToGive: HandoverToGive[], heldOffRoute: HeldShipment[], notices: Notice[] }`. `CourierRoute` = number, service date, `stops` in order, each with kind, address, neighborhood, contact phone, and `tasks` (shipment id, tracking number, merchant, recipient name and phone, instructions, package count and size, delivery window, COD amount, status, flags, `blockedByHandover`, `problemNote`). Updates `couriers.last_synced_at` (FR-005, FR-022, FR-028) |
+| `GET /api/courier/route` | → `CourierSnapshot` = `{ serverTime, sessionExpiresAt, route: CourierRoute \| null, handoversToGive: HandoverToGive[], heldOffRoute: HeldShipment[], notices: Notice[], summary: DaySummary }`; `DaySummary` (today, Bogotá) = counts of deliveries, exceptions, returns, pending stops; `cash`, `companyTransfer`, `merchantTransfer`, `disbursements`, `cashToHandOver` (FR-037). `CourierRoute` = number, service date, `stops` in order, each with kind, address, neighborhood, contact phone, and `tasks` (shipment id, tracking number, merchant, recipient name and phone, instructions, package count and size, delivery window, COD amount, status, flags, `blockedByHandover`, `problemNote`). Updates `couriers.last_synced_at` (FR-005, FR-022, FR-028) |
 | `POST /api/courier/records` | `{ deviceNow, records: CourierRecordInput[] }` (1–50, in the order they happened) → `{ results: { id, outcome }[] }`. Each record is applied in its own transaction (FR-018–FR-026) |
 | `PUT /api/courier/photos/:id` | Body: the JPEG image (`image/jpeg`, ≤ 1 MB) → `204`. `404` while its record has not arrived; repeating it is harmless (FR-023) |
 | `POST /api/courier/notices/acknowledge` | `{ actionId, noticeIds, occurredAt }` → `204`; sets `acknowledged_at` only where empty (FR-027) |
-| `GET /api/courier/summary?date=YYYY-MM-DD` | → `DaySummary` = counts of deliveries, exceptions, returns, pending stops; `cash`, `companyTransfer`, `merchantTransfer`, `disbursements`, `cashToHandOver` (FR-037) |
 | `POST /api/courier/push-subscriptions` | `{ actionId, endpoint, keys: { p256dh, auth } }` → `204` (FR-040) |
 | `POST /api/courier/push-subscriptions/remove` | `{ actionId, endpoint }` → `204` |
 
@@ -53,7 +52,7 @@ and optional `location: { latitude, longitude, accuracyM }`:
 
 | Method and path | Request → Response |
 | --- | --- |
-| `POST /api/shipments/:id/records` | A `CourierRecordInput` without `shipmentId`, plus optional `occurredAt` (default now). Stored with `on_behalf = true` for the courier who holds the shipment or whose route carries it → `{ id, outcome }` (FR-034) |
+| `POST /api/shipments/:id/records` | A `CourierRecordInput` without `shipmentId` (any kind except `handover_confirmation`, which feature 002 provides), plus optional `occurredAt` (default now). Stored with `on_behalf = true` for the courier who holds the shipment or whose route carries it → `{ id, outcome }` (FR-034) |
 | `POST /api/shipments/:id/exception-decision` | `{ actionId, decision: 'new_attempt', serviceDate?, routeId? }` or `{ actionId, decision: 'return', routeId? }` → `Shipment`; with `routeId`, the stop is added under the rules of feature 002 (`409 route_not_in_progress`, handover when another courier's) (FR-029) |
 | `POST /api/shipments/:id/office-receipt` | `{ actionId }` → `Shipment` with `heldAtOffice: true` (FR-041) |
 | `POST /api/shipments/:id/clear-review` | `{ actionId, note }` → `Shipment` (FR-026) |
@@ -80,6 +79,11 @@ Reasons and notes are 5–200 characters.
   shipments; a shipment held by a courier gets only a delivery or return stop and requires a
   route in progress; one held by the office gets a pickup stop at the office first (FR-031,
   FR-041).
+- **`GET /api/shipments/export`** (owner): gains the columns "Fecha de estado", "Mensajero",
+  "Recibido por", "Efectivo", "Transferencia a la empresa", "Transferencia al cliente",
+  "Pagos por cuenta del cliente", "Intentos", "Motivo de la última novedad" (FR-042).
+- **`GET /api/export/:dataset?format=csv`** (owner): gains the datasets `courier-records`,
+  `routes` (one row per stop task), and `handovers`, with Spanish headers (FR-042).
 - **Every route and shipment mutation of feature 002** that affects a courier with a route in
   progress also creates a notice and sends a phone notification (FR-027, FR-040).
 

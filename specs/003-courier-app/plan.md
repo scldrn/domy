@@ -55,7 +55,7 @@ in under 30 s of user time (SC-002)
 - Monthly infrastructure within the quoted range (object storage about COP 20,000).
 
 **Scale/Scope**: 4–6 couriers, about 20–40 shipments and 20–40 photos a day; 7 user stories,
-41 functional requirements; 4 courier screens and about 6 panel additions
+42 functional requirements; 4 courier screens and about 6 panel additions
 
 ## Constitution Check
 
@@ -92,7 +92,7 @@ specs/003-courier-app/
 ├── research.md
 ├── data-model.md
 ├── quickstart.md
-├── quickstart-results.md   # written by task T085 during validation
+├── quickstart-results.md   # written by task T087 during validation
 ├── contracts/
 │   └── http-api.md
 ├── checklists/
@@ -129,6 +129,7 @@ apps/server/src/
 │   ├── courier-records.ts            # correct, revert
 │   ├── photos.ts                     # GET /api/photos/:id
 │   ├── settings.ts                   # /api/settings
+│   ├── export.ts                     # + courier-records, routes, handovers
 │   ├── shipments.ts                  # + records on behalf, exception decision, office receipt, clear review
 │   └── routes.ts                     # + held shipments, notices on every change
 └── lib/
@@ -189,8 +190,9 @@ Made in this branch, so features 001 and 002 stay consistent with this one:
 - Feature 001 data model: the lifecycle rows owned by 003 are replaced by the transitions in
   [data-model.md](data-model.md).
 - Feature 002 spec and data model: a note that "Sin asignar" also lists held shipments, that
-  held shipments join routes under the rules for picked-up shipments, and that `stop_kind`
-  gains `return`; the items its Assumptions deferred to this feature are marked as defined
+  held shipments join routes under the rules for picked-up shipments, that `stop_kind`
+  gains `return`, that a handover may start from a courier without a route, and that routes
+  and handovers are exported by this feature (FR-042); the items its Assumptions deferred to this feature are marked as defined
   here.
 - Feature 002's test-only stand-in for courier actions (its task T012) is replaced by the
   real record function in this feature's tasks.

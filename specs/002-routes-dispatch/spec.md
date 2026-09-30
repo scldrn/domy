@@ -439,7 +439,9 @@ are "Registrado" again and the route remains in history as "Cancelada".
   "Sin asignar" also lists shipments a courier or the office holds that are on no route
   (003 FR-031); such shipments join a route under the rules for picked-up shipments
   (FR-014), or with a pickup stop at the office (003 FR-041); routes gain return stops
-  (003 FR-029); every change to a dispatched route notifies its courier (003 FR-027).
+  (003 FR-029); every change to a dispatched route notifies its courier (003 FR-027);
+  routes, stops, and handovers are exportable by the owner (003 FR-042); a handover may
+  start from a courier who has no route (003 FR-025).
 - Deferred to feature 003, which defines them (003 FR-024–FR-031):
   - what the dispatcher decides for a shipment in "Novedad" (new attempt, reschedule, or
     return to sender) and the trip back to the merchant for a return; until that decision,

@@ -595,6 +595,12 @@ over equal to cash collected minus disbursements.
   the shipment's history (and the route's, when it changes the route) with author, time it
   happened, and time it was received. The history is visible to the owner and the
   dispatcher (feature 001).
+- **FR-042**: The owner MUST be able to export everything the field operation records
+  (Constitution IX): the shipment export of feature 001 gains the delivery columns (status
+  time, courier, received-by name, amounts collected by payment method, disbursements,
+  number of attempts, last exception reason); and courier records, routes with their
+  stops, and handovers are each exportable to CSV with Spanish column names. Photos stay
+  in the client's own storage account.
 
 ### Key Entities
 

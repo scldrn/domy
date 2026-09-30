@@ -72,7 +72,7 @@ one Spanish name shown to users.
 | return to sender | Devolución al remitente | — | Bringing an undeliverable shipment back to the merchant. |
 | exception decision | Decisión de la novedad | — | What the dispatcher decides for a shipment in "Novedad": new attempt ("Nuevo intento", today or another date) or return to sender ("Devolver al remitente"). |
 | return stop | Devolución | — | Stop at the merchant's pickup point where an undeliverable shipment is given back. |
-| pickup problem | Problema de recogida | — | Courier's report that a shipment could not be picked up or an errand could not be done; a flag, not a status. |
+| pickup problem | Problema de recogida | — | Courier's report that a shipment could not be picked up, an errand could not be done, or a return could not be handed back; a flag, not a status. |
 | courier record | Registro del mensajero | — | Something a courier did or reported in the app: pickup, delivery, exception, return, disbursement, handover confirmation. |
 | pending sync | Pendiente por sincronizar | — | Record or photo saved on the phone and not yet received by the system. |
 | recorded by dispatch | Registrado por despacho | — | Mark on a courier record entered by the owner or dispatcher on the courier's behalf. |

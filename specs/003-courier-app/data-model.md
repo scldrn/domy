@@ -106,6 +106,10 @@ route_id is not null`" is unchanged: a shipment `picked_up`, or `exception` with
 record and cleared when the task is completed; the flag disappears with the task when the
 shipment leaves the route (FR-014).
 
+**Changed in `handovers`** (feature 002): `from_route_id` becomes optional, for a package
+held off route or picked up after the dispatcher changed the route (FR-025, FR-029); a
+handover may be requested for a shipment `picked_up`, or `exception` with `return_decided`.
+
 **Added to `couriers`**: `last_synced_at` timestamptz, updated on every snapshot request
 (FR-033).
 
@@ -175,7 +179,9 @@ handovers, and `office_received` events, ordered by `occurred_at`.
 - **Flags** (research R11): "Sin foto", "Foto pendiente", "Recaudo diferente", "Problema de
   recogida", "Por revisar".
 - **Collected total**: `cash_amount + company_transfer_amount + merchant_transfer_amount`.
-- **Day summary** (FR-037), `packages/domain/src/day-summary.ts`: over the courier's applied,
+- **Day summary** (FR-037), `packages/domain/src/day-summary.ts`: returned inside the
+  snapshot for today, so "Mi día" works without signal. Pending stops are counted from the
+  route, not from records. The rest is computed over the courier's applied,
   not reverted records of the date (Bogotá): counts by kind, the three collection totals,
   total disbursements, and cash to hand over = cash collected − disbursements.
 
@@ -184,10 +190,12 @@ handovers, and `office_received` events, ordered by `occurred_at`.
 | Store | Content | Removed |
 | --- | --- | --- |
 | `snapshot` | Last response of `GET /api/courier/route` | Replaced at every sync; cleared at sign-out |
-| `outbox` | Records not yet acknowledged, with their input and `occurredAt` | When the server acknowledges each |
+| `outbox` | Items not yet acknowledged, in order, of two types: a **record** (its input and `occurredAt`) and a **notice acknowledgment** (`actionId`, notice ids, `occurredAt`). Records are sent first, then acknowledgments | When the server acknowledges each |
 | `photos` | Compressed images with their `id` and record `id` | When the upload is acknowledged |
 | `meta` | User id, clock offset, last synchronization time | At sign-out |
 
 A finished route is absent from the next snapshot, so its personal data leaves the phone at
-that sync (FR-023). A `401` caused by deactivation or ended sessions clears `snapshot` and
-keeps `outbox` readable (FR-004).
+that sync (FR-023). A `401` received before the `sessionExpiresAt` of the stored snapshot means access was
+withdrawn (deactivation or sessions ended): it clears `snapshot` and keeps `outbox`
+readable. A `401` after that time means the session expired: everything is kept (FR-003,
+FR-004).
