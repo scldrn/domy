@@ -435,7 +435,12 @@ are "Registrado" again and the route remains in history as "Cancelada".
 - The 15-shipment confirmation threshold is a guard against selection mistakes; typical
   routes have 8–9 shipments over 2–3 pickups.
 - Finance (COD cash-up per route) is Phase 2; this feature only shows the total to collect.
-- Deferred to feature 003, which must define them consistently with this feature:
+- Extended by [feature 003](../003-courier-app/spec.md), which adds to this feature's rules:
+  "Sin asignar" also lists shipments a courier or the office holds that are on no route
+  (003 FR-031); such shipments join a route under the rules for picked-up shipments
+  (FR-014), or with a pickup stop at the office (003 FR-041); routes gain return stops
+  (003 FR-029); every change to a dispatched route notifies its courier (003 FR-027).
+- Deferred to feature 003, which defines them (003 FR-024–FR-031):
   - what the dispatcher decides for a shipment in "Novedad" (new attempt, reschedule, or
     return to sender) and the trip back to the merchant for a return; until that decision,
     a shipment in "Novedad" stays on its route and cannot be moved or removed;

@@ -141,6 +141,11 @@ a `picked_up` shipment stays `picked_up` and can only move to a route `in_progre
 
 A `finished` or `cancelled` route never reopens (FR-012).
 
+[Feature 003](../003-courier-app/data-model.md) extends this model: `stop_kind` gains
+`return`, `route_tasks` gains `problem_note`, `shipments` gains `held_at_office`,
+`return_decided`, and `needs_review`, and the unassigned list also includes held shipments
+that are on no route.
+
 ## Route lifecycle
 
 | From | To | Trigger | Rules |

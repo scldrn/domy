@@ -312,8 +312,8 @@ over equal to cash collected minus disbursements.
   (FR-020, FR-034).
 - **EC-06 Session expired or courier deactivated while records are pending**: the records
   stay on the phone; an expired session sends them after the same courier signs in again;
-  records of a deactivated courier made before the deactivation are accepted (FR-003,
-  FR-021).
+  a deactivated courier can no longer send them: they stay readable on the phone and the
+  dispatcher records them on the courier's behalf (FR-003, FR-020, FR-021, FR-034).
 - **EC-07 Another courier signs in on the same phone**: not possible while records are
   pending, because sign-out is refused (FR-004).
 - **EC-08 Same courier on two phones**: both show the same route; a record that repeats what
@@ -360,7 +360,8 @@ over equal to cash collected minus disbursements.
   starting a route. A session that expires during a route loses nothing: the route stays
   visible on the phone, records keep being saved, and they are sent after the courier
   signs in again (FR-021). Deactivating the courier's user ends access at the next request (feature
-  001, FR-032); records made before the deactivation are still accepted.
+  001, FR-032): records still on that phone can no longer be sent, stay readable there
+  (FR-020), and are recorded by the dispatcher on the courier's behalf (FR-034).
 - **FR-004**: Signing out MUST be refused while records are pending to synchronize, with an
   explanation. After sign-out the phone keeps no route data.
 
@@ -426,8 +427,9 @@ over equal to cash collected minus disbursements.
   order in which they happened.
 - **FR-020**: Pending records MUST be sent automatically when the app opens, when the
   connection returns, and periodically while the app is open, without the courier doing
-  anything. The app MUST always show how many records and photos are pending, and warn the
-  courier when records have been pending for more than 2 hours.
+  anything. The app MUST always show how many records and photos are pending, let the
+  courier read the list of pending records, and warn the courier when records have been
+  pending for more than 2 hours.
 - **FR-021**: Records MUST be sent as the courier who made them. If the session expired, the
   records stay on the phone and are sent after that courier signs in again.
 - **FR-022**: With signal, the app MUST refresh the route at least once a minute while it is

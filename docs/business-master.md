@@ -109,6 +109,8 @@ minutes leaves room to reassign or call the recipient within a route of 8–9 st
 - **Next step after an exception**: depends on the situation, so the dispatcher chooses per
   case among reattempt the same day, reschedule to another day, or return to sender.
   **Confirmed.**
+- **Where the package stays meanwhile**: with the courier, or the courier hands it to the
+  dispatcher at the company's office. **Confirmed** (2026-09-30).
 - **Failed attempt billing**: the owner answered "se pierde la ida" (the trip is lost).
   Who absorbs it — the merchant is charged the fee, or the business absorbs it — is
   **Open** (to be verified with the owner).
@@ -402,7 +404,7 @@ Numbering follows the question list of 2026-09-30.
 
 | # | Decision | Resolution |
 | --- | --- | --- |
-| 16 | Courier sign-in | Email and password, recovery by email; long-lived session. |
+| 16 | Courier sign-in | Email and password, recovery by email; session of at most 30 days, as the dispatcher's. Phone notification on dispatch and on every route change. |
 | 17 | Dispatcher and owner sign-in | Email and password, recovery by email. |
 | 18 | Route ordering | Manual drag-and-drop, grouped by pickup point and zone; no automatic optimization. |
 | 19 | Addresses | Street address + neighborhood from the catalog + button to open Google Maps or Waze. |

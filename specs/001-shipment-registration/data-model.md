@@ -247,9 +247,15 @@ vocabulary, and are finalized by the features that own them.
 | `dispatched` | `registered` | Remove before pickup | 002 |
 | `dispatched` | `assigned` | Undo dispatch | 002 |
 | `dispatched` | `picked_up` | Courier confirms pickup | 003 |
+| `registered`, `assigned` | `picked_up` | Pickup record that arrives after the dispatcher changed the route | 003 |
 | `picked_up` | `delivered` | Courier confirms delivery | 003 |
+| `dispatched` | `delivered` | Errand completed | 003 |
 | `picked_up` | `exception` | Courier reports a delivery exception | 003 |
-| `exception` | `registered` / `returned` | Dispatcher decides reattempt/reschedule or return to sender | 003 |
+| `exception` | `picked_up` | New attempt while a courier holds the package; or exception reverted | 003 |
+| `exception` | `registered` | New attempt while the office holds the package | 003 |
+| `exception` | `returned` | Return stop completed | 003 |
+| `delivered` | `picked_up` | Delivery reverted by the owner or dispatcher | 003 |
+| `returned` | `exception` | Return reverted | 003 |
 
 - **Editable** (FR-015): `registered`, `assigned`, `dispatched`; every field except
   `tracking_number`, `merchant_id`, and `kind`. Refused from `picked_up` on.
