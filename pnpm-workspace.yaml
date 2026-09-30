@@ -1,0 +1,18 @@
+packages:
+  - apps/*
+  - packages/*
+minimumReleaseAgeExclude:
+  - "@vitest/mocker@5.0.3"
+  - "@vitest/spy@5.0.3"
+  - hono@4.13.12
+  - resend@6.31.0
+  - vitest@5.0.3
+  - react-day-picker@10.0.2
+
+# Install scripts allowed to run. Native add-ons of the Docker client used by Testcontainers
+# are optional and skipped.
+allowBuilds:
+  esbuild: true
+  cpu-features: false
+  protobufjs: false
+  ssh2: false

@@ -9,3 +9,12 @@
 
 # Client source spreadsheets: contain personal and banking data. Never commit.
 docs/discovery/raw/
+
+# Dependencies, builds, and test reports
+node_modules/
+dist/
+test-results/
+playwright-report/
+
+# Playwright sessions written by the end-to-end global setup
+apps/web/tests/e2e/.auth/

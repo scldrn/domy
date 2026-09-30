@@ -1,0 +1,10 @@
+# Hand-maintained documentation and Spec Kit artifacts
+*.md
+.specify/
+.claude/
+docs/
+# Generated
+pnpm-lock.yaml
+apps/web/src/route-tree.gen.ts
+apps/web/src/styles/tokens.css
+apps/server/src/db/migrations/
