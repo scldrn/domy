@@ -9,6 +9,7 @@ export const routes = rootRoute("root.tsx", [
   layout("panel", "panel-layout.tsx", [
     index("dispatch-board.tsx"),
     route("/envios/nuevo", "shipment-new.tsx"),
+    route("/envios/masivo", "shipment-bulk.tsx"),
     route("/envios/$trackingNumber", "shipment-detail.tsx"),
     route("/envios/$trackingNumber/editar", "shipment-edit.tsx"),
   ]),

@@ -7,6 +7,7 @@ import type { Auth } from "./auth.ts";
 import type { Db } from "./db/client.ts";
 import type { Clock } from "./lib/clock.ts";
 import { handleError } from "./lib/errors.ts";
+import { bulkRoutes } from "./routes/bulk.ts";
 import { carrierRoutes } from "./routes/carriers.ts";
 import { merchantRoutes } from "./routes/merchants.ts";
 import { municipalityRoutes, neighborhoodRoutes } from "./routes/neighborhoods.ts";
@@ -56,6 +57,7 @@ export function createApp(deps: AppDeps) {
     .onError(handleError)
     .on(["GET", "POST"], "/api/auth/*", (c) => deps.auth.handler(c.req.raw))
     .route("/api/shipments", shipmentRoutes)
+    .route("/api/bulk", bulkRoutes)
     .route("/api/merchants", merchantRoutes)
     .route("/api/neighborhoods", neighborhoodRoutes)
     .route("/api/municipalities", municipalityRoutes)

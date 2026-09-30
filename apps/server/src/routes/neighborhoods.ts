@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../app.ts";
+import type { Executor } from "../db/client.ts";
 import {
   municipalities,
   neighborhoods,
@@ -38,43 +39,52 @@ const selection = {
   rateZone: { id: rateZones.id, name: rateZones.name },
 };
 
+/**
+ * Neighborhoods by name or spelling variant, best match first, with the trigram similarity
+ * of the best name or variant (1 when it matches exactly once normalized).
+ */
+export async function searchNeighborhoods(
+  db: Executor,
+  { q, municipalityId, kind, needsReview }: z.infer<typeof searchQuery>,
+  limit: number,
+) {
+  const term = q ? normalizeText(q) : "";
+  const variantScore = sql`coalesce((
+    select max(similarity(${neighborhoodVariants.variantNormalized}, ${term}))
+    from ${neighborhoodVariants}
+    where ${neighborhoodVariants.neighborhoodId} = ${neighborhoods.id}
+  ), 0)`;
+  const score = sql<number>`greatest(similarity(${neighborhoods.nameNormalized}, ${term}), ${variantScore})`;
+  return db
+    .select({ ...selection, similarity: score })
+    .from(neighborhoods)
+    .innerJoin(municipalities, eq(municipalities.id, neighborhoods.municipalityId))
+    .innerJoin(rateZones, eq(rateZones.id, neighborhoods.rateZoneId))
+    .where(
+      and(
+        eq(neighborhoods.isActive, true),
+        municipalityId ? eq(neighborhoods.municipalityId, municipalityId) : undefined,
+        kind ? eq(neighborhoods.kind, kind) : undefined,
+        needsReview ? eq(neighborhoods.needsReview, needsReview === "true") : undefined,
+        term
+          ? sql`(${neighborhoods.nameNormalized} like ${`%${term}%`} or ${score} > 0.3)`
+          : undefined,
+      ),
+    )
+    .orderBy(
+      term
+        ? sql`(${neighborhoods.nameNormalized} = ${term}) desc, ${score} desc`
+        : neighborhoods.nameNormalized,
+      neighborhoods.nameNormalized,
+    )
+    .limit(limit);
+}
+
 export const neighborhoodRoutes = new Hono<AppEnv>()
   .use(requireRole("owner", "dispatcher"))
   // Catalog search tolerant to accents, case, variants, and typos (FR-005, research R7).
   .get("/", validate("query", searchQuery), async (c) => {
-    const { q, municipalityId, kind, needsReview } = c.req.valid("query");
-    const term = q ? normalizeText(q) : "";
-    const variantScore = sql`coalesce((
-      select max(similarity(${neighborhoodVariants.variantNormalized}, ${term}))
-      from ${neighborhoodVariants}
-      where ${neighborhoodVariants.neighborhoodId} = ${neighborhoods.id}
-    ), 0)`;
-    const score = sql`greatest(similarity(${neighborhoods.nameNormalized}, ${term}), ${variantScore})`;
-    const rows = await c
-      .get("db")
-      .select(selection)
-      .from(neighborhoods)
-      .innerJoin(municipalities, eq(municipalities.id, neighborhoods.municipalityId))
-      .innerJoin(rateZones, eq(rateZones.id, neighborhoods.rateZoneId))
-      .where(
-        and(
-          eq(neighborhoods.isActive, true),
-          municipalityId ? eq(neighborhoods.municipalityId, municipalityId) : undefined,
-          kind ? eq(neighborhoods.kind, kind) : undefined,
-          needsReview ? eq(neighborhoods.needsReview, needsReview === "true") : undefined,
-          term
-            ? sql`(${neighborhoods.nameNormalized} like ${`%${term}%`} or ${score} > 0.3)`
-            : undefined,
-        ),
-      )
-      .orderBy(
-        term
-          ? sql`(${neighborhoods.nameNormalized} = ${term}) desc, ${score} desc`
-          : neighborhoods.nameNormalized,
-        neighborhoods.nameNormalized,
-      )
-      .limit(20);
-    return c.json({ items: rows });
+    return c.json({ items: await searchNeighborhoods(c.get("db"), c.req.valid("query"), 20) });
   })
   // Dispatchers add neighborhoods with an existing rate zone, for the owner's review (FR-036).
   .post("/", validate("json", createInput), async (c) => {

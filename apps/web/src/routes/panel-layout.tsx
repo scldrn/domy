@@ -1,6 +1,7 @@
 import AddBoxIcon from "@material-symbols/svg-400/rounded/add_box.svg?react";
 import DashboardIcon from "@material-symbols/svg-400/rounded/dashboard.svg?react";
 import LogoutIcon from "@material-symbols/svg-400/rounded/logout.svg?react";
+import PostAddIcon from "@material-symbols/svg-400/rounded/post_add.svg?react";
 import type { UserRole } from "@domy/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -28,7 +29,7 @@ import {
 import { sessionQuery, signOut } from "@/features/auth/session";
 
 type NavigationItem = {
-  to: "/" | "/envios/nuevo";
+  to: "/" | "/envios/nuevo" | "/envios/masivo";
   label: string;
   icon: Symbol;
   roles: UserRole[];
@@ -38,6 +39,12 @@ type NavigationItem = {
 const navigation: NavigationItem[] = [
   { to: "/", label: "Tablero", icon: DashboardIcon, roles: ["owner", "dispatcher"] },
   { to: "/envios/nuevo", label: "Nuevo envío", icon: AddBoxIcon, roles: ["owner", "dispatcher"] },
+  {
+    to: "/envios/masivo",
+    label: "Registro masivo",
+    icon: PostAddIcon,
+    roles: ["owner", "dispatcher"],
+  },
 ];
 
 export const Route = createFileRoute("/_panel")({

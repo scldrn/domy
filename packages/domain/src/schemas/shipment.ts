@@ -13,10 +13,11 @@ export const money = z
   .int("Usa pesos enteros, sin decimales.")
   .min(0, "El valor no puede ser negativo.");
 
-export const phone = z.string().regex(/^\d{10}$/, "Escribe un teléfono de 10 dígitos.");
+const phoneMessage = "Escribe un teléfono de 10 dígitos.";
+export const phone = z.string({ error: phoneMessage }).regex(/^\d{10}$/, phoneMessage);
 export const calendarDate = z.iso.date();
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Escribe una hora válida.");
-const required = (message: string) => z.string().trim().min(1, message);
+const required = (message: string) => z.string({ error: message }).trim().min(1, message);
 
 export const windowPreset = z.discriminatedUnion("preset", [
   z.object({ preset: z.literal("before"), end: time }),

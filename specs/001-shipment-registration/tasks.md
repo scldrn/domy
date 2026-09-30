@@ -214,16 +214,21 @@ neighborhood, fix them in the preview, confirm, and verify 20 shipments with cor
 
 ### Tests for User Story 4 ⚠️ write first, must fail
 
-- [ ] T075 [P] [US4] Unit tests in `packages/domain/src/bulk-rows.test.ts` for contracts/bulk-template.md: header detection, the 19 columns in order, case- and accent-insensitive values, money parsing, date `DD/MM/AAAA`, window phrases ("antes de las 5pm", "de 1 a 5pm", "en la tarde"), unknown columns and more than 200 rows rejected
-- [ ] T076 [P] [US4] Integration tests in `apps/server/tests/bulk.test.ts` covering spec US4 scenarios 1–4: preview statuses `ready`, `needs_confirmation`, `invalid`; neighborhood proposal with similarity; duplicate flag; confirm creates all rows in one transaction or none; `bulk_batches` row and `bulk_batch_id` set; repeating the confirm with the same `batchId` returns the first result without new shipments (FR-042)
-- [ ] T077 [P] [US4] End-to-end test in `apps/web/tests/e2e/bulk-registration.spec.ts`: quickstart scenario 10 with pasted rows and with an uploaded `.xlsx`
+- [X] T075 [P] [US4] Unit tests in `packages/domain/src/bulk-rows.test.ts` for contracts/bulk-template.md: header detection, the 19 columns in order, case- and accent-insensitive values, money parsing, date `DD/MM/AAAA`, window phrases ("antes de las 5pm", "de 1 a 5pm", "en la tarde"), unknown columns and more than 200 rows rejected
+- [X] T076 [P] [US4] Integration tests in `apps/server/tests/bulk.test.ts` covering spec US4 scenarios 1–4: preview statuses `ready`, `needs_confirmation`, `invalid`; neighborhood proposal with similarity; duplicate flag; confirm creates all rows in one transaction or none; `bulk_batches` row and `bulk_batch_id` set; repeating the confirm with the same `batchId` returns the first result without new shipments (FR-042)
+- [X] T077 [P] [US4] End-to-end test in `apps/web/tests/e2e/bulk-registration.spec.ts`: quickstart scenario 10 with pasted rows and with an uploaded `.xlsx`
 
 ### Implementation for User Story 4
 
-- [ ] T078 [P] [US4] Implement `packages/domain/src/bulk-rows.ts` (raw rows → partial `ShipmentCreateInput` with per-field errors) until T075 passes
-- [ ] T079 [US4] Implement `POST /api/bulk/preview` and `POST /api/bulk/confirm` in `apps/server/src/routes/bulk.ts` until T076 passes
-- [ ] T080 [P] [US4] Add the downloadable templates `apps/web/public/plantilla-envios.csv` and `apps/web/public/plantilla-envios.xlsx` with the exact Spanish headers of contracts/bulk-template.md
-- [ ] T081 [US4] Build `apps/web/src/features/bulk/bulk-input.tsx` (paste area, file upload parsed with Papa Parse and read-excel-file), `apps/web/src/features/bulk/bulk-preview-table.tsx` (inline fixes, neighborhood and duplicate confirmation), and the route `apps/web/src/routes/shipment-bulk.tsx` (`/envios/masivo`), until T077 passes
+- [X] T078 [P] [US4] Implement `packages/domain/src/bulk-rows.ts` (raw rows → partial `ShipmentCreateInput` with per-field errors) until T075 passes
+- [X] T079 [US4] Implement `POST /api/bulk/preview` and `POST /api/bulk/confirm` in `apps/server/src/routes/bulk.ts` until T076 passes
+- [X] T080 [P] [US4] Add the downloadable templates `apps/web/public/plantilla-envios.csv` and `apps/web/public/plantilla-envios.xlsx` with the exact Spanish headers of contracts/bulk-template.md
+- [X] T081 [US4] Build `apps/web/src/features/bulk/bulk-input.tsx` (paste area, file upload parsed with Papa Parse and read-excel-file), `apps/web/src/features/bulk/bulk-preview-table.tsx` (inline fixes, neighborhood and duplicate confirmation), and the route `apps/web/src/routes/shipment-bulk.tsx` (`/envios/masivo`), until T077 passes
+
+**Note**: rows are corrected in the list itself (the text area, also filled by an uploaded
+file) and reviewed again; the preview table takes the neighborhood, duplicate, and amount
+confirmations. A value that matches the catalog once accents and case are ignored
+("copàcabana") is exact; only fuzzy matches ask for confirmation.
 
 **Checkpoint**: high-volume merchants are registered in minutes
 

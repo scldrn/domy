@@ -5,7 +5,6 @@ import {
   codAmountError,
   feeQuoteInput,
   filterBoard,
-  generateTrackingNumber,
   normalizeText,
   normalizeTrackingNumber,
   resolveCodAmount,
@@ -16,17 +15,13 @@ import {
   shipmentStatusLabels,
   shipmentUpdateInput,
   shipmentVoidInput,
-  windowFromPreset,
   type BoardShipment,
-  type DeliveryWindow,
   type DispatchBoard,
-  type RateEntry,
   type Shipment,
   type ShipmentDetail,
   type ShipmentKind,
-  type WindowPreset,
 } from "@domy/domain";
-import { and, asc, eq, inArray, isNull, lt, ne, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -38,7 +33,6 @@ import {
   municipalities,
   neighborhoods,
   pickupPoints,
-  rateCardEntries,
   rateZones,
   shipmentEvents,
   shipments,
@@ -46,13 +40,18 @@ import {
 } from "../db/schema/index.ts";
 import { findShipmentAction } from "../lib/action-id.ts";
 import { requireRole } from "../lib/auth-guard.ts";
+import {
+  codConfirmationThreshold,
+  deliveryWindow,
+  feeConfirmationThreshold,
+  insertShipments,
+  prepareShipment,
+  pricingPlace,
+  rateEntriesFor,
+  resolvePickup,
+} from "../lib/registration.ts";
 import { AppError } from "../lib/errors.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
-
-/** Amounts that require an explicit confirmation before saving (FR-037). */
-const feeConfirmationThreshold = 100_000;
-const codConfirmationThreshold = 2_000_000;
-const handoffKinds = ["terminal", "airport", "carrier_office"] as const;
 
 const pickupNeighborhoods = alias(neighborhoods, "pickup_neighborhoods");
 const recipientNeighborhoods = alias(neighborhoods, "recipient_neighborhoods");
@@ -224,84 +223,6 @@ async function referenceNames(db: Executor, changes: [string, [unknown, unknown]
   return new Map(rows.flat().map((row) => [row.id, row.name]));
 }
 
-/** The rate card entries that can apply to a merchant: its own and the standard ones. */
-async function rateEntriesFor(db: Executor, merchantId: string): Promise<RateEntry[]> {
-  return db
-    .select({
-      kind: rateCardEntries.kind,
-      merchantId: rateCardEntries.merchantId,
-      rateZoneId: rateCardEntries.rateZoneId,
-      amount: rateCardEntries.amount,
-      effectiveFrom: rateCardEntries.effectiveFrom,
-      createdAt: rateCardEntries.createdAt,
-    })
-    .from(rateCardEntries)
-    .where(or(isNull(rateCardEntries.merchantId), eq(rateCardEntries.merchantId, merchantId)));
-}
-
-/** The place that gives the rate zone: the recipient's neighborhood or the handoff place. */
-async function pricingPlace(db: Executor, kind: ShipmentKind, neighborhoodId: string | null) {
-  if (kind === "errand" || !neighborhoodId) return null;
-  const [place] = await db
-    .select({
-      id: neighborhoods.id,
-      kind: neighborhoods.kind,
-      rateZone: { id: rateZones.id, name: rateZones.name },
-    })
-    .from(neighborhoods)
-    .innerJoin(rateZones, eq(rateZones.id, neighborhoods.rateZoneId))
-    .where(eq(neighborhoods.id, neighborhoodId));
-  if (!place) {
-    throw new AppError("invalid_request", {
-      fields: { recipientNeighborhoodId: "Elige un lugar del catálogo." },
-    });
-  }
-  const isHandoffPlace = (handoffKinds as readonly string[]).includes(place.kind);
-  if (kind === "carrier_handoff" && !isHandoffPlace) {
-    throw new AppError("invalid_request", {
-      fields: {
-        recipientNeighborhoodId:
-          "Elige una terminal, un aeropuerto o una oficina de transportadora.",
-      },
-    });
-  }
-  return place;
-}
-
-/** The pickup of a shipment: a merchant's active pickup point, or a one-off address. */
-async function resolvePickup(
-  db: Executor,
-  merchantId: string,
-  pickup: { pickupPointId: string | null; pickupAddress: string; pickupNeighborhoodId: string },
-) {
-  if (!pickup.pickupPointId) return pickup;
-  const [point] = await db
-    .select()
-    .from(pickupPoints)
-    .where(and(eq(pickupPoints.id, pickup.pickupPointId), eq(pickupPoints.merchantId, merchantId)));
-  if (!point?.isActive) {
-    throw new AppError("invalid_request", {
-      fields: { pickupPointId: "Elige un punto de recogida activo del cliente." },
-    });
-  }
-  return {
-    pickupPointId: point.id,
-    pickupAddress: point.address,
-    pickupNeighborhoodId: point.neighborhoodId,
-  };
-}
-
-function deliveryWindow(serviceDate: string, preset: WindowPreset | null): DeliveryWindow {
-  if (!preset) return { windowStart: null, windowEnd: null };
-  try {
-    return windowFromPreset(serviceDate, preset);
-  } catch (error) {
-    throw new AppError("invalid_request", {
-      fields: { window: error instanceof Error ? error.message : "Franja no válida." },
-    });
-  }
-}
-
 const idParam = z.object({ id: z.uuid() });
 
 type ShipmentRow = typeof shipments.$inferSelect;
@@ -445,126 +366,9 @@ export const shipmentRoutes = new Hono<AppEnv>()
     }
 
     const registeredAt = c.get("clock")();
-    const serviceDate = input.serviceDate ?? bogotaToday(registeredAt);
-
-    const { pickupAddress, pickupNeighborhoodId } = await resolvePickup(db, input.merchantId, {
-      pickupPointId: input.pickupPointId ?? null,
-      pickupAddress: input.pickupAddress ?? "",
-      pickupNeighborhoodId: input.pickupNeighborhoodId ?? "",
-    });
-
-    const neighborhoodId = input.kind === "errand" ? null : input.recipientNeighborhoodId;
-    const place = await pricingPlace(db, input.kind, neighborhoodId);
-    const fee = calculateFee({
-      kind: input.kind,
-      merchantId: input.merchantId,
-      rateZoneId: place?.rateZone.id ?? null,
-      serviceLevel: input.serviceLevel,
-      registeredAt,
-      entries: await rateEntriesFor(db, input.merchantId),
-    });
-    const overridden = fee.calculatedFee === null || input.fee !== fee.calculatedFee;
-    if (overridden && !input.feeOverrideReason) {
-      throw new AppError("invalid_request", {
-        fields: {
-          feeOverrideReason:
-            fee.calculatedFee === null
-              ? "Escribe el motivo de la tarifa manual."
-              : "Escribe el motivo del cambio de tarifa.",
-        },
-      });
-    }
-
-    const codError = codAmountError(input.paymentMode, input.codAmount ?? null);
-    if (codError) {
-      throw new AppError("invalid_request", { fields: { codAmount: codError } });
-    }
-    const codAmount = resolveCodAmount(input.paymentMode, input.fee, input.codAmount ?? 0);
-
-    if (
-      !input.confirmed &&
-      (input.fee > feeConfirmationThreshold || codAmount > codConfirmationThreshold)
-    ) {
-      throw new AppError("confirmation_required");
-    }
-
-    const window = deliveryWindow(serviceDate, input.window ?? null);
-
-    const recipient =
-      input.kind === "delivery" ||
-      input.kind === "reverse_pickup" ||
-      input.kind === "carrier_handoff"
-        ? {
-            recipientName: input.recipientName ?? null,
-            recipientNameNormalized: input.recipientName
-              ? normalizeText(input.recipientName)
-              : null,
-            recipientPhone: input.recipientPhone ?? null,
-            recipientNeighborhoodId: input.recipientNeighborhoodId,
-          }
-        : {};
-    const values = {
-      id: input.id,
-      kind: input.kind,
-      serviceDate,
-      merchantId: input.merchantId,
-      pickupPointId: input.pickupPointId ?? null,
-      pickupAddress,
-      pickupNeighborhoodId,
-      ...recipient,
-      recipientAddress:
-        input.kind === "delivery" || input.kind === "reverse_pickup"
-          ? input.recipientAddress
-          : null,
-      carrierId: input.kind === "carrier_handoff" ? input.carrierId : null,
-      destinationTown: input.kind === "carrier_handoff" ? input.destinationTown : null,
-      errandDescription: input.kind === "errand" ? input.errandDescription : null,
-      rateZoneId: place?.rateZone.id ?? null,
-      serviceLevel: input.serviceLevel,
-      calculatedFee: fee.calculatedFee,
-      fee: input.fee,
-      feeOverrideReason: overridden ? (input.feeOverrideReason ?? null) : null,
-      feeNeedsReview: fee.needsReview,
-      paymentMode: input.paymentMode,
-      codAmount,
-      ...window,
-      packageSize: input.packageSize ?? null,
-      packageCount: input.packageCount ?? null,
-      merchantReference: input.merchantReference || null,
-      instructions: input.instructions || null,
-      registeredAt,
-      registeredBy: user.id,
-    };
-
-    for (let attempt = 0; ; attempt++) {
-      try {
-        const created = await db.transaction(async (tx) => {
-          const [row] = await tx
-            .insert(shipments)
-            .values({ ...values, trackingNumber: generateTrackingNumber() })
-            .onConflictDoNothing({ target: shipments.id })
-            .returning({ id: shipments.id });
-          if (!row) return false;
-          const { recipientNameNormalized: _, ...changes } = values;
-          await tx.insert(shipmentEvents).values({
-            shipmentId: row.id,
-            type: "created",
-            toStatus: "registered",
-            actorUserId: user.id,
-            occurredAt: registeredAt,
-            reason: values.feeOverrideReason,
-            changes: Object.fromEntries(
-              Object.entries(changes).map(([field, value]) => [field, [null, value]]),
-            ),
-          });
-          return true;
-        });
-        return c.json(await loadShipment(db, input.id), created ? 201 : 200);
-      } catch (error) {
-        if (attempt < 5 && isUniqueViolation(error, "shipments_tracking_number_key")) continue;
-        throw error;
-      }
-    }
+    const values = await prepareShipment(db, input, { userId: user.id, registeredAt });
+    const created = await insertShipments(db, [values]);
+    return c.json(await loadShipment(db, input.id), created ? 201 : 200);
   })
   // Possible duplicates (FR-013): the same reference or, without one, the same phone.
   .get("/duplicates", validate("query", duplicatesQuery), async (c) => {

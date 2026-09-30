@@ -94,3 +94,26 @@ describe("shipmentCreateInput", () => {
     ).toEqual([]);
   });
 });
+
+describe("missing values", () => {
+  it("are explained in Spanish", () => {
+    const result = shipmentCreateInput.safeParse({
+      id: crypto.randomUUID(),
+      kind: "delivery",
+      merchantId: crypto.randomUUID(),
+      pickupPointId: crypto.randomUUID(),
+      paymentMode: "merchant_account",
+      fee: 13000,
+    });
+    expect(result.success).toBe(false);
+    const messages = Object.fromEntries(
+      (result.error?.issues ?? []).map((issue) => [issue.path.join("."), issue.message]),
+    );
+    expect(messages).toEqual({
+      recipientName: "Escribe el nombre del destinatario.",
+      recipientPhone: "Escribe un teléfono de 10 dígitos.",
+      recipientAddress: "Escribe la dirección de entrega.",
+      recipientNeighborhoodId: "Elige el barrio.",
+    });
+  });
+});
