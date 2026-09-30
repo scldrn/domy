@@ -83,10 +83,12 @@ specs/002-routes-dispatch/
 ├── research.md
 ├── data-model.md
 ├── quickstart.md
+├── quickstart-results.md   # written by task T055 during validation
 ├── contracts/
 │   └── http-api.md
 ├── checklists/
-│   └── requirements.md
+│   ├── requirements.md
+│   └── route-rules.md
 └── tasks.md             # created by /speckit-tasks
 ```
 
@@ -96,7 +98,7 @@ Files added or changed by this feature, inside the structure defined by feature 
 
 ```text
 packages/domain/src/
-├── routes.ts                         # buildStops, add/remove, moveStop, validateStopOrder, isRouteFinished, routeProgress
+├── routes.ts                         # buildStops, add/remove, moveStop, validateStopOrder, isRouteFinished, routeProgress, canUndoDispatch
 ├── shipment-lifecycle.ts             # + transitions owned by this feature
 └── schemas/
     └── routes.ts                     # request and response schemas
@@ -111,7 +113,8 @@ apps/server/src/
 │   ├── handovers.ts                  # /api/handovers/*
 │   └── shipments.ts                  # + unassigned, reassign; void and edit update the route
 └── lib/
-    └── action-id.ts                  # exactly-once helper shared by every mutation
+    ├── action-id.ts                  # exactly-once helper (created in feature 001), used by every route action
+    └── route-status.ts               # recalculates "Finalizada" inside each transaction
 
 apps/server/tests/                    # routes-*.test.ts, handovers.test.ts
 
@@ -133,8 +136,7 @@ apps/web/tests/e2e/                   # route-build-dispatch.spec.ts, route-adju
 ```
 
 **Structure Decision**: no new package or folder convention; this feature adds files to the
-places feature 001 defined. The only new shared helper, `lib/action-id.ts`, exists because
-every mutation of features 001–003 needs the same exactly-once check.
+places feature 001 defined, and reuses its exactly-once helper `lib/action-id.ts`.
 
 ## Complexity Tracking
 
