@@ -52,8 +52,8 @@ applied (FR-024). Never deleted.
 - Index `(shipment_id, occurred_at)`; index `(courier_id, occurred_at)` for "Mi día".
 - A **delivery attempt** (FR-032) is an applied record of kind `delivery` or `exception`
   that is not reverted.
-- A correction updates `received_by_name`, the three amounts, `note`, `disbursement_amount`,
-  or `payee` in place and writes a `record_corrected` shipment event with old and new values.
+- A correction updates `received_by_name`, the three amounts, `exception_reason`, `note`,
+  `disbursement_amount`, or `payee` in place and writes a `record_corrected` shipment event with old and new values.
 
 **`record_photos`**
 
@@ -63,7 +63,7 @@ applied (FR-024). Never deleted.
 | `record_id` | uuid → courier_records | Not null |
 | `kind` | `photo_kind` | Not null |
 | `storage_key` | text | Object key in the private bucket |
-| `uploaded_at` | timestamptz | Null until the image arrives ("Foto pendiente", FR-023) |
+| `uploaded_at` | timestamptz | Null until the image arrives: "Foto pendiente" during the 24 hours after the record, then treated as missing (FR-023) |
 | `byte_size` | integer | Set at upload; at most 1 MB |
 
 At most three `proof` photos per record, enforced by the request schema (FR-009). Objects are
@@ -146,6 +146,7 @@ These rows replace the rows marked "003" in feature 001's lifecycle table
 | `exception` | `picked_up` | New attempt decided while a courier holds the package; or exception reverted |
 | `exception` | `registered` | New attempt decided while the office holds the package |
 | `exception` | `returned` | Return record |
+| `exception` (return decided) | `picked_up` | Return changed to a new attempt before the return stop is completed (FR-029) |
 | `delivered` | `picked_up` | Delivery reverted by the owner or dispatcher |
 | `returned` | `exception` | Return reverted (with `return_decided` true again) |
 
@@ -188,4 +189,5 @@ handovers, and `office_received` events, ordered by `occurred_at`.
 | `meta` | User id, clock offset, last synchronization time | At sign-out |
 
 A finished route is absent from the next snapshot, so its personal data leaves the phone at
-that sync (FR-023).
+that sync (FR-023). A `401` caused by deactivation or ended sessions clears `snapshot` and
+keeps `outbox` readable (FR-004).

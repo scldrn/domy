@@ -17,7 +17,7 @@ every mutation.
 
 | Status | `code` | When |
 | --- | --- | --- |
-| 409 | `no_exception_to_decide` | Deciding for a shipment that is not in "Novedad", or already decided (FR-029) |
+| 409 | `no_exception_to_decide` | Deciding for a shipment that is not in "Novedad"; a return already decided accepts only a change to `new_attempt` (FR-029) |
 | 409 | `not_held_by_courier` | "Recibido en oficina" for a package no courier holds (FR-041) |
 | 409 | `record_not_revertible` | Reverting a record that is not the shipment's latest applied delivery, exception, or return (FR-035) |
 | 409 | `office_not_configured` | "Recibido en oficina" before the office address is set (FR-041) |
@@ -28,7 +28,7 @@ every mutation.
 
 | Method and path | Request → Response |
 | --- | --- |
-| `GET /api/courier/route` | → `CourierSnapshot` = `{ serverTime, sessionExpiresAt, route: CourierRoute \| null, handoversToGive: HandoverToGive[], notices: Notice[] }`. `CourierRoute` = number, service date, `stops` in order, each with kind, address, neighborhood, contact phone, and `tasks` (shipment id, tracking number, merchant, recipient name and phone, instructions, package count and size, delivery window, COD amount, status, flags, `blockedByHandover`, `problemNote`). Updates `couriers.last_synced_at` (FR-005, FR-022, FR-028) |
+| `GET /api/courier/route` | → `CourierSnapshot` = `{ serverTime, sessionExpiresAt, route: CourierRoute \| null, handoversToGive: HandoverToGive[], heldOffRoute: HeldShipment[], notices: Notice[] }`. `CourierRoute` = number, service date, `stops` in order, each with kind, address, neighborhood, contact phone, and `tasks` (shipment id, tracking number, merchant, recipient name and phone, instructions, package count and size, delivery window, COD amount, status, flags, `blockedByHandover`, `problemNote`). Updates `couriers.last_synced_at` (FR-005, FR-022, FR-028) |
 | `POST /api/courier/records` | `{ deviceNow, records: CourierRecordInput[] }` (1–50, in the order they happened) → `{ results: { id, outcome }[] }`. Each record is applied in its own transaction (FR-018–FR-026) |
 | `PUT /api/courier/photos/:id` | Body: the JPEG image (`image/jpeg`, ≤ 1 MB) → `204`. `404` while its record has not arrived; repeating it is harmless (FR-023) |
 | `POST /api/courier/notices/acknowledge` | `{ actionId, noticeIds, occurredAt }` → `204`; sets `acknowledged_at` only where empty (FR-027) |
@@ -57,7 +57,7 @@ and optional `location: { latitude, longitude, accuracyM }`:
 | `POST /api/shipments/:id/exception-decision` | `{ actionId, decision: 'new_attempt', serviceDate?, routeId? }` or `{ actionId, decision: 'return', routeId? }` → `Shipment`; with `routeId`, the stop is added under the rules of feature 002 (`409 route_not_in_progress`, handover when another courier's) (FR-029) |
 | `POST /api/shipments/:id/office-receipt` | `{ actionId }` → `Shipment` with `heldAtOffice: true` (FR-041) |
 | `POST /api/shipments/:id/clear-review` | `{ actionId, note }` → `Shipment` (FR-026) |
-| `POST /api/courier-records/:id/correct` | `{ actionId, reason, receivedByName?, cashAmount?, companyTransferAmount?, merchantTransferAmount?, note?, amount?, payee? }` → `CourierRecord` (FR-035) |
+| `POST /api/courier-records/:id/correct` | `{ actionId, reason, receivedByName?, cashAmount?, companyTransferAmount?, merchantTransferAmount?, exceptionReason?, note?, amount?, payee? }` → `CourierRecord` (FR-035) |
 | `POST /api/courier-records/:id/revert` | `{ actionId, reason }` → `Shipment` (FR-035) |
 | `GET /api/photos/:id` | → the image. Owner and dispatcher: any photo; courier: photos of their own records. `404` when the object was deleted by retention (FR-036) |
 | `GET /api/settings`, `PATCH /api/settings` | `{ actionId, officeAddress, officeNeighborhoodId }`; owner only for `PATCH` (FR-041) |

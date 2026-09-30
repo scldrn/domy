@@ -113,6 +113,11 @@ happened.
    dispatch board marked "Foto pendiente", and the photo is attached when it arrives.
 8. **Given** pending records, **When** the courier tries to sign out, **Then** the app
    refuses and explains that the records must be sent first.
+9. **Given** the session expires while the courier is on a route, **Then** the route stays
+   usable, new records are saved, and they are sent after the courier signs in again.
+10. **Given** a phone that has never loaded the route and has no signal, **When** the courier
+    opens the app, **Then** it explains that the route could not be loaded and retries on
+    its own when signal returns.
 
 ---
 
@@ -363,7 +368,10 @@ over equal to cash collected minus disbursements.
   001, FR-032): records still on that phone can no longer be sent, stay readable there
   (FR-020), and are recorded by the dispatcher on the courier's behalf (FR-034).
 - **FR-004**: Signing out MUST be refused while records are pending to synchronize, with an
-  explanation. After sign-out the phone keeps no route data.
+  explanation. After sign-out the phone keeps no route data. When the system refuses
+  the phone because the user was deactivated or the owner ended the sessions, the app
+  removes the route data at that moment and keeps only the list of pending records.
+  Signing in needs signal.
 
 **Carrying out a route**
 
@@ -371,7 +379,9 @@ over equal to cash collected minus disbursements.
   dispatcher's order with kind, address, neighborhood, instructions, shipments with
   tracking number, merchant, recipient, package count and size, delivery window, COD
   amount, and at-risk or late flags. The first pending stop in that order is highlighted;
-  the courier may open and complete any pending stop (feature 002, FR-007).
+  the courier may open and complete any pending stop (feature 002, FR-007). The app also
+  lists "En mi custodia": packages the courier holds that are on no route (FR-031), for
+  reference only.
 - **FR-006**: At a pickup stop, the courier MUST confirm each shipment individually. A
   confirmed shipment becomes "Recogido" and its custody starts with that courier. The stop
   is completed when none of its shipments is pending.
@@ -379,21 +389,25 @@ over equal to cash collected minus disbursements.
   app offers to confirm the pickup first. An errand has a single stop and no pickup.
 - **FR-008**: Recording a delivery MUST capture the received-by name, proposed as the
   recipient's name and editable (for a carrier handoff, proposed as the carrier's name; for
-  a reverse pickup, as the merchant's name). The shipment becomes "Entregado" and the
-  courier's custody ends.
+  a reverse pickup, as the merchant's name). The name has 2 to 100 characters. The shipment
+  becomes "Entregado" and the courier's custody ends. Completing an errand captures an
+  optional note instead of a received-by name. Nothing is collected at an exception or a
+  return.
 - **FR-009**: The app MUST ask for a proof-of-delivery photo at every delivery, return, and
   completed errand, and let the courier skip it. A delivery without photo is flagged "Sin
   foto" on the dispatch board. A record accepts up to three photos. Photos MUST be reduced
-  on the phone before they are stored or sent. A photo problem MUST never block a record.
+  on the phone, to about 200 KB while staying legible, before they are stored or sent. A
+  photo problem MUST never block a record.
 - **FR-010**: When a shipment has a COD amount greater than zero, recording its delivery MUST
   capture the amount collected, split among the payment methods "Efectivo", "Transferencia
   a la empresa", and "Transferencia al cliente". The app proposes the full COD amount in
   cash. For any transfer the app asks for a photo of the receipt, which can be skipped.
 - **FR-011**: A collected total different from the COD amount MUST require a note and flag
   the shipment "Recaudo diferente" on the dispatch board. Amounts are whole pesos, zero or
-  more.
-- **FR-012**: At any stop the courier MUST be able to record a disbursement for one of its
-  shipments: amount, carrier or payee, optional note, and a photo of the receipt (asked
+  more; a collected total or a disbursement above COP 2,000,000 asks for confirmation
+  (the threshold of feature 001, FR-037).
+- **FR-012**: The courier MUST be able to record a disbursement for any shipment of the
+  route on the phone, whether its stop is pending or done: amount greater than zero, carrier or payee, optional note, and a photo of the receipt (asked
   for, skippable). This feature captures disbursements; what is done with them is Phase 2.
 - **FR-013**: The courier MUST be able to report a delivery exception for a picked-up
   shipment with one reason among "Destinatario ausente", "Dirección errada", and
@@ -402,13 +416,14 @@ over equal to cash collected minus disbursements.
 - **FR-014**: The courier MUST be able to report a problem on a shipment not yet picked up,
   or on an errand, with a note of 5 to 200 characters. The shipment keeps its status and
   stays pending on the route, flagged "Problema de recogida" on the dispatch board until it
-  is picked up, completed, removed, or voided. The dispatcher acts with the tools of
+  is picked up, completed, removed, or voided; a new report replaces the note shown. The
+  dispatcher acts with the tools of
   features 001 and 002 (remove, reassign, void).
 - **FR-015**: Every record MUST capture the phone's location when available, without
   blocking or delaying the record. There is no continuous location sharing.
 - **FR-016**: Each stop MUST offer shortcuts to call the recipient, write to them on
   WhatsApp, and open the address in a map app; pickup stops offer the same for the
-  merchant's contact when it exists.
+  merchant's contact. A shortcut appears only when its phone number or address exists.
 - **FR-017**: Before saving a delivery, exception, or return, the app MUST show what will be
   recorded (shipment, recipient, result, amounts) for the courier to confirm. A saved
   record cannot be changed or reverted by the courier.
@@ -419,24 +434,30 @@ over equal to cash collected minus disbursements.
   pickup problem, return, handover confirmation, acknowledgment of a notice) MUST be saved
   on the phone before anything is sent, and MUST survive closing the app, restarting the
   phone, and running out of battery. The app shows the result at once, without waiting for
-  the connection.
+  the connection. If the phone cannot save a record (for example, no storage left), the
+  app MUST say so and MUST NOT show the action as done.
 - **FR-019**: Every record MUST carry an identifier generated on the phone and have exactly
   one effect however many times it is sent. It MUST keep the time at which it happened and
   the time at which the system received it; the time at which it happened is corrected by
-  the clock difference measured at synchronization. Records of a shipment apply in the
-  order in which they happened.
+  the clock difference measured at synchronization and is never later than the time of
+  receipt. A phone sends its records in the order in which they happened; a record that
+  arrives after the shipment changed by other means is judged against the shipment as it
+  is then (FR-024–FR-026).
 - **FR-020**: Pending records MUST be sent automatically when the app opens, when the
-  connection returns, and periodically while the app is open, without the courier doing
-  anything. The app MUST always show how many records and photos are pending, let the
+  connection returns, and at least once a minute while the app is open, without the courier
+  doing anything. The app MUST always show how many records and photos are pending, let the
   courier read the list of pending records, and warn the courier when records have been
   pending for more than 2 hours.
 - **FR-021**: Records MUST be sent as the courier who made them. If the session expired, the
   records stay on the phone and are sent after that courier signs in again.
 - **FR-022**: With signal, the app MUST refresh the route at least once a minute while it is
   open, and every time it is opened. A route already loaded MUST open and be fully usable
-  without signal, including the information needed for each stop.
+  without signal, with all the data of FR-005. If no route was ever loaded and there is no
+  signal, the app says so and retries on its own.
 - **FR-023**: Photos MUST be sent separately from their record, after it; a record whose
-  photos have not arrived is marked "Foto pendiente". Once a route is finished and its
+  photos have not arrived is marked "Foto pendiente"; if a photo has not arrived 24 hours
+  after its record, the record is treated as having no such photo ("Sin foto" for a proof
+  of delivery). Once a route is finished and its
   records and photos are sent, the phone MUST delete that route's personal data and photos
   within 24 hours.
 
@@ -450,24 +471,28 @@ over equal to cash collected minus disbursements.
   applied as the fact it states whenever the shipment's status allows it, and flag the
   shipment "Por revisar":
   - a **pickup** of a shipment "Registrado", "Asignado", or "En ruta": the shipment becomes
-    "Recogido" in that courier's custody. If it is on another courier's route, a pending
-    handover to that courier is created; if it is on no route, it waits off route marked
-    "En custodia de {courier}";
+    "Recogido" in that courier's custody. If it is on another courier's route in progress,
+    a pending handover to that courier is created; if it is on a route in preparation, it
+    leaves that route; then, or if it is on no route, it waits off route marked "En
+    custodia de {courier}";
   - a **delivery, exception, or return** by the courier who holds custody: it applies, any
     pending handover of that shipment is cancelled, and its pending stop on another route
-    is removed.
-- **FR-026**: A record that cannot be applied (the shipment is "Anulado", "Entregado", or
-  "Devuelto", or the author does not hold custody) MUST be kept as "No aplicado", flag the
-  shipment "Por revisar", and show the courier a notice. The owner or dispatcher clears a
-  "Por revisar" flag with a note.
+    is removed;
+  - a **disbursement**: it is always stored, unless the shipment is "Anulado".
+- **FR-026**: In every other case (for example, the shipment is "Anulado", "Entregado", or
+  "Devuelto", or the author does not hold custody) the record MUST be kept as "No
+  aplicado", flag the shipment "Por revisar", and show the courier a notice. The owner or
+  dispatcher clears a "Por revisar" flag with a note of 5 to 200 characters; clearing it
+  changes nothing else.
 
 **Changes and handovers**
 
 - **FR-027**: The app MUST show a notice for every change the dispatcher makes to the
   courier's route: route dispatched, shipment added, removed, or voided, stops reordered,
   shipment reassigned to or from another courier, route reassigned, dispatch undone,
-  exception decided, record corrected or reverted. A notice stays until the courier taps
-  "Entendido"; the acknowledgment is recorded with its time.
+  exception decided, package received at the office, record corrected or reverted, record
+  not applied. Notices stay until the courier taps "Entendido", which acknowledges all the
+  notices shown; the acknowledgment is recorded with its time.
 - **FR-040**: The system MUST send a phone notification to the courier, even with the app
   closed, when a route is dispatched to them and for every later change that produces a
   notice (FR-027). The app asks for the notification permission once, after sign-in. The
@@ -484,12 +509,15 @@ over equal to cash collected minus disbursements.
 
 - **FR-029**: For a shipment in "Novedad", the owner or dispatcher MUST be able to decide:
   - **"Nuevo intento"**, with a service date (today by default) and optionally a route in
-    progress: the shipment returns to "Recogido". With a route, it gets a new pending
+    progress (proposed: the route it is on, if still in progress): the shipment returns to
+    "Recogido". With a route, it gets a new pending
     delivery stop there, with a pending handover if the route belongs to another courier.
     Without a route, or with a later date, it leaves its route and waits off route;
   - **"Devolver al remitente"**, optionally on a route in progress: the shipment shows
-    "Devolución en curso" and gets a return stop at the merchant's pickup point, under the
-    same route and handover rules.
+    "Devolución en curso" and gets a return stop at the place where it was picked up (the
+    merchant's pickup point; for a reverse pickup, the recipient's address), under the
+    same route and handover rules. While the return stop is not completed, the decision
+    can be changed to "Nuevo intento", which removes the pending return stop.
 
   Until a decision is made, the shipment stays in "Novedad" on its route and cannot be moved
   or removed (feature 002, Assumptions).
@@ -505,7 +533,8 @@ over equal to cash collected minus disbursements.
     stop;
   - with no decision yet, it stays in "Novedad" marked "En oficina".
 
-  The office has one address, set by the owner.
+  The office has one address, set by the owner; "Recibido en oficina" cannot be recorded
+  until it is set.
 - **FR-030**: Completing a return stop MUST capture the received-by name and ask for a photo;
   the shipment becomes "Devuelto" and custody ends. A return stop cannot end in an
   exception: if the merchant is not there, the courier reports a problem with a note
@@ -515,30 +544,37 @@ over equal to cash collected minus disbursements.
   route in progress, where they get only a delivery stop (or return stop), with a pending
   handover if the route belongs to another courier. Shipments held by the office are listed
   marked "En oficina" and can be added to any route (FR-041).
-- **FR-032**: Every delivery attempt MUST be kept: courier, time, result, reason. The fee of
+- **FR-032**: Every delivery attempt MUST be kept: courier, time, result, reason. A reverted
+  record does not count as an attempt. The fee of
   a shipment does not change with the number of attempts in this feature.
 
 **Dispatch panel**
 
 - **FR-033**: The dispatch board MUST show "Novedades por decidir", and the flags "Sin foto",
   "Foto pendiente", "Recaudo diferente", "Problema de recogida", and "Por revisar"; and for
-  each route, the time of the courier's last synchronization and whether the latest change
-  has been acknowledged.
+  each route, the last time the courier's app contacted the system and how many changes
+  the courier has not acknowledged.
 - **FR-034**: The owner and the dispatcher MUST be able to record on a courier's behalf a
   pickup, delivery (with received-by name and collection), exception, pickup problem,
   return, and disbursement, stating the time it happened (now by default, never in the
-  future). Such records are marked "Registrado por despacho" with the user as author.
+  future). The record is attributed to the courier who holds the package or, before
+  pickup, to the courier of its route. Such records are marked "Registrado por despacho"
+  with the user as author.
 - **FR-035**: The owner and the dispatcher MUST be able to correct, with a reason of 5 to 200
-  characters, the received-by name, the collected amounts and payment methods, and a
-  disbursement; and to revert a delivery, exception, or return recorded by mistake, which
-  returns the shipment to "Recogido" in the custody of the courier who held it, with its
+  characters, the received-by name, the collected amounts and payment methods, the reason
+  and note of an exception, and a disbursement; and to revert the latest delivery,
+  exception, or return of a shipment recorded by mistake. Reverting a delivery or an
+  exception returns the shipment to "Recogido", and reverting a return returns it to
+  "Novedad" with the return pending, in the custody of the courier who held it, with its
   stop pending again on its route if that route is still in progress, otherwise off route
-  (FR-031). Corrections and reverts keep the previous values in the history and are
+  (FR-031). A reverted delivery's collection no longer counts. Corrections and reverts keep the previous values in the history and are
   notified to the courier.
 - **FR-036**: The shipment detail MUST show its proof of delivery (received-by name, photos,
   time, location), collection by payment method with receipt photos, disbursements, every
   attempt, and every record "No aplicado". Photos are visible to the owner and the
   dispatcher, and to the courier only for their own records of routes still on the phone.
+  Photos are kept 12 months and then deleted; the record stays and says the photo is no
+  longer available.
 
 **Summary**
 
@@ -550,12 +586,15 @@ over equal to cash collected minus disbursements.
 **General**
 
 - **FR-038**: All user-facing text MUST be in Spanish (Colombia) with the glossary's UI
-  terms; the app MUST follow the design system (`docs/design-system.md`), be usable with
-  one hand on a small phone in daylight, and meet the accessibility level of the
-  constitution.
+  terms; the app MUST follow the design system (`docs/design-system.md`) and the
+  constitution's rules for the courier app: usable with one hand, touch targets of at
+  least 48 px, confirming a pickup, confirming a delivery, and reporting an exception
+  within 3 taps of the route screen, a high-contrast option for sunlight, WCAG 2.2 AA, on
+  Android 10 or later with Chrome and iPhone with iOS 16 or later.
 - **FR-039**: Every record, decision, correction, revert, and cleared flag MUST be kept in
   the shipment's history (and the route's, when it changes the route) with author, time it
-  happened, and time it was received.
+  happened, and time it was received. The history is visible to the owner and the
+  dispatcher (feature 001).
 
 ### Key Entities
 
@@ -577,8 +616,8 @@ over equal to cash collected minus disbursements.
 - **Office custody**: the office, not a courier, is responsible for a package from "Recibido
   en oficina" until a courier picks it up there. Custody records therefore name a courier
   or the office.
-- **Return stop**: a stop at the merchant's pickup point where an undeliverable shipment is
-  given back.
+- **Return stop**: a stop at the place where the shipment was picked up, where an
+  undeliverable shipment is given back.
 - **Notice**: a change to a courier's route that the courier must see; acknowledged or not,
   and when.
 - **Review flag** ("Por revisar"): a mark on a shipment whose record arrived after the
@@ -641,7 +680,5 @@ over equal to cash collected minus disbursements.
 - The exception reasons are the three confirmed by the owner; pickup problems use a free
   note.
 - The cash-up, its reconciliation, and courier pay are Phase 2; "Mi día" is informative.
-- Photos are kept 12 months (business master §4.4); their deletion is handled with the
-  storage defined at planning.
 - The tracking page and the merchant link (feature 004) read the statuses, the received-by
   name, and the stop order produced here.
