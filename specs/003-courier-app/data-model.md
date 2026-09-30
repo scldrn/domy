@@ -87,7 +87,8 @@ Index `(courier_id) WHERE acknowledged_at is null`.
 the user signs out.
 
 **`company_settings`** (single row, FR-041): `office_address` text, `office_neighborhood_id`
-uuid → neighborhoods. Changes are written to `audit_events` (feature 001).
+uuid → neighborhoods. Changes are written to `audit_events` (feature 001). Feature 004 adds
+`support_phone` and `company_name`.
 
 **Added to `shipments`**
 
