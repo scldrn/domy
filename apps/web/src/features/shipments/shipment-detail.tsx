@@ -1,5 +1,7 @@
 import {
+  canVoid,
   formatTrackingNumber,
+  isEditable,
   packageSizeLabels,
   paymentModeLabels,
   serviceLevelLabels,
@@ -8,10 +10,16 @@ import {
   type ShipmentDetail as ShipmentDetailData,
   type ShipmentEvent,
 } from "@domy/domain";
-import type { ReactNode } from "react";
+import { getRouteApi, Link } from "@tanstack/react-router";
+import { useId, type ReactNode } from "react";
 import { ShipmentStatusChip } from "@/components/shipment-status-chip";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { formatCop, formatDate, formatDateTime, formatWindow } from "@/lib/format";
+import { ConfirmFeeDialog } from "./confirm-fee-dialog";
+import { VoidDialog } from "./void-dialog";
+
+const panelRoute = getRouteApi("/_panel");
 
 const eventLabels: Record<ShipmentEvent["type"], string> = {
   created: "Creado",
@@ -20,6 +28,53 @@ const eventLabels: Record<ShipmentEvent["type"], string> = {
   voided: "Anulado",
   status_changed: "Cambio de estado",
 };
+
+/** Field names and value formats of the change history (FR-016). */
+const fieldLabels: Record<string, string> = {
+  serviceDate: "Fecha del servicio",
+  pickupPointId: "Punto de recogida",
+  pickupAddress: "Dirección de recogida",
+  pickupNeighborhoodId: "Barrio de recogida",
+  recipientName: "Destinatario",
+  recipientPhone: "Teléfono",
+  recipientAddress: "Dirección",
+  recipientNeighborhoodId: "Barrio",
+  carrierId: "Transportadora",
+  destinationTown: "Municipio de destino",
+  errandDescription: "Descripción",
+  rateZoneId: "Zona tarifaria",
+  serviceLevel: "Nivel de servicio",
+  calculatedFee: "Tarifa calculada",
+  fee: "Tarifa",
+  feeOverrideReason: "Motivo de la tarifa",
+  feeNeedsReview: "Tarifa por revisar",
+  paymentMode: "Modalidad de pago",
+  codAmount: "Valor a recaudar",
+  windowStart: "Franja desde",
+  windowEnd: "Franja hasta",
+  packageSize: "Tamaño",
+  packageCount: "Unidades",
+  merchantReference: "Referencia",
+  instructions: "Indicaciones",
+};
+const moneyFields = new Set(["fee", "calculatedFee", "codAmount"]);
+const enumLabels: Record<string, Record<string, string>> = {
+  paymentMode: paymentModeLabels,
+  serviceLevel: serviceLevelLabels,
+  packageSize: packageSizeLabels,
+};
+
+function changeValue(field: string, value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "Sí" : "No";
+  if (typeof value === "number" && moneyFields.has(field)) return formatCop(value);
+  if (typeof value === "string") {
+    if (field === "serviceDate") return formatDate(value);
+    if (field === "windowStart" || field === "windowEnd") return formatDateTime(value);
+    return enumLabels[field]?.[value] ?? value;
+  }
+  return typeof value === "number" ? String(value) : JSON.stringify(value);
+}
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   if (children === null || children === undefined || children === "") return null;
@@ -42,6 +97,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 /** A shipment with every recorded value and its history (FR-016). */
 export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
+  const { user } = panelRoute.useRouteContext();
+  const historyId = useId();
   const recipientPlace = shipment.recipientNeighborhood
     ? `${shipment.recipientNeighborhood.name}, ${shipment.recipientNeighborhood.municipality}`
     : null;
@@ -53,6 +110,21 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         </h1>
         <ShipmentStatusChip status={shipment.status} />
         {shipment.feeNeedsReview && <Badge variant="warning">Tarifa por revisar</Badge>}
+        <div className="ml-auto flex flex-wrap gap-2">
+          {shipment.feeNeedsReview && user.role === "owner" && (
+            <ConfirmFeeDialog shipment={shipment} />
+          )}
+          {canVoid(shipment.status) && <VoidDialog shipment={shipment} />}
+          {isEditable(shipment.status) && (
+            <Link
+              to="/envios/$trackingNumber/editar"
+              params={{ trackingNumber: shipment.trackingNumber }}
+              className={buttonVariants()}
+            >
+              Editar
+            </Link>
+          )}
+        </div>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -107,14 +179,16 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         </Section>
       </div>
 
-      <section>
-        <h2 className="mb-2 text-title-m text-on-surface">Historial de cambios</h2>
+      <section aria-labelledby={historyId}>
+        <h2 id={historyId} className="mb-2 text-title-m text-on-surface">
+          Historial de cambios
+        </h2>
         <ol className="flex flex-col gap-2">
           {shipment.events.map((event) => (
             <li key={event.id} className="rounded-sm bg-surface-container-low px-4 py-3">
               <p className="text-body-l text-on-surface">
                 {eventLabels[event.type]}
-                {event.toStatus && event.type !== "created"
+                {event.toStatus && event.type === "status_changed"
                   ? `: ${shipmentStatusLabels[event.toStatus]}`
                   : ""}
               </p>
@@ -122,6 +196,16 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
                 {event.actor.name} · {formatDateTime(event.occurredAt)}
               </p>
               {event.reason && <p className="text-body-m text-on-surface">{event.reason}</p>}
+              {event.changes && (
+                <ul className="mt-1 text-body-m text-on-surface">
+                  {Object.entries(event.changes).map(([field, [before, after]]) => (
+                    <li key={field}>
+                      {fieldLabels[field] ?? field}: {changeValue(field, before)} →{" "}
+                      {changeValue(field, after)}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           ))}
         </ol>

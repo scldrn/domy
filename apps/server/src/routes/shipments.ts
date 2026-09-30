@@ -9,21 +9,29 @@ import {
   normalizeText,
   normalizeTrackingNumber,
   resolveCodAmount,
+  canVoid,
+  feeConfirmInput,
+  isEditable,
   shipmentCreateInput,
+  shipmentStatusLabels,
+  shipmentUpdateInput,
+  shipmentVoidInput,
   windowFromPreset,
   type BoardShipment,
+  type DeliveryWindow,
   type DispatchBoard,
   type RateEntry,
   type Shipment,
   type ShipmentDetail,
   type ShipmentKind,
+  type WindowPreset,
 } from "@domy/domain";
 import { and, asc, eq, inArray, isNull, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../app.ts";
-import type { Executor } from "../db/client.ts";
+import type { Db, Executor } from "../db/client.ts";
 import {
   carriers,
   merchants,
@@ -36,6 +44,7 @@ import {
   shipments,
   users,
 } from "../db/schema/index.ts";
+import { findShipmentAction } from "../lib/action-id.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
@@ -141,6 +150,12 @@ async function loadDetail(db: Executor, id: string): Promise<ShipmentDetail> {
     .innerJoin(users, eq(users.id, shipmentEvents.actorUserId))
     .where(eq(shipmentEvents.shipmentId, id))
     .orderBy(asc(shipmentEvents.occurredAt), asc(shipmentEvents.recordedAt));
+  const names = await referenceNames(
+    db,
+    events.flatMap(({ event }) =>
+      event.type === "created" ? [] : Object.entries(changesOf(event)),
+    ),
+  );
   return {
     ...shipment,
     events: events.map(({ event, actor }) => ({
@@ -152,9 +167,61 @@ async function loadDetail(db: Executor, id: string): Promise<ShipmentDetail> {
       occurredAt: event.occurredAt.toISOString(),
       recordedAt: event.recordedAt.toISOString(),
       reason: event.reason,
-      changes: event.changes as Record<string, unknown> | null,
+      changes:
+        event.type === "created" || !event.changes
+          ? null
+          : Object.fromEntries(
+              Object.entries(changesOf(event)).map(([field, [before, after]]) => [
+                field,
+                referenceFields.has(field)
+                  ? [named(names, before), named(names, after)]
+                  : [before, after],
+              ]),
+            ),
     })),
   };
+}
+
+type Changes = Record<string, [unknown, unknown]>;
+const changesOf = (event: { changes: unknown }) => (event.changes ?? {}) as Changes;
+
+/** Changed identifiers are shown by name in the history (FR-016). */
+const referenceFields = new Set([
+  "recipientNeighborhoodId",
+  "pickupNeighborhoodId",
+  "pickupPointId",
+  "rateZoneId",
+  "carrierId",
+]);
+
+const named = (names: Map<string, string>, value: unknown) =>
+  (typeof value === "string" && names.get(value)) || value;
+
+async function referenceNames(db: Executor, changes: [string, [unknown, unknown]][]) {
+  const ids = changes
+    .filter(([field]) => referenceFields.has(field))
+    .flatMap(([, values]) => values)
+    .filter((value): value is string => typeof value === "string");
+  if (ids.length === 0) return new Map<string, string>();
+  const rows = await Promise.all([
+    db
+      .select({ id: neighborhoods.id, name: neighborhoods.name })
+      .from(neighborhoods)
+      .where(inArray(neighborhoods.id, ids)),
+    db
+      .select({ id: rateZones.id, name: rateZones.name })
+      .from(rateZones)
+      .where(inArray(rateZones.id, ids)),
+    db
+      .select({ id: carriers.id, name: carriers.name })
+      .from(carriers)
+      .where(inArray(carriers.id, ids)),
+    db
+      .select({ id: pickupPoints.id, name: pickupPoints.label })
+      .from(pickupPoints)
+      .where(inArray(pickupPoints.id, ids)),
+  ]);
+  return new Map(rows.flat().map((row) => [row.id, row.name]));
 }
 
 /** The rate card entries that can apply to a merchant: its own and the standard ones. */
@@ -201,6 +268,141 @@ async function pricingPlace(db: Executor, kind: ShipmentKind, neighborhoodId: st
   return place;
 }
 
+/** The pickup of a shipment: a merchant's active pickup point, or a one-off address. */
+async function resolvePickup(
+  db: Executor,
+  merchantId: string,
+  pickup: { pickupPointId: string | null; pickupAddress: string; pickupNeighborhoodId: string },
+) {
+  if (!pickup.pickupPointId) return pickup;
+  const [point] = await db
+    .select()
+    .from(pickupPoints)
+    .where(and(eq(pickupPoints.id, pickup.pickupPointId), eq(pickupPoints.merchantId, merchantId)));
+  if (!point?.isActive) {
+    throw new AppError("invalid_request", {
+      fields: { pickupPointId: "Elige un punto de recogida activo del cliente." },
+    });
+  }
+  return {
+    pickupPointId: point.id,
+    pickupAddress: point.address,
+    pickupNeighborhoodId: point.neighborhoodId,
+  };
+}
+
+function deliveryWindow(serviceDate: string, preset: WindowPreset | null): DeliveryWindow {
+  if (!preset) return { windowStart: null, windowEnd: null };
+  try {
+    return windowFromPreset(serviceDate, preset);
+  } catch (error) {
+    throw new AppError("invalid_request", {
+      fields: { window: error instanceof Error ? error.message : "Franja no válida." },
+    });
+  }
+}
+
+const idParam = z.object({ id: z.uuid() });
+
+type ShipmentRow = typeof shipments.$inferSelect;
+/** Values to change; `undefined` leaves a field as it is. */
+type ShipmentChange = { [Field in keyof ShipmentRow]?: ShipmentRow[Field] | undefined };
+
+/** Fields every kind has, and the fields that only some kinds have (FR-015). */
+const commonFields = new Set([
+  "serviceDate",
+  "pickupPointId",
+  "pickupAddress",
+  "pickupNeighborhoodId",
+  "serviceLevel",
+  "fee",
+  "feeOverrideReason",
+  "paymentMode",
+  "codAmount",
+  "packageSize",
+  "packageCount",
+  "merchantReference",
+  "instructions",
+]);
+const recipientFields = ["recipientName", "recipientPhone", "recipientNeighborhoodId"];
+const kindFields: Record<ShipmentKind, Set<string>> = {
+  delivery: new Set([...recipientFields, "recipientAddress"]),
+  reverse_pickup: new Set([...recipientFields, "recipientAddress"]),
+  carrier_handoff: new Set([...recipientFields, "carrierId", "destinationTown"]),
+  errand: new Set(["errandDescription"]),
+};
+
+async function loadVersion(db: Executor, id: string, version: number): Promise<ShipmentRow> {
+  const [current] = await db.select().from(shipments).where(eq(shipments.id, id));
+  if (!current) throw new AppError("not_found", { message: "No encontramos ese envío." });
+  if (current.version !== version) {
+    throw new AppError("version_conflict", {
+      message: "Este envío cambió; revisa la versión más reciente.",
+    });
+  }
+  return current;
+}
+
+/** A shipment that can still be edited or voided: not picked up yet (FR-015). */
+async function loadEditable(db: Executor, id: string, version: number, action: "edit" | "void") {
+  const [found] = await db
+    .select({ status: shipments.status })
+    .from(shipments)
+    .where(eq(shipments.id, id));
+  const allowed = found && (action === "edit" ? isEditable(found.status) : canVoid(found.status));
+  if (found && !allowed) {
+    throw new AppError("invalid_transition", {
+      message:
+        found.status === "voided"
+          ? "Este envío ya está anulado."
+          : `Este envío ya fue recogido (estado «${shipmentStatusLabels[found.status]}»); no se puede ${action === "edit" ? "editar" : "anular"}.`,
+    });
+  }
+  return loadVersion(db, id, version);
+}
+
+/** `{ field: [old, new] }` for every field whose value changes. */
+function diff(current: ShipmentRow, next: ShipmentChange): Record<string, unknown> {
+  const plain = (value: unknown) => (value instanceof Date ? value.toISOString() : value);
+  const changes: Record<string, unknown> = {};
+  for (const [field, value] of Object.entries(next)) {
+    if (value === undefined || field === "recipientNameNormalized") continue;
+    const before = plain(current[field as keyof ShipmentRow]);
+    if (before !== plain(value)) changes[field] = [before, plain(value)];
+  }
+  return changes;
+}
+
+/**
+ * Applies a change and its event together, only on the version the user saw (FR-018). An
+ * action already recorded by a concurrent retry counts as applied (FR-042).
+ */
+async function saveChange(
+  db: Db,
+  current: ShipmentRow,
+  values: ShipmentChange,
+  event: Omit<typeof shipmentEvents.$inferInsert, "shipmentId">,
+) {
+  await db
+    .transaction(async (tx) => {
+      const [row] = await tx
+        .update(shipments)
+        .set({ ...values, version: current.version + 1, updatedAt: event.occurredAt })
+        .where(and(eq(shipments.id, current.id), eq(shipments.version, current.version)))
+        .returning({ id: shipments.id });
+      if (!row) {
+        throw new AppError("version_conflict", {
+          message: "Este envío cambió; revisa la versión más reciente.",
+        });
+      }
+      await tx.insert(shipmentEvents).values({ ...event, shipmentId: current.id });
+    })
+    .catch((error: unknown) => {
+      if (isUniqueViolation(error, "shipment_events_client_event_id_key")) return;
+      throw error;
+    });
+}
+
 const duplicatesQuery = z.object({
   merchantId: z.uuid(),
   serviceDate: z.iso.date(),
@@ -219,7 +421,7 @@ export const shipmentRoutes = new Hono<AppEnv>()
       merchantId: input.merchantId,
       rateZoneId: place?.rateZone.id ?? null,
       serviceLevel: input.serviceLevel,
-      registeredAt: c.get("clock")(),
+      registeredAt: input.registeredAt ? new Date(input.registeredAt) : c.get("clock")(),
       entries: await rateEntriesFor(db, input.merchantId),
     });
     return c.json({
@@ -245,26 +447,11 @@ export const shipmentRoutes = new Hono<AppEnv>()
     const registeredAt = c.get("clock")();
     const serviceDate = input.serviceDate ?? bogotaToday(registeredAt);
 
-    let pickupAddress = input.pickupAddress ?? "";
-    let pickupNeighborhoodId = input.pickupNeighborhoodId ?? "";
-    if (input.pickupPointId) {
-      const [point] = await db
-        .select()
-        .from(pickupPoints)
-        .where(
-          and(
-            eq(pickupPoints.id, input.pickupPointId),
-            eq(pickupPoints.merchantId, input.merchantId),
-          ),
-        );
-      if (!point?.isActive) {
-        throw new AppError("invalid_request", {
-          fields: { pickupPointId: "Elige un punto de recogida activo del cliente." },
-        });
-      }
-      pickupAddress = point.address;
-      pickupNeighborhoodId = point.neighborhoodId;
-    }
+    const { pickupAddress, pickupNeighborhoodId } = await resolvePickup(db, input.merchantId, {
+      pickupPointId: input.pickupPointId ?? null,
+      pickupAddress: input.pickupAddress ?? "",
+      pickupNeighborhoodId: input.pickupNeighborhoodId ?? "",
+    });
 
     const neighborhoodId = input.kind === "errand" ? null : input.recipientNeighborhoodId;
     const place = await pricingPlace(db, input.kind, neighborhoodId);
@@ -301,16 +488,7 @@ export const shipmentRoutes = new Hono<AppEnv>()
       throw new AppError("confirmation_required");
     }
 
-    let window: ReturnType<typeof windowFromPreset> = { windowStart: null, windowEnd: null };
-    if (input.window) {
-      try {
-        window = windowFromPreset(serviceDate, input.window);
-      } catch (error) {
-        throw new AppError("invalid_request", {
-          fields: { window: error instanceof Error ? error.message : "Franja no válida." },
-        });
-      }
-    }
+    const window = deliveryWindow(serviceDate, input.window ?? null);
 
     const recipient =
       input.kind === "delivery" ||
@@ -481,6 +659,181 @@ export const shipmentRoutes = new Hono<AppEnv>()
       throw new AppError("not_found", { message: "No hay un envío con ese número de guía." });
     return c.json(await loadDetail(db, row.id));
   })
-  .get("/:id", validate("param", z.object({ id: z.uuid() })), async (c) => {
+  .get("/:id", validate("param", idParam), async (c) => {
     return c.json(await loadDetail(c.get("db"), c.req.valid("param").id));
-  });
+  })
+  // Corrections while the shipment is not picked up (FR-015, FR-016, FR-018, FR-042).
+  .patch("/:id", validate("param", idParam), validate("json", shipmentUpdateInput), async (c) => {
+    const { id } = c.req.valid("param");
+    const { actionId, version, confirmed, window: windowInput, ...input } = c.req.valid("json");
+    const db = c.get("db");
+    if (await findShipmentAction(db, actionId)) return c.json(await loadShipment(db, id));
+    const current = await loadEditable(db, id, version, "edit");
+
+    const misplaced = Object.keys(input).find(
+      (field) => !kindFields[current.kind].has(field) && !commonFields.has(field),
+    );
+    if (misplaced) {
+      throw new AppError("invalid_request", {
+        fields: { [misplaced]: "Este dato no aplica a este tipo de envío." },
+      });
+    }
+
+    const serviceDate = input.serviceDate ?? current.serviceDate;
+    const pickup =
+      input.pickupPointId !== undefined || input.pickupAddress || input.pickupNeighborhoodId
+        ? await resolvePickup(db, current.merchantId, {
+            pickupPointId:
+              input.pickupPointId !== undefined ? input.pickupPointId : current.pickupPointId,
+            pickupAddress: input.pickupAddress ?? current.pickupAddress,
+            pickupNeighborhoodId: input.pickupNeighborhoodId ?? current.pickupNeighborhoodId,
+          })
+        : {};
+
+    // The fee is recalculated with the rate card in force at registration (scenario 1); a new
+    // rate zone or service level discards an earlier override (scenario 5).
+    const neighborhoodId = input.recipientNeighborhoodId ?? current.recipientNeighborhoodId;
+    const place = await pricingPlace(db, current.kind, neighborhoodId);
+    const rateZoneId = place?.rateZone.id ?? null;
+    const serviceLevel = input.serviceLevel ?? current.serviceLevel;
+    const pricingChanged =
+      rateZoneId !== current.rateZoneId || serviceLevel !== current.serviceLevel;
+    const pricing = pricingChanged
+      ? calculateFee({
+          kind: current.kind,
+          merchantId: current.merchantId,
+          rateZoneId,
+          serviceLevel,
+          registeredAt: current.registeredAt,
+          entries: await rateEntriesFor(db, current.merchantId),
+        })
+      : { calculatedFee: current.calculatedFee, needsReview: current.feeNeedsReview };
+    const fee =
+      input.fee ?? (pricingChanged ? (pricing.calculatedFee ?? current.fee) : current.fee);
+    const overridden = pricing.calculatedFee === null || fee !== pricing.calculatedFee;
+    const keepsOverride = !pricingChanged && fee === current.fee;
+    const feeOverrideReason = overridden
+      ? (input.feeOverrideReason ?? (keepsOverride ? current.feeOverrideReason : null))
+      : null;
+    if (overridden && !feeOverrideReason) {
+      throw new AppError("invalid_request", {
+        fields: {
+          feeOverrideReason:
+            pricing.calculatedFee === null
+              ? "Escribe el motivo de la tarifa manual."
+              : "Escribe el motivo del cambio de tarifa.",
+        },
+      });
+    }
+
+    const paymentMode = input.paymentMode ?? current.paymentMode;
+    const enteredCod = input.codAmount ?? current.codAmount;
+    const codError = codAmountError(paymentMode, enteredCod);
+    if (codError) throw new AppError("invalid_request", { fields: { codAmount: codError } });
+    const codAmount = resolveCodAmount(paymentMode, fee, enteredCod);
+    if (
+      !confirmed &&
+      ((fee !== current.fee && fee > feeConfirmationThreshold) ||
+        (codAmount !== current.codAmount && codAmount > codConfirmationThreshold))
+    ) {
+      throw new AppError("confirmation_required");
+    }
+
+    // A new service date moves the window with it unless a new window is given.
+    const shiftMs = Date.parse(serviceDate) - Date.parse(current.serviceDate);
+    const shift = (instant: Date | null) => instant && new Date(instant.getTime() + shiftMs);
+    const window =
+      windowInput !== undefined
+        ? deliveryWindow(serviceDate, windowInput)
+        : { windowStart: shift(current.windowStart), windowEnd: shift(current.windowEnd) };
+
+    const recipientName = input.recipientName ?? current.recipientName;
+    const next = {
+      ...input,
+      ...pickup,
+      ...window,
+      serviceDate,
+      recipientName,
+      recipientNameNormalized: recipientName ? normalizeText(recipientName) : null,
+      rateZoneId,
+      serviceLevel,
+      calculatedFee: pricing.calculatedFee,
+      fee,
+      feeOverrideReason,
+      feeNeedsReview: pricing.needsReview,
+      paymentMode,
+      codAmount,
+      merchantReference: input.merchantReference === "" ? null : input.merchantReference,
+      instructions: input.instructions === "" ? null : input.instructions,
+    };
+    const changes = diff(current, next);
+    if (Object.keys(changes).length === 0) return c.json(await loadShipment(db, id));
+    await saveChange(db, current, next, {
+      type: "updated",
+      reason: "feeOverrideReason" in changes ? feeOverrideReason : null,
+      changes,
+      actorUserId: c.get("user").id,
+      occurredAt: c.get("clock")(),
+      clientEventId: actionId,
+    });
+    return c.json(await loadShipment(db, id));
+  })
+  // Voiding with a reason; shipments are never deleted (FR-014, FR-017, FR-040).
+  .post("/:id/void", validate("param", idParam), validate("json", shipmentVoidInput), async (c) => {
+    const { id } = c.req.valid("param");
+    const { actionId, version, reason } = c.req.valid("json");
+    const db = c.get("db");
+    if (await findShipmentAction(db, actionId)) return c.json(await loadShipment(db, id));
+    const current = await loadEditable(db, id, version, "void");
+    await saveChange(
+      db,
+      current,
+      { status: "voided", voidReason: reason },
+      {
+        type: "voided",
+        fromStatus: current.status,
+        toStatus: "voided",
+        reason,
+        actorUserId: c.get("user").id,
+        occurredAt: c.get("clock")(),
+        clientEventId: actionId,
+      },
+    );
+    return c.json(await loadShipment(db, id));
+  })
+  // The owner confirms or corrects a fee marked "Tarifa por revisar" (FR-035).
+  .post(
+    "/:id/confirm-fee",
+    requireRole("owner"),
+    validate("param", idParam),
+    validate("json", feeConfirmInput),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { actionId, version, fee } = c.req.valid("json");
+      const db = c.get("db");
+      if (await findShipmentAction(db, actionId)) return c.json(await loadShipment(db, id));
+      const current = await loadVersion(db, id, version);
+      if (!current.feeNeedsReview) {
+        throw new AppError("invalid_transition", {
+          message: "Este envío no tiene la tarifa por revisar.",
+        });
+      }
+      const next = {
+        fee,
+        feeNeedsReview: false,
+        codAmount: resolveCodAmount(current.paymentMode, fee, current.codAmount),
+        feeOverrideReason:
+          current.calculatedFee !== null && fee === current.calculatedFee
+            ? null
+            : current.feeOverrideReason,
+      };
+      await saveChange(db, current, next, {
+        type: "fee_confirmed",
+        changes: diff(current, next),
+        actorUserId: c.get("user").id,
+        occurredAt: c.get("clock")(),
+        clientEventId: actionId,
+      });
+      return c.json(await loadShipment(db, id));
+    },
+  );

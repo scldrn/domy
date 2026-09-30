@@ -1,4 +1,4 @@
-import { bogotaLocalTimeToInstant, bogotaToday } from "./bogota-time.ts";
+import { bogotaLocalTime, bogotaLocalTimeToInstant, bogotaToday } from "./bogota-time.ts";
 
 /** Delivery window presets (FR-010, data-model.md §Delivery window presets). */
 export type WindowPreset =
@@ -40,6 +40,20 @@ export function windowFromPreset(serviceDate: string, window: WindowPreset): Del
     windowStart: start ? bogotaLocalTimeToInstant(serviceDate, start) : null,
     windowEnd: end ? bogotaLocalTimeToInstant(serviceDate, end) : null,
   };
+}
+
+/** The preset that describes a stored window, for editing it (inverse of `windowFromPreset`). */
+export function presetFromWindow(window: DeliveryWindow): WindowPreset | null {
+  const start = window.windowStart && bogotaLocalTime(window.windowStart);
+  const end = window.windowEnd && bogotaLocalTime(window.windowEnd);
+  if (start && end) {
+    if (start === "08:00" && end === "12:00") return { preset: "morning" };
+    if (start === "12:00" && end === "20:00") return { preset: "afternoon" };
+    return { preset: "between", start, end };
+  }
+  if (end) return { preset: "before", end };
+  if (start) return { preset: "after", start };
+  return null;
 }
 
 /** Warnings that do not block saving (FR-010): Sunday service date, window already past. */

@@ -14,6 +14,7 @@ import { Route as signInRouteImport } from './routes/sign-in'
 import { Route as dispatchBoardRouteImport } from './routes/dispatch-board'
 import { Route as shipmentDetailRouteImport } from './routes/shipment-detail'
 import { Route as shipmentNewRouteImport } from './routes/shipment-new'
+import { Route as shipmentEditRouteImport } from './routes/shipment-edit'
 
 const panelLayoutRoute = panelLayoutRouteImport.update({
   id: '/_panel',
@@ -39,18 +40,25 @@ const shipmentNewRoute = shipmentNewRouteImport.update({
   path: '/envios/nuevo',
   getParentRoute: () => panelLayoutRoute,
 } as any)
+const shipmentEditRoute = shipmentEditRouteImport.update({
+  id: '/envios/$trackingNumber/editar',
+  path: '/envios/$trackingNumber/editar',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof dispatchBoardRoute
   '/ingresar': typeof signInRoute
   '/envios/$trackingNumber': typeof shipmentDetailRoute
   '/envios/nuevo': typeof shipmentNewRoute
+  '/envios/$trackingNumber/editar': typeof shipmentEditRoute
 }
 export interface FileRoutesByTo {
   '/ingresar': typeof signInRoute
   '/': typeof dispatchBoardRoute
   '/envios/$trackingNumber': typeof shipmentDetailRoute
   '/envios/nuevo': typeof shipmentNewRoute
+  '/envios/$trackingNumber/editar': typeof shipmentEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,12 +67,23 @@ export interface FileRoutesById {
   '/_panel/': typeof dispatchBoardRoute
   '/_panel/envios/$trackingNumber': typeof shipmentDetailRoute
   '/_panel/envios/nuevo': typeof shipmentNewRoute
+  '/_panel/envios/$trackingNumber/editar': typeof shipmentEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ingresar' | '/envios/$trackingNumber' | '/envios/nuevo'
+  fullPaths:
+    | '/'
+    | '/ingresar'
+    | '/envios/$trackingNumber'
+    | '/envios/nuevo'
+    | '/envios/$trackingNumber/editar'
   fileRoutesByTo: FileRoutesByTo
-  to: '/ingresar' | '/' | '/envios/$trackingNumber' | '/envios/nuevo'
+  to:
+    | '/ingresar'
+    | '/'
+    | '/envios/$trackingNumber'
+    | '/envios/nuevo'
+    | '/envios/$trackingNumber/editar'
   id:
     | '__root__'
     | '/_panel'
@@ -72,6 +91,7 @@ export interface FileRouteTypes {
     | '/_panel/'
     | '/_panel/envios/$trackingNumber'
     | '/_panel/envios/nuevo'
+    | '/_panel/envios/$trackingNumber/editar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -116,6 +136,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof shipmentNewRouteImport
       parentRoute: typeof panelLayoutRoute
     }
+    '/_panel/envios/$trackingNumber/editar': {
+      id: '/_panel/envios/$trackingNumber/editar'
+      path: '/envios/$trackingNumber/editar'
+      fullPath: '/envios/$trackingNumber/editar'
+      preLoaderRoute: typeof shipmentEditRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
   }
 }
 
@@ -123,12 +150,14 @@ interface panelLayoutRouteChildren {
   dispatchBoardRoute: typeof dispatchBoardRoute
   shipmentDetailRoute: typeof shipmentDetailRoute
   shipmentNewRoute: typeof shipmentNewRoute
+  shipmentEditRoute: typeof shipmentEditRoute
 }
 
 const panelLayoutRouteChildren: panelLayoutRouteChildren = {
   dispatchBoardRoute: dispatchBoardRoute,
   shipmentDetailRoute: shipmentDetailRoute,
   shipmentNewRoute: shipmentNewRoute,
+  shipmentEditRoute: shipmentEditRoute,
 }
 
 const panelLayoutRouteWithChildren = panelLayoutRoute._addFileChildren(

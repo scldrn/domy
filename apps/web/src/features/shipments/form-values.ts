@@ -1,10 +1,13 @@
-import type {
-  PackageSize,
-  PaymentMode,
-  ServiceLevel,
-  ShipmentCreateInput,
-  ShipmentKind,
-  WindowPreset,
+import {
+  presetFromWindow,
+  type PackageSize,
+  type PaymentMode,
+  type ServiceLevel,
+  type Shipment,
+  type ShipmentCreateInput,
+  type ShipmentKind,
+  type ShipmentUpdateInput,
+  type WindowPreset,
 } from "@domy/domain";
 import type { NeighborhoodOption, NamedOption } from "./api";
 
@@ -146,6 +149,77 @@ export function toCreateInput(
     case "errand":
       return { ...common, kind: values.kind, errandDescription: values.errandDescription };
   }
+}
+
+/** The form filled with a shipment, to edit it (User Story 3). */
+export function fromShipment(shipment: Shipment): ShipmentFormValues {
+  const place = (neighborhood: { id: string; name: string; municipality?: string } | null) =>
+    neighborhood && {
+      id: neighborhood.id,
+      name: neighborhood.name,
+      kind: "neighborhood" as const,
+      needsReview: false,
+      municipality: { id: "", name: neighborhood.municipality ?? "" },
+      rateZone: shipment.rateZone ?? { id: "", name: "" },
+    };
+  const handoff = shipment.kind === "carrier_handoff";
+  const preset = presetFromWindow({
+    windowStart: shipment.windowStart ? new Date(shipment.windowStart) : null,
+    windowEnd: shipment.windowEnd ? new Date(shipment.windowEnd) : null,
+  });
+  return {
+    kind: shipment.kind,
+    merchant: shipment.merchant,
+    pickupPointId: shipment.pickupPointId ?? otherPickupAddress,
+    pickupAddress: shipment.pickupPointId ? "" : shipment.pickupAddress,
+    pickupNeighborhood: shipment.pickupPointId ? null : place(shipment.pickupNeighborhood),
+    recipientName: shipment.recipientName ?? "",
+    recipientPhone: shipment.recipientPhone ?? "",
+    recipientAddress: shipment.recipientAddress ?? "",
+    recipientNeighborhood: handoff ? null : place(shipment.recipientNeighborhood),
+    handoffPlace: handoff ? place(shipment.recipientNeighborhood) : null,
+    carrierId: shipment.carrier?.id ?? "",
+    destinationTown: shipment.destinationTown ?? "",
+    errandDescription: shipment.errandDescription ?? "",
+    paymentMode: shipment.paymentMode,
+    codAmount: shipment.codAmount,
+    serviceLevel: shipment.serviceLevel,
+    fee: shipment.fee,
+    feeOverridden: shipment.calculatedFee !== null && shipment.fee !== shipment.calculatedFee,
+    feeOverrideReason: shipment.feeOverrideReason ?? "",
+    serviceDate: shipment.serviceDate,
+    window: {
+      preset: preset?.preset ?? "none",
+      start: preset && "start" in preset ? preset.start : "",
+      end: preset && "end" in preset ? preset.end : "",
+    },
+    packageSize: shipment.packageSize ?? "",
+    packageCount: shipment.packageCount === null ? "" : String(shipment.packageCount),
+    merchantReference: shipment.merchantReference ?? "",
+    instructions: shipment.instructions ?? "",
+  };
+}
+
+/**
+ * The edit of a shipment from the validated form: every editable field, with cleared
+ * optional fields sent empty so they are removed. Tracking number, merchant, and kind stay.
+ */
+export function toUpdateInput(
+  input: ShipmentCreateInput,
+  values: ShipmentFormValues,
+  shipment: Shipment,
+  actionId: string,
+): ShipmentUpdateInput {
+  const { id: _id, merchantId: _merchant, kind: _kind, ...fields } = input;
+  return {
+    ...fields,
+    actionId,
+    version: shipment.version,
+    packageSize: values.packageSize || null,
+    packageCount: values.packageCount ? Number(values.packageCount) : null,
+    merchantReference: values.merchantReference.trim(),
+    instructions: values.instructions.trim(),
+  };
 }
 
 /** Where an API or schema field error is shown in the form. */

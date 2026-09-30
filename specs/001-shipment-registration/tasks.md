@@ -191,14 +191,14 @@ reason, and verify both in each shipment's history with author, time, and old an
 
 ### Tests for User Story 3 ⚠️ write first, must fail
 
-- [ ] T070 [P] [US3] Integration tests in `apps/server/tests/shipments-update.test.ts` covering spec US3 scenarios 1–7: recalculation with the original `registered_at`, override discarded, COD rule per payment mode, `409 version_conflict`, `409 invalid_transition` from `picked_up`, fields `trackingNumber`, `merchantId`, `kind` rejected, `updated` event with old and new values, a repeated `actionId` returning the current shipment without a second event (FR-042), void with reason 5–200 characters, and `POST /:id/confirm-fee` owner-only clearing `fee_needs_review` with a `fee_confirmed` event (FR-035)
-- [ ] T071 [P] [US3] End-to-end test in `apps/web/tests/e2e/edit-void-shipment.spec.ts`: quickstart scenarios 8–9, and the owner confirming a "Tarifa por revisar"
+- [X] T070 [P] [US3] Integration tests in `apps/server/tests/shipments-update.test.ts` covering spec US3 scenarios 1–7: recalculation with the original `registered_at`, override discarded, COD rule per payment mode, `409 version_conflict`, `409 invalid_transition` from `picked_up`, fields `trackingNumber`, `merchantId`, `kind` rejected, `updated` event with old and new values, a repeated `actionId` returning the current shipment without a second event (FR-042), void with reason 5–200 characters, and `POST /:id/confirm-fee` owner-only clearing `fee_needs_review` with a `fee_confirmed` event (FR-035)
+- [X] T071 [P] [US3] End-to-end test in `apps/web/tests/e2e/edit-void-shipment.spec.ts`: quickstart scenarios 8–9, and the owner confirming a "Tarifa por revisar"
 
 ### Implementation for User Story 3
 
-- [ ] T072 [US3] Add `ShipmentUpdateInput` and `ShipmentVoidInput` (both with `actionId` and `version`) to `packages/domain/src/schemas/shipment.ts`
-- [ ] T073 [US3] Implement `PATCH /api/shipments/:id`, `POST /api/shipments/:id/void`, and `POST /api/shipments/:id/confirm-fee` in `apps/server/src/routes/shipments.ts` (optimistic `version`, lifecycle check, event with diff in the same transaction) until T070 passes
-- [ ] T074 [US3] Build the edit route `apps/web/src/routes/shipment-edit.tsx` (`/envios/$trackingNumber/editar`) reusing the shipment form, `apps/web/src/features/shipments/void-dialog.tsx`, the conflict message that keeps typed values, and `apps/web/src/features/shipments/confirm-fee-dialog.tsx` for the owner, until T071 passes
+- [X] T072 [US3] Add `ShipmentUpdateInput` and `ShipmentVoidInput` (both with `actionId` and `version`) to `packages/domain/src/schemas/shipment.ts`
+- [X] T073 [US3] Implement `PATCH /api/shipments/:id`, `POST /api/shipments/:id/void`, and `POST /api/shipments/:id/confirm-fee` in `apps/server/src/routes/shipments.ts` (optimistic `version`, lifecycle check, event with diff in the same transaction) until T070 passes
+- [X] T074 [US3] Build the edit route `apps/web/src/routes/shipment-edit.tsx` (`/envios/$trackingNumber/editar`) reusing the shipment form, `apps/web/src/features/shipments/void-dialog.tsx`, the conflict message that keeps typed values, and `apps/web/src/features/shipments/confirm-fee-dialog.tsx` for the owner, until T071 passes
 
 **Checkpoint**: shipments can be corrected and voided with a complete history
 

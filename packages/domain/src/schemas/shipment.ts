@@ -97,12 +97,67 @@ export const shipmentCreateInput = z
 
 export type ShipmentCreateInput = z.input<typeof shipmentCreateInput>;
 
+const action = {
+  actionId: z.uuid("Falta el identificador de la acción."),
+  version: z.number().int().min(1),
+};
+
+/**
+ * Input of `PATCH /api/shipments/:id`: the fields to change, every one optional (FR-015).
+ * The tracking number, merchant, and kind cannot change; the shipment's kind decides which
+ * of the kind-specific fields apply.
+ */
+export const shipmentUpdateInput = z.strictObject(
+  {
+    ...action,
+    serviceDate: calendarDate.optional(),
+    pickupPointId: common.pickupPointId,
+    pickupAddress: common.pickupAddress,
+    pickupNeighborhoodId: common.pickupNeighborhoodId,
+    recipientName: recipient.recipientName.optional(),
+    recipientPhone: phone.optional(),
+    recipientAddress: recipient.recipientAddress.optional(),
+    recipientNeighborhoodId: z.uuid("Elige el barrio.").optional(),
+    carrierId: z.uuid("Elige la transportadora.").optional(),
+    destinationTown: required("Escribe el municipio de destino.").optional(),
+    errandDescription: required("Describe la diligencia.").optional(),
+    serviceLevel: serviceLevel.optional(),
+    fee: common.fee.optional(),
+    feeOverrideReason: reason.optional(),
+    paymentMode: paymentMode.optional(),
+    codAmount: money.optional(),
+    window: common.window,
+    packageSize: packageSize.nullable().optional(),
+    packageCount: common.packageCount.nullable().optional(),
+    merchantReference: common.merchantReference,
+    instructions: common.instructions,
+    confirmed: common.confirmed,
+  },
+  {
+    error: (issue) =>
+      issue.code === "unrecognized_keys"
+        ? "El número de guía, el cliente y el tipo de envío no se pueden cambiar; anula el envío y regístralo de nuevo."
+        : undefined,
+  },
+);
+export type ShipmentUpdateInput = z.input<typeof shipmentUpdateInput>;
+
+/** Input of `POST /api/shipments/:id/void` (FR-014, FR-040). */
+export const shipmentVoidInput = z.object({ ...action, reason });
+export type ShipmentVoidInput = z.input<typeof shipmentVoidInput>;
+
+/** Input of `POST /api/shipments/:id/confirm-fee`: the confirmed or corrected fee (FR-035). */
+export const feeConfirmInput = z.object({ ...action, fee: common.fee });
+export type FeeConfirmInput = z.input<typeof feeConfirmInput>;
+
 /** Input of `POST /api/shipments/fee-quote`. */
 export const feeQuoteInput = z.object({
   merchantId: z.uuid(),
   kind: shipmentKind,
   neighborhoodId: z.uuid().nullable(),
   serviceLevel,
+  /** When editing: the shipment's registration time, whose rate card applies (FR-006). */
+  registeredAt: z.iso.datetime().optional(),
 });
 export type FeeQuoteInput = z.infer<typeof feeQuoteInput>;
 
@@ -167,7 +222,8 @@ export type ShipmentEvent = {
   occurredAt: string;
   recordedAt: string;
   reason: string | null;
-  changes: Record<string, unknown> | null;
+  /** `{ field: [old, new] }` of edits and fee confirmations; referenced records by name. */
+  changes: Record<string, [unknown, unknown]> | null;
 };
 
 export type ShipmentDetail = Shipment & { events: ShipmentEvent[] };

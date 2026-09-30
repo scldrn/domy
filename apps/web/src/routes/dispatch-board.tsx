@@ -9,7 +9,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BoardFilters } from "@/features/board/board-filters";
 import { BoardTable } from "@/features/board/board-table";
@@ -96,7 +96,9 @@ function DispatchBoardPage() {
               Ver hoy
             </Button>
           )}
-          <Button render={<Link to="/envios/nuevo" />}>Nuevo envío</Button>
+          <Link to="/envios/nuevo" className={buttonVariants()}>
+            Nuevo envío
+          </Link>
         </div>
       </header>
 

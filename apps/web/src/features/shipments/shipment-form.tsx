@@ -10,8 +10,9 @@ import {
   shipmentKinds,
   windowFromPreset,
   windowWarnings,
+  type Shipment,
 } from "@domy/domain";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState, type ComponentProps } from "react";
 import { Controller, FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
@@ -41,14 +42,16 @@ import { OptionSelect } from "@/components/option-select";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api-client";
 import { now } from "@/lib/clock";
-import { createShipment, findDuplicates, listCarriers, quoteFee } from "./api";
+import { createShipment, findDuplicates, listCarriers, quoteFee, updateShipment } from "./api";
 import { DeliveryWindowField } from "./delivery-window-field";
 import { FeeField } from "./fee-field";
 import {
   emptyShipmentForm,
   formFieldOf,
+  fromShipment,
   pricingNeighborhood,
   toCreateInput,
+  toUpdateInput,
   windowPresetOf,
   type ShipmentFormValues,
 } from "./form-values";
@@ -62,11 +65,22 @@ import { useFormDraft } from "./use-form-draft";
 const sessionExpiredMessage =
   "Tu sesión terminó. Ingresa de nuevo: los datos del formulario se conservan.";
 
-/** Registration of a single shipment (User Story 1). */
-export function ShipmentForm() {
+/**
+ * Registration of a single shipment (User Story 1) or, given a shipment, its correction
+ * (User Story 3). An edit keeps its typed values per shipment version, so a newer version
+ * starts from the saved values.
+ */
+export function ShipmentForm({ shipment }: { shipment?: Shipment }) {
   const navigate = useNavigate();
-  const emptyValues = useCallback(() => emptyShipmentForm(bogotaToday(now())), []);
-  const draft = useFormDraft("shipment", emptyValues);
+  const queryClient = useQueryClient();
+  const emptyValues = useCallback(
+    () => (shipment ? fromShipment(shipment) : emptyShipmentForm(bogotaToday(now()))),
+    [shipment],
+  );
+  const draft = useFormDraft(
+    shipment ? `shipment-edit:${shipment.id}:${String(shipment.version)}` : "shipment",
+    emptyValues,
+  );
   const form = useForm<ShipmentFormValues>({ defaultValues: draft.initialValues });
   const { control, register, setValue, setError, clearErrors, formState } = form;
   const [confirming, setConfirming] = useState(false);
@@ -86,11 +100,22 @@ export function ShipmentForm() {
         kind: values.kind,
         neighborhoodId: place?.id ?? null,
         serviceLevel: values.serviceLevel,
+        ...(shipment && { registeredAt: shipment.registeredAt }),
       }),
     enabled: Boolean(values.merchant) && (values.kind === "errand" || Boolean(place)),
   });
   const calculatedFee = quote.data?.calculatedFee ?? null;
   const needsManualFee = values.kind === "errand" || (quote.data?.needsManualFee ?? false);
+
+  // Editing: a new rate zone or service level discards an earlier override (US3 scenario 5).
+  const rateZoneId = quote.data?.rateZone?.id;
+  useEffect(() => {
+    if (!shipment || rateZoneId === undefined) return;
+    if (rateZoneId !== shipment.rateZone?.id || values.serviceLevel !== shipment.serviceLevel) {
+      setValue("feeOverridden", false);
+      setValue("feeOverrideReason", "");
+    }
+  }, [shipment, rateZoneId, values.serviceLevel, setValue]);
 
   // The fee follows the rate card until the dispatcher overrides it.
   useEffect(() => {
@@ -116,6 +141,8 @@ export function ShipmentForm() {
         ...(reference ? { merchantReference: reference } : { recipientPhone: phone }),
       }),
     enabled: Boolean(values.merchant) && (Boolean(reference) || phone.length === 10),
+    select: (trackingNumbers) =>
+      trackingNumbers.filter((number) => number !== shipment?.trackingNumber),
   });
 
   let window = null;
@@ -131,7 +158,7 @@ export function ShipmentForm() {
 
   async function save(formValues: ShipmentFormValues, confirmed: boolean) {
     clearErrors();
-    const input = toCreateInput(formValues, draft.id, confirmed);
+    const input = toCreateInput(formValues, shipment?.id ?? draft.id, confirmed);
     const parsed = shipmentCreateInput.safeParse(input);
     if (!parsed.success) {
       for (const issue of parsed.error.issues) {
@@ -141,15 +168,26 @@ export function ShipmentForm() {
       return;
     }
     try {
-      const shipment = await createShipment(input);
-      const trackingNumber = formatTrackingNumber(shipment.trackingNumber);
+      if (shipment) {
+        await updateShipment(shipment.id, toUpdateInput(input, formValues, shipment, draft.id));
+        draft.startNew();
+        await queryClient.invalidateQueries({ queryKey: ["shipment", shipment.trackingNumber] });
+        toast.success("Cambios guardados");
+        await navigate({
+          to: "/envios/$trackingNumber",
+          params: { trackingNumber: shipment.trackingNumber },
+        });
+        return;
+      }
+      const created = await createShipment(input);
+      const trackingNumber = formatTrackingNumber(created.trackingNumber);
       toast.success(`Envío ${trackingNumber} registrado`, {
         action: {
           label: "Ver envío",
           onClick: () => {
             void navigate({
               to: "/envios/$trackingNumber",
-              params: { trackingNumber: shipment.trackingNumber },
+              params: { trackingNumber: created.trackingNumber },
             });
           },
         },
@@ -184,27 +222,38 @@ export function ShipmentForm() {
       >
         <FieldSet className="lg:col-span-2">
           <FieldLegend>Tipo de envío</FieldLegend>
-          <Controller
-            control={control}
-            name="kind"
-            render={({ field }) => (
-              <SegmentedControl
-                label="Tipo de envío"
-                value={field.value}
-                onChange={field.onChange}
-                options={shipmentKinds.map((value) => ({
-                  value,
-                  label: shipmentKindLabels[value],
-                }))}
-              />
-            )}
-          />
+          {shipment ? (
+            <p className="text-body-l text-on-surface">{shipmentKindLabels[shipment.kind]}</p>
+          ) : (
+            <Controller
+              control={control}
+              name="kind"
+              render={({ field }) => (
+                <SegmentedControl
+                  label="Tipo de envío"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={shipmentKinds.map((value) => ({
+                    value,
+                    label: shipmentKindLabels[value],
+                  }))}
+                />
+              )}
+            />
+          )}
         </FieldSet>
 
         <FieldSet>
           <FieldLegend>Cliente y recogida</FieldLegend>
           <FieldGroup>
-            <MerchantCombobox autoFocus />
+            {shipment ? (
+              <Field>
+                <FieldLabel>Cliente</FieldLabel>
+                <p className="text-body-l text-on-surface">{shipment.merchant.name}</p>
+              </Field>
+            ) : (
+              <MerchantCombobox autoFocus />
+            )}
             <PickupPointSelect />
           </FieldGroup>
         </FieldSet>
@@ -372,7 +421,13 @@ export function ShipmentForm() {
           )}
           {formState.errors.root && <FieldError errors={[formState.errors.root]} />}
           <Button type="submit" size="lg" className="self-start" disabled={formState.isSubmitting}>
-            {formState.isSubmitting ? "Registrando…" : "Registrar envío"}
+            {shipment
+              ? formState.isSubmitting
+                ? "Guardando…"
+                : "Guardar cambios"
+              : formState.isSubmitting
+                ? "Registrando…"
+                : "Registrar envío"}
           </Button>
         </div>
       </form>
@@ -393,7 +448,7 @@ export function ShipmentForm() {
                 void form.handleSubmit((formValues) => save(formValues, true))();
               }}
             >
-              Confirmar y registrar
+              {shipment ? "Confirmar y guardar" : "Confirmar y registrar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

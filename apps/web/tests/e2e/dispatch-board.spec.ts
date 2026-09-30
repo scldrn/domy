@@ -1,37 +1,9 @@
 import { formatTrackingNumber, type Shipment } from "@domy/domain";
+import { register } from "./api";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 
 const startOfSuite = "2026-10-01T15:00:00Z"; // 10:00 in Bogotá, as global-setup sets it
-
-/** Registers a Bullish Hype delivery to Laureles through the API, as the page's user. */
-async function register(page: Page, overrides: Record<string, unknown> = {}): Promise<Shipment> {
-  const get = async <T>(path: string) => (await (await page.request.get(path)).json()) as T;
-  const [merchant] = (await get<{ items: { id: string }[] }>("/api/merchants?q=Bullish")).items;
-  const [place] = (await get<{ items: { id: string }[] }>("/api/neighborhoods?q=Laureles")).items;
-  if (!merchant || !place) throw new Error("The e2e catalog lacks Bullish Hype or Laureles");
-  const [point] = (
-    await get<{ items: { id: string }[] }>(`/api/merchants/${merchant.id}/pickup-points`)
-  ).items;
-  const response = await page.request.post("/api/shipments", {
-    data: {
-      id: crypto.randomUUID(),
-      kind: "delivery",
-      merchantId: merchant.id,
-      pickupPointId: point?.id,
-      recipientName: "Laura Gómez",
-      recipientPhone: "3001234567",
-      recipientAddress: "Calle 10 # 43-12",
-      recipientNeighborhoodId: place.id,
-      paymentMode: "cash_on_delivery",
-      codAmount: 85000,
-      fee: 13000,
-      ...overrides,
-    },
-  });
-  expect(response.status()).toBe(201);
-  return (await response.json()) as Shipment;
-}
 
 const row = (scope: Page | Locator, shipment: Shipment) =>
   scope.getByRole("row").filter({ hasText: formatTrackingNumber(shipment.trackingNumber) });

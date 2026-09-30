@@ -28,3 +28,8 @@ export function bogotaLocalTimeToInstant(date: string, time: string): Date {
   }
   return instant;
 }
+
+/** The local time (HH:MM) of an instant in Bogotá. */
+export function bogotaLocalTime(instant: Date): string {
+  return new Date(instant.getTime() - offsetMs).toISOString().slice(11, 16);
+}

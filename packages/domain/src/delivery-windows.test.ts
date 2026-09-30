@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { windowFromPreset, windowWarnings } from "./delivery-windows.ts";
+import {
+  presetFromWindow,
+  windowFromPreset,
+  windowWarnings,
+  type WindowPreset,
+} from "./delivery-windows.ts";
 
 const date = "2026-10-01";
 
@@ -63,5 +68,21 @@ describe("windowWarnings", () => {
     expect(windowWarnings(date, windowFromPreset(date, { preset: "afternoon" }), now).past).toBe(
       false,
     );
+  });
+});
+
+describe("presetFromWindow", () => {
+  it("returns the preset of every stored window", () => {
+    const presets: WindowPreset[] = [
+      { preset: "morning" },
+      { preset: "afternoon" },
+      { preset: "before", end: "17:00" },
+      { preset: "after", start: "14:30" },
+      { preset: "between", start: "09:00", end: "11:00" },
+    ];
+    for (const preset of presets) {
+      expect(presetFromWindow(windowFromPreset(date, preset))).toEqual(preset);
+    }
+    expect(presetFromWindow({ windowStart: null, windowEnd: null })).toBeNull();
   });
 });

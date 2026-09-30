@@ -1,10 +1,13 @@
 import type {
+  FeeConfirmInput,
   FeeQuote,
   FeeQuoteInput,
   NeighborhoodKind,
   Shipment,
   ShipmentCreateInput,
   ShipmentDetail,
+  ShipmentUpdateInput,
+  ShipmentVoidInput,
 } from "@domy/domain";
 import { api, unwrap } from "@/lib/api-client";
 
@@ -112,4 +115,18 @@ export async function createShipment(input: ShipmentCreateInput): Promise<Shipme
 
 export async function getShipmentByTrackingNumber(trackingNumber: string): Promise<ShipmentDetail> {
   return unwrap<ShipmentDetail>(api.api.shipments.$get({ query: { trackingNumber } }));
+}
+
+export async function updateShipment(id: string, input: ShipmentUpdateInput): Promise<Shipment> {
+  return unwrap<Shipment>(api.api.shipments[":id"].$patch({ param: { id }, json: input }));
+}
+
+export async function voidShipment(id: string, input: ShipmentVoidInput): Promise<Shipment> {
+  return unwrap<Shipment>(api.api.shipments[":id"].void.$post({ param: { id }, json: input }));
+}
+
+export async function confirmFee(id: string, input: FeeConfirmInput): Promise<Shipment> {
+  return unwrap<Shipment>(
+    api.api.shipments[":id"]["confirm-fee"].$post({ param: { id }, json: input }),
+  );
 }
