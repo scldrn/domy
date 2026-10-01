@@ -14,3 +14,4 @@ export * from "./dispatch-board.ts";
 export * from "./bulk-rows.ts";
 export * from "./schemas/bulk.ts";
 export * from "./schemas/search.ts";
+export * from "./schemas/master-data.ts";

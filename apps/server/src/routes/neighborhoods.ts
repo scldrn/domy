@@ -1,4 +1,9 @@
-import { neighborhoodKind, normalizeText } from "@domy/domain";
+import {
+  neighborhoodKind,
+  neighborhoodUpdateInput,
+  normalizeText,
+  type NeighborhoodDetail,
+} from "@domy/domain";
 import { and, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -11,16 +16,21 @@ import {
   rateZones,
 } from "../db/schema/index.ts";
 import { recordAudit } from "../lib/audit.ts";
+import { auditedChange, diffValues } from "../lib/master-data.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
 
 const searchQuery = z.object({
   q: z.string().optional(),
+  /** Active places by default; the catalog screen also asks for inactive ones. */
+  active: z.enum(["true", "false", "all"]).optional(),
   municipalityId: z.uuid().optional(),
   kind: neighborhoodKind.optional(),
   needsReview: z.enum(["true", "false"]).optional(),
 });
+
+const idParam = z.object({ id: z.uuid() });
 
 const createInput = z.object({
   id: z.uuid(),
@@ -35,6 +45,7 @@ const selection = {
   name: neighborhoods.name,
   kind: neighborhoods.kind,
   needsReview: neighborhoods.needsReview,
+  isActive: neighborhoods.isActive,
   municipality: { id: municipalities.id, name: municipalities.name },
   rateZone: { id: rateZones.id, name: rateZones.name },
 };
@@ -45,7 +56,7 @@ const selection = {
  */
 export async function searchNeighborhoods(
   db: Executor,
-  { q, municipalityId, kind, needsReview }: z.infer<typeof searchQuery>,
+  { q, municipalityId, kind, needsReview, active = "true" }: z.infer<typeof searchQuery>,
   limit: number,
 ) {
   const term = q ? normalizeText(q) : "";
@@ -62,7 +73,7 @@ export async function searchNeighborhoods(
     .innerJoin(rateZones, eq(rateZones.id, neighborhoods.rateZoneId))
     .where(
       and(
-        eq(neighborhoods.isActive, true),
+        active === "all" ? undefined : eq(neighborhoods.isActive, active === "true"),
         municipalityId ? eq(neighborhoods.municipalityId, municipalityId) : undefined,
         kind ? eq(neighborhoods.kind, kind) : undefined,
         needsReview ? eq(neighborhoods.needsReview, needsReview === "true") : undefined,
@@ -129,7 +140,88 @@ export const neighborhoodRoutes = new Hono<AppEnv>()
       .innerJoin(rateZones, eq(rateZones.id, neighborhoods.rateZoneId))
       .where(eq(neighborhoods.id, input.id));
     return c.json(row, created ? 201 : 200);
-  });
+  })
+  .get("/:id", validate("param", idParam), async (c) => {
+    return c.json(await loadNeighborhood(c.get("db"), c.req.valid("param").id));
+  })
+  // Names and variants for everyone; zone, review, and deactivation for the owner (FR-026).
+  .patch(
+    "/:id",
+    validate("param", idParam),
+    validate("json", neighborhoodUpdateInput),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { actionId, variants, ...input } = c.req.valid("json");
+      const ownerOnly =
+        input.rateZoneId !== undefined ||
+        input.kind !== undefined ||
+        input.needsReview !== undefined ||
+        input.isActive !== undefined;
+      if (ownerOnly && c.get("user").role !== "owner") {
+        throw new AppError("forbidden", {
+          message:
+            "Solo el propietario cambia la zona tarifaria o el tipo de un barrio, lo confirma o lo desactiva.",
+        });
+      }
+      await auditedChange(c, { type: "neighborhood", id, actionId }, async (tx) => {
+        const current = await loadNeighborhood(tx, id);
+        const normalizedVariants = variants && [...new Set(variants.map(normalizeText))];
+        const changes = diffValues(
+          { ...current, rateZoneId: current.rateZone.id },
+          { ...input, variants: normalizedVariants },
+        );
+        if (Object.keys(changes).length === 0) return null;
+        if (Object.keys(input).length > 0) {
+          await tx
+            .update(neighborhoods)
+            .set({ ...input, ...(input.name && { nameNormalized: normalizeText(input.name) }) })
+            .where(eq(neighborhoods.id, id));
+        }
+        if (normalizedVariants) {
+          await tx.delete(neighborhoodVariants).where(eq(neighborhoodVariants.neighborhoodId, id));
+          if (normalizedVariants.length > 0) {
+            await tx.insert(neighborhoodVariants).values(
+              normalizedVariants.map((variant) => ({
+                id: crypto.randomUUID(),
+                neighborhoodId: id,
+                variantNormalized: variant,
+              })),
+            );
+          }
+        }
+        return changes;
+      }).catch((error: unknown) => {
+        if (isUniqueViolation(error, "neighborhood_variants_variant_normalized_key")) {
+          throw new AppError("invalid_request", {
+            fields: { variants: "Una de las variantes ya pertenece a otro barrio." },
+          });
+        }
+        if (isUniqueViolation(error, "neighborhoods_name_municipality_key")) {
+          throw new AppError("invalid_request", {
+            fields: { name: "Ese barrio ya existe en el municipio." },
+          });
+        }
+        throw error;
+      });
+      return c.json(await loadNeighborhood(c.get("db"), id));
+    },
+  );
+
+async function loadNeighborhood(db: Executor, id: string): Promise<NeighborhoodDetail> {
+  const [place] = await db
+    .select(selection)
+    .from(neighborhoods)
+    .innerJoin(municipalities, eq(municipalities.id, neighborhoods.municipalityId))
+    .innerJoin(rateZones, eq(rateZones.id, neighborhoods.rateZoneId))
+    .where(eq(neighborhoods.id, id));
+  if (!place) throw new AppError("not_found", { message: "No encontramos ese barrio." });
+  const variants = await db
+    .select({ variant: neighborhoodVariants.variantNormalized })
+    .from(neighborhoodVariants)
+    .where(eq(neighborhoodVariants.neighborhoodId, id))
+    .orderBy(neighborhoodVariants.variantNormalized);
+  return { ...place, variants: variants.map((row) => row.variant) };
+}
 
 export const municipalityRoutes = new Hono<AppEnv>()
   .use(requireRole("owner", "dispatcher"))

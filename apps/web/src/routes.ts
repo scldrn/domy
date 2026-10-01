@@ -13,5 +13,12 @@ export const routes = rootRoute("root.tsx", [
     route("/envios/$trackingNumber", "shipment-detail.tsx"),
     route("/envios/$trackingNumber/editar", "shipment-edit.tsx"),
     route("/historial", "history.tsx"),
+    route("/clientes", "merchants.tsx"),
+    route("/clientes/$merchantId", "merchant-detail.tsx"),
+    route("/mensajeros", "couriers.tsx"),
+    route("/transportadoras", "carriers.tsx"),
+    route("/barrios", "neighborhoods.tsx"),
+    route("/tarifario", "rate-card.tsx"),
+    route("/auditoria", "audit-log.tsx"),
   ]),
 ]);

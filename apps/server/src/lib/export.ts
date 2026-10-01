@@ -83,9 +83,9 @@ export async function findExportRecords(
 }
 
 /** "01/10/2026" from a calendar day. */
-const day = (date: string) => date.split("-").reverse().join("/");
+export const day = (date: string) => date.split("-").reverse().join("/");
 /** "01/10/2026 17:00" in Bogotá from an instant. */
-const instant = (value: Date | null) =>
+export const instant = (value: Date | null) =>
   value && `${day(bogotaToday(value))} ${bogotaLocalTime(value)}`;
 
 /** One row per shipment; money as whole numbers, dates and times in Bogotá. */

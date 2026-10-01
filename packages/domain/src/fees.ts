@@ -19,7 +19,7 @@ export type FeeResult = {
 };
 
 /** The entry in force at an instant: latest effective date, ties won by the latest created. */
-function inForce(entries: RateEntry[], at: Date): RateEntry | undefined {
+export function entryInForce(entries: RateEntry[], at: Date): RateEntry | undefined {
   return entries
     .filter((entry) => entry.effectiveFrom.getTime() <= at.getTime())
     .sort(
@@ -46,7 +46,7 @@ export function calculateFee(input: {
     return { calculatedFee: null, needsManualFee: true, needsReview: false };
   }
   const pick = (kind: RateEntry["kind"], merchantId: string | null) =>
-    inForce(
+    entryInForce(
       input.entries.filter(
         (entry) =>
           entry.kind === kind &&

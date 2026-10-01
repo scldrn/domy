@@ -2,7 +2,13 @@ import AddBoxIcon from "@material-symbols/svg-400/rounded/add_box.svg?react";
 import DashboardIcon from "@material-symbols/svg-400/rounded/dashboard.svg?react";
 import HistoryIcon from "@material-symbols/svg-400/rounded/history.svg?react";
 import LogoutIcon from "@material-symbols/svg-400/rounded/logout.svg?react";
+import ManageHistoryIcon from "@material-symbols/svg-400/rounded/manage_history.svg?react";
+import MapIcon from "@material-symbols/svg-400/rounded/map.svg?react";
 import PostAddIcon from "@material-symbols/svg-400/rounded/post_add.svg?react";
+import SellIcon from "@material-symbols/svg-400/rounded/sell.svg?react";
+import StorefrontIcon from "@material-symbols/svg-400/rounded/storefront.svg?react";
+import TruckIcon from "@material-symbols/svg-400/rounded/local_shipping.svg?react";
+import TwoWheelerIcon from "@material-symbols/svg-400/rounded/two_wheeler.svg?react";
 import type { UserRole } from "@domy/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,6 +25,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -30,23 +37,46 @@ import {
 import { sessionQuery, signOut } from "@/features/auth/session";
 
 type NavigationItem = {
-  to: "/" | "/envios/nuevo" | "/envios/masivo" | "/historial";
+  to:
+    | "/"
+    | "/envios/nuevo"
+    | "/envios/masivo"
+    | "/historial"
+    | "/clientes"
+    | "/mensajeros"
+    | "/transportadoras"
+    | "/barrios"
+    | "/tarifario"
+    | "/auditoria";
   label: string;
   icon: Symbol;
   roles: UserRole[];
 };
 
-/** Navigation of the dispatch panel; each feature adds its destinations. */
-const navigation: NavigationItem[] = [
-  { to: "/", label: "Tablero", icon: DashboardIcon, roles: ["owner", "dispatcher"] },
-  { to: "/envios/nuevo", label: "Nuevo envío", icon: AddBoxIcon, roles: ["owner", "dispatcher"] },
+const office: UserRole[] = ["owner", "dispatcher"];
+
+/** Navigation of the dispatch panel, in groups; each feature adds its destinations. */
+const navigation: { label: string | null; items: NavigationItem[] }[] = [
   {
-    to: "/envios/masivo",
-    label: "Registro masivo",
-    icon: PostAddIcon,
-    roles: ["owner", "dispatcher"],
+    label: null,
+    items: [
+      { to: "/", label: "Tablero", icon: DashboardIcon, roles: office },
+      { to: "/envios/nuevo", label: "Nuevo envío", icon: AddBoxIcon, roles: office },
+      { to: "/envios/masivo", label: "Registro masivo", icon: PostAddIcon, roles: office },
+      { to: "/historial", label: "Historial", icon: HistoryIcon, roles: office },
+    ],
   },
-  { to: "/historial", label: "Historial", icon: HistoryIcon, roles: ["owner", "dispatcher"] },
+  {
+    label: "Datos maestros",
+    items: [
+      { to: "/clientes", label: "Clientes", icon: StorefrontIcon, roles: office },
+      { to: "/mensajeros", label: "Mensajeros", icon: TwoWheelerIcon, roles: office },
+      { to: "/transportadoras", label: "Transportadoras", icon: TruckIcon, roles: office },
+      { to: "/barrios", label: "Barrios", icon: MapIcon, roles: office },
+      { to: "/tarifario", label: "Tarifario", icon: SellIcon, roles: office },
+      { to: "/auditoria", label: "Auditoría", icon: ManageHistoryIcon, roles: ["owner"] },
+    ],
+  },
 ];
 
 export const Route = createFileRoute("/_panel")({
@@ -79,24 +109,27 @@ function PanelLayout() {
           Domy
         </SidebarHeader>
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarMenu>
-              {navigation
-                .filter((item) => item.roles.includes(user.role))
-                .map((item) => (
-                  <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton
-                      isActive={pathname === item.to}
-                      tooltip={item.label}
-                      render={<Link to={item.to} />}
-                    >
-                      <Icon symbol={item.icon} />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
-          </SidebarGroup>
+          {navigation.map((group) => (
+            <SidebarGroup key={group.label ?? "main"}>
+              {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+              <SidebarMenu>
+                {group.items
+                  .filter((item) => item.roles.includes(user.role))
+                  .map((item) => (
+                    <SidebarMenuItem key={item.to}>
+                      <SidebarMenuButton
+                        isActive={item.to === "/" ? pathname === "/" : pathname.startsWith(item.to)}
+                        tooltip={item.label}
+                        render={<Link to={item.to} />}
+                      >
+                        <Icon symbol={item.icon} />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+              </SidebarMenu>
+            </SidebarGroup>
+          ))}
         </SidebarContent>
       </Sidebar>
       <SidebarInset>

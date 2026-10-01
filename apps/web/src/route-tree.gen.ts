@@ -12,7 +12,14 @@ import { Route as rootRouteImport } from './routes/root'
 import { Route as panelLayoutRouteImport } from './routes/panel-layout'
 import { Route as signInRouteImport } from './routes/sign-in'
 import { Route as dispatchBoardRouteImport } from './routes/dispatch-board'
+import { Route as auditLogRouteImport } from './routes/audit-log'
+import { Route as neighborhoodsRouteImport } from './routes/neighborhoods'
+import { Route as merchantsRouteImport } from './routes/merchants'
 import { Route as historyRouteImport } from './routes/history'
+import { Route as couriersRouteImport } from './routes/couriers'
+import { Route as rateCardRouteImport } from './routes/rate-card'
+import { Route as carriersRouteImport } from './routes/carriers'
+import { Route as merchantDetailRouteImport } from './routes/merchant-detail'
 import { Route as shipmentDetailRouteImport } from './routes/shipment-detail'
 import { Route as shipmentBulkRouteImport } from './routes/shipment-bulk'
 import { Route as shipmentNewRouteImport } from './routes/shipment-new'
@@ -32,9 +39,44 @@ const dispatchBoardRoute = dispatchBoardRouteImport.update({
   path: '/',
   getParentRoute: () => panelLayoutRoute,
 } as any)
+const auditLogRoute = auditLogRouteImport.update({
+  id: '/auditoria',
+  path: '/auditoria',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
+const neighborhoodsRoute = neighborhoodsRouteImport.update({
+  id: '/barrios',
+  path: '/barrios',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
+const merchantsRoute = merchantsRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
 const historyRoute = historyRouteImport.update({
   id: '/historial',
   path: '/historial',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
+const couriersRoute = couriersRouteImport.update({
+  id: '/mensajeros',
+  path: '/mensajeros',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
+const rateCardRoute = rateCardRouteImport.update({
+  id: '/tarifario',
+  path: '/tarifario',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
+const carriersRoute = carriersRouteImport.update({
+  id: '/transportadoras',
+  path: '/transportadoras',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
+const merchantDetailRoute = merchantDetailRouteImport.update({
+  id: '/clientes/$merchantId',
+  path: '/clientes/$merchantId',
   getParentRoute: () => panelLayoutRoute,
 } as any)
 const shipmentDetailRoute = shipmentDetailRouteImport.update({
@@ -61,7 +103,14 @@ const shipmentEditRoute = shipmentEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof dispatchBoardRoute
   '/ingresar': typeof signInRoute
+  '/auditoria': typeof auditLogRoute
+  '/barrios': typeof neighborhoodsRoute
+  '/clientes': typeof merchantsRoute
   '/historial': typeof historyRoute
+  '/mensajeros': typeof couriersRoute
+  '/tarifario': typeof rateCardRoute
+  '/transportadoras': typeof carriersRoute
+  '/clientes/$merchantId': typeof merchantDetailRoute
   '/envios/$trackingNumber': typeof shipmentDetailRoute
   '/envios/masivo': typeof shipmentBulkRoute
   '/envios/nuevo': typeof shipmentNewRoute
@@ -70,7 +119,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/ingresar': typeof signInRoute
   '/': typeof dispatchBoardRoute
+  '/auditoria': typeof auditLogRoute
+  '/barrios': typeof neighborhoodsRoute
+  '/clientes': typeof merchantsRoute
   '/historial': typeof historyRoute
+  '/mensajeros': typeof couriersRoute
+  '/tarifario': typeof rateCardRoute
+  '/transportadoras': typeof carriersRoute
+  '/clientes/$merchantId': typeof merchantDetailRoute
   '/envios/$trackingNumber': typeof shipmentDetailRoute
   '/envios/masivo': typeof shipmentBulkRoute
   '/envios/nuevo': typeof shipmentNewRoute
@@ -81,7 +137,14 @@ export interface FileRoutesById {
   '/_panel': typeof panelLayoutRouteWithChildren
   '/ingresar': typeof signInRoute
   '/_panel/': typeof dispatchBoardRoute
+  '/_panel/auditoria': typeof auditLogRoute
+  '/_panel/barrios': typeof neighborhoodsRoute
+  '/_panel/clientes': typeof merchantsRoute
   '/_panel/historial': typeof historyRoute
+  '/_panel/mensajeros': typeof couriersRoute
+  '/_panel/tarifario': typeof rateCardRoute
+  '/_panel/transportadoras': typeof carriersRoute
+  '/_panel/clientes/$merchantId': typeof merchantDetailRoute
   '/_panel/envios/$trackingNumber': typeof shipmentDetailRoute
   '/_panel/envios/masivo': typeof shipmentBulkRoute
   '/_panel/envios/nuevo': typeof shipmentNewRoute
@@ -92,7 +155,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ingresar'
+    | '/auditoria'
+    | '/barrios'
+    | '/clientes'
     | '/historial'
+    | '/mensajeros'
+    | '/tarifario'
+    | '/transportadoras'
+    | '/clientes/$merchantId'
     | '/envios/$trackingNumber'
     | '/envios/masivo'
     | '/envios/nuevo'
@@ -101,7 +171,14 @@ export interface FileRouteTypes {
   to:
     | '/ingresar'
     | '/'
+    | '/auditoria'
+    | '/barrios'
+    | '/clientes'
     | '/historial'
+    | '/mensajeros'
+    | '/tarifario'
+    | '/transportadoras'
+    | '/clientes/$merchantId'
     | '/envios/$trackingNumber'
     | '/envios/masivo'
     | '/envios/nuevo'
@@ -111,7 +188,14 @@ export interface FileRouteTypes {
     | '/_panel'
     | '/ingresar'
     | '/_panel/'
+    | '/_panel/auditoria'
+    | '/_panel/barrios'
+    | '/_panel/clientes'
     | '/_panel/historial'
+    | '/_panel/mensajeros'
+    | '/_panel/tarifario'
+    | '/_panel/transportadoras'
+    | '/_panel/clientes/$merchantId'
     | '/_panel/envios/$trackingNumber'
     | '/_panel/envios/masivo'
     | '/_panel/envios/nuevo'
@@ -146,11 +230,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof dispatchBoardRouteImport
       parentRoute: typeof panelLayoutRoute
     }
+    '/_panel/auditoria': {
+      id: '/_panel/auditoria'
+      path: '/auditoria'
+      fullPath: '/auditoria'
+      preLoaderRoute: typeof auditLogRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
+    '/_panel/barrios': {
+      id: '/_panel/barrios'
+      path: '/barrios'
+      fullPath: '/barrios'
+      preLoaderRoute: typeof neighborhoodsRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
+    '/_panel/clientes': {
+      id: '/_panel/clientes'
+      path: '/clientes'
+      fullPath: '/clientes'
+      preLoaderRoute: typeof merchantsRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
     '/_panel/historial': {
       id: '/_panel/historial'
       path: '/historial'
       fullPath: '/historial'
       preLoaderRoute: typeof historyRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
+    '/_panel/mensajeros': {
+      id: '/_panel/mensajeros'
+      path: '/mensajeros'
+      fullPath: '/mensajeros'
+      preLoaderRoute: typeof couriersRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
+    '/_panel/tarifario': {
+      id: '/_panel/tarifario'
+      path: '/tarifario'
+      fullPath: '/tarifario'
+      preLoaderRoute: typeof rateCardRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
+    '/_panel/transportadoras': {
+      id: '/_panel/transportadoras'
+      path: '/transportadoras'
+      fullPath: '/transportadoras'
+      preLoaderRoute: typeof carriersRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
+    '/_panel/clientes/$merchantId': {
+      id: '/_panel/clientes/$merchantId'
+      path: '/clientes/$merchantId'
+      fullPath: '/clientes/$merchantId'
+      preLoaderRoute: typeof merchantDetailRouteImport
       parentRoute: typeof panelLayoutRoute
     }
     '/_panel/envios/$trackingNumber': {
@@ -186,7 +319,14 @@ declare module '@tanstack/react-router' {
 
 interface panelLayoutRouteChildren {
   dispatchBoardRoute: typeof dispatchBoardRoute
+  auditLogRoute: typeof auditLogRoute
+  neighborhoodsRoute: typeof neighborhoodsRoute
+  merchantsRoute: typeof merchantsRoute
   historyRoute: typeof historyRoute
+  couriersRoute: typeof couriersRoute
+  rateCardRoute: typeof rateCardRoute
+  carriersRoute: typeof carriersRoute
+  merchantDetailRoute: typeof merchantDetailRoute
   shipmentDetailRoute: typeof shipmentDetailRoute
   shipmentBulkRoute: typeof shipmentBulkRoute
   shipmentNewRoute: typeof shipmentNewRoute
@@ -195,7 +335,14 @@ interface panelLayoutRouteChildren {
 
 const panelLayoutRouteChildren: panelLayoutRouteChildren = {
   dispatchBoardRoute: dispatchBoardRoute,
+  auditLogRoute: auditLogRoute,
+  neighborhoodsRoute: neighborhoodsRoute,
+  merchantsRoute: merchantsRoute,
   historyRoute: historyRoute,
+  couriersRoute: couriersRoute,
+  rateCardRoute: rateCardRoute,
+  carriersRoute: carriersRoute,
+  merchantDetailRoute: merchantDetailRoute,
   shipmentDetailRoute: shipmentDetailRoute,
   shipmentBulkRoute: shipmentBulkRoute,
   shipmentNewRoute: shipmentNewRoute,

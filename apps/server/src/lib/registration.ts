@@ -16,6 +16,8 @@ import { and, eq, isNull, or } from "drizzle-orm";
 import type { z } from "zod";
 import type { Db, Executor } from "../db/client.ts";
 import {
+  carriers,
+  merchants,
   neighborhoods,
   pickupPoints,
   rateCardEntries,
@@ -118,6 +120,42 @@ export function deliveryWindow(serviceDate: string, preset: WindowPreset | null)
   }
 }
 
+/** Deactivated merchants, carriers, and places are not offered for new shipments (FR-029). */
+async function requireActive(
+  db: Executor,
+  input: { merchantId: string; carrierId?: string; recipientNeighborhoodId?: string },
+) {
+  const [merchant] = await db
+    .select({ isActive: merchants.isActive })
+    .from(merchants)
+    .where(eq(merchants.id, input.merchantId));
+  if (!merchant?.isActive) {
+    throw new AppError("invalid_request", { fields: { merchantId: "Elige un cliente activo." } });
+  }
+  if (input.carrierId) {
+    const [carrier] = await db
+      .select({ isActive: carriers.isActive })
+      .from(carriers)
+      .where(eq(carriers.id, input.carrierId));
+    if (!carrier?.isActive) {
+      throw new AppError("invalid_request", {
+        fields: { carrierId: "Elige una transportadora activa." },
+      });
+    }
+  }
+  if (input.recipientNeighborhoodId) {
+    const [place] = await db
+      .select({ isActive: neighborhoods.isActive })
+      .from(neighborhoods)
+      .where(eq(neighborhoods.id, input.recipientNeighborhoodId));
+    if (place && !place.isActive) {
+      throw new AppError("invalid_request", {
+        fields: { recipientNeighborhoodId: "Ese lugar ya no está activo; elige otro." },
+      });
+    }
+  }
+}
+
 export type NewShipment = typeof shipments.$inferInsert & { id: string; registeredBy: string };
 
 /**
@@ -132,6 +170,7 @@ export async function prepareShipment(
 ): Promise<NewShipment> {
   const { registeredAt } = context;
   const serviceDate = input.serviceDate ?? bogotaToday(registeredAt);
+  await requireActive(db, input);
 
   const { pickupAddress, pickupNeighborhoodId } = await resolvePickup(db, input.merchantId, {
     pickupPointId: input.pickupPointId ?? null,

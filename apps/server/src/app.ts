@@ -9,7 +9,11 @@ import type { Clock } from "./lib/clock.ts";
 import { handleError } from "./lib/errors.ts";
 import { bulkRoutes } from "./routes/bulk.ts";
 import { carrierRoutes } from "./routes/carriers.ts";
-import { merchantRoutes } from "./routes/merchants.ts";
+import { auditEventRoutes } from "./routes/audit-events.ts";
+import { courierRoutes } from "./routes/couriers.ts";
+import { exportRoutes } from "./routes/export.ts";
+import { merchantRoutes, pickupPointRoutes } from "./routes/merchants.ts";
+import { rateCardRoutes } from "./routes/rate-card.ts";
 import { municipalityRoutes, neighborhoodRoutes } from "./routes/neighborhoods.ts";
 import { rateZoneRoutes } from "./routes/rate-zones.ts";
 import { shipmentRoutes } from "./routes/shipments.ts";
@@ -59,6 +63,11 @@ export function createApp(deps: AppDeps) {
     .route("/api/shipments", shipmentRoutes)
     .route("/api/bulk", bulkRoutes)
     .route("/api/merchants", merchantRoutes)
+    .route("/api/pickup-points", pickupPointRoutes)
+    .route("/api/couriers", courierRoutes)
+    .route("/api/rate-card", rateCardRoutes)
+    .route("/api/audit-events", auditEventRoutes)
+    .route("/api/export", exportRoutes)
     .route("/api/neighborhoods", neighborhoodRoutes)
     .route("/api/municipalities", municipalityRoutes)
     .route("/api/carriers", carrierRoutes)
