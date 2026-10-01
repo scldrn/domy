@@ -42,6 +42,23 @@ pnpm test:e2e   # end-to-end tests (Playwright)
 pnpm build
 ```
 
+## Production
+
+One Node.js process serves the API and the built web app from the same origin.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build                  # web bundle in apps/web/dist; the server is type-checked
+pnpm db:migrate
+cd apps/server
+NODE_ENV=production node --env-file=../../.env src/index.ts
+```
+
+In production `.env` also needs `RESEND_API_KEY` (recovery emails) and `APP_URL` set to the
+public address; `SENTRY_DSN` and `VITE_SENTRY_DSN` (read when the web app is built) turn on
+error reporting. Run `pnpm db:seed` once, on the first installation, to create the catalog and
+the first owner account.
+
 ## Workspace
 
 | Package | Purpose |

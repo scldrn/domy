@@ -1,9 +1,14 @@
 import * as React from "react";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    // Focusable so a table wider than the screen scrolls with the keyboard (WCAG 2.1.1).
+    <div
+      data-slot="table-container"
+      tabIndex={0}
+      className="relative w-full overflow-x-auto rounded-sm focus-visible:outline-2 focus-visible:outline-primary"
+    >
       <table
         data-slot="table"
         className={cn("w-full caption-bottom text-body-m", className)}

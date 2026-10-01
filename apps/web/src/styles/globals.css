@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 @import "./tokens.css";
 
 /* Roboto, self-hosted (Latin subset). Android uses the installed Roboto first. */

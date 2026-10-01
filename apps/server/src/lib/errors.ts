@@ -41,6 +41,37 @@ export class AppError extends Error {
   }
 }
 
+/**
+ * An error as it may be logged (FR-041): a failed database query keeps only the database's
+ * code and message, never the statement or its parameters, which hold recipients' data.
+ */
+export function errorForLog(error: Error): {
+  type: string;
+  message: string;
+  code?: unknown;
+  constraint?: unknown;
+  stack?: string | undefined;
+} {
+  const cause: unknown = error.cause;
+  if (typeof cause === "object" && cause !== null && "code" in cause) {
+    const database = cause as { code: unknown; message?: unknown; constraint_name?: unknown };
+    return {
+      type: "DatabaseError",
+      code: database.code,
+      message: typeof database.message === "string" ? database.message : "Database error",
+      constraint: database.constraint_name,
+    };
+  }
+  return { type: error.name, message: error.message, stack: error.stack };
+}
+
+let reportError: ((error: Error) => void) | null = null;
+
+/** Sends unexpected errors to error reporting (Sentry), already stripped of personal data. */
+export function setErrorReporter(reporter: (error: Error) => void): void {
+  reportError = reporter;
+}
+
 /** Hono error handler: every non-2xx response has the body `{ error: { code, message, fields? } }`. */
 export function handleError(error: Error, c: Context<AppEnv>) {
   if (error instanceof AppError) {
@@ -56,7 +87,14 @@ export function handleError(error: Error, c: Context<AppEnv>) {
       error.status,
     );
   }
-  c.get("logger").error({ err: error }, "unhandled error");
+  const logged = errorForLog(error);
+  c.get("logger").error({ err: logged }, "unhandled error");
+  if (reportError) {
+    const reported = new Error(logged.message);
+    reported.name = logged.type;
+    if (logged.stack) reported.stack = logged.stack;
+    reportError(reported);
+  }
   return c.json(
     {
       error: { code: "internal_error", message: "Ocurrió un error inesperado. Intenta de nuevo." },

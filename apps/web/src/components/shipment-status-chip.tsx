@@ -7,7 +7,7 @@ import PickedUpIcon from "@material-symbols/svg-400/rounded/package_2.svg?react"
 import ExceptionIcon from "@material-symbols/svg-400/rounded/report.svg?react";
 import ReturnedIcon from "@material-symbols/svg-400/rounded/undo.svg?react";
 import { shipmentStatusLabels, type ShipmentStatus } from "@domy/domain";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { Icon, type Symbol } from "./icon";
 
 /** Shipment state chip: label + icon + color role, identical on every surface (§8). */

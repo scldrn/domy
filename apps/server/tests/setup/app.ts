@@ -1,5 +1,5 @@
 import type { UserRole } from "@domy/domain";
-import pino from "pino";
+import pino, { type Logger } from "pino";
 import { createApp } from "../../src/app.ts";
 import { createAuth } from "../../src/auth.ts";
 import type { Db } from "../../src/db/client.ts";
@@ -7,7 +7,7 @@ import type { Db } from "../../src/db/client.ts";
 export type SentEmail = { email: string; name: string; url: string };
 
 /** The real app wired to a test database, a controllable clock, and captured emails. */
-export function createTestApp(db: Db, options: { now?: string } = {}) {
+export function createTestApp(db: Db, options: { now?: string; logger?: Logger } = {}) {
   let now = new Date(options.now ?? "2026-10-01T15:00:00Z");
   const emails: SentEmail[] = [];
   const auth = createAuth({
@@ -19,7 +19,12 @@ export function createTestApp(db: Db, options: { now?: string } = {}) {
       await Promise.resolve();
     },
   });
-  const app = createApp({ db, auth, clock: () => now, logger: pino({ level: "silent" }) });
+  const app = createApp({
+    db,
+    auth,
+    clock: () => now,
+    logger: options.logger ?? pino({ level: "silent" }),
+  });
 
   /** Creates an active user with a role and returns it with the cookie of a new session. */
   async function signIn(role: UserRole, overrides: { email?: string; name?: string } = {}) {

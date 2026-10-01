@@ -323,13 +323,13 @@ not the rate card or users; the courier cannot open the panel
 
 **Purpose**: quality attributes that span user stories
 
-- [ ] T115 [P] Add accessibility checks (axe) to every end-to-end spec through `apps/web/tests/e2e/fixtures.ts` and fix violations until WCAG 2.2 AA passes on all screens, and verify every panel screen stays usable at 600 px wide (FR-034, design-system.md §2)
-- [ ] T116 [P] Add the scale test `apps/server/tests/search-scale.test.ts`: generate 100,000 shipments and assert search by tracking number, merchant reference, and recipient phone in under 2 seconds (SC-006)
-- [ ] T117 [P] Add `apps/server/tests/log-redaction.test.ts`: no password, cookie, or recipient phone appears in logs (FR-041)
-- [ ] T118 [P] Wire optional Sentry error reporting in `apps/server/src/index.ts` and `apps/web/src/main.tsx` (enabled only when `SENTRY_DSN` is set)
-- [ ] T119 Verify the production build: `pnpm build` produces the web bundle and the server serves it; record the commands in `README.md`
-- [ ] T120 Run every scenario of `specs/001-shipment-registration/quickstart.md` (1–17) and record the results in `specs/001-shipment-registration/quickstart-results.md`, including a go-live checklist item "Amy Tecnology rates confirmed by the owner"
-- [ ] T121 Remove dead code and unused dependencies, and confirm `pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` pass with zero warnings
+- [X] T115 [P] Add accessibility checks (axe) to every end-to-end spec through `apps/web/tests/e2e/fixtures.ts` and fix violations until WCAG 2.2 AA passes on all screens, and verify every panel screen stays usable at 600 px wide (FR-034, design-system.md §2)
+- [X] T116 [P] Add the scale test `apps/server/tests/search-scale.test.ts`: generate 100,000 shipments and assert search by tracking number, merchant reference, and recipient phone in under 2 seconds (SC-006)
+- [X] T117 [P] Add `apps/server/tests/log-redaction.test.ts`: no password, cookie, or recipient phone appears in logs (FR-041)
+- [X] T118 [P] Wire optional Sentry error reporting in `apps/server/src/index.ts` and `apps/web/src/main.tsx` (enabled only when `SENTRY_DSN` is set)
+- [X] T119 Verify the production build: `pnpm build` produces the web bundle and the server serves it; record the commands in `README.md`
+- [X] T120 Run every scenario of `specs/001-shipment-registration/quickstart.md` (1–17) and record the results in `specs/001-shipment-registration/quickstart-results.md`, including a go-live checklist item "Amy Tecnology rates confirmed by the owner"
+- [X] T121 Remove dead code and unused dependencies, and confirm `pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` pass with zero warnings
 
 ---
 

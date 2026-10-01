@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import CheckIcon from "@material-symbols/svg-400/rounded/check.svg?react";
 import ChevronDownIcon from "@material-symbols/svg-400/rounded/keyboard_arrow_down.svg?react";
 import ChevronUpIcon from "@material-symbols/svg-400/rounded/keyboard_arrow_up.svg?react";

@@ -1,8 +1,8 @@
-import pino from "pino";
+import pino, { type DestinationStream } from "pino";
 
 /** Structured logs without secrets, cookies, passwords, or recipient phones (Constitution IX). */
-export function createLogger(level: string) {
-  return pino({
+export function createLogger(level: string, destination?: DestinationStream) {
+  const options = {
     level,
     redact: {
       paths: [
@@ -17,5 +17,6 @@ export function createLogger(level: string) {
       ],
       censor: "[oculto]",
     },
-  });
+  };
+  return destination ? pino(options, destination) : pino(options);
 }

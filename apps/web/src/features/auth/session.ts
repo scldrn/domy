@@ -10,7 +10,7 @@ const networkError = new ApiError(0, {
   message: "No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.",
 });
 
-export async function authRequest(path: string, body?: unknown): Promise<Response> {
+async function authRequest(path: string, body?: unknown): Promise<Response> {
   try {
     const response = await fetch(`/api/auth/${path}`, {
       method: body === undefined ? "GET" : "POST",
@@ -28,7 +28,7 @@ export async function authRequest(path: string, body?: unknown): Promise<Respons
 }
 
 /** The signed-in user, or null. */
-export async function getSession(): Promise<SessionUser | null> {
+async function getSession(): Promise<SessionUser | null> {
   const response = await authRequest("get-session");
   if (!response.ok) return null;
   const body = (await response.json()) as { user: SessionUser } | null;

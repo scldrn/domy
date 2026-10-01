@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Input as InputPrimitive } from "@base-ui/react/input";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 
 /** M3 outlined text field: 56 px high, outline turns primary and 2 px thick on focus. */
 const textFieldClasses =

@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 /** M3 segmented button for one choice among a few (kind, payment mode, service level). */

@@ -30,6 +30,14 @@ declare module "@tanstack/react-router" {
   }
 }
 
+// Browser error reporting, only when configured (research R14); loaded apart from the app.
+const sentryDsn = import.meta.env["VITE_SENTRY_DSN"] as string | undefined;
+if (sentryDsn) {
+  void import("@sentry/react").then((Sentry) => {
+    Sentry.init({ dsn: sentryDsn, environment: import.meta.env.MODE });
+  });
+}
+
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");
 

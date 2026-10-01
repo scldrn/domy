@@ -1,9 +1,43 @@
-import { test as base, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { test as base, expect, type Browser, type Page } from "@playwright/test";
 import { apiPort } from "./ports";
 
 type Role = "owner" | "dispatcher" | "courier";
 
 const authFile = (role: Role) => new URL(`.auth/${role}.json`, import.meta.url).pathname;
+
+/** WCAG 2.2 AA violations of the page as it is now (FR-034). */
+export async function accessibilityViolations(page: Page): Promise<string[]> {
+  // Dialogs and snackbars fade in and out: measure contrast once their animations end.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+      .every((animation) => animation.playState !== "running"),
+  );
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  return results.violations.map(
+    (violation) =>
+      `${violation.id}: ${violation.help} (${violation.nodes.map((node) => `${node.target.join(" ")} ${node.failureSummary ?? ""} ${node.html.slice(0, 160)}`).join("; ")})`,
+  );
+}
+
+/**
+ * A page signed in as a role. When the test passed, the screen it ended on is checked for
+ * accessibility, so every end-to-end scenario also checks its screens.
+ */
+async function rolePage(browser: Browser, role: Role, use: (page: Page) => Promise<void>) {
+  const context = await browser.newContext({ storageState: authFile(role) });
+  const page = await context.newPage();
+  await use(page);
+  const info = test.info();
+  if (info.status === info.expectedStatus && !page.isClosed() && page.url().startsWith("http")) {
+    expect(await accessibilityViolations(page), `accessibility of ${page.url()}`).toEqual([]);
+  }
+  await context.close();
+}
 
 /** Pages signed in as each role, and control of the server's clock. */
 export const test = base.extend<{
@@ -13,19 +47,13 @@ export const test = base.extend<{
   setServerNow: (instant: string) => Promise<void>;
 }>({
   ownerPage: async ({ browser }, use) => {
-    const context = await browser.newContext({ storageState: authFile("owner") });
-    await use(await context.newPage());
-    await context.close();
+    await rolePage(browser, "owner", use);
   },
   dispatcherPage: async ({ browser }, use) => {
-    const context = await browser.newContext({ storageState: authFile("dispatcher") });
-    await use(await context.newPage());
-    await context.close();
+    await rolePage(browser, "dispatcher", use);
   },
   courierPage: async ({ browser }, use) => {
-    const context = await browser.newContext({ storageState: authFile("courier") });
-    await use(await context.newPage());
-    await context.close();
+    await rolePage(browser, "courier", use);
   },
   // eslint-disable-next-line no-empty-pattern -- Playwright fixtures destructure their dependencies.
   setServerNow: async ({}, use) => {
@@ -39,4 +67,4 @@ export const test = base.extend<{
   },
 });
 
-export { expect } from "@playwright/test";
+export { expect };

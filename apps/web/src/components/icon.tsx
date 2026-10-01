@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import type { ComponentType, SVGProps } from "react";
 
 /** A Material Symbols Rounded SVG, imported as `…/rounded/<name>.svg?react` (fill: `-fill`). */

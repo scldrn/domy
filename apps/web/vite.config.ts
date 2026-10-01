@@ -7,6 +7,8 @@ import svgr from "vite-plugin-svgr";
 import { routes } from "./src/routes.ts";
 
 export default defineConfig({
+  // One .env at the repository root; only VITE_* variables reach the browser.
+  envDir: "../..",
   plugins: [
     tanstackRouter({
       target: "react",

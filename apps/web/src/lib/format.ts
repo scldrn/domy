@@ -28,7 +28,7 @@ export function formatDate(value: Date | string): string {
 }
 
 /** "2:30 p. m." */
-export function formatTime(value: Date | string): string {
+function formatTime(value: Date | string): string {
   return timeFormat.format(new Date(value));
 }
 

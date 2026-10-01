@@ -4,7 +4,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 /** Passwords have 8 to 128 characters, with no composition rules (FR-030). */
-export const newPassword = z
+const newPassword = z
   .string()
   .min(8, "Usa al menos 8 caracteres.")
   .max(128, "Usa máximo 128 caracteres.");
