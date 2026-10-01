@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { auditEvents, shipmentEvents } from "../db/schema/index.ts";
+import { auditEvents, routeEvents, shipmentEvents } from "../db/schema/index.ts";
 import type { Executor } from "../db/client.ts";
 
 /**
@@ -21,4 +21,13 @@ export async function findAuditAction(db: Executor, actionId: string): Promise<s
     .from(auditEvents)
     .where(eq(auditEvents.clientEventId, actionId));
   return event?.entityId ?? null;
+}
+
+/** The route an action was applied to, when its `actionId` is already recorded (feature 002). */
+export async function findRouteAction(db: Executor, actionId: string): Promise<string | null> {
+  const [event] = await db
+    .select({ routeId: routeEvents.routeId })
+    .from(routeEvents)
+    .where(eq(routeEvents.clientEventId, actionId));
+  return event?.routeId ?? null;
 }

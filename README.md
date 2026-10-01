@@ -71,4 +71,7 @@ the first owner account.
 
 Each dependency is listed in the `package.json` of the package that uses it, with an exact
 version. The ratified stack and the reason for every addition are in the constitution and in
-each feature's `plan.md` and `research.md`.
+each feature's `plan.md` and `research.md`. Additions by feature:
+
+- 002: `@dnd-kit/core` and `@dnd-kit/sortable`, to reorder route stops by dragging and with
+  the keyboard (research R3).

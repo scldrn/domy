@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { shipments } from "../src/db/schema/index.ts";
 import { createTestApp } from "./setup/app.ts";
+import { placeOnRoute } from "./setup/routes.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
 import { startDatabase, type TestDatabase } from "./setup/database.ts";
 
@@ -51,6 +52,10 @@ async function register(overrides: Record<string, unknown> = {}): Promise<Shipme
 
 /** Status changes of features 002 and 003 do not exist yet; tests set them directly. */
 async function setStatus(shipment: Shipment, status: Shipment["status"]) {
+  if (status === "assigned" || status === "dispatched" || status === "picked_up") {
+    await placeOnRoute(database.db, shipment.id, status, shipment.registeredBy.id);
+    return;
+  }
   await database.db
     .update(shipments)
     .set({ status, voidReason: status === "voided" ? "Cliente canceló" : null })

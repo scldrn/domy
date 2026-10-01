@@ -6,6 +6,7 @@ import {
   date,
   index,
   integer,
+  type AnyPgColumn,
   jsonb,
   pgTable,
   text,
@@ -14,7 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./auth.ts";
 import { createdAt, updatedAt } from "./columns.ts";
-import { carriers, merchants, pickupPoints } from "./directories.ts";
+import { carriers, couriers, merchants, pickupPoints } from "./directories.ts";
 import {
   packageSize,
   paymentMode,
@@ -24,6 +25,7 @@ import {
   shipmentStatus,
 } from "./enums.ts";
 import { neighborhoods, rateZones } from "./geography.ts";
+import { routes } from "./routes.ts";
 
 export const bulkBatches = pgTable("bulk_batches", {
   id: uuid().primaryKey(),
@@ -78,6 +80,10 @@ export const shipments = pgTable(
     instructions: text(),
     voidReason: text(),
     bulkBatchId: uuid().references(() => bulkBatches.id),
+    /** The route currently carrying the shipment (feature 002, FR-004). */
+    routeId: uuid().references((): AnyPgColumn => routes.id),
+    /** Who holds the package: set at pickup, changed only by a confirmed handover (FR-025). */
+    custodyCourierId: uuid().references(() => couriers.id),
     version: integer().notNull().default(1),
     registeredAt: timestamp({ withTimezone: true }).notNull(),
     registeredBy: uuid()
@@ -120,6 +126,12 @@ export const shipments = pgTable(
         and (${table.voidReason} is null or char_length(${table.voidReason}) between 5 and 200)`,
     ),
     check("shipments_fee_check", sql`${table.fee} > 0`),
+    check(
+      "shipments_route_check",
+      sql`(${table.status} <> 'registered' or ${table.routeId} is null)
+        and (${table.status} not in ('assigned', 'dispatched') or ${table.routeId} is not null)`,
+    ),
+    index("shipments_route_idx").on(table.routeId),
     check("shipments_cod_amount_check", sql`${table.codAmount} >= 0`),
     check(
       "shipments_window_check",
@@ -167,6 +179,8 @@ export const shipmentEvents = pgTable(
     reason: text(),
     changes: jsonb(),
     clientEventId: uuid().unique("shipment_events_client_event_id_key"),
+    /** The route a status change, reassignment, or handover refers to (feature 002). */
+    routeId: uuid().references((): AnyPgColumn => routes.id),
   },
   (table) => [index("shipment_events_shipment_idx").on(table.shipmentId, table.occurredAt)],
 );

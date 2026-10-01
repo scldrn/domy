@@ -13,8 +13,10 @@ import { auditEventRoutes } from "./routes/audit-events.ts";
 import { authRoutes } from "./routes/auth.ts";
 import { courierRoutes } from "./routes/couriers.ts";
 import { exportRoutes } from "./routes/export.ts";
+import { handoverRoutes } from "./routes/handovers.ts";
 import { merchantRoutes, pickupPointRoutes } from "./routes/merchants.ts";
 import { rateCardRoutes } from "./routes/rate-card.ts";
+import { routeRoutes } from "./routes/routes.ts";
 import { municipalityRoutes, neighborhoodRoutes } from "./routes/neighborhoods.ts";
 import { rateZoneRoutes } from "./routes/rate-zones.ts";
 import { shipmentRoutes } from "./routes/shipments.ts";
@@ -66,6 +68,8 @@ export function createApp(deps: AppDeps) {
     .on(["GET", "POST"], "/api/auth/*", (c) => deps.auth.handler(c.req.raw))
     .route("/api/shipments", shipmentRoutes)
     .route("/api/bulk", bulkRoutes)
+    .route("/api/routes", routeRoutes)
+    .route("/api/handovers", handoverRoutes)
     .route("/api/merchants", merchantRoutes)
     .route("/api/pickup-points", pickupPointRoutes)
     .route("/api/couriers", courierRoutes)

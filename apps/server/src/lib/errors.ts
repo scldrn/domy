@@ -13,6 +13,21 @@ const errorCatalog = {
   duplicate_alias: [409, "Ese nombre ya identifica a otro registro."],
   last_owner: [409, "Debe quedar al menos un propietario activo."],
   confirmation_required: [422, "Confirma el valor antes de guardar."],
+  // Routes and dispatch (feature 002).
+  shipment_not_registered: [409, "Ese envío ya no está «Registrado» o ya está en una ruta."],
+  courier_busy: [409, "Ese mensajero ya tiene una ruta en curso."],
+  invalid_stop_order: [409, "Ese orden de paradas no es válido."],
+  shipment_picked_up: [409, "Ese envío ya fue recogido; no se puede quitar de la ruta."],
+  route_has_completed_stops: [
+    409,
+    "La ruta ya tiene paradas completadas o envíos recogidos; no se puede deshacer el despacho.",
+  ],
+  route_not_in_progress: [409, "La ruta no está en curso."],
+  route_in_progress: [409, "Una ruta en curso no se puede cancelar."],
+  shipment_not_movable: [409, "Ese envío no se puede mover en su estado actual."],
+  past_service_date: [422, "No se crean rutas para fechas pasadas."],
+  courier_required: [422, "Asigna un mensajero antes de despachar la ruta."],
+  route_empty: [422, "La ruta no tiene envíos."],
   account_locked: [423, "La cuenta está bloqueada temporalmente."],
 } as const satisfies Record<string, readonly [ContentfulStatusCode, string]>;
 
