@@ -171,6 +171,21 @@ describe("POST /api/bulk/preview", () => {
     });
   });
 
+  it("warns without blocking about Sundays and windows already past (FR-010)", async () => {
+    // Now is 10:00 on Thursday 1 October 2026 in Bogotá.
+    const [sunday, past, fine] = await preview([
+      delivery({ Fecha: "04/10/2026" }),
+      delivery({ Franja: "antes de las 9am" }),
+      delivery({ Franja: "en la tarde" }),
+    ]);
+    expect(sunday).toMatchObject({
+      status: "ready",
+      warnings: ["La fecha del servicio es un domingo."],
+    });
+    expect(past).toMatchObject({ status: "ready", warnings: ["La franja de entrega ya pasó."] });
+    expect(fine?.warnings).toEqual([]);
+  });
+
   it("asks to confirm large amounts (FR-037)", async () => {
     const [row] = await preview([
       delivery({ Modalidad: "Contraentrega", "Valor a recaudar": "2.500.000" }),

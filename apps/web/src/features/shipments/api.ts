@@ -88,9 +88,12 @@ export async function listMunicipalities(): Promise<NamedOption[]> {
   return items;
 }
 
+/** Active rate zones, for selection lists (FR-029). */
 export async function listRateZones(): Promise<NamedOption[]> {
-  const { items } = await unwrap<{ items: NamedOption[] }>(api.api["rate-zones"].$get());
-  return items;
+  const { items } = await unwrap<{ items: (NamedOption & { isActive: boolean })[] }>(
+    api.api["rate-zones"].$get(),
+  );
+  return items.filter((zone) => zone.isActive);
 }
 
 export async function quoteFee(input: FeeQuoteInput): Promise<FeeQuote> {

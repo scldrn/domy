@@ -118,6 +118,11 @@ export function BulkPreviewTable({
                       {bulkColumnOf[field] ?? "Fila"}: {message}
                     </li>
                   ))}
+                  {row.warnings.map((warning) => (
+                    <li key={warning} className="text-on-surface-variant">
+                      {warning}
+                    </li>
+                  ))}
                   {pending.includes("neighborhood") && match && (
                     <li className="flex flex-col gap-2">
                       <span>No encontramos el barrio exacto; ¿es {placeName(match)}?</span>

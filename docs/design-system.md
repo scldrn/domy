@@ -162,7 +162,7 @@ spec.
 | Date and time pickers | shadcn `Calendar` + `Popover`, `es` locale | Delivery windows, history filters |
 | Tabs | shadcn `Tabs` | Dispatch panel sections |
 | Search | shadcn `Command` | Global search by tracking number, merchant, recipient |
-| Data table | shadcn data table (TanStack Table) with M3 tokens | Dispatch board, history. M3 has no data table spec; use dense rows (40 px) on desktop only |
+| Data table | shadcn `Table` with M3 tokens; TanStack Table only once sorting or column controls are needed | Dispatch board, history, master data. M3 has no data table spec; use dense rows (40 px) on desktop only; wide tables scroll inside their own focusable area |
 
 ### 7.1 Icons
 

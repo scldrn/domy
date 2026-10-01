@@ -102,6 +102,37 @@ describe("neighborhood catalog (FR-026, FR-036)", () => {
   });
 });
 
+describe("inactive rate zones (FR-029)", () => {
+  it("are refused for new neighborhoods and rates", async () => {
+    await call(
+      "PATCH",
+      `/api/rate-zones/${catalog.zone.noRate}`,
+      { actionId: crypto.randomUUID(), isActive: false },
+      owner.cookie,
+    );
+    const place = await call("POST", "/api/neighborhoods", {
+      id: crypto.randomUUID(),
+      name: "Vereda Nueva",
+      municipalityId: catalog.municipality.girardota,
+      rateZoneId: catalog.zone.noRate,
+    });
+    expect(place.body).toMatchObject({ error: { fields: { rateZoneId: expect.any(String) } } });
+    const rate = await call(
+      "POST",
+      "/api/rate-card/entries",
+      {
+        id: crypto.randomUUID(),
+        kind: "zone_rate",
+        rateZoneId: catalog.zone.noRate,
+        amount: 20000,
+        effectiveFrom: "2030-01-01",
+      },
+      owner.cookie,
+    );
+    expect(rate.status).toBe(400);
+  });
+});
+
 describe("rate zones (FR-028)", () => {
   it("are managed by the owner only", async () => {
     const body = { id: crypto.randomUUID(), name: "Rionegro" };

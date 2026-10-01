@@ -16,9 +16,15 @@ const actionId = z.uuid("Falta el identificador de la acción.");
 const name = (message: string) =>
   z.string({ error: message }).trim().min(2, message).max(120, "Máximo 120 caracteres.");
 const aliases = z
-  .array(z.string().trim().min(2, "Cada alias tiene al menos 2 caracteres.").max(120))
+  .array(
+    z
+      .string()
+      .trim()
+      .min(2, "Cada alias tiene al menos 2 caracteres.")
+      .max(120, "Cada alias tiene máximo 120 caracteres."),
+  )
   .max(20, "Máximo 20 alias.");
-const optionalText = z.string().trim().max(500).nullable();
+const optionalText = z.string().trim().max(500, "Máximo 500 caracteres.").nullable();
 
 export const merchantCreateInput = z.object({
   id: z.uuid(),
@@ -93,7 +99,16 @@ export type CarrierUpdateInput = z.input<typeof carrierUpdateInput>;
 export const neighborhoodUpdateInput = z.object({
   actionId,
   name: name("Escribe el nombre del barrio.").optional(),
-  variants: z.array(z.string().trim().min(2).max(120)).max(50).optional(),
+  variants: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(2, "Cada variante tiene al menos 2 caracteres.")
+        .max(120, "Cada variante tiene máximo 120 caracteres."),
+    )
+    .max(50, "Máximo 50 variantes.")
+    .optional(),
   kind: neighborhoodKind.optional(),
   rateZoneId: z.uuid().optional(),
   needsReview: z.literal(false).optional(),

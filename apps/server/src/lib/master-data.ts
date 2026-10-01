@@ -3,7 +3,13 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import type { Context } from "hono";
 import type { AppEnv } from "../app.ts";
 import type { Db, Executor } from "../db/client.ts";
-import { courierAliases, couriers, merchantAliases, merchants } from "../db/schema/index.ts";
+import {
+  courierAliases,
+  couriers,
+  merchantAliases,
+  merchants,
+  rateZones,
+} from "../db/schema/index.ts";
 import { findAuditAction } from "./action-id.ts";
 import { recordAudit, type AuditEntity } from "./audit.ts";
 import { AppError } from "./errors.ts";
@@ -166,5 +172,18 @@ export async function replaceAliases(
     if (rows.length > 0) {
       await tx.insert(courierAliases).values(rows.map((row) => ({ ...row, courierId: recordId })));
     }
+  }
+}
+
+/** New neighborhoods and rates use an active rate zone (FR-029). */
+export async function requireActiveZone(db: Executor, rateZoneId: string): Promise<void> {
+  const [zone] = await db
+    .select({ isActive: rateZones.isActive })
+    .from(rateZones)
+    .where(eq(rateZones.id, rateZoneId));
+  if (!zone?.isActive) {
+    throw new AppError("invalid_request", {
+      fields: { rateZoneId: "Elige una zona tarifaria activa." },
+    });
   }
 }

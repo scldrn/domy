@@ -12,6 +12,9 @@ import {
   type BulkConfirmResult,
   type BulkPreviewRow,
   type ShipmentCreateInput,
+  type WindowPreset,
+  windowFromPreset,
+  windowWarnings,
 } from "@domy/domain";
 import { and, desc, eq, inArray, ne, or } from "drizzle-orm";
 import { Hono } from "hono";
@@ -101,6 +104,21 @@ async function duplicatesOf(db: Executor, input: Omit<ShipmentCreateInput, "id">
       ),
     );
   return rows.map((row) => row.trackingNumber);
+}
+
+/** The non-blocking warnings of FR-010: a Sunday service date or a window already past. */
+function rowWarnings(serviceDate: string, preset: WindowPreset | null, now: Date): string[] {
+  let window = null;
+  try {
+    window = preset ? windowFromPreset(serviceDate, preset) : null;
+  } catch {
+    // An invalid window is already an error of the row.
+  }
+  const { sunday, past } = windowWarnings(serviceDate, window, now);
+  return [
+    ...(sunday ? ["La fecha del servicio es un domingo."] : []),
+    ...(past ? ["La franja de entrega ya pasó."] : []),
+  ];
 }
 
 export const bulkRoutes = new Hono<AppEnv>()
@@ -221,6 +239,7 @@ export const bulkRoutes = new Hono<AppEnv>()
       if (duplicateOf.length > 0) confirmations.push("duplicate");
       preview.push({
         input,
+        warnings: rowWarnings(input.serviceDate ?? today, input.window ?? null, registeredAt),
         neighborhoodMatch: match,
         calculatedFee,
         duplicateOf,

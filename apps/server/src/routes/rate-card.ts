@@ -14,7 +14,7 @@ import type { Executor } from "../db/client.ts";
 import { merchants, rateCardEntries, rateZones, users } from "../db/schema/index.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
-import { auditedCreate } from "../lib/master-data.ts";
+import { auditedCreate, requireActiveZone } from "../lib/master-data.ts";
 import { validate } from "../lib/validate.ts";
 
 const merchantQuery = z.object({ merchantId: z.uuid().optional() });
@@ -123,6 +123,7 @@ export const rateCardRoutes = new Hono<AppEnv>()
         fields: { effectiveFrom: "La vigencia empieza hoy o en una fecha futura." },
       });
     }
+    if (input.rateZoneId) await requireActiveZone(c.get("db"), input.rateZoneId);
     const created = await auditedCreate(c, { type: "rate_card_entry", id }, async (tx) => {
       const values = {
         ...input,

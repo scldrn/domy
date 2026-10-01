@@ -25,6 +25,8 @@ export type BulkPreviewRow = {
   calculatedFee: number | null;
   duplicateOf: string[];
   errors: Record<string, string>;
+  /** Non-blocking warnings (FR-010): a Sunday service date or a window already past. */
+  warnings: string[];
   confirmations: BulkConfirmation[];
   status: "ready" | "needs_confirmation" | "invalid";
 };

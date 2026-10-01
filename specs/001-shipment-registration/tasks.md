@@ -421,3 +421,12 @@ plan, tasks, and analysis (decision #35 in the business master).
 - Verify each test fails before implementing; commit after each task or logical group
 - Every task must leave `pnpm check` clean
 - No task may add a dependency that is not listed in plan.md without updating the plan
+
+## Phase 11: Convergence
+
+- [X] T122 Keep the bulk list (pasted or uploaded text, chosen merchant and pickup point) in the tab's session storage like the single registration draft, so it survives an expired session and the sign-in in between, and clear it after the rows are created per FR-038, EC-10 (partial)
+- [X] T123 Show the non-blocking warnings of FR-010 in the bulk preview: a service date on a Sunday and a delivery window already past, per FR-010, EC-05 (partial)
+- [X] T124 Give every length limit of the shared schemas a Spanish message (aliases and variants, instructions, merchant reference, optional texts in `packages/domain/src/schemas/shipment.ts` and `master-data.ts`) so no default English validation text reaches a screen per FR-034 (partial)
+- [X] T125 Offer only active rate zones in the selection lists (adding a neighborhood, a neighborhood's zone, a new rate entry) and refuse an inactive zone for a new neighborhood or rate entry on the server per FR-029 (partial)
+- [X] T126 Record in `docs/design-system.md` that the dispatch board, history, and master data use the shadcn `Table` with M3 tokens, and that TanStack Table is added only when sorting or column controls are needed, per FR-034 and design-system.md §7 (partial)
+- [X] T127 Review the rule that a rate card entry can start only today or later (FR-028 does not state it): confirm it with the owner and record it in spec.md FR-028, or remove the check from `apps/server/src/routes/rate-card.ts` per FR-028 (unrequested)

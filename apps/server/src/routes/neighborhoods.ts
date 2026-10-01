@@ -16,7 +16,7 @@ import {
   rateZones,
 } from "../db/schema/index.ts";
 import { recordAudit } from "../lib/audit.ts";
-import { auditedChange, diffValues } from "../lib/master-data.ts";
+import { auditedChange, diffValues, requireActiveZone } from "../lib/master-data.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
@@ -102,6 +102,7 @@ export const neighborhoodRoutes = new Hono<AppEnv>()
     const input = c.req.valid("json");
     const user = c.get("user");
     const db = c.get("db");
+    await requireActiveZone(db, input.rateZoneId);
     const created = await db
       .transaction(async (tx) => {
         const [row] = await tx
@@ -163,6 +164,7 @@ export const neighborhoodRoutes = new Hono<AppEnv>()
             "Solo el propietario cambia la zona tarifaria o el tipo de un barrio, lo confirma o lo desactiva.",
         });
       }
+      if (input.rateZoneId) await requireActiveZone(c.get("db"), input.rateZoneId);
       await auditedChange(c, { type: "neighborhood", id, actionId }, async (tx) => {
         const current = await loadNeighborhood(tx, id);
         const normalizedVariants = variants && [...new Set(variants.map(normalizeText))];

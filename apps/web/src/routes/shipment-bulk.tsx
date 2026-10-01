@@ -6,7 +6,7 @@ import {
 } from "@domy/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { OptionSelect } from "@/components/option-select";
 import { SearchCombobox } from "@/components/search-combobox";
@@ -16,6 +16,7 @@ import { confirmBulk, previewBulk } from "@/features/bulk/api";
 import { BulkInput, rowsToText, textToRows } from "@/features/bulk/bulk-input";
 import { BulkPreviewTable, rowState } from "@/features/bulk/bulk-preview-table";
 import { listPickupPoints, searchMerchants, type MerchantOption } from "@/features/shipments/api";
+import { useFormDraft } from "@/features/shipments/use-form-draft";
 import { ApiError } from "@/lib/api-client";
 
 export const Route = createFileRoute("/_panel/envios/masivo")({
@@ -33,15 +34,26 @@ type Preview = {
   batch: { id: string; rowIds: string[] };
 };
 
+type BulkDraft = { merchant: MerchantOption | null; pickupPointId: string | null; text: string };
+const emptyDraft = (): BulkDraft => ({ merchant: null, pickupPointId: null, text: "" });
+
 const plural = (count: number, one: string, many: string) =>
   `${String(count)} ${count === 1 ? one : many}`;
 
 /** Registration of up to 200 shipments of one merchant at once (User Story 4). */
 function ShipmentBulkPage() {
   const queryClient = useQueryClient();
-  const [merchant, setMerchant] = useState<MerchantOption | null>(null);
-  const [pickupPointId, setPickupPointId] = useState<string | null>(null);
-  const [text, setText] = useState("");
+  // The list survives a failed request, an expired session, and the sign-in (FR-038).
+  const draft = useFormDraft("bulk", emptyDraft);
+  const [merchant, setMerchant] = useState<MerchantOption | null>(draft.initialValues.merchant);
+  const [pickupPointId, setPickupPointId] = useState<string | null>(
+    draft.initialValues.pickupPointId,
+  );
+  const [text, setText] = useState(draft.initialValues.text);
+  const { save: saveDraft } = draft;
+  useEffect(() => {
+    saveDraft({ merchant, pickupPointId, text });
+  }, [merchant, pickupPointId, text, saveDraft]);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -135,7 +147,10 @@ function ShipmentBulkPage() {
       const remaining = preview.cells.filter((_, index) => !created.has(index));
       setText(rowsToText(remaining));
       if (remaining.length > 0) await review(remaining);
-      else setPreview(null);
+      else {
+        setPreview(null);
+        draft.startNew();
+      }
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "No pudimos crear los envíos.");
     } finally {

@@ -27,7 +27,7 @@ export const windowPreset = z.discriminatedUnion("preset", [
   z.object({ preset: z.literal("afternoon") }),
 ]);
 
-const optionalText = z.string().trim().max(500).optional();
+const optionalText = z.string().trim().max(500, "Máximo 500 caracteres.").optional();
 
 const common = {
   id: z.uuid("Falta el identificador del envío."),
@@ -44,7 +44,11 @@ const common = {
   window: windowPreset.nullable().optional(),
   packageSize: packageSize.optional(),
   packageCount: z.number().int().min(1, "Debe haber al menos una unidad.").optional(),
-  merchantReference: z.string().trim().max(60).optional(),
+  merchantReference: z
+    .string()
+    .trim()
+    .max(60, "La referencia tiene máximo 60 caracteres.")
+    .optional(),
   instructions: optionalText,
   /** Explicit confirmation of a fee above COP 100.000 or a COD above COP 2.000.000 (FR-037). */
   confirmed: z.boolean().optional(),

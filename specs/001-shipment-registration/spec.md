@@ -22,6 +22,10 @@ document appear in Spanish between quotes.
 - Q: How long does a dispatcher or owner session stay open in the dispatch panel? → A: Until the user signs out, for at most 30 days.
 - Q: What hours do the "En la mañana" and "En la tarde" delivery windows represent? → A: Operating day 8:00 a. m.–8:00 p. m.; morning 8:00–12:00, afternoon 12:00–20:00.
 
+### Session 2026-10-01
+
+- Q: Can a rate card entry take effect on a past date? → A: No; it starts today or later (owner decision during convergence, T127).
+
 ### Checklist review 2026-09-30
 
 Decisions taken while closing `checklists/core-rules.md`:
@@ -500,9 +504,10 @@ dispatch panel at all.
 - **FR-028**: Only the owner MUST be able to manage rate zones and the rate card: a standard
   rate per rate zone, one standard express surcharge, and merchant overrides of zone rates
   and of the express surcharge. Each entry has an effective date, a calendar day that
-  starts at 00:00. Entries are never edited or removed: to correct a scheduled or current
-  rate the owner adds a new entry, and when two entries share an effective date the most
-  recently added applies. The full history of past rates is kept.
+  starts at 00:00 and is today or a later day (a past date would change the fee recalculated
+  when an already registered shipment is edited). Entries are never edited or removed: to
+  correct a scheduled or current rate the owner adds a new entry, and when two entries share
+  an effective date the most recently added applies. The full history of past rates is kept.
 - **FR-029**: Deactivated records MUST disappear from selection lists and remain in history;
   shipments already open keep working with them. Deactivating a merchant MUST warn with its
   number of open shipments. A merchant with active pickup points MUST always have exactly

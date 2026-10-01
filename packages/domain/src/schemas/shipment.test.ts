@@ -117,3 +117,25 @@ describe("missing values", () => {
     });
   });
 });
+
+describe("length limits", () => {
+  it("are explained in Spanish", () => {
+    const result = shipmentCreateInput.safeParse({
+      id: crypto.randomUUID(),
+      kind: "errand",
+      merchantId: crypto.randomUUID(),
+      pickupPointId: crypto.randomUUID(),
+      errandDescription: "Pagar un recibo",
+      paymentMode: "merchant_account",
+      fee: 12000,
+      feeOverrideReason: "Diligencia en el centro",
+      merchantReference: "x".repeat(61),
+      instructions: "x".repeat(501),
+    });
+    const messages = (result.error?.issues ?? []).map((issue) => issue.message);
+    expect(messages).toEqual([
+      "La referencia tiene máximo 60 caracteres.",
+      "Máximo 500 caracteres.",
+    ]);
+  });
+});
