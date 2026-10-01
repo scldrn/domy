@@ -10,6 +10,7 @@ import { handleError } from "./lib/errors.ts";
 import { bulkRoutes } from "./routes/bulk.ts";
 import { carrierRoutes } from "./routes/carriers.ts";
 import { auditEventRoutes } from "./routes/audit-events.ts";
+import { authRoutes } from "./routes/auth.ts";
 import { courierRoutes } from "./routes/couriers.ts";
 import { exportRoutes } from "./routes/export.ts";
 import { merchantRoutes, pickupPointRoutes } from "./routes/merchants.ts";
@@ -27,6 +28,8 @@ export type AppDeps = {
   webDist?: string;
   /** End-to-end tests only: lets a test move the server clock (research R9). */
   setNow?: (instant: string) => void;
+  /** End-to-end tests only: the recovery emails, to follow their links. */
+  testEmails?: readonly { email: string; name: string; url: string }[];
 };
 
 export type AppEnv = {
@@ -59,6 +62,7 @@ export function createApp(deps: AppDeps) {
       );
     })
     .onError(handleError)
+    .route("/api/auth", authRoutes)
     .on(["GET", "POST"], "/api/auth/*", (c) => deps.auth.handler(c.req.raw))
     .route("/api/shipments", shipmentRoutes)
     .route("/api/bulk", bulkRoutes)
@@ -73,7 +77,10 @@ export function createApp(deps: AppDeps) {
     .route("/api/carriers", carrierRoutes)
     .route("/api/rate-zones", rateZoneRoutes);
 
-  const { setNow } = deps;
+  const { setNow, testEmails } = deps;
+  if (testEmails) {
+    app.get("/api/test/emails", (c) => c.json({ items: testEmails }));
+  }
   if (setNow) {
     app.post("/api/test/clock", async (c) => {
       const { now } = await c.req.json<{ now: string }>();

@@ -51,7 +51,7 @@ All three must pass with zero warnings (Constitution, quality gates).
 | 10 | US4 | Paste 20 rows of the template for Amy Tecnology, with 2 invalid rows and "copàcabana" | Preview proposes "Copacabana"; after fixing, 20 shipments are created |
 | 11 | US5 | Search by a recipient phone; export as Excel | Matching shipments, newest first; the file opens with Spanish headers |
 | 12 | US6 | Add a standard rate effective tomorrow | Today's registrations use the current rate; tomorrow's (fake clock) the new one |
-| 13 | US7 | Create a dispatcher and a courier; sign in as each | Dispatcher: panel without rate card or users. Courier: no access to the panel |
+| 13 | US7 | Create a dispatcher and a courier; sign in as each | Dispatcher: panel with the rate card read-only (FR-031) and without users. Courier: no access to the panel |
 | 14 | US7 | Fail sign-in 5 times | Password sign-in locked for 15 minutes; message says when to retry |
 | 15 | US1 | Register an express delivery to Medellín; register a carrier handoff to "Terminal del Norte" | Fee $ 17.500 (13.000 + 4.500); handoff fee from the terminal's rate zone, carrier and town required |
 | 16 | US6 | As dispatcher, add a neighborhood; then try to change another neighborhood's rate zone | Added and listed for the owner's review; the zone change is not available |

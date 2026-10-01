@@ -3,8 +3,10 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { adminAc, defaultStatements, userAc } from "better-auth/plugins/admin/access";
+import { eq } from "drizzle-orm";
 import type { Db } from "./db/client.ts";
 import * as schema from "./db/schema/index.ts";
+import { users } from "./db/schema/index.ts";
 
 const ac = createAccessControl(defaultStatements);
 
@@ -36,6 +38,13 @@ export function createAuth(options: {
       maxPasswordLength: 128,
       resetPasswordTokenExpiresIn: 60 * 60,
       revokeSessionsOnPasswordReset: true,
+      // A completed recovery also lifts a sign-in lock (FR-033).
+      onPasswordReset: async ({ user }) => {
+        await options.db
+          .update(users)
+          .set({ failedSignInCount: 0, lockedUntil: null })
+          .where(eq(users.id, user.id));
+      },
       sendResetPassword: async ({ user, url }) => {
         await options.sendResetPassword({ email: user.email, name: user.name, url });
       },

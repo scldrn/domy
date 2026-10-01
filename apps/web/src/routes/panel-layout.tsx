@@ -1,5 +1,6 @@
 import AddBoxIcon from "@material-symbols/svg-400/rounded/add_box.svg?react";
 import DashboardIcon from "@material-symbols/svg-400/rounded/dashboard.svg?react";
+import GroupIcon from "@material-symbols/svg-400/rounded/group.svg?react";
 import HistoryIcon from "@material-symbols/svg-400/rounded/history.svg?react";
 import LogoutIcon from "@material-symbols/svg-400/rounded/logout.svg?react";
 import ManageHistoryIcon from "@material-symbols/svg-400/rounded/manage_history.svg?react";
@@ -47,7 +48,8 @@ type NavigationItem = {
     | "/transportadoras"
     | "/barrios"
     | "/tarifario"
-    | "/auditoria";
+    | "/auditoria"
+    | "/usuarios";
   label: string;
   icon: Symbol;
   roles: UserRole[];
@@ -74,6 +76,12 @@ const navigation: { label: string | null; items: NavigationItem[] }[] = [
       { to: "/transportadoras", label: "Transportadoras", icon: TruckIcon, roles: office },
       { to: "/barrios", label: "Barrios", icon: MapIcon, roles: office },
       { to: "/tarifario", label: "Tarifario", icon: SellIcon, roles: office },
+    ],
+  },
+  {
+    label: "Administración",
+    items: [
+      { to: "/usuarios", label: "Usuarios", icon: GroupIcon, roles: ["owner"] },
       { to: "/auditoria", label: "Auditoría", icon: ManageHistoryIcon, roles: ["owner"] },
     ],
   },
@@ -85,6 +93,8 @@ export const Route = createFileRoute("/_panel")({
     if (!user) {
       throw redirect({ to: "/ingresar", search: { redirect: location.href } });
     }
+    // The panel is for the office; couriers have their own app (feature 003).
+    if (user.role === "courier") throw redirect({ to: "/mensajero" });
     return { user };
   },
   component: PanelLayout,
@@ -109,33 +119,42 @@ function PanelLayout() {
           Domy
         </SidebarHeader>
         <SidebarContent>
-          {navigation.map((group) => (
-            <SidebarGroup key={group.label ?? "main"}>
-              {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
-              <SidebarMenu>
-                {group.items
-                  .filter((item) => item.roles.includes(user.role))
-                  .map((item) => (
-                    <SidebarMenuItem key={item.to}>
-                      <SidebarMenuButton
-                        isActive={item.to === "/" ? pathname === "/" : pathname.startsWith(item.to)}
-                        tooltip={item.label}
-                        render={<Link to={item.to} />}
-                      >
-                        <Icon symbol={item.icon} />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-              </SidebarMenu>
-            </SidebarGroup>
-          ))}
+          {navigation
+            .filter((group) => group.items.some((item) => item.roles.includes(user.role)))
+            .map((group) => (
+              <SidebarGroup key={group.label ?? "main"}>
+                {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+                <SidebarMenu>
+                  {group.items
+                    .filter((item) => item.roles.includes(user.role))
+                    .map((item) => (
+                      <SidebarMenuItem key={item.to}>
+                        <SidebarMenuButton
+                          isActive={
+                            item.to === "/" ? pathname === "/" : pathname.startsWith(item.to)
+                          }
+                          tooltip={item.label}
+                          render={<Link to={item.to} />}
+                        >
+                          <Icon symbol={item.icon} />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            ))}
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
         <header className="flex h-16 items-center gap-2 border-b border-outline-variant px-2">
           <SidebarTrigger aria-label="Mostrar u ocultar el menú" />
-          <span className="flex-1 text-title-m text-on-surface">{user.name}</span>
+          <Link
+            to="/cuenta"
+            className="flex-1 text-title-m text-on-surface underline-offset-4 hover:underline"
+          >
+            {user.name}
+          </Link>
           <Button variant="ghost" onClick={() => void onSignOut()}>
             <Icon symbol={LogoutIcon} size={20} />
             Cerrar sesión

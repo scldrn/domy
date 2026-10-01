@@ -6,6 +6,9 @@ import { index, layout, rootRoute, route } from "@tanstack/virtual-file-routes";
  */
 export const routes = rootRoute("root.tsx", [
   route("/ingresar", "sign-in.tsx"),
+  route("/recuperar", "recover.tsx"),
+  route("/restablecer", "reset-password.tsx"),
+  route("/mensajero", "courier-home.tsx"),
   layout("panel", "panel-layout.tsx", [
     index("dispatch-board.tsx"),
     route("/envios/nuevo", "shipment-new.tsx"),
@@ -20,5 +23,7 @@ export const routes = rootRoute("root.tsx", [
     route("/barrios", "neighborhoods.tsx"),
     route("/tarifario", "rate-card.tsx"),
     route("/auditoria", "audit-log.tsx"),
+    route("/usuarios", "users.tsx"),
+    route("/cuenta", "account.tsx"),
   ]),
 ]);

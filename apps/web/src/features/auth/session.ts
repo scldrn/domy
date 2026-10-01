@@ -10,7 +10,7 @@ const networkError = new ApiError(0, {
   message: "No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.",
 });
 
-async function authRequest(path: string, body?: unknown): Promise<Response> {
+export async function authRequest(path: string, body?: unknown): Promise<Response> {
   try {
     const response = await fetch(`/api/auth/${path}`, {
       method: body === undefined ? "GET" : "POST",
@@ -63,3 +63,41 @@ export async function signIn(email: string, password: string): Promise<void> {
 export async function signOut(): Promise<void> {
   await authRequest("sign-out", {});
 }
+
+/** Better Auth error codes, said in Spanish. */
+const authMessages: Record<string, string> = {
+  USER_ALREADY_EXISTS: "Ya existe una cuenta con ese correo.",
+  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: "Ya existe una cuenta con ese correo.",
+  PASSWORD_TOO_SHORT: "La contraseña debe tener al menos 8 caracteres.",
+  PASSWORD_TOO_LONG: "La contraseña puede tener hasta 128 caracteres.",
+  INVALID_PASSWORD: "La contraseña actual no es correcta.",
+  INVALID_TOKEN: "El enlace no es válido o venció. Pide uno nuevo.",
+  INVALID_EMAIL: "Escribe un correo válido.",
+  YOU_CANNOT_BAN_YOURSELF: "No puedes desactivar tu propia cuenta.",
+};
+
+/**
+ * A Better Auth call that throws an ApiError with a Spanish message; Domy's own rules
+ * (lockout, last owner) already answer in Spanish.
+ */
+export async function authCall<T>(path: string, body?: unknown): Promise<T> {
+  const response = await authRequest(path, body);
+  const json = (await response.json().catch(() => null)) as
+    (T & { code?: string; error?: { code: string; message: string } }) | null;
+  if (response.ok) return json as T;
+  if (json?.error) throw new ApiError(response.status, json.error);
+  const code = json?.code ?? "auth_error";
+  throw new ApiError(response.status, {
+    code,
+    message: authMessages[code] ?? "No pudimos completar la acción. Intenta de nuevo.",
+  });
+}
+
+export const requestPasswordReset = (email: string) =>
+  authCall("request-password-reset", { email, redirectTo: "/restablecer" });
+
+export const resetPassword = (token: string, newPassword: string) =>
+  authCall("reset-password", { token, newPassword });
+
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  authCall("change-password", { currentPassword, newPassword, revokeOtherSessions: true });

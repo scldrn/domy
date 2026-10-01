@@ -1,4 +1,5 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { AuthCard } from "@/features/auth/auth-card";
 import { SignInForm } from "@/features/auth/sign-in-form";
 import { sessionQuery } from "@/features/auth/session";
 
@@ -13,14 +14,11 @@ export const Route = createFileRoute("/ingresar")({
 
 function SignInPage() {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-surface-container-low p-4">
-      <div className="w-full max-w-sm rounded-xl bg-surface p-6 shadow-sm">
-        <h1 className="text-headline-s text-on-surface">Domy</h1>
-        <p className="mt-1 mb-6 text-body-m text-on-surface-variant">
-          Ingresa con tu correo y contraseña.
-        </p>
-        <SignInForm />
-      </div>
-    </main>
+    <AuthCard title="Domy" description="Ingresa con tu correo y contraseña.">
+      <SignInForm />
+      <Link to="/recuperar" className="mt-4 block text-body-m text-primary underline">
+        ¿Olvidaste tu contraseña?
+      </Link>
+    </AuthCard>
   );
 }

@@ -11,14 +11,19 @@
 import { Route as rootRouteImport } from './routes/root'
 import { Route as panelLayoutRouteImport } from './routes/panel-layout'
 import { Route as signInRouteImport } from './routes/sign-in'
+import { Route as courierHomeRouteImport } from './routes/courier-home'
+import { Route as recoverRouteImport } from './routes/recover'
+import { Route as resetPasswordRouteImport } from './routes/reset-password'
 import { Route as dispatchBoardRouteImport } from './routes/dispatch-board'
 import { Route as auditLogRouteImport } from './routes/audit-log'
 import { Route as neighborhoodsRouteImport } from './routes/neighborhoods'
 import { Route as merchantsRouteImport } from './routes/merchants'
+import { Route as accountRouteImport } from './routes/account'
 import { Route as historyRouteImport } from './routes/history'
 import { Route as couriersRouteImport } from './routes/couriers'
 import { Route as rateCardRouteImport } from './routes/rate-card'
 import { Route as carriersRouteImport } from './routes/carriers'
+import { Route as usersRouteImport } from './routes/users'
 import { Route as merchantDetailRouteImport } from './routes/merchant-detail'
 import { Route as shipmentDetailRouteImport } from './routes/shipment-detail'
 import { Route as shipmentBulkRouteImport } from './routes/shipment-bulk'
@@ -32,6 +37,21 @@ const panelLayoutRoute = panelLayoutRouteImport.update({
 const signInRoute = signInRouteImport.update({
   id: '/ingresar',
   path: '/ingresar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const courierHomeRoute = courierHomeRouteImport.update({
+  id: '/mensajero',
+  path: '/mensajero',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const recoverRoute = recoverRouteImport.update({
+  id: '/recuperar',
+  path: '/recuperar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const resetPasswordRoute = resetPasswordRouteImport.update({
+  id: '/restablecer',
+  path: '/restablecer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const dispatchBoardRoute = dispatchBoardRouteImport.update({
@@ -54,6 +74,11 @@ const merchantsRoute = merchantsRouteImport.update({
   path: '/clientes',
   getParentRoute: () => panelLayoutRoute,
 } as any)
+const accountRoute = accountRouteImport.update({
+  id: '/cuenta',
+  path: '/cuenta',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
 const historyRoute = historyRouteImport.update({
   id: '/historial',
   path: '/historial',
@@ -72,6 +97,11 @@ const rateCardRoute = rateCardRouteImport.update({
 const carriersRoute = carriersRouteImport.update({
   id: '/transportadoras',
   path: '/transportadoras',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
+const usersRoute = usersRouteImport.update({
+  id: '/usuarios',
+  path: '/usuarios',
   getParentRoute: () => panelLayoutRoute,
 } as any)
 const merchantDetailRoute = merchantDetailRouteImport.update({
@@ -103,13 +133,18 @@ const shipmentEditRoute = shipmentEditRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof dispatchBoardRoute
   '/ingresar': typeof signInRoute
+  '/mensajero': typeof courierHomeRoute
+  '/recuperar': typeof recoverRoute
+  '/restablecer': typeof resetPasswordRoute
   '/auditoria': typeof auditLogRoute
   '/barrios': typeof neighborhoodsRoute
   '/clientes': typeof merchantsRoute
+  '/cuenta': typeof accountRoute
   '/historial': typeof historyRoute
   '/mensajeros': typeof couriersRoute
   '/tarifario': typeof rateCardRoute
   '/transportadoras': typeof carriersRoute
+  '/usuarios': typeof usersRoute
   '/clientes/$merchantId': typeof merchantDetailRoute
   '/envios/$trackingNumber': typeof shipmentDetailRoute
   '/envios/masivo': typeof shipmentBulkRoute
@@ -118,14 +153,19 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/ingresar': typeof signInRoute
+  '/mensajero': typeof courierHomeRoute
+  '/recuperar': typeof recoverRoute
+  '/restablecer': typeof resetPasswordRoute
   '/': typeof dispatchBoardRoute
   '/auditoria': typeof auditLogRoute
   '/barrios': typeof neighborhoodsRoute
   '/clientes': typeof merchantsRoute
+  '/cuenta': typeof accountRoute
   '/historial': typeof historyRoute
   '/mensajeros': typeof couriersRoute
   '/tarifario': typeof rateCardRoute
   '/transportadoras': typeof carriersRoute
+  '/usuarios': typeof usersRoute
   '/clientes/$merchantId': typeof merchantDetailRoute
   '/envios/$trackingNumber': typeof shipmentDetailRoute
   '/envios/masivo': typeof shipmentBulkRoute
@@ -136,14 +176,19 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_panel': typeof panelLayoutRouteWithChildren
   '/ingresar': typeof signInRoute
+  '/mensajero': typeof courierHomeRoute
+  '/recuperar': typeof recoverRoute
+  '/restablecer': typeof resetPasswordRoute
   '/_panel/': typeof dispatchBoardRoute
   '/_panel/auditoria': typeof auditLogRoute
   '/_panel/barrios': typeof neighborhoodsRoute
   '/_panel/clientes': typeof merchantsRoute
+  '/_panel/cuenta': typeof accountRoute
   '/_panel/historial': typeof historyRoute
   '/_panel/mensajeros': typeof couriersRoute
   '/_panel/tarifario': typeof rateCardRoute
   '/_panel/transportadoras': typeof carriersRoute
+  '/_panel/usuarios': typeof usersRoute
   '/_panel/clientes/$merchantId': typeof merchantDetailRoute
   '/_panel/envios/$trackingNumber': typeof shipmentDetailRoute
   '/_panel/envios/masivo': typeof shipmentBulkRoute
@@ -155,13 +200,18 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ingresar'
+    | '/mensajero'
+    | '/recuperar'
+    | '/restablecer'
     | '/auditoria'
     | '/barrios'
     | '/clientes'
+    | '/cuenta'
     | '/historial'
     | '/mensajeros'
     | '/tarifario'
     | '/transportadoras'
+    | '/usuarios'
     | '/clientes/$merchantId'
     | '/envios/$trackingNumber'
     | '/envios/masivo'
@@ -170,14 +220,19 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/ingresar'
+    | '/mensajero'
+    | '/recuperar'
+    | '/restablecer'
     | '/'
     | '/auditoria'
     | '/barrios'
     | '/clientes'
+    | '/cuenta'
     | '/historial'
     | '/mensajeros'
     | '/tarifario'
     | '/transportadoras'
+    | '/usuarios'
     | '/clientes/$merchantId'
     | '/envios/$trackingNumber'
     | '/envios/masivo'
@@ -187,14 +242,19 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_panel'
     | '/ingresar'
+    | '/mensajero'
+    | '/recuperar'
+    | '/restablecer'
     | '/_panel/'
     | '/_panel/auditoria'
     | '/_panel/barrios'
     | '/_panel/clientes'
+    | '/_panel/cuenta'
     | '/_panel/historial'
     | '/_panel/mensajeros'
     | '/_panel/tarifario'
     | '/_panel/transportadoras'
+    | '/_panel/usuarios'
     | '/_panel/clientes/$merchantId'
     | '/_panel/envios/$trackingNumber'
     | '/_panel/envios/masivo'
@@ -205,6 +265,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   panelLayoutRoute: typeof panelLayoutRouteWithChildren
   signInRoute: typeof signInRoute
+  courierHomeRoute: typeof courierHomeRoute
+  recoverRoute: typeof recoverRoute
+  resetPasswordRoute: typeof resetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -221,6 +284,27 @@ declare module '@tanstack/react-router' {
       path: '/ingresar'
       fullPath: '/ingresar'
       preLoaderRoute: typeof signInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mensajero': {
+      id: '/mensajero'
+      path: '/mensajero'
+      fullPath: '/mensajero'
+      preLoaderRoute: typeof courierHomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar': {
+      id: '/recuperar'
+      path: '/recuperar'
+      fullPath: '/recuperar'
+      preLoaderRoute: typeof recoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restablecer': {
+      id: '/restablecer'
+      path: '/restablecer'
+      fullPath: '/restablecer'
+      preLoaderRoute: typeof resetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_panel/': {
@@ -251,6 +335,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof merchantsRouteImport
       parentRoute: typeof panelLayoutRoute
     }
+    '/_panel/cuenta': {
+      id: '/_panel/cuenta'
+      path: '/cuenta'
+      fullPath: '/cuenta'
+      preLoaderRoute: typeof accountRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
     '/_panel/historial': {
       id: '/_panel/historial'
       path: '/historial'
@@ -277,6 +368,13 @@ declare module '@tanstack/react-router' {
       path: '/transportadoras'
       fullPath: '/transportadoras'
       preLoaderRoute: typeof carriersRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
+    '/_panel/usuarios': {
+      id: '/_panel/usuarios'
+      path: '/usuarios'
+      fullPath: '/usuarios'
+      preLoaderRoute: typeof usersRouteImport
       parentRoute: typeof panelLayoutRoute
     }
     '/_panel/clientes/$merchantId': {
@@ -322,10 +420,12 @@ interface panelLayoutRouteChildren {
   auditLogRoute: typeof auditLogRoute
   neighborhoodsRoute: typeof neighborhoodsRoute
   merchantsRoute: typeof merchantsRoute
+  accountRoute: typeof accountRoute
   historyRoute: typeof historyRoute
   couriersRoute: typeof couriersRoute
   rateCardRoute: typeof rateCardRoute
   carriersRoute: typeof carriersRoute
+  usersRoute: typeof usersRoute
   merchantDetailRoute: typeof merchantDetailRoute
   shipmentDetailRoute: typeof shipmentDetailRoute
   shipmentBulkRoute: typeof shipmentBulkRoute
@@ -338,10 +438,12 @@ const panelLayoutRouteChildren: panelLayoutRouteChildren = {
   auditLogRoute: auditLogRoute,
   neighborhoodsRoute: neighborhoodsRoute,
   merchantsRoute: merchantsRoute,
+  accountRoute: accountRoute,
   historyRoute: historyRoute,
   couriersRoute: couriersRoute,
   rateCardRoute: rateCardRoute,
   carriersRoute: carriersRoute,
+  usersRoute: usersRoute,
   merchantDetailRoute: merchantDetailRoute,
   shipmentDetailRoute: shipmentDetailRoute,
   shipmentBulkRoute: shipmentBulkRoute,
@@ -356,6 +458,9 @@ const panelLayoutRouteWithChildren = panelLayoutRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   panelLayoutRoute: panelLayoutRouteWithChildren,
   signInRoute: signInRoute,
+  courierHomeRoute: courierHomeRoute,
+  recoverRoute: recoverRoute,
+  resetPasswordRoute: resetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
