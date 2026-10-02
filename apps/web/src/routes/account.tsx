@@ -1,6 +1,7 @@
 import { userRoleLabels } from "@domy/domain";
 import { createFileRoute } from "@tanstack/react-router";
 import { ChangePasswordForm } from "@/features/auth/change-password-form";
+import { PageHeader } from "@/components/page-header";
 
 export const Route = createFileRoute("/_panel/cuenta")({
   head: () => ({ meta: [{ title: "Mi cuenta · Domy" }] }),
@@ -12,8 +13,8 @@ function AccountPage() {
   const { user } = Route.useRouteContext();
   return (
     <div className="flex max-w-3xl flex-col gap-6">
-      <h1 className="text-headline-s text-on-surface">Mi cuenta</h1>
-      <dl className="grid grid-cols-[8rem_1fr] gap-2 text-body-l">
+      <PageHeader title="Mi cuenta" />
+      <dl className="grid grid-cols-[8rem_1fr] gap-x-4 gap-y-3 rounded-md border border-outline-variant bg-sheet p-6 text-body-l">
         <dt className="text-on-surface-variant">Nombre</dt>
         <dd>{user.name}</dd>
         <dt className="text-on-surface-variant">Correo</dt>

@@ -126,7 +126,7 @@ domy/
 │       │   ├── components/ui/        # shadcn/ui components restyled to M3
 │       │   ├── styles/               # tokens.css (generated), globals.css
 │       │   └── lib/                  # api-client.ts, format.ts, clock.ts
-│       ├── public/                   # fonts (Roboto subset)
+│       ├── public/                   # static assets served as is
 │       ├── tests/e2e/                # Playwright
 │       ├── index.html
 │       ├── vite.config.ts
@@ -147,7 +147,7 @@ domy/
 │       │   └── index.ts
 │       └── package.json              # unit tests sit next to each module (*.test.ts)
 ├── scripts/
-│   └── generate-design-tokens.ts     # M3 roles from seed #2B3A8F → apps/web/src/styles/tokens.css
+│   └── generate-design-tokens.ts     # M3 roles from the seed of design-system.md §3.1 → apps/web/src/styles/tokens.css
 ├── .github/workflows/ci.yml
 ├── compose.yaml                      # PostgreSQL 18 for development
 ├── .env.example

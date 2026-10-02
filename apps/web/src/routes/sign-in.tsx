@@ -14,9 +14,12 @@ export const Route = createFileRoute("/ingresar")({
 
 function SignInPage() {
   return (
-    <AuthCard title="Domy" description="Ingresa con tu correo y contraseña.">
+    <AuthCard title="Ingresar" description="Usa el correo y la contraseña de tu cuenta.">
       <SignInForm />
-      <Link to="/recuperar" className="mt-4 block text-body-m text-primary underline">
+      <Link
+        to="/recuperar"
+        className="mt-6 block w-fit rounded-xs text-body-m text-primary underline underline-offset-4"
+      >
         ¿Olvidaste tu contraseña?
       </Link>
     </AuthCard>

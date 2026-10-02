@@ -17,6 +17,7 @@ export function OptionSelect<T extends string>({
   placeholder,
   invalid,
   disabled,
+  hideLabel,
 }: {
   label: string;
   value: T | "" | null;
@@ -25,11 +26,15 @@ export function OptionSelect<T extends string>({
   placeholder?: string;
   invalid?: boolean;
   disabled?: boolean;
+  /** Keeps the label for screen readers only, where the value already says what it is. */
+  hideLabel?: boolean;
 }) {
   const labelId = useId();
   return (
     <>
-      <FieldLabel id={labelId}>{label}</FieldLabel>
+      <FieldLabel id={labelId} className={hideLabel ? "sr-only" : undefined}>
+        {label}
+      </FieldLabel>
       <Select
         value={value || null}
         onValueChange={(next) => {

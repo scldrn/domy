@@ -6,8 +6,7 @@ import {
   type BoardShipment,
 } from "@domy/domain";
 import { Link } from "@tanstack/react-router";
-import { ShipmentStatusChip } from "@/components/shipment-status-chip";
-import { Badge } from "@/components/ui/badge";
+import { ShipmentStatusMark } from "@/components/shipment-status-mark";
 import {
   Table,
   TableBody,
@@ -16,91 +15,118 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/cn";
 import { formatCop, formatDate, formatWindow } from "@/lib/format";
 
 const dayMs = 24 * 60 * 60 * 1000;
 
 function daysPending(serviceDate: string, today: string): string {
   const days = Math.round((Date.parse(today) - Date.parse(serviceDate)) / dayMs);
-  return days === 1 ? "1 día" : `${String(days)} días`;
+  return days === 1 ? "hace 1 día" : `hace ${String(days)} días`;
 }
 
-function Flags({ shipment, now }: { shipment: BoardShipment; now: Date }) {
-  const windowEnd = shipment.windowEnd ? new Date(shipment.windowEnd) : null;
-  const flag = shipmentFlag({ status: shipment.status, windowEnd }, now);
-  return (
-    <span className="flex gap-1">
-      {flag && (
-        <Badge variant={flag.kind === "late" ? "destructive" : "warning"}>{flagLabel(flag)}</Badge>
-      )}
-      {shipment.feeNeedsReview && <Badge variant="outline">Tarifa por revisar</Badge>}
-    </span>
-  );
-}
+/** The row of a shipment on the board; the ribbon finds it by this id. */
+export const rowId = (shipment: BoardShipment) => `envio-${shipment.trackingNumber}`;
 
 /**
- * The board's shipments (FR-021). With `today`, it adds the original service date and the
- * days pending, for the section "Pendientes de días anteriores".
+ * The board's shipments (FR-021): tracking number, merchant, recipient and neighborhood,
+ * window with its flag (FR-022), COD amount, and status. With `today`, the tracking number
+ * carries the original service date and the days pending, so both tables keep one layout.
  */
 export function BoardTable({
   shipments,
   now,
   today,
+  pointed,
+  onPoint,
 }: {
   shipments: BoardShipment[];
   now: Date;
   today?: string;
+  pointed: string | null;
+  onPoint: (id: string | null) => void;
 }) {
   return (
-    <Table>
+    <Table className="min-w-[58rem] table-fixed">
       <TableHeader>
         <TableRow>
-          <TableHead>Guía</TableHead>
-          {today && <TableHead>Fecha del servicio</TableHead>}
+          <TableHead className="w-40">Guía</TableHead>
           <TableHead>Cliente</TableHead>
           <TableHead>Destinatario</TableHead>
-          <TableHead>Barrio</TableHead>
-          <TableHead>Estado</TableHead>
-          <TableHead>Franja</TableHead>
-          <TableHead className="text-right">Contraentrega</TableHead>
-          <TableHead>Alertas</TableHead>
+          <TableHead className="w-56">Franja</TableHead>
+          <TableHead className="w-32 text-right">Recaudo</TableHead>
+          <TableHead className="w-40">Estado</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {shipments.map((shipment) => (
-          <TableRow key={shipment.id}>
-            <TableCell>
-              <Link
-                to="/envios/$trackingNumber"
-                params={{ trackingNumber: shipment.trackingNumber }}
-                className="text-primary tabular-nums underline-offset-4 hover:underline"
-              >
-                {formatTrackingNumber(shipment.trackingNumber)}
-              </Link>
-            </TableCell>
-            {today && (
+        {shipments.map((shipment) => {
+          const windowEnd = shipment.windowEnd ? new Date(shipment.windowEnd) : null;
+          const flag = shipmentFlag({ status: shipment.status, windowEnd }, now);
+          return (
+            <TableRow
+              key={shipment.id}
+              id={rowId(shipment)}
+              onMouseEnter={() => {
+                onPoint(shipment.id);
+              }}
+              onMouseLeave={() => {
+                onPoint(null);
+              }}
+              data-pointed={pointed === shipment.id || undefined}
+              className="scroll-mt-24 data-pointed:bg-secondary/10"
+            >
               <TableCell>
-                {formatDate(shipment.serviceDate)}
-                <span className="block text-body-s text-on-surface-variant">
-                  {daysPending(shipment.serviceDate, today)}
+                <Link
+                  to="/envios/$trackingNumber"
+                  params={{ trackingNumber: shipment.trackingNumber }}
+                  className="guia rounded-xs text-title-m text-on-surface underline-offset-4 hover:underline"
+                >
+                  {formatTrackingNumber(shipment.trackingNumber)}
+                </Link>
+                {today && (
+                  <span className="block text-body-s text-on-surface-variant">
+                    {formatDate(shipment.serviceDate)}, {daysPending(shipment.serviceDate, today)}
+                  </span>
+                )}
+              </TableCell>
+              <TableCell className="truncate">{shipment.merchant.name}</TableCell>
+              <TableCell className="truncate">
+                {shipment.recipientName ?? shipmentKindLabels[shipment.kind]}
+                <span className="block truncate text-body-s text-on-surface-variant">
+                  {shipment.recipientNeighborhood?.name ?? "Sin barrio"}
                 </span>
               </TableCell>
-            )}
-            <TableCell>{shipment.merchant.name}</TableCell>
-            <TableCell>{shipment.recipientName ?? shipmentKindLabels[shipment.kind]}</TableCell>
-            <TableCell>{shipment.recipientNeighborhood?.name}</TableCell>
-            <TableCell>
-              <ShipmentStatusChip status={shipment.status} />
-            </TableCell>
-            <TableCell>{formatWindow(shipment.windowStart, shipment.windowEnd)}</TableCell>
-            <TableCell className="text-right tabular-nums">
-              {shipment.codAmount > 0 ? formatCop(shipment.codAmount) : "—"}
-            </TableCell>
-            <TableCell>
-              <Flags shipment={shipment} now={now} />
-            </TableCell>
-          </TableRow>
-        ))}
+              <TableCell>
+                {formatWindow(shipment.windowStart, shipment.windowEnd) ?? (
+                  <span className="text-on-surface-variant">Sin franja</span>
+                )}
+                {flag && (
+                  <span
+                    className={cn(
+                      "block text-label-m",
+                      flag.kind === "late" ? "text-error" : "text-warning",
+                    )}
+                  >
+                    {flagLabel(flag)}
+                  </span>
+                )}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {shipment.codAmount > 0 ? (
+                  formatCop(shipment.codAmount)
+                ) : (
+                  <span className="text-on-surface-variant">Sin recaudo</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <ShipmentStatusMark status={shipment.status} />
+                {shipment.feeNeedsReview && (
+                  <span className="block text-label-m text-warning">Tarifa por revisar</span>
+                )}
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );

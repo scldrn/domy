@@ -11,6 +11,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import ArrowBackIcon from "@material-symbols/svg-400/rounded/arrow_back.svg?react";
+import { Icon } from "@/components/icon";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,35 +68,42 @@ function MerchantDetailPage() {
 
   return (
     <div className="flex max-w-5xl flex-col gap-6">
-      <Link to="/clientes" className="text-body-m text-primary">
-        ← Clientes
+      <Link
+        to="/clientes"
+        className="-mb-3 flex w-fit items-center gap-1 text-label-l text-primary underline-offset-4 hover:underline"
+      >
+        <Icon symbol={ArrowBackIcon} size={20} />
+        Clientes
       </Link>
-      <header className="flex flex-wrap items-center gap-4">
-        <h1 className="text-headline-s text-on-surface">{data.name}</h1>
+      <PageHeader
+        title={data.name}
+        actions={
+          <>
+            <MerchantDialog merchant={data} />
+            {data.isActive ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setConfirming(true);
+                }}
+              >
+                Desactivar cliente
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={() => void setActive(true)}>
+                Reactivar cliente
+              </Button>
+            )}
+          </>
+        }
+      >
         {data.isActive ? (
           <Badge variant="success">Activo</Badge>
         ) : (
           <Badge variant="outline">Inactivo</Badge>
         )}
-        <div className="ml-auto flex gap-2">
-          <MerchantDialog merchant={data} />
-          {data.isActive ? (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setConfirming(true);
-              }}
-            >
-              Desactivar cliente
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={() => void setActive(true)}>
-              Reactivar cliente
-            </Button>
-          )}
-        </div>
-      </header>
-      <dl className="grid grid-cols-[10rem_1fr] gap-2 text-body-l">
+      </PageHeader>
+      <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-3 rounded-md border border-outline-variant bg-sheet p-6 text-body-l">
         <dt className="text-on-surface-variant">Alias</dt>
         <dd>{data.aliases.join(", ") || "—"}</dd>
         <dt className="text-on-surface-variant">WhatsApp</dt>

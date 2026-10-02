@@ -18,6 +18,7 @@ import { ExportButton } from "@/features/master-data/export-button";
 import { RateEntryDialog } from "@/features/master-data/rate-card/rate-entry-dialog";
 import { searchMerchants, type MerchantOption } from "@/features/shipments/api";
 import { formatCop, formatDate, formatDateTime } from "@/lib/format";
+import { PageHeader } from "@/components/page-header";
 
 const panelRoute = getRouteApi("/_panel");
 
@@ -54,16 +55,20 @@ function RateCardPage() {
   });
 
   return (
-    <div className="flex max-w-5xl flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-headline-s text-on-surface">Tarifario</h1>
-        {owner && (
-          <div className="flex gap-2">
-            <ExportButton dataset="rate-card" />
-            <RateEntryDialog merchant={merchant} />
-          </div>
-        )}
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Tarifario"
+        actions={
+          <>
+            {owner && (
+              <div className="flex gap-2">
+                <ExportButton dataset="rate-card" />
+                <RateEntryDialog merchant={merchant} />
+              </div>
+            )}
+          </>
+        }
+      />
       <Field className="max-w-sm">
         <FieldLabel htmlFor="rate-card-merchant">Tarifas especiales de un cliente</FieldLabel>
         <SearchCombobox<MerchantOption>

@@ -8,6 +8,11 @@ describe("cn", () => {
     );
   });
 
+  it("treats the lede as a size and keeps the tracking number style beside any size", () => {
+    expect(cn("text-on-surface-variant", "text-lede")).toBe("text-on-surface-variant text-lede");
+    expect(cn("guia text-title-m", "text-body-m")).toBe("guia text-body-m");
+  });
+
   it("still resolves conflicts within each group", () => {
     expect(cn("text-body-m", "text-title-m")).toBe("text-title-m");
     expect(cn("text-primary", "text-error")).toBe("text-error");

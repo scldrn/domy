@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 
 /** Small status marks and counts (M3 badge and assist-chip colors). */
 const badgeVariants = cva(
-  "inline-flex h-6 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-sm px-2 text-label-m whitespace-nowrap [&>svg]:pointer-events-none [&>svg]:size-4!",
+  "inline-flex h-6 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-xs px-2 text-label-m whitespace-nowrap [&>svg]:pointer-events-none [&>svg]:size-4!",
   {
     variants: {
       variant: {

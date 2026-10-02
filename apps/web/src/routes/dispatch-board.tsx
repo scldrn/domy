@@ -9,15 +9,21 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import InboxIcon from "@material-symbols/svg-400/rounded/inbox.svg?react";
+import FilterOffIcon from "@material-symbols/svg-400/rounded/filter_alt_off.svg?react";
+import { EmptyState } from "@/components/empty-state";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BoardFilters } from "@/features/board/board-filters";
-import { BoardTable } from "@/features/board/board-table";
-import { PendingSection } from "@/features/board/pending-section";
-import { StatusCounts } from "@/features/board/status-counts";
+import { BoardSection } from "@/features/board/board-section";
+import { rowId } from "@/features/board/board-table";
+import { DayRibbon } from "@/features/board/day-ribbon";
+import { daySentence } from "@/features/board/day-sentence";
+import { DayStepper } from "@/features/board/day-stepper";
 import { api, unwrap } from "@/lib/api-client";
 import { now, syncClock } from "@/lib/clock";
-import { formatDate } from "@/lib/format";
+import { cn } from "@/lib/cn";
+import { formatDate, formatLongDate } from "@/lib/format";
 
 /** Changes by any user appear within 30 seconds (FR-023, research R9). */
 const pollMs = 20_000;
@@ -64,6 +70,7 @@ function DispatchBoardPage() {
     refetchInterval: pollMs,
   });
   useTicker(flagRefreshMs);
+  const [pointed, setPointed] = useState<string | null>(null);
 
   const setFilters = (next: Partial<BoardQuery>) => {
     void navigate({ search: (previous) => ({ ...previous, ...next }), replace: true });
@@ -75,78 +82,163 @@ function DispatchBoardPage() {
   const all: BoardShipment[] = data ? [...data.shipments, ...data.pendingFromPreviousDays] : [];
   const view = data ? filterBoard(data.date, all, search, currentTime) : null;
   const date = data?.date ?? search.date ?? today;
+  const isToday = date === today;
+  const filtered = Boolean(search.merchantId ?? search.rateZoneId ?? search.flag ?? search.status);
+
+  /** From the ribbon to the row: scroll it into view and put the focus on its tracking number. */
+  const pick = (shipment: BoardShipment) => {
+    const row = document.getElementById(rowId(shipment));
+    if (!row) return;
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    row.scrollIntoView({ block: "center", behavior: calm ? "auto" : "smooth" });
+    row.querySelector("a")?.focus({ preventScroll: true });
+    setPointed(shipment.id);
+  };
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-headline-s text-on-surface">Tablero de despacho</h1>
-          <p className="text-body-m text-on-surface-variant">
-            {date === today ? `Hoy, ${formatDate(date)}` : formatDate(date)}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {date !== today && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setFilters({ date: undefined });
-              }}
-            >
-              Ver hoy
-            </Button>
-          )}
-          <Link to="/envios/nuevo" className={buttonVariants()}>
-            Nuevo envío
-          </Link>
-        </div>
-      </header>
-
-      <BoardFilters
-        date={date}
-        filters={search}
-        merchants={distinctById(all.map((shipment) => shipment.merchant))}
-        rateZones={distinctById(all.map((shipment) => shipment.rateZone))}
-        onChange={setFilters}
-      />
-
-      {board.isPending ? (
-        <div className="flex flex-col gap-2" aria-label="Cargando el tablero">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : board.isError && !data ? (
-        <p role="alert" className="text-body-l text-error">
-          {board.error.message}
-        </p>
-      ) : view ? (
-        <>
-          <StatusCounts
-            counts={view.counts}
-            selected={search.status}
-            onSelect={(status) => {
-              setFilters({ status });
+    <div className="flex flex-col gap-8">
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+          <h1 className="text-headline-l text-on-surface">
+            <span className="sr-only">Tablero de despacho, </span>
+            {formatLongDate(date, today)}
+          </h1>
+          <DayStepper
+            date={date}
+            today={today}
+            onChange={(next) => {
+              setFilters({ date: next === today ? undefined : next });
             }}
           />
-          {date === today && (
-            <PendingSection
-              shipments={view.pendingFromPreviousDays}
-              now={currentTime}
-              today={today}
+        </div>
+        {data ? (
+          <p className="max-w-[68ch] text-lede text-on-surface-variant" aria-live="polite">
+            {daySentence({
+              isToday,
+              shipments: data.shipments,
+              pending: isToday ? data.pendingFromPreviousDays : [],
+              now: currentTime,
+            }).map((segment, index) =>
+              segment.strong ? (
+                <strong
+                  key={index}
+                  className={cn(
+                    "font-semibold whitespace-nowrap tabular-nums",
+                    segment.tone === "error" ? "text-error" : "text-on-surface",
+                  )}
+                >
+                  {segment.text}
+                </strong>
+              ) : (
+                segment.text
+              ),
+            )}
+          </p>
+        ) : (
+          <Skeleton className="h-7 w-full max-w-2xl" />
+        )}
+      </header>
+
+      {board.isPending ? (
+        <div className="flex flex-col gap-3" aria-label="Cargando el tablero">
+          <Skeleton className="h-56 w-full rounded-md" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      ) : board.isError && !data ? (
+        <p
+          role="alert"
+          className="rounded-sm bg-error-container p-4 text-body-l text-on-error-container"
+        >
+          {board.error.message}
+        </p>
+      ) : view && data ? (
+        <>
+          <DayRibbon
+            shipments={view.shipments}
+            pending={view.pendingFromPreviousDays}
+            now={currentTime}
+            isToday={isToday}
+            isPast={date < today}
+            pointed={pointed}
+            onPoint={setPointed}
+            onPick={pick}
+          />
+
+          <div className="flex flex-col gap-6">
+            <BoardFilters
+              filters={search}
+              merchants={distinctById(all.map((shipment) => shipment.merchant))}
+              rateZones={distinctById(all.map((shipment) => shipment.rateZone))}
+              counts={view.counts}
+              onChange={setFilters}
             />
-          )}
-          {view.shipments.length > 0 ? (
-            <BoardTable shipments={view.shipments} now={currentTime} />
-          ) : (
-            <p className="rounded-lg bg-surface-container-low p-6 text-body-l text-on-surface-variant">
-              {all.length > 0
-                ? "Ningún envío de esta fecha coincide con los filtros."
-                : "No hay envíos registrados para esta fecha."}
-            </p>
-          )}
+
+            {isToday && view.pendingFromPreviousDays.length > 0 && (
+              <BoardSection
+                title="Pendientes de días anteriores"
+                hint="Siguen abiertos desde otros días; resuélvelos antes que los de hoy."
+                shipments={view.pendingFromPreviousDays}
+                now={currentTime}
+                today={today}
+                pointed={pointed}
+                onPoint={setPointed}
+              />
+            )}
+            {view.shipments.length > 0 ? (
+              <BoardSection
+                title={isToday ? "Para hoy" : `Para el ${formatDate(date)}`}
+                hint="Ordenados por la hora en que cierra su franja; los que no tienen franja van al final."
+                shipments={[...view.shipments].sort(byWindowEnd)}
+                now={currentTime}
+                pointed={pointed}
+                onPoint={setPointed}
+              />
+            ) : (
+              <EmptyState
+                icon={filtered ? FilterOffIcon : InboxIcon}
+                {...(filtered
+                  ? {
+                      title: "Ningún envío de este día coincide con los filtros",
+                      action: (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setFilters({
+                              merchantId: undefined,
+                              rateZoneId: undefined,
+                              flag: undefined,
+                              status: undefined,
+                            });
+                          }}
+                        >
+                          Quitar filtros
+                        </Button>
+                      ),
+                    }
+                  : {
+                      title: isToday
+                        ? "Todavía no hay envíos para hoy"
+                        : "No hay envíos registrados para este día",
+                      description: "Los envíos que registres para esta fecha aparecerán aquí.",
+                      action: (
+                        <Link to="/envios/nuevo" className={buttonVariants()}>
+                          Registrar un envío
+                        </Link>
+                      ),
+                    })}
+              />
+            )}
+          </div>
         </>
       ) : null}
     </div>
   );
+}
+
+/** Windows that close first come first; shipments without a window go last. */
+function byWindowEnd(a: BoardShipment, b: BoardShipment): number {
+  const end = (shipment: BoardShipment) =>
+    shipment.windowEnd ? Date.parse(shipment.windowEnd) : Number.POSITIVE_INFINITY;
+  return end(a) - end(b);
 }

@@ -412,7 +412,7 @@ Numbering follows the question list of 2026-09-30.
 | 21 | Reassigning a picked-up shipment | Dispatcher only, with a reason. |
 | 22 | Editing a shipment | Allowed until pickup; audited. |
 | 23 | Events on behalf of a courier | Allowed to the dispatcher, marked "registrado por despacho". |
-| 24 | UI design and prototypes | Material Design 3 over Tailwind CSS + shadcn/ui, defined in [design-system.md](design-system.md). Seed ink indigo `#2B3A8F`, Material Symbols Rounded, logo direction "route d" (artwork pending). Specs define behavior, plans apply the design system. |
+| 24 | UI design and prototypes | Material Design 3 over Tailwind CSS + shadcn/ui, defined in [design-system.md](design-system.md). Seed pizarra `#34495E` with accent verde azulado `#1F7A8C` and the Archivo typeface (adopted on 2026-10-01, replacing ink indigo `#2B3A8F` and Roboto), Material Symbols Rounded, logo direction "route d" (artwork pending). Specs define behavior, plans apply the design system. |
 | 33 | Courier location | Phase 1: captured on every courier event, never blocking. Real-time sharing belongs to the Phase 3 native app. |
 
 ### Technical decisions

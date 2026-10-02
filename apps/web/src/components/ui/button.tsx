@@ -7,13 +7,13 @@ import { cn } from "@/lib/cn";
  * icon buttons. Every button is at least 48 × 48 px (Constitution VII).
  */
 const buttonVariants = cva(
-  "state-layer inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full whitespace-nowrap text-label-l transition-[background-color,box-shadow] duration-(--duration-short) ease-(--ease-standard) outline-none select-none disabled:pointer-events-none disabled:opacity-38 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
+  "state-layer inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-sm whitespace-nowrap text-label-l transition-[background-color,box-shadow] duration-(--duration-short) ease-(--ease-standard) outline-none select-none disabled:pointer-events-none disabled:opacity-38 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-5",
   {
     variants: {
       variant: {
         default: "bg-primary text-on-primary",
         secondary: "bg-secondary-container text-on-secondary-container",
-        outline: "border border-outline text-primary",
+        outline: "border border-outline-variant bg-sheet text-on-surface hover:border-outline",
         ghost: "text-primary",
         destructive: "bg-error text-on-error",
         link: "text-primary underline-offset-4 hover:underline",

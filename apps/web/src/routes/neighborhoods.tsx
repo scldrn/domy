@@ -5,7 +5,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -23,6 +22,8 @@ import {
   EditNeighborhoodDialog,
 } from "@/features/master-data/neighborhoods/neighborhood-dialogs";
 import { ApiError } from "@/lib/api-client";
+import { PageHeader } from "@/components/page-header";
+import { SearchField } from "@/components/search-field";
 
 const panelRoute = getRouteApi("/_panel");
 
@@ -66,20 +67,22 @@ function NeighborhoodsPage() {
   }
 
   return (
-    <div className="flex max-w-5xl flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-headline-s text-on-surface">Barrios</h1>
-        <div className="flex gap-2">
-          <ExportButton dataset="neighborhoods" />
-          <AddNeighborhoodDialog />
-        </div>
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Barrios"
+        actions={
+          <>
+            <div className="flex gap-2">
+              <ExportButton dataset="neighborhoods" />
+              <AddNeighborhoodDialog />
+            </div>
+          </>
+        }
+      />
       <div className="flex flex-wrap items-center gap-4">
-        <Input
-          type="search"
+        <SearchField
           aria-label="Buscar barrios"
           placeholder="Nombre o variante"
-          className="max-w-sm"
           value={q}
           onChange={(event) => {
             setQ(event.target.value);

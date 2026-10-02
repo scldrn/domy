@@ -14,8 +14,8 @@ test("finds shipments by recipient phone, newest first, and exports them (scenar
   const newer = await register(dispatcherPage, { recipientPhone: phone, merchantReference: "H-2" });
 
   await page.goto("/historial");
-  await page.getByLabel("Buscar").fill(`${phone.slice(0, 3)} ${phone.slice(3)}`);
-  await page.getByLabel("Buscar").press("Enter");
+  await page.getByLabel("Buscar", { exact: true }).fill(`${phone.slice(0, 3)} ${phone.slice(3)}`);
+  await page.getByLabel("Buscar", { exact: true }).press("Enter");
   await expect(page).toHaveURL(/q=/);
   const rows = page.getByRole("row").filter({ hasText: "Laura Gómez" });
   await expect(rows).toHaveCount(2);

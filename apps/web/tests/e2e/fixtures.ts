@@ -17,6 +17,9 @@ export async function accessibilityViolations(page: Page): Promise<string[]> {
   );
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    // Base UI's invisible focus guards around popups take role="button" only in Safari, so
+    // VoiceOver can move past them; they are never shown or named, by design.
+    .exclude("[data-base-ui-focus-guard]")
     .analyze();
   return results.violations.map(
     (violation) =>

@@ -1,6 +1,10 @@
+import UploadIcon from "@material-symbols/svg-400/rounded/upload_file.svg?react";
 import Papa from "papaparse";
 import { readSheet, type CellValue } from "read-excel-file/browser";
 import { useId } from "react";
+import { Icon } from "@/components/icon";
+import { cn } from "@/lib/cn";
+import { buttonVariants } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -63,7 +67,7 @@ export function BulkInput({
           }}
           rows={8}
           spellCheck={false}
-          className="font-mono text-body-s"
+          className="text-body-m"
           placeholder="Pega aquí las filas copiadas de la hoja de cálculo, con o sin la fila de títulos."
         />
         <FieldDescription>
@@ -80,20 +84,35 @@ export function BulkInput({
       </Field>
       <Field>
         <FieldLabel htmlFor={fileId}>Subir archivo</FieldLabel>
-        <input
-          id={fileId}
-          type="file"
-          accept=".xlsx,.csv"
-          className="text-body-m file:mr-4 file:h-12 file:rounded-full file:border file:border-outline file:bg-transparent file:px-6 file:text-label-l file:text-primary"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            event.target.value = "";
-            if (!file) return;
-            readFile(file).then(onFileRead, () => {
-              onFileError("No pudimos leer el archivo. Usa la plantilla en Excel (.xlsx) o CSV.");
-            });
-          }}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            id={fileId}
+            type="file"
+            accept=".xlsx,.csv"
+            className="peer sr-only"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (!file) return;
+              readFile(file).then(onFileRead, () => {
+                onFileError("No pudimos leer el archivo. Usa la plantilla en Excel (.xlsx) o CSV.");
+              });
+            }}
+          />
+          <label
+            htmlFor={fileId}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent",
+            )}
+          >
+            <Icon symbol={UploadIcon} size={20} />
+            Elegir archivo
+          </label>
+          <span className="text-body-m text-on-surface-variant">
+            Excel (.xlsx) o CSV con las columnas de la plantilla.
+          </span>
+        </div>
       </Field>
     </div>
   );

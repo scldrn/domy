@@ -2,7 +2,6 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -16,6 +15,8 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { listMerchants } from "@/features/master-data/api";
 import { ExportButton } from "@/features/master-data/export-button";
 import { MerchantDialog } from "@/features/master-data/merchants/merchant-dialog";
+import { PageHeader } from "@/components/page-header";
+import { SearchField } from "@/components/search-field";
 
 export const Route = createFileRoute("/_panel/clientes")({
   head: () => ({ meta: [{ title: "Clientes · Domy" }] }),
@@ -34,20 +35,22 @@ function MerchantsPage() {
   });
 
   return (
-    <div className="flex max-w-5xl flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-headline-s text-on-surface">Clientes</h1>
-        <div className="flex gap-2">
-          <ExportButton dataset="merchants" />
-          <MerchantDialog />
-        </div>
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Clientes"
+        actions={
+          <>
+            <div className="flex gap-2">
+              <ExportButton dataset="merchants" />
+              <MerchantDialog />
+            </div>
+          </>
+        }
+      />
       <div className="flex flex-wrap items-center gap-4">
-        <Input
-          type="search"
+        <SearchField
           aria-label="Buscar clientes"
           placeholder="Nombre o alias"
-          className="max-w-sm"
           value={q}
           onChange={(event) => {
             setQ(event.target.value);

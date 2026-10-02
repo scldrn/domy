@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { listAuditEvents } from "@/features/master-data/api";
 import { formatDateTime } from "@/lib/format";
+import { PageHeader } from "@/components/page-header";
 
 export const Route = createFileRoute("/_panel/auditoria")({
   beforeLoad: ({ context }) => {
@@ -56,8 +57,11 @@ function AuditLogPage() {
   const items = events.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
-    <div className="flex max-w-5xl flex-col gap-6">
-      <h1 className="text-headline-s text-on-surface">Auditoría de datos maestros</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Auditoría de datos maestros"
+        description="Quién creó o cambió clientes, mensajeros, barrios, tarifas y cuentas, y cuándo."
+      />
       <Table>
         <TableHeader>
           <TableRow>

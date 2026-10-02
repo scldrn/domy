@@ -1,9 +1,12 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import SearchOffIcon from "@material-symbols/svg-400/rounded/search_off.svg?react";
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
+import { SearchField } from "@/components/search-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -52,20 +55,20 @@ export function DirectoryPage<T extends { id: string; name: string; isActive: bo
   const visible = (items.data ?? []).filter((item) => showInactive || item.isActive);
 
   return (
-    <div className="flex max-w-5xl flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-headline-s text-on-surface">{title}</h1>
-        <div className="flex gap-2">
-          <ExportButton dataset={dataset} />
-          {create}
-        </div>
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title={title}
+        actions={
+          <>
+            <ExportButton dataset={dataset} />
+            {create}
+          </>
+        }
+      />
       <div className="flex flex-wrap items-center gap-4">
-        <Input
-          type="search"
+        <SearchField
           aria-label={`Buscar ${title.toLowerCase()}`}
           placeholder="Nombre o alias"
-          className="max-w-sm"
           value={q}
           onChange={(event) => {
             setQ(event.target.value);
@@ -129,6 +132,16 @@ export function DirectoryPage<T extends { id: string; name: string; isActive: bo
           ))}
         </TableBody>
       </Table>
+      {items.isSuccess && visible.length === 0 && (
+        <EmptyState
+          icon={SearchOffIcon}
+          title={q ? "Nada coincide con la búsqueda" : "Todavía no hay registros"}
+          {...(!showInactive &&
+            (items.data.length > 0 || q) && {
+              description: "Si lo que buscas está inactivo, activa «Mostrar inactivos».",
+            })}
+        />
+      )}
     </div>
   );
 }

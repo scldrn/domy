@@ -218,9 +218,9 @@ export function ShipmentForm({ shipment }: { shipment?: Shipment }) {
       <form
         onSubmit={(event) => void submit(event)}
         noValidate
-        className="grid max-w-5xl gap-8 lg:grid-cols-2"
+        className="grid max-w-5xl items-start gap-4 lg:grid-cols-2"
       >
-        <FieldSet className="lg:col-span-2">
+        <FieldSet className="rounded-md border border-outline-variant bg-sheet p-6 [&>legend]:float-left [&>legend]:mb-4 [&>legend]:w-full [&>legend]:text-title-m [&>legend+*]:clear-both lg:col-span-2">
           <FieldLegend>Tipo de envío</FieldLegend>
           {shipment ? (
             <p className="text-body-l text-on-surface">{shipmentKindLabels[shipment.kind]}</p>
@@ -243,7 +243,7 @@ export function ShipmentForm({ shipment }: { shipment?: Shipment }) {
           )}
         </FieldSet>
 
-        <FieldSet>
+        <FieldSet className="rounded-md border border-outline-variant bg-sheet p-6 [&>legend]:float-left [&>legend]:mb-4 [&>legend]:w-full [&>legend]:text-title-m [&>legend+*]:clear-both">
           <FieldLegend>Cliente y recogida</FieldLegend>
           <FieldGroup>
             {shipment ? (
@@ -258,7 +258,7 @@ export function ShipmentForm({ shipment }: { shipment?: Shipment }) {
           </FieldGroup>
         </FieldSet>
 
-        <FieldSet>
+        <FieldSet className="rounded-md border border-outline-variant bg-sheet p-6 [&>legend]:float-left [&>legend]:mb-4 [&>legend]:w-full [&>legend]:text-title-m [&>legend+*]:clear-both">
           <FieldLegend>{values.kind === "errand" ? "Diligencia" : "Destino"}</FieldLegend>
           <FieldGroup>
             {(values.kind === "delivery" || values.kind === "reverse_pickup") && (
@@ -324,7 +324,7 @@ export function ShipmentForm({ shipment }: { shipment?: Shipment }) {
           </FieldGroup>
         </FieldSet>
 
-        <FieldSet>
+        <FieldSet className="rounded-md border border-outline-variant bg-sheet p-6 [&>legend]:float-left [&>legend]:mb-4 [&>legend]:w-full [&>legend]:text-title-m [&>legend+*]:clear-both">
           <FieldLegend>Pago y tarifa</FieldLegend>
           <FieldGroup>
             <PaymentModeFields />
@@ -354,7 +354,7 @@ export function ShipmentForm({ shipment }: { shipment?: Shipment }) {
           </FieldGroup>
         </FieldSet>
 
-        <FieldSet>
+        <FieldSet className="rounded-md border border-outline-variant bg-sheet p-6 [&>legend]:float-left [&>legend]:mb-4 [&>legend]:w-full [&>legend]:text-title-m [&>legend+*]:clear-both">
           <FieldLegend>Detalles</FieldLegend>
           <FieldGroup>
             <Field data-invalid={Boolean(formState.errors.serviceDate)}>
@@ -392,7 +392,7 @@ export function ShipmentForm({ shipment }: { shipment?: Shipment }) {
           </FieldGroup>
         </FieldSet>
 
-        <div className="flex flex-col gap-3 lg:col-span-2">
+        <div className="sticky bottom-0 z-10 -mx-1 flex flex-col gap-3 bg-paper/95 px-1 py-4 backdrop-blur lg:col-span-2">
           {(duplicates.data?.length ?? 0) > 0 && (
             <p
               role="status"

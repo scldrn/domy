@@ -28,8 +28,22 @@ export function formatDate(value: Date | string): string {
 }
 
 /** "2:30 p. m." */
-function formatTime(value: Date | string): string {
+export function formatTime(value: Date | string): string {
   return timeFormat.format(new Date(value));
+}
+
+const longDateFormat = new Intl.DateTimeFormat("es-CO", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone,
+});
+
+/** "Jueves 1 de octubre" for a calendar day; the year is added when it is not `today`'s. */
+export function formatLongDate(date: string, today: string): string {
+  const text = longDateFormat.format(new Date(`${date}T12:00:00-05:00`)).replace(",", "");
+  const full = date.slice(0, 4) === today.slice(0, 4) ? text : `${text} de ${date.slice(0, 4)}`;
+  return full.charAt(0).toUpperCase() + full.slice(1);
 }
 
 /** "30 sep 2026, 2:30 p. m." */

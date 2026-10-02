@@ -1,5 +1,6 @@
 import { shipmentStatuses, shipmentStatusLabels } from "@domy/domain";
 import { useState } from "react";
+import { ChipRow } from "@/components/chip-row";
 import { OptionSelect } from "@/components/option-select";
 import { SearchCombobox } from "@/components/search-combobox";
 import { Button } from "@/components/ui/button";
@@ -25,13 +26,13 @@ export function SearchFilters({
   return (
     <div className="flex flex-col gap-4">
       <form
-        className="flex max-w-3xl items-end gap-2"
+        className="grid grid-cols-2 items-end gap-3 lg:grid-cols-4"
         onSubmit={(event) => {
           event.preventDefault();
           onChange({ q: text.trim() || undefined });
         }}
       >
-        <Field className="flex-1">
+        <Field className="col-span-2 lg:col-span-3">
           <FieldLabel htmlFor="history-q">Buscar</FieldLabel>
           <Input
             id="history-q"
@@ -43,10 +44,12 @@ export function SearchFilters({
             placeholder="Guía, referencia, cliente, destinatario o teléfono"
           />
         </Field>
-        <Button type="submit">Buscar</Button>
+        <Button type="submit" className="h-14">
+          Buscar
+        </Button>
       </form>
-      <div className="flex flex-wrap items-end gap-4">
-        <Field className="w-44">
+      <div className="grid grid-cols-2 items-end gap-3 lg:grid-cols-4">
+        <Field>
           <FieldLabel htmlFor="history-from">Desde</FieldLabel>
           <Input
             id="history-from"
@@ -57,7 +60,7 @@ export function SearchFilters({
             }}
           />
         </Field>
-        <Field className="w-44">
+        <Field>
           <FieldLabel htmlFor="history-to">Hasta</FieldLabel>
           <Input
             id="history-to"
@@ -68,7 +71,7 @@ export function SearchFilters({
             }}
           />
         </Field>
-        <Field className="w-48">
+        <Field>
           <OptionSelect
             label="Estado"
             value={filters.status ?? anyStatus}
@@ -84,11 +87,12 @@ export function SearchFilters({
             ]}
           />
         </Field>
-        <Field className="w-64">
+        <Field>
           <FieldLabel htmlFor="history-place">Barrio</FieldLabel>
           {filters.neighborhoodId && !place ? (
             <Button
               variant="outline"
+              className="h-14"
               onClick={() => {
                 onChange({ neighborhoodId: undefined });
               }}
@@ -112,14 +116,18 @@ export function SearchFilters({
             />
           )}
         </Field>
-        <Toggle
-          pressed={filters.feeReview === "true"}
-          onPressedChange={(pressed) => {
-            onChange({ feeReview: pressed ? "true" : undefined });
-          }}
-        >
-          Tarifa por revisar
-        </Toggle>
+      </div>
+      <div className="border-t border-outline-variant pt-4">
+        <ChipRow label="Alertas">
+          <Toggle
+            pressed={filters.feeReview === "true"}
+            onPressedChange={(pressed) => {
+              onChange({ feeReview: pressed ? "true" : undefined });
+            }}
+          >
+            Tarifa por revisar
+          </Toggle>
+        </ChipRow>
       </div>
     </div>
   );

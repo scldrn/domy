@@ -12,7 +12,8 @@ import {
 } from "@domy/domain";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useId, type ReactNode } from "react";
-import { ShipmentStatusChip } from "@/components/shipment-status-chip";
+import { PageHeader } from "@/components/page-header";
+import { ShipmentStatusMark } from "@/components/shipment-status-mark";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { formatCop, formatDate, formatDateTime, formatWindow } from "@/lib/format";
@@ -88,7 +89,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-lg bg-surface-container-low p-4">
+    <section className="rounded-md border border-outline-variant bg-sheet p-6">
       <h2 className="mb-2 text-title-m text-on-surface">{title}</h2>
       <dl>{children}</dl>
     </section>
@@ -104,28 +105,30 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
     : null;
   return (
     <div className="flex max-w-5xl flex-col gap-6">
-      <header className="flex flex-wrap items-center gap-4">
-        <h1 className="text-headline-s text-on-surface tabular-nums">
-          {formatTrackingNumber(shipment.trackingNumber)}
-        </h1>
-        <ShipmentStatusChip status={shipment.status} />
+      <PageHeader
+        title={<span className="guia">{formatTrackingNumber(shipment.trackingNumber)}</span>}
+        description={`${shipment.merchant.name} · ${formatDate(shipment.serviceDate)}`}
+        actions={
+          <>
+            {shipment.feeNeedsReview && user.role === "owner" && (
+              <ConfirmFeeDialog shipment={shipment} />
+            )}
+            {canVoid(shipment.status) && <VoidDialog shipment={shipment} />}
+            {isEditable(shipment.status) && (
+              <Link
+                to="/envios/$trackingNumber/editar"
+                params={{ trackingNumber: shipment.trackingNumber }}
+                className={buttonVariants()}
+              >
+                Editar
+              </Link>
+            )}
+          </>
+        }
+      >
+        <ShipmentStatusMark status={shipment.status} />
         {shipment.feeNeedsReview && <Badge variant="warning">Tarifa por revisar</Badge>}
-        <div className="ml-auto flex flex-wrap gap-2">
-          {shipment.feeNeedsReview && user.role === "owner" && (
-            <ConfirmFeeDialog shipment={shipment} />
-          )}
-          {canVoid(shipment.status) && <VoidDialog shipment={shipment} />}
-          {isEditable(shipment.status) && (
-            <Link
-              to="/envios/$trackingNumber/editar"
-              params={{ trackingNumber: shipment.trackingNumber }}
-              className={buttonVariants()}
-            >
-              Editar
-            </Link>
-          )}
-        </div>
-      </header>
+      </PageHeader>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="Cliente y recogida">
@@ -168,7 +171,9 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         </Section>
 
         <Section title="Detalles">
-          <Row label="Franja">{formatWindow(shipment.windowStart, shipment.windowEnd)}</Row>
+          <Row label="Franja">
+            {formatWindow(shipment.windowStart, shipment.windowEnd) ?? "Sin franja"}
+          </Row>
           <Row label="Tamaño">
             {shipment.packageSize && packageSizeLabels[shipment.packageSize]}
           </Row>
@@ -183,9 +188,12 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         <h2 id={historyId} className="mb-2 text-title-m text-on-surface">
           Historial de cambios
         </h2>
-        <ol className="flex flex-col gap-2">
+        <ol className="ml-2 flex flex-col border-l-2 border-outline-variant">
           {shipment.events.map((event) => (
-            <li key={event.id} className="rounded-sm bg-surface-container-low px-4 py-3">
+            <li
+              key={event.id}
+              className="relative pb-5 pl-6 before:absolute before:top-1.5 before:-left-[7px] before:size-3 before:rounded-full before:bg-primary before:ring-4 before:ring-surface last:pb-0"
+            >
               <p className="text-body-l text-on-surface">
                 {eventLabels[event.type]}
                 {event.toStatus && event.type === "status_changed"

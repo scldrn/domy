@@ -33,12 +33,16 @@ async function registerAndOpen(page: Page) {
   await expect(page).toHaveURL(/\/envios\/[0-9A-Z]{8}$/);
 }
 
-test.beforeEach(async ({ dispatcherPage }) => {
-  await dispatcherPage.goto("/envios/nuevo");
-  await dispatcherPage.evaluate(() => {
+test.beforeEach(async ({ dispatcherPage: page }) => {
+  // Start without a saved draft. Each load waits for its heading: in WebKit the router's own
+  // start-up counts as a navigation and would interrupt the next one.
+  await page.goto("/envios/nuevo");
+  await expect(page.getByRole("heading", { level: 1, name: "Nuevo envío" })).toBeVisible();
+  await page.evaluate(() => {
     sessionStorage.clear();
   });
-  await dispatcherPage.reload();
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "Nuevo envío" })).toBeVisible();
 });
 
 test("registers a delivery on merchant account at the standard fee (scenario 1)", async ({

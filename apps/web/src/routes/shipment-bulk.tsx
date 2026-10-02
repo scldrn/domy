@@ -18,6 +18,7 @@ import { BulkPreviewTable, rowState } from "@/features/bulk/bulk-preview-table";
 import { listPickupPoints, searchMerchants, type MerchantOption } from "@/features/shipments/api";
 import { useFormDraft } from "@/features/shipments/use-form-draft";
 import { ApiError } from "@/lib/api-client";
+import { PageHeader } from "@/components/page-header";
 
 export const Route = createFileRoute("/_panel/envios/masivo")({
   head: () => ({ meta: [{ title: "Registro masivo · Domy" }] }),
@@ -160,7 +161,7 @@ function ShipmentBulkPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-headline-s text-on-surface">Registro masivo</h1>
+      <PageHeader title="Registro masivo" />
       <div className="grid max-w-5xl gap-4 lg:grid-cols-2">
         <Field>
           <FieldLabel htmlFor="bulk-merchant">Cliente</FieldLabel>

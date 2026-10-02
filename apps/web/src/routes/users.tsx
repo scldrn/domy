@@ -31,6 +31,7 @@ import {
   type Account,
 } from "@/features/users/api";
 import { ApiError } from "@/lib/api-client";
+import { PageHeader } from "@/components/page-header";
 
 export const Route = createFileRoute("/_panel/usuarios")({
   beforeLoad: ({ context }) => {
@@ -57,11 +58,15 @@ function UsersPage() {
   }
 
   return (
-    <div className="flex max-w-5xl flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-headline-s text-on-surface">Usuarios</h1>
-        <AccountDialog />
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Usuarios"
+        actions={
+          <>
+            <AccountDialog />
+          </>
+        }
+      />
       <Table>
         <TableHeader>
           <TableRow>

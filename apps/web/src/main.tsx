@@ -2,6 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { NotFound, RouteError } from "./components/route-states";
 import { queryClient } from "./lib/api-client";
 import { routeTree } from "./route-tree.gen";
 import "./styles/globals.css";
@@ -10,6 +11,8 @@ const router = createRouter({
   routeTree,
   context: { queryClient },
   defaultPreload: "intent",
+  defaultErrorComponent: RouteError,
+  defaultNotFoundComponent: NotFound,
   // Search params stay plain text ("?q=3001234567&feeReview=true"): the default parser would
   // turn them into numbers and booleans. Route schemas validate them.
   parseSearch: (search) => Object.fromEntries(new URLSearchParams(search)),

@@ -5,7 +5,7 @@ import ProgressIcon from "@material-symbols/svg-400/rounded/progress_activity.sv
 import WarningIcon from "@material-symbols/svg-400/rounded/warning.svg?react";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
-/** Snackbar (M3): inverse surface, bottom of the screen, short text with an optional action. */
+/** Snackbar (M3): the rail's slate, bottom of the screen, short text with an optional action. */
 function Toaster(props: ToasterProps) {
   return (
     <Sonner
@@ -21,16 +21,16 @@ function Toaster(props: ToasterProps) {
       }}
       style={
         {
-          "--normal-bg": "var(--md-sys-color-inverse-surface)",
-          "--normal-text": "var(--md-sys-color-inverse-on-surface)",
+          "--normal-bg": "var(--md-sys-color-rail)",
+          "--normal-text": "var(--md-sys-color-on-rail)",
           "--normal-border": "transparent",
-          "--border-radius": "var(--radius-xs)",
+          "--border-radius": "var(--radius-sm)",
         } as React.CSSProperties
       }
       toastOptions={{
         classNames: {
           toast: "text-body-m min-h-12",
-          actionButton: "text-label-l !text-inverse-primary !bg-transparent",
+          actionButton: "text-label-l !text-rail-accent !bg-transparent",
         },
       }}
       {...props}

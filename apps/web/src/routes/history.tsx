@@ -1,6 +1,9 @@
 import { shipmentSearchQuery } from "@domy/domain";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
+import SearchOffIcon from "@material-symbols/svg-400/rounded/search_off.svg?react";
+import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { exportUrl, searchShipments, type HistoryFilters } from "@/features/history/api";
@@ -34,27 +37,30 @@ function HistoryPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-headline-s text-on-surface">Historial</h1>
-        {user.role === "owner" && (
-          <div className="flex gap-2">
-            <a
-              className={buttonVariants({ variant: "outline" })}
-              href={exportUrl(filters, "csv")}
-              download
-            >
-              Exportar CSV
-            </a>
-            <a
-              className={buttonVariants({ variant: "outline" })}
-              href={exportUrl(filters, "xlsx")}
-              download
-            >
-              Exportar Excel
-            </a>
-          </div>
-        )}
-      </header>
+      <PageHeader
+        title="Historial"
+        description="Todos los envíos registrados, con búsqueda y filtros."
+        actions={
+          user.role === "owner" && (
+            <>
+              <a
+                className={buttonVariants({ variant: "outline" })}
+                href={exportUrl(filters, "csv")}
+                download
+              >
+                Exportar CSV
+              </a>
+              <a
+                className={buttonVariants({ variant: "outline" })}
+                href={exportUrl(filters, "xlsx")}
+                download
+              >
+                Exportar Excel
+              </a>
+            </>
+          )
+        }
+      />
 
       <SearchFilters filters={filters} onChange={setFilters} />
 
@@ -69,9 +75,11 @@ function HistoryPage() {
           {results.error.message}
         </p>
       ) : items.length === 0 ? (
-        <p className="rounded-lg bg-surface-container-low p-6 text-body-l text-on-surface-variant">
-          No hay envíos que coincidan con la búsqueda.
-        </p>
+        <EmptyState
+          icon={SearchOffIcon}
+          title="No hay envíos que coincidan con la búsqueda"
+          description="Prueba con menos filtros o con otra parte del nombre, la guía o el teléfono."
+        />
       ) : (
         <>
           <ResultsTable items={items} />

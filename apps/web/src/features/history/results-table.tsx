@@ -1,6 +1,6 @@
 import { formatTrackingNumber, type ShipmentSummary } from "@domy/domain";
 import { Link } from "@tanstack/react-router";
-import { ShipmentStatusChip } from "@/components/shipment-status-chip";
+import { ShipmentStatusMark } from "@/components/shipment-status-mark";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -15,19 +15,15 @@ import { formatCop, formatDate, formatDateTime } from "@/lib/format";
 /** Search results, newest first (FR-024). */
 export function ResultsTable({ items }: { items: ShipmentSummary[] }) {
   return (
-    <Table>
+    <Table className="min-w-[60rem] table-fixed">
       <TableHeader>
         <TableRow>
-          <TableHead>Guía</TableHead>
-          <TableHead>Fecha</TableHead>
-          <TableHead>Cliente</TableHead>
-          <TableHead>Referencia</TableHead>
-          <TableHead>Destinatario</TableHead>
-          <TableHead>Teléfono</TableHead>
-          <TableHead>Barrio</TableHead>
-          <TableHead>Estado</TableHead>
-          <TableHead className="text-right">Tarifa</TableHead>
-          <TableHead>Registrado</TableHead>
+          <TableHead className="w-40">Guía</TableHead>
+          <TableHead>Cliente y referencia</TableHead>
+          <TableHead>Destinatario y barrio</TableHead>
+          <TableHead className="w-40">Estado</TableHead>
+          <TableHead className="w-48 text-right">Tarifa</TableHead>
+          <TableHead className="w-48">Registrado</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -37,29 +33,42 @@ export function ResultsTable({ items }: { items: ShipmentSummary[] }) {
               <Link
                 to="/envios/$trackingNumber"
                 params={{ trackingNumber: item.trackingNumber }}
-                className="text-primary tabular-nums underline-offset-4 hover:underline"
+                className="guia rounded-xs text-title-s text-on-surface underline-offset-4 hover:underline"
               >
                 {formatTrackingNumber(item.trackingNumber)}
               </Link>
+              <span className="block text-body-s text-on-surface-variant">
+                {formatDate(item.serviceDate)}
+              </span>
             </TableCell>
-            <TableCell>{formatDate(item.serviceDate)}</TableCell>
-            <TableCell>{item.merchant.name}</TableCell>
-            <TableCell>{item.merchantReference}</TableCell>
-            <TableCell>{item.recipientName}</TableCell>
-            <TableCell className="tabular-nums">{item.recipientPhone}</TableCell>
-            <TableCell>{item.recipientNeighborhood?.name}</TableCell>
+            <TableCell className="truncate">
+              {item.merchant.name}
+              <span className="block truncate text-body-s text-on-surface-variant">
+                {item.merchantReference ?? "Sin referencia"}
+              </span>
+            </TableCell>
+            <TableCell className="truncate">
+              {item.recipientName ?? "—"}
+              <span className="block truncate text-body-s text-on-surface-variant tabular-nums">
+                {[item.recipientPhone, item.recipientNeighborhood?.name]
+                  .filter(Boolean)
+                  .join(" · ") || "Sin barrio"}
+              </span>
+            </TableCell>
             <TableCell>
-              <ShipmentStatusChip status={item.status} />
+              <ShipmentStatusMark status={item.status} />
             </TableCell>
             <TableCell className="text-right tabular-nums">
               {formatCop(item.fee)}
               {item.feeNeedsReview && (
-                <Badge variant="warning" className="ml-2">
+                <Badge variant="warning" className="mt-1 ml-auto flex">
                   Tarifa por revisar
                 </Badge>
               )}
             </TableCell>
-            <TableCell>{formatDateTime(item.registeredAt)}</TableCell>
+            <TableCell className="text-body-s text-on-surface-variant">
+              {formatDateTime(item.registeredAt)}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

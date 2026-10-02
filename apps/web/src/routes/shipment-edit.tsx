@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { getShipmentByTrackingNumber } from "@/features/shipments/api";
 import { ShipmentForm } from "@/features/shipments/shipment-form";
+import { PageHeader } from "@/components/page-header";
 
 const shipmentQuery = (trackingNumber: string) => ({
   queryKey: ["shipment", trackingNumber],
@@ -28,7 +29,7 @@ function ShipmentEditPage() {
   const title = `Editar envío ${formatTrackingNumber(shipment.trackingNumber)}`;
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-headline-s text-on-surface">{title}</h1>
+      <PageHeader title={title} />
       {isEditable(shipment.status) ? (
         <ShipmentForm key={shipment.version} shipment={shipment} />
       ) : (
