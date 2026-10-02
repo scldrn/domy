@@ -28,6 +28,18 @@ wins in any conflict.
 - Every mutation carries a client-generated `id` (creations) or `actionId` (everything else).
 - Integration tests use real PostgreSQL through Testcontainers; never mock the database.
 
+## Working with the owner
+
+- Talk to the owner, Samuel Calderón, in Spanish, always.
+- Commit and push only when he approves. After each user story, report what was done in
+  Spanish and ask before committing and continuing.
+- One branch per feature implementation, created from `main` and merged back once converged.
+- Never read outside this repository without his permission.
+- Visual decisions (palette, typeface, icons, logo) are his: render the options so he can
+  open them, and let him choose.
+- `.env` and the client's data in `docs/discovery/raw/` never enter git.
+- Current state and next step: [docs/status.md](docs/status.md).
+
 ## Quality gates
 
 `pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` must pass with zero warnings.
