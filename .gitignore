@@ -21,3 +21,6 @@ apps/web/tests/e2e/.auth/
 
 # TanStack Router generator cache
 .tanstack/
+
+# Spec Kit extension catalog cache
+.specify/extensions/.cache/

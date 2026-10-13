@@ -1,31 +1,34 @@
 # Project status
 
 Where Domy stands and what comes next, so any session can resume without the conversation
-that produced it. Updated 2026-10-02; update it whenever a feature is merged or the next step
+that produced it. Updated 2026-10-13; update it whenever a slice is merged or the next step
 changes.
 
 ## Features
 
-| Feature | Branch | State |
-| --- | --- | --- |
-| 001 Shipment registration | `001-shipment-registration-impl` | Done, converged, and merged into `main` |
-| Panel identity (design) | `ui-polish` | Merged into `main` (`c363847`); rules in [design-system.md](design-system.md) |
-| 002 Routes and dispatch | `002-routes-dispatch-impl` | Setup, foundation, and User Story 1 done (T001–T027, `37d56c3`); branched from `main` before the panel redesign |
-| 003 Courier app | `003-courier-app` | Specified, planned, tasked, and analyzed; implementation not started |
-| 004 Tracking page and merchant link | `004-tracking-merchant-link` | Specified, planned, tasked, and analyzed; implementation not started |
+Work follows Trunk-Based Development (constitution 2.0.0): every slice lands on `main` through
+a short-lived branch, so the specification and implementation of every feature live on `main`.
 
-Each `NNN-…` branch holds the feature's specification; each `NNN-…-impl` branch holds its
-implementation, created from `main` and merged back once converged.
+| Feature | State |
+| --- | --- |
+| 001 Shipment registration | Done and converged, on `main` |
+| Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
+| 002 Routes and dispatch | Specified on `main`. Setup, foundation, and User Story 1 (T001–T027) are done but not yet on `main`: commit `37d56c3` on `002-routes-dispatch-impl`, the last branch of the retired scheme, which predates the panel redesign |
+| 003 Courier app | Specified, planned, tasked, and analyzed; implementation not started |
+| 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Merge `main` into `002-routes-dispatch-impl` and restyle the route screens
+1. Bring User Story 1 of 002 to `main` on a short-lived branch from `main` (`002-us1-routes`):
+   apply `37d56c3`, resolve its conflicts with the panel redesign, restyle the route screens
    (`routes/routes-board.tsx`, `routes/route-detail.tsx`, `features/routes/*`) to
-   [design-system.md](design-system.md).
-2. Continue 002 with User Story 2, the routes of the day on the board (T028–T032). It adds the
-   route and courier to the board's shipments and the courier filter, which completes the
-   courier column of 001's FR-021 and FR-023.
-3. Then User Stories 3–5, polish, converge, and merge 002; then 003 and 004 the same way.
+   [design-system.md](design-system.md), pass the gates, and squash-merge it. Then delete
+   `002-routes-dispatch-impl`.
+2. Continue 002 with User Story 2, the routes of the day on the board (T028–T032), on its own
+   branch. It adds the route and courier to the board's shipments and the courier filter,
+   which completes the courier column of 001's FR-021 and FR-023.
+3. Then User Stories 3–5, polish, and converge 002, one slice per branch; then 003 and 004
+   the same way.
 
 ## Open with the client
 
