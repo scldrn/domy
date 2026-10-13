@@ -1,4 +1,4 @@
-import { bogotaToday, type RouteDetail } from "@domy/domain";
+import { bogotaToday, formatTrackingNumber, type RouteDetail } from "@domy/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -7,10 +7,17 @@ import { PageHeader } from "@/components/page-header";
 import { RouteStatusMark } from "@/components/route-status-mark";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AddShipmentsDialog } from "@/features/routes/add-shipments-dialog";
 import { CourierSelect } from "@/features/routes/courier-select";
 import { RouteHistory } from "@/features/routes/route-history";
 import { StopList } from "@/features/routes/stop-list";
-import { dispatchRoute, getRoute, setRouteCourier, setStopOrder } from "@/features/routes/api";
+import {
+  dispatchRoute,
+  getRoute,
+  removeRouteShipment,
+  setRouteCourier,
+  setStopOrder,
+} from "@/features/routes/api";
 import { ApiError } from "@/lib/api-client";
 import { now } from "@/lib/clock";
 import { formatCop, formatLongDate } from "@/lib/format";
@@ -20,7 +27,10 @@ export const Route = createFileRoute("/_panel/rutas/$routeId")({
   component: RouteDetailPage,
 });
 
-/** One route: stops in order, courier, dispatch, and history (FR-006–FR-009, FR-019). */
+/**
+ * One route: stops in order, courier, dispatch, shipments added and removed, and history
+ * (FR-006–FR-009, FR-011, FR-012, FR-019).
+ */
 function RouteDetailPage() {
   const { routeId } = Route.useParams();
   const queryClient = useQueryClient();
@@ -29,6 +39,12 @@ function RouteDetailPage() {
   const [problem, setProblem] = useState<{ message: string; routeId?: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
+  async function showUpdated(updated: RouteDetail) {
+    queryClient.setQueryData(queryKey, updated);
+    await queryClient.invalidateQueries({ queryKey: ["routes-board"] });
+    await queryClient.invalidateQueries({ queryKey: ["unassigned"] });
+  }
+
   /** Runs a route action with a new action identifier and the version on screen. */
   async function act(action: (current: RouteDetail, actionId: string) => Promise<RouteDetail>) {
     if (!route.data) return;
@@ -36,8 +52,7 @@ function RouteDetailPage() {
     setBusy(true);
     try {
       const updated = await action(route.data, crypto.randomUUID());
-      queryClient.setQueryData(queryKey, updated);
-      await queryClient.invalidateQueries({ queryKey: ["routes-board"] });
+      await showUpdated(updated);
       return updated;
     } catch (error) {
       // The latest version replaces anything shown before the refusal (FR-021).
@@ -154,18 +169,36 @@ function RouteDetailPage() {
           aria-labelledby="stops-title"
           className="flex min-w-0 flex-col gap-3 xl:col-start-1 xl:row-start-1"
         >
-          <div>
-            <h2 id="stops-title" className="flex items-baseline gap-2 text-title-m text-on-surface">
-              Paradas
-              <span className="text-body-l text-on-surface-variant tabular-nums">
-                {data.stops.length}
-              </span>
-            </h2>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-72 flex-1">
+              <h2
+                id="stops-title"
+                className="flex items-baseline gap-2 text-title-m text-on-surface"
+              >
+                Paradas
+                <span className="text-body-l text-on-surface-variant tabular-nums">
+                  {data.stops.length}
+                </span>
+              </h2>
+              {editable && (
+                <p className="text-body-m text-on-surface-variant">
+                  El orden es una recomendación para el mensajero. Arrastra una parada, o usa su
+                  botón con el teclado, para cambiarlo.
+                </p>
+              )}
+            </div>
             {editable && (
-              <p className="text-body-m text-on-surface-variant">
-                El orden es una recomendación para el mensajero. Arrastra una parada, o usa su botón
-                con el teclado, para cambiarlo.
-              </p>
+              <AddShipmentsDialog
+                route={data}
+                disabled={busy}
+                onAdded={async (updated, count) => {
+                  await showUpdated(updated);
+                  toast.success(
+                    `${count === 1 ? "1 envío agregado" : `${String(count)} envíos agregados`} a la Ruta ${String(updated.number)}`,
+                  );
+                }}
+                onRefused={() => route.refetch()}
+              />
             )}
           </div>
           <StopList
@@ -174,6 +207,22 @@ function RouteDetailPage() {
             onInvalid={(message) => {
               setProblem({ message });
             }}
+            {...(editable && {
+              onRemove: (task) => {
+                void act((current, actionId) =>
+                  removeRouteShipment(current.id, task.shipmentId, {
+                    actionId,
+                    version: current.version,
+                  }),
+                ).then((updated) => {
+                  if (updated) {
+                    toast.success(
+                      `${formatTrackingNumber(task.shipment.trackingNumber)} quitado de la ruta`,
+                    );
+                  }
+                });
+              },
+            })}
             onReorder={(stopIds) => {
               // Show the new order at once; the server's answer replaces it.
               queryClient.setQueryData(queryKey, {

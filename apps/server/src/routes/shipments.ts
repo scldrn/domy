@@ -7,6 +7,7 @@ import {
   filterBoard,
   normalizeText,
   normalizeTrackingNumber,
+  relocateShipment,
   resolveCodAmount,
   canVoid,
   feeConfirmInput,
@@ -74,7 +75,16 @@ import {
   rateEntriesFor,
   resolvePickup,
 } from "../lib/registration.ts";
-import { unassignedUpTo } from "../lib/route-store.ts";
+import { refreshRouteStatus } from "../lib/route-status.ts";
+import {
+  loadPlan,
+  planShipments,
+  recordRouteEvents,
+  removeFromPlan,
+  savePlan,
+  touchRoute,
+  unassignedUpTo,
+} from "../lib/route-store.ts";
 import { AppError } from "../lib/errors.ts";
 import { exportTable, findExportRecords, toCsv, toXlsx } from "../lib/export.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
@@ -443,16 +453,26 @@ function diff(current: ShipmentRow, next: ShipmentChange): Record<string, unknow
 
 /**
  * Applies a change and its event together, only on the version the user saw (FR-018). An
- * action already recorded by a concurrent retry counts as applied (FR-042).
+ * action already recorded by a concurrent retry counts as applied (FR-042). `onRoute` changes
+ * the shipment's route in the same transaction (feature 002, FR-013); the route is locked
+ * first, in the order route actions lock it.
  */
 async function saveChange(
   db: Db,
   current: ShipmentRow,
   values: ShipmentChange,
   event: Omit<typeof shipmentEvents.$inferInsert, "shipmentId">,
+  onRoute?: (tx: Executor, routeId: string) => Promise<void>,
 ) {
   await db
     .transaction(async (tx) => {
+      if (onRoute && current.routeId) {
+        await tx
+          .select({ id: routes.id })
+          .from(routes)
+          .where(eq(routes.id, current.routeId))
+          .for("update");
+      }
       const [row] = await tx
         .update(shipments)
         .set({ ...values, version: current.version + 1, updatedAt: event.occurredAt })
@@ -464,6 +484,7 @@ async function saveChange(
         });
       }
       await tx.insert(shipmentEvents).values({ ...event, shipmentId: current.id });
+      if (onRoute && current.routeId) await onRoute(tx, current.routeId);
     })
     .catch((error: unknown) => {
       if (isUniqueViolation(error, "shipment_events_client_event_id_key")) return;
@@ -794,14 +815,29 @@ export const shipmentRoutes = new Hono<AppEnv>()
     };
     const changes = diff(current, next);
     if (Object.keys(changes).length === 0) return c.json(await loadShipment(db, id));
-    await saveChange(db, current, next, {
-      type: "updated",
-      reason: "feeOverrideReason" in changes ? feeOverrideReason : null,
-      changes,
-      actorUserId: c.get("user").id,
-      occurredAt: c.get("clock")(),
-      clientEventId: actionId,
-    });
+    const occurredAt = c.get("clock")();
+    await saveChange(
+      db,
+      current,
+      next,
+      {
+        type: "updated",
+        reason: "feeOverrideReason" in changes ? feeOverrideReason : null,
+        changes,
+        actorUserId: c.get("user").id,
+        occurredAt,
+        clientEventId: actionId,
+      },
+      // A new pickup place or address moves its stops (feature 002, FR-013).
+      async (tx, routeId) => {
+        const before = await loadPlan(tx, routeId);
+        const [edited] = await planShipments(tx, [id]);
+        const after = edited ? relocateShipment(before, edited, () => crypto.randomUUID()) : before;
+        if (after === before) return;
+        await savePlan(tx, routeId, before, after);
+        await touchRoute(tx, routeId, occurredAt);
+      },
+    );
     return c.json(await loadShipment(db, id));
   })
   // Voiding with a reason; shipments are never deleted (FR-014, FR-017, FR-040).
@@ -811,18 +847,28 @@ export const shipmentRoutes = new Hono<AppEnv>()
     const db = c.get("db");
     if (await findShipmentAction(db, actionId)) return c.json(await loadShipment(db, id));
     const current = await loadEditable(db, id, version, "void");
+    const actorUserId = c.get("user").id;
+    const occurredAt = c.get("clock")();
     await saveChange(
       db,
       current,
-      { status: "voided", voidReason: reason },
+      { status: "voided", voidReason: reason, routeId: null },
       {
         type: "voided",
         fromStatus: current.status,
         toStatus: "voided",
         reason,
-        actorUserId: c.get("user").id,
-        occurredAt: c.get("clock")(),
+        actorUserId,
+        occurredAt,
+        routeId: current.routeId,
         clientEventId: actionId,
+      },
+      // A voided shipment leaves its route in the same operation (feature 002, FR-013).
+      async (tx, routeId) => {
+        const removed = await removeFromPlan(tx, routeId, id, { actorUserId, occurredAt, reason });
+        await touchRoute(tx, routeId, occurredAt);
+        await recordRouteEvents(tx, [removed]);
+        await refreshRouteStatus(tx, routeId, { actorUserId, now: occurredAt });
       },
     );
     return c.json(await loadShipment(db, id));

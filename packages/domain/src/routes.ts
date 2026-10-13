@@ -183,6 +183,77 @@ export function removeShipmentFromStops(
     .filter((existing) => existing.tasks.length > 0);
 }
 
+const samePlace = (stop: Place, place: Place) =>
+  stop.address === place.address && stop.neighborhoodId === place.neighborhoodId;
+
+/**
+ * A shipment on a route whose places were edited (FR-013, EC-05). Its delivery or errand stop
+ * takes the new place where it is. A new pickup place joins a pending pickup stop of that
+ * place before its delivery, or else moves the pickup stop when the shipment has it alone,
+ * or else gets a new pickup stop right before its delivery. Returns `stops` itself when
+ * nothing changes.
+ */
+export function relocateShipment(
+  stops: RouteStopPlan[],
+  shipment: RoutePlanShipment,
+  newId: () => string,
+): RouteStopPlan[] {
+  const owns = (stop: RouteStopPlan, kind: (k: StopKind) => boolean) =>
+    stop.tasks.some(
+      (task) => task.shipmentId === shipment.id && task.status === "pending" && kind(task.kind),
+    );
+  const finalPlace = shipment.delivery ?? shipment.pickup;
+  let changed = false;
+  let next = stops.map((stop) => {
+    if (!owns(stop, (kind) => kind !== "pickup") || samePlace(stop, finalPlace)) return stop;
+    changed = true;
+    return { ...stop, address: finalPlace.address, neighborhoodId: finalPlace.neighborhoodId };
+  });
+
+  const pickupIndex = next.findIndex(
+    (stop) => stop.kind === "pickup" && owns(stop, (kind) => kind === "pickup"),
+  );
+  const pickupStop = next[pickupIndex];
+  if (pickupStop && !samePlace(pickupStop, shipment.pickup)) {
+    changed = true;
+    const deliveryIndex = next.findIndex((stop) => owns(stop, (kind) => kind === "delivery"));
+    const task = { shipmentId: shipment.id, kind: "pickup" as const, status: "pending" as const };
+    const target = next.findIndex(
+      (stop, index) =>
+        index !== pickupIndex &&
+        index < deliveryIndex &&
+        stop.kind === "pickup" &&
+        isPending(stop) &&
+        placeKey(stop) === placeKey(shipment.pickup),
+    );
+    const alone = pickupStop.tasks.length === 1;
+    if (target === -1 && alone) {
+      next[pickupIndex] = {
+        ...pickupStop,
+        address: shipment.pickup.address,
+        neighborhoodId: shipment.pickup.neighborhoodId,
+      };
+    } else {
+      next = next.map((stop, index) => {
+        if (index === pickupIndex) {
+          return {
+            ...stop,
+            tasks: stop.tasks.filter(
+              (existing) => !(existing.shipmentId === shipment.id && existing.kind === "pickup"),
+            ),
+          };
+        }
+        return index === target ? { ...stop, tasks: [...stop.tasks, task] } : stop;
+      });
+      if (target === -1) {
+        next.splice(deliveryIndex, 0, stop(newId(), "pickup", shipment.pickup, shipment.id));
+      }
+      next = next.filter((existing) => existing.tasks.length > 0);
+    }
+  }
+  return changed ? next : stops;
+}
+
 export function moveStop(stops: RouteStopPlan[], stopId: string, toIndex: number): RouteStopPlan[] {
   const moving = stops.find((existing) => existing.id === stopId);
   if (!moving) return stops;

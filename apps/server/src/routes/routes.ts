@@ -1,14 +1,18 @@
 import {
+  addShipmentToStops,
   bogotaToday,
   buildStops,
   needsLargeRouteConfirmation,
   routeActionInput,
+  routeAddShipmentsInput,
   routeCourierInput,
   routeCreateInput,
   routesBoardQuery,
+  shipmentStatusLabels,
   stopOrderInput,
   validateStopOrder,
   type RoutesBoard,
+  type RouteStopPlan,
 } from "@domy/domain";
 import { and, eq, isNull, lt, lte, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
@@ -27,12 +31,14 @@ import {
   loadRouteSummaries,
   planShipments,
   recordRouteEvents,
+  removeFromPlan,
   savePlan,
   transitionShipments,
   unassignedUpTo,
   type NewRouteEvent,
   type RouteRow,
 } from "../lib/route-store.ts";
+import { refreshRouteStatus } from "../lib/route-status.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
 
 const idParam = z.object({ id: z.uuid() });
@@ -64,7 +70,8 @@ async function courierBusy(db: Executor, courierId: string): Promise<AppError> {
 /**
  * Applies one action on an existing route exactly once (FR-020) and only on the version the
  * user saw (FR-021). `apply` changes the route and returns its events; the first one stores
- * the action identifier.
+ * the action identifier. A route in progress left with nothing pending then finishes
+ * (FR-012, research R9).
  */
 async function applyRouteAction(
   c: Context<AppEnv>,
@@ -83,6 +90,7 @@ async function applyRouteAction(
       const [first, ...rest] = events;
       if (first)
         await recordRouteEvents(tx, [{ ...first, clientEventId: input.actionId }, ...rest]);
+      await refreshRouteStatus(tx, routeId, { actorUserId: c.get("user").id, now });
     })
     .catch((error: unknown) => {
       if (isUniqueViolation(error, "route_events_client_event_id_key")) return;
@@ -90,6 +98,13 @@ async function applyRouteAction(
     });
   return c.json(await loadRouteDetail(db, routeId));
 }
+
+/** A shipment joins a route up to the later of the route's date and today (FR-003). */
+const latestDate = (serviceDate: string, today: string) =>
+  serviceDate > today ? serviceDate : today;
+
+const notRegisteredMessage =
+  "Algún envío ya no está «Registrado», ya está en una ruta o tiene una fecha posterior a la de la ruta. Actualiza la lista.";
 
 function requireStatus(route: RouteRow, allowed: RouteRow["status"][], message: string) {
   if (!allowed.includes(route.status)) {
@@ -126,8 +141,6 @@ export const routeRoutes = new Hono<AppEnv>()
       });
     }
     if (input.courierId) await requireActiveCourier(db, input.courierId);
-    // A shipment joins a route up to the later of the route's date and today (FR-003).
-    const latestDate = input.serviceDate > today ? input.serviceDate : today;
 
     for (let attempt = 0; ; attempt++) {
       try {
@@ -147,13 +160,13 @@ export const routeRoutes = new Hono<AppEnv>()
             eventRouteId: input.id,
             actorUserId: user.id,
             occurredAt: now,
-            extraWhere: and(isNull(shipments.routeId), lte(shipments.serviceDate, latestDate)),
+            extraWhere: and(
+              isNull(shipments.routeId),
+              lte(shipments.serviceDate, latestDate(input.serviceDate, today)),
+            ),
           });
           if (moved.length !== shipmentIds.length) {
-            throw new AppError("shipment_not_registered", {
-              message:
-                "Algún envío ya no está «Registrado», ya está en una ruta o tiene una fecha posterior a la de la ruta. Actualiza la lista.",
-            });
+            throw new AppError("shipment_not_registered", { message: notRegisteredMessage });
           }
           await savePlan(
             tx,
@@ -276,6 +289,109 @@ export const routeRoutes = new Hono<AppEnv>()
             occurredAt: now,
             changes: { before: before.map((stop) => stop.id), after: input.stopIds },
           },
+        ];
+      });
+    },
+  )
+  // Shipments added to a route in preparation or in progress (FR-003, FR-005, FR-011).
+  .post(
+    "/:id/shipments",
+    validate("param", idParam),
+    validate("json", routeAddShipmentsInput),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const shipmentIds = [...new Set(input.shipmentIds)];
+      return applyRouteAction(c, id, input, async (tx, route, now) => {
+        requireStatus(
+          route,
+          ["draft", "in_progress"],
+          "Solo se agregan envíos a rutas en preparación o en curso.",
+        );
+        const [carried] = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(shipments)
+          .where(eq(shipments.routeId, id));
+        const total = (carried?.count ?? 0) + shipmentIds.length;
+        if (needsLargeRouteConfirmation(total) && !input.confirmed) {
+          throw new AppError("confirmation_required", {
+            message: `La ruta quedaría con ${String(total)} envíos; confirma para agregarlos.`,
+          });
+        }
+        const today = bogotaToday(now);
+        const user = c.get("user");
+        const moved = await transitionShipments(tx, {
+          ids: shipmentIds,
+          from: ["registered"],
+          to: route.status === "draft" ? "assigned" : "dispatched",
+          routeId: id,
+          eventRouteId: id,
+          actorUserId: user.id,
+          occurredAt: now,
+          extraWhere: and(
+            isNull(shipments.routeId),
+            lte(shipments.serviceDate, latestDate(route.serviceDate, today)),
+          ),
+        });
+        if (moved.length !== shipmentIds.length) {
+          throw new AppError("shipment_not_registered", { message: notRegisteredMessage });
+        }
+        const before = await loadPlan(tx, id);
+        const after = (await planShipments(tx, shipmentIds)).reduce<RouteStopPlan[]>(
+          (stops, shipment) => addShipmentToStops(stops, shipment, () => crypto.randomUUID()),
+          before,
+        );
+        await savePlan(tx, id, before, after);
+        return shipmentIds.map((shipmentId) => ({
+          routeId: id,
+          type: "shipment_added" as const,
+          actorUserId: user.id,
+          occurredAt: now,
+          shipmentId,
+        }));
+      });
+    },
+  )
+  // A shipment not picked up leaves the route and is "Registrado" again (FR-012).
+  .post(
+    "/:id/shipments/:shipmentId/remove",
+    validate("param", z.object({ id: z.uuid(), shipmentId: z.uuid() })),
+    validate("json", routeActionInput),
+    async (c) => {
+      const { id, shipmentId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      return applyRouteAction(c, id, input, async (tx, route, now) => {
+        requireStatus(
+          route,
+          ["draft", "in_progress"],
+          "Solo se quitan envíos de rutas en preparación o en curso.",
+        );
+        const [shipment] = await tx
+          .select({ status: shipments.status, routeId: shipments.routeId })
+          .from(shipments)
+          .where(eq(shipments.id, shipmentId))
+          .for("update");
+        if (shipment?.routeId !== id) {
+          throw new AppError("not_found", { message: "Ese envío no está en esta ruta." });
+        }
+        if (shipment.status === "picked_up") throw new AppError("shipment_picked_up");
+        if (shipment.status !== "assigned" && shipment.status !== "dispatched") {
+          throw new AppError("shipment_not_movable", {
+            message: `Un envío «${shipmentStatusLabels[shipment.status]}» no se quita de la ruta.`,
+          });
+        }
+        const user = c.get("user");
+        await transitionShipments(tx, {
+          ids: [shipmentId],
+          from: ["assigned", "dispatched"],
+          to: "registered",
+          routeId: null,
+          eventRouteId: id,
+          actorUserId: user.id,
+          occurredAt: now,
+        });
+        return [
+          await removeFromPlan(tx, id, shipmentId, { actorUserId: user.id, occurredAt: now }),
         ];
       });
     },

@@ -1,4 +1,5 @@
 import {
+  removeShipmentFromStops,
   routeProgress,
   shipmentFlag,
   shipmentPlaces,
@@ -133,7 +134,11 @@ export async function savePlan(
   const existing = new Set(before.map((stop) => stop.id));
   for (const [position, stop] of after.entries()) {
     if (existing.has(stop.id)) {
-      await tx.update(routeStops).set({ position }).where(eq(routeStops.id, stop.id));
+      // The place changes when its shipment is edited (FR-013).
+      await tx
+        .update(routeStops)
+        .set({ position, address: stop.address, neighborhoodId: stop.neighborhoodId })
+        .where(eq(routeStops.id, stop.id));
     } else {
       await tx.insert(routeStops).values({
         id: stop.id,
@@ -156,6 +161,44 @@ export async function savePlan(
       );
     }
   }
+}
+
+/**
+ * Takes a shipment's pending tasks off a route, with any stop left empty, and returns the
+ * event that records it: the stops before and after, and what the deleted stops held
+ * (FR-012, FR-013, research R10).
+ */
+export async function removeFromPlan(
+  tx: Executor,
+  routeId: string,
+  shipmentId: string,
+  event: { actorUserId: string; occurredAt: Date; reason?: string },
+): Promise<NewRouteEvent> {
+  const before = await loadPlan(tx, routeId);
+  const after = removeShipmentFromStops(before, shipmentId);
+  await savePlan(tx, routeId, before, after);
+  const kept = new Set(after.map((stop) => stop.id));
+  return {
+    routeId,
+    type: "shipment_removed",
+    shipmentId,
+    ...event,
+    changes: {
+      before: before.map((stop) => stop.id),
+      after: after.map((stop) => stop.id),
+      removedStops: before
+        .filter((stop) => !kept.has(stop.id))
+        .map(({ id, kind, address, neighborhoodId }) => ({ id, kind, address, neighborhoodId })),
+    },
+  };
+}
+
+/** A new version for a route changed through one of its shipments (research R5). */
+export async function touchRoute(tx: Executor, routeId: string, now: Date): Promise<void> {
+  await tx
+    .update(routes)
+    .set({ version: sql`${routes.version} + 1`, updatedAt: now })
+    .where(eq(routes.id, routeId));
 }
 
 /** The shipments in the order given, as the route rules see them (FR-005). */

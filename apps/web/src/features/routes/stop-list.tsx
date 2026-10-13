@@ -22,11 +22,13 @@ import {
   validateStopOrder,
   type RouteStop,
   type RouteStopPlan,
+  type RouteTask,
 } from "@domy/domain";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/cn";
 import { Icon } from "@/components/icon";
 import { ShipmentStatusMark } from "@/components/shipment-status-mark";
+import { Button } from "@/components/ui/button";
 import { formatWindow } from "@/lib/format";
 
 const plan = (stops: RouteStop[]): RouteStopPlan[] =>
@@ -44,7 +46,23 @@ const plan = (stops: RouteStop[]): RouteStopPlan[] =>
 
 const isPending = (stop: RouteStop) => stop.tasks.some((task) => task.status === "pending");
 
-function StopItem({ stop, index, locked }: { stop: RouteStop; index: number; locked: boolean }) {
+/** A shipment not picked up leaves the route from its delivery or errand stop (FR-012). */
+const removable = (task: RouteTask) =>
+  task.kind !== "pickup" &&
+  task.status === "pending" &&
+  (task.shipment.status === "assigned" || task.shipment.status === "dispatched");
+
+function StopItem({
+  stop,
+  index,
+  locked,
+  onRemove,
+}: {
+  stop: RouteStop;
+  index: number;
+  locked: boolean;
+  onRemove: ((task: RouteTask) => void) | undefined;
+}) {
   const disabled = locked || !isPending(stop);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: stop.id,
@@ -99,6 +117,20 @@ function StopItem({ stop, index, locked }: { stop: RouteStop; index: number; loc
                 {formatWindow(task.shipment.windowStart, task.shipment.windowEnd) ?? "Sin franja"}
               </span>
               <ShipmentStatusMark status={task.shipment.status} />
+              {onRemove && removable(task) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-my-3 ml-auto"
+                  disabled={locked}
+                  aria-label={`Quitar ${formatTrackingNumber(task.shipment.trackingNumber)} de la ruta`}
+                  onClick={() => {
+                    onRemove(task);
+                  }}
+                >
+                  Quitar
+                </Button>
+              )}
             </li>
           ))}
         </ul>
@@ -116,11 +148,14 @@ export function StopList({
   locked = false,
   onReorder,
   onInvalid,
+  onRemove,
 }: {
   stops: RouteStop[];
   locked?: boolean;
   onReorder: (stopIds: string[]) => void;
   onInvalid: (message: string) => void;
+  /** Offers "Quitar" on each shipment that can still leave the route. */
+  onRemove?: (task: RouteTask) => void;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -169,7 +204,7 @@ export function StopList({
           aria-label="Paradas de la ruta"
         >
           {stops.map((stop, index) => (
-            <StopItem key={stop.id} stop={stop} index={index} locked={locked} />
+            <StopItem key={stop.id} stop={stop} index={index} locked={locked} onRemove={onRemove} />
           ))}
         </ol>
       </SortableContext>
