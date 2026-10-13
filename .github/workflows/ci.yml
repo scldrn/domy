@@ -1,7 +1,9 @@
 name: CI
 
+# Trunk-Based Development: every pull request is checked before it merges, and main after.
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:

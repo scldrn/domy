@@ -434,3 +434,4 @@ Numbering follows the question list of 2026-09-30.
 | --- | --- | --- |
 | 34 | Phase 1 breakdown | 001 shipment registration and dispatch board, 002 routes and dispatch, 003 courier app, 004 tracking. |
 | 35 | Order of work | Specify, clarify, plan, tasks, and analyze all four specs before implementing any (Spec Kit). |
+| 36 | Branching model | Trunk-Based Development from 2026-10-13: `main` is the only long-lived branch, and every change lands through a short-lived branch (at most two days) merged by pull request once CI passes (constitution 2.0.0). |

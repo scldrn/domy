@@ -18,8 +18,10 @@ wins in any conflict.
 - Spec-Driven Development with GitHub Spec Kit is mandatory: specify → clarify → plan →
   checklist → tasks → analyze → implement → converge (`/speckit-*` skills in `.claude/skills/`).
 - Each feature lives in `specs/NNN-…/` (spec, plan, research, data-model, contracts,
-  quickstart, tasks, checklists). Branch `NNN-…` holds the specification; `NNN-…-impl` holds
-  the implementation.
+  quickstart, tasks, checklists); its number identifies it, not a branch.
+- Spec Kit 1.1.3 (`.specify/init-options.json`). The `/speckit-*` skills need no CLI; the
+  Specify CLI (`uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v1.1.3`)
+  only upgrades them: `specify integration upgrade claude` and `specify extension update`.
 - Implementation follows `specs/<feature>/tasks.md` in order, tests first. Deviations go back
   to the spec or plan, never silently into code.
 - Mark a task `[X]` in `tasks.md` only when it is done and its tests pass.
@@ -58,6 +60,31 @@ Generated, never edited by hand: `apps/web/src/route-tree.gen.ts` (TanStack Rout
 on `vite dev` and `vite build`), `apps/web/src/styles/tokens.css` (`pnpm tokens`), and
 `apps/server/src/db/migrations/` (`pnpm db:generate`). Prettier skips Markdown, `docs/`,
 `.specify/`, and `.claude/`.
+
+## Branches
+
+Trunk-Based Development is mandatory; the rules are in the constitution (Development
+Workflow & Quality Gates). One slice, one short-lived branch, one pull request:
+
+```bash
+git switch main && git pull --ff-only
+git switch -c 002-us2-routes-on-board   # NNN-<slice> in a feature, <type>/<slug> outside one
+# work, committing small steps; run the quality gates locally
+git fetch && git rebase origin/main     # if main moved
+git push -u origin HEAD && gh pr create --fill
+gh pr checks --watch                    # never merge red or running CI
+gh pr merge --squash --delete-branch
+git switch main && git pull --ff-only
+```
+
+- `/speckit-specify` creates the feature's first branch itself (git extension hook), so run
+  it from an up-to-date `main`. A branch that continues an existing feature points Spec Kit
+  at it once: `export SPECIFY_FEATURE_DIRECTORY=specs/NNN-…`, which is then saved in the
+  local `.specify/feature.json`.
+- Unfinished work merges but stays unreachable: the navigation destination or link of a user
+  story lands with its last slice.
+- The repository's GitHub plan cannot protect `main`, so nothing blocks a merge with red CI:
+  check it every time.
 
 ## Code
 
@@ -163,7 +190,8 @@ and then needs a migration.
 - Talk to the owner, Samuel Calderón, in Spanish, always.
 - Commit and push only when he approves. After each user story, report what was done in
   Spanish and ask before committing and continuing.
-- One branch per feature implementation, created from `main` and merged back once converged.
+- Each user story, or a smaller slice of one, is one short-lived branch and pull request;
+  push, open, and merge it only with his approval.
 - Never read outside this repository without his permission.
 - Visual decisions (palette, typeface, icons, logo) are his: render the options so he can
   open them, and let him choose.
@@ -172,5 +200,7 @@ and then needs a migration.
 
 ## Quality gates
 
-`pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` must pass with zero warnings, as
-in CI (`.github/workflows/ci.yml`). Commits follow Conventional Commits.
+`pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` must pass with zero warnings
+before any branch merges into `main`, as CI runs them (`.github/workflows/ci.yml`) on every
+pull request and on `main`. Commits and pull request titles follow Conventional Commits; the
+title becomes the squashed commit on `main`.

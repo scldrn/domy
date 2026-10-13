@@ -133,7 +133,8 @@ is slower than WhatsApp and a spreadsheet, it will not be adopted.
   the legacy term (e.g., "Envío", not "Servicio"; "Novedad"; "Prueba de entrega").
 - Formatting and linting are automated and MUST pass with zero warnings. Dead code,
   commented-out code, stray files, and unused dependencies are forbidden.
-- Commits follow Conventional Commits. One feature per branch, named by Spec Kit.
+- Commits follow Conventional Commits. Branches follow Trunk-Based Development, as defined
+  in Development Workflow & Quality Gates.
 - Every file lives in the one place the plan's project structure assigns to it.
 
 **Rationale**: the owner of this codebase requires absolute order; consistency is what
@@ -191,8 +192,8 @@ Constraints:
 Spec-Driven Development with GitHub Spec Kit is mandatory and strict. No production code
 is written outside this flow.
 
-1. `/speckit-specify` — a feature starts as a spec on its own branch. Specs describe what
-   and why, never how.
+1. `/speckit-specify` — a feature starts as a spec, written on the feature's first
+   short-lived branch. Specs describe what and why, never how.
 2. `/speckit-clarify` — REQUIRED before planning. No `[NEEDS CLARIFICATION]` marker may
    remain in a spec that enters planning.
 3. `/speckit-plan` — the plan MUST pass the Constitution Check; any violation is recorded
@@ -204,14 +205,40 @@ is written outside this flow.
    the spec or plan, never silently into code.
 7. `/speckit-converge` — REQUIRED after implementation, repeated until converged.
 
-Quality gates (all MUST pass before a feature branch is merged):
+### Trunk-Based Development
+
+- `main` is the trunk and the only long-lived branch. Develop, release, hotfix, and
+  long-lived per-feature branches are forbidden; the former scheme of `NNN-…` specification
+  branches and `NNN-…-impl` implementation branches is retired.
+- Every change reaches `main` through a short-lived branch created from an up-to-date
+  `main`. A branch belongs to one developer (or a pair), lives at most two days, and carries
+  one coherent slice: a Spec Kit phase, one user story or a smaller part of one, or a fix.
+  It is merged through a pull request once CI passes, squash-merged, and then deleted. If
+  `main` moved, the branch is updated from `main` before it merges.
+- `main` MUST always be releasable: a pull request whose CI is red or still running is
+  never merged. Work not yet complete for its users is merged but not reachable: its entry
+  point (navigation destination or link) lands with the last slice of its user story. A
+  feature flag is used only when a spec requires one.
+- Releases are cut from `main`, and defects are fixed forward on `main`.
+- Spec Kit features are identified by their number and folder (`specs/NNN-…`), not by a
+  branch. `/speckit-specify` opens the feature's first short-lived branch; later slices use
+  branches named `NNN-<slice>`; work outside a feature uses `<type>/<slug>`, with the
+  Conventional Commit type. Spec Kit finds the active feature through
+  `SPECIFY_FEATURE_DIRECTORY` or the local `.specify/feature.json`.
+
+Quality gates (all MUST pass before any branch is merged into `main`):
 
 - Type check, lint, and format check with zero errors and zero warnings.
 - Full test suite green, including integration tests against PostgreSQL and end-to-end
   tests for affected critical flows.
 - Production build succeeds.
-- Every acceptance scenario in the spec is demonstrably satisfied.
+- Every acceptance scenario the slice completes is demonstrably satisfied; the last slice of
+  a feature satisfies every acceptance scenario of its spec.
 - Changes to the database are expressed as a reviewed migration.
+
+**Rationale**: a branch that lives for days drifts from `main` and turns integration into
+the riskiest step; the 002 implementation branch fell behind the panel redesign exactly
+this way. Small slices merged daily keep `main` green, releasable, and reviewable.
 
 ## Governance
 
@@ -226,4 +253,4 @@ Quality gates (all MUST pass before a feature branch is merged):
 - Runtime development guidance for agents lives in `CLAUDE.md` and MUST stay consistent
   with this document.
 
-**Version**: 1.2.0 | **Ratified**: 2026-09-29 | **Last Amended**: 2026-09-30
+**Version**: 2.0.0 | **Ratified**: 2026-09-29 | **Last Amended**: 2026-10-13
