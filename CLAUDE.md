@@ -1,5 +1,8 @@
-# Domy — guidance for agents
+# CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+Domy is the operations and tracking system of Cohex, an urban courier business in Medellín.
 This file must stay consistent with the [constitution](.specify/memory/constitution.md), which
 wins in any conflict.
 
@@ -13,10 +16,48 @@ wins in any conflict.
 ## Method
 
 - Spec-Driven Development with GitHub Spec Kit is mandatory: specify → clarify → plan →
-  checklist → tasks → analyze → implement → converge.
+  checklist → tasks → analyze → implement → converge (`/speckit-*` skills in `.claude/skills/`).
+- Each feature lives in `specs/NNN-…/` (spec, plan, research, data-model, contracts,
+  quickstart, tasks, checklists). Branch `NNN-…` holds the specification; `NNN-…-impl` holds
+  the implementation.
 - Implementation follows `specs/<feature>/tasks.md` in order, tests first. Deviations go back
   to the spec or plan, never silently into code.
 - Mark a task `[X]` in `tasks.md` only when it is done and its tests pass.
+- Code comments cite what they implement: requirements (`FR-042`), success criteria, user
+  story scenarios, and research decisions (`research R9`) of the feature's spec.
+- Background lives in [docs/business-master.md](docs/business-master.md) (how the business
+  works, rates, decision log) and `docs/discovery/` (client interview and quote COT-2026-001,
+  which bounds Phase 1 scope).
+
+## Commands
+
+Node 24 (`.nvmrc`), pnpm 12 (`corepack enable pnpm`), and Docker. Run from the repository root.
+
+```bash
+cp .env.example .env && pnpm install
+docker compose up -d             # PostgreSQL 18 on :5432, Adminer on :8080
+pnpm db:migrate && pnpm db:seed  # the seed prints the password of propietario@example.com once
+pnpm dev                         # web on :5173 (proxies /api), API on :3000 with node --watch
+
+pnpm check      # prettier --check, eslint --max-warnings 0, tsc in every package
+pnpm test       # Vitest in every package; server tests need Docker running
+pnpm test:e2e   # Playwright, chromium only; needs Docker
+pnpm build      # web bundle in apps/web/dist; the server build is only tsc --noEmit
+
+# One file or one case
+pnpm --filter @domy/domain exec vitest run src/fees.test.ts
+pnpm --filter @domy/server exec vitest run tests/shipments-create.test.ts -t "case name"
+pnpm --filter @domy/web exec vitest run src/features/board/day-sentence.test.ts
+pnpm --filter @domy/web exec playwright test tests/e2e/register-shipment.spec.ts
+
+pnpm db:generate  # SQL migration from apps/server/src/db/schema/ (drizzle-kit)
+pnpm tokens       # regenerates apps/web/src/styles/tokens.css from the seed colors
+```
+
+Generated, never edited by hand: `apps/web/src/route-tree.gen.ts` (TanStack Router plugin,
+on `vite dev` and `vite build`), `apps/web/src/styles/tokens.css` (`pnpm tokens`), and
+`apps/server/src/db/migrations/` (`pnpm db:generate`). Prettier skips Markdown, `docs/`,
+`.specify/`, and `.claude/`.
 
 ## Code
 
@@ -27,6 +68,95 @@ wins in any conflict.
 - Money is integer COP; instants are stored in UTC and shown in `America/Bogota`.
 - Every mutation carries a client-generated `id` (creations) or `actionId` (everything else).
 - Integration tests use real PostgreSQL through Testcontainers; never mock the database.
+
+## Architecture
+
+A pnpm workspace with three packages. Nothing is compiled except the web bundle:
+`@domy/domain` and `@domy/server/app` are consumed as source through their `exports`.
+
+### `packages/domain`
+
+The only home of business rules: the shipment lifecycle state machine
+(`shipment-lifecycle.ts`), fee resolution against the rate card (`fees.ts`), payment modes,
+delivery windows, tracking numbers, text normalization for matching, Bogotá calendar time
+(fixed UTC−05:00), and the Zod schemas in `schemas/`, which validate requests on the server
+and forms on the web. Value lists such as `shipmentStatuses`, `shipmentKinds`, and `userRoles`
+are declared here and the server builds its `pgEnum`s from them, so a new value starts here
+and then needs a migration.
+
+### `apps/server` (Hono API)
+
+- `src/index.ts` wires the real dependencies from the environment (`env.ts` validates it with
+  Zod and exits on error). `createApp(deps)` in `src/app.ts` receives `db`, `auth`, `clock`,
+  and `logger`, so tests build the same app around a test database and a controlled clock.
+  With `NODE_ENV=production` the same process also serves `apps/web/dist`.
+- Each resource is a Hono sub-app in `src/routes/`, mounted in `app.ts`. Routes must stay
+  chained (`new Hono<AppEnv>().use(...).get(...).post(...)`), in their module and in
+  `app.ts`, or their types never reach `AppType` and the web client.
+- Input goes through `validate(target, schema)` (`lib/validate.ts`) with the domain schemas;
+  access through `requireRole(...)` (`lib/auth-guard.ts`), which also sets `c.get("user")`.
+- Errors are `throw new AppError(code, { message?, fields? })`. Codes, HTTP statuses, and
+  default Spanish messages are catalogued in `lib/errors.ts`; every error response is
+  `{ error: { code, message, fields? } }`. Unexpected errors are logged without SQL
+  parameters, which hold recipients' data, and answered with a generic Spanish message.
+- Time: handlers read `c.get("clock")()`, never `new Date()`. `DOMY_FAKE_NOW` moves the clock
+  in development and tests; with `NODE_ENV=test` the app also exposes `POST /api/test/clock`
+  and `GET /api/test/emails`. The `Date` response header follows the clock, and the web
+  corrects its own clock with it (`apps/web/src/lib/clock.ts`).
+- Exactly once: a creation is keyed by its client `id` (a repeated id returns the existing
+  record with 200 instead of 201). Any other mutation's `actionId` is stored as the unique
+  `client_event_id` of the shipment or audit event it writes, and `lib/action-id.ts` detects
+  a replay. Shipments also carry a `version` for optimistic concurrency (`version_conflict`).
+- A change and its event share one transaction: `saveChange` in `routes/shipments.ts` for the
+  append-only shipment history; `auditedCreate` and `auditedChange` (`lib/master-data.ts`) and
+  `recordAudit` (`lib/audit.ts`) for master data and accounts. Shipments are voided and master
+  data deactivated, never deleted.
+- Auth is Better Auth (`src/auth.ts`) under `/api/auth`, with the admin plugin and the roles
+  `owner`, `dispatcher`, and `courier`. Sign-up is disabled: the owner creates accounts.
+  `routes/auth.ts` wraps the endpoints that need Domy's own rules (lockout, last active owner,
+  audit); every other `/api/auth/*` request goes straight to `auth.handler`.
+- Database: Drizzle with `casing: "snake_case"` (camelCase in TypeScript, snake_case in
+  PostgreSQL), schema by area in `src/db/schema/`. Invariants are also CHECK constraints there
+  (payment mode against COD amount, required fields per shipment kind, void and fee-override
+  reasons). Searches match `*_normalized` columns written with `normalizeText`. The seed
+  (`src/db/seed/`) is idempotent and loads the catalog from `neighborhoods.csv` and the
+  standard rates.
+- Logs are pino with cookies, passwords, and recipient phones redacted (`lib/logger.ts`).
+
+### `apps/web` (React + Vite)
+
+- Routes are TanStack Router virtual routes declared in `src/routes.ts`: Spanish URLs,
+  English files in `src/routes/`. `panel-layout.tsx` is the signed-in panel of owner and
+  dispatcher; couriers are sent to `/mensajero`. Search params stay strings (`main.tsx`) and
+  each route validates its own.
+- Server calls live in each area's `src/features/<area>/api.ts` as
+  `unwrap<T>(api.api.<resource>.$get(...))`. `api` is `hc<AppType>` from `@domy/server/app`
+  (`src/lib/api-client.ts`); `unwrap` turns an error body into an `ApiError` carrying the
+  server's Spanish message and per-field messages. Data goes through TanStack Query. Forms
+  use react-hook-form; the shipment form checks its input with the domain schema before
+  sending and maps the server's `fields` back onto its own fields.
+- Imports use the `@/` alias for `src/` and no file extension (bundler resolution), unlike
+  server and domain.
+- UI follows [docs/design-system.md](docs/design-system.md): Material Design 3 over Tailwind
+  CSS 4 and shadcn/ui (`base-nova` style on Base UI) in `src/components/ui/`, with Domy's
+  shared components in `src/components/`. Colors come only from the generated tokens; icons
+  are single Material Symbols Rounded SVGs imported with `?react` and drawn with `Icon`.
+
+### Tests
+
+- Domain and web unit tests sit next to their code (`*.test.ts`).
+- Server integration tests (`apps/server/tests/`) start one `postgres:18` per file
+  (`setup/database.ts`: `startDatabase` in `beforeAll`, `truncate` in `beforeEach`), build the
+  app with `createTestApp(db, { now })` from `setup/app.ts` (fixed clock with `setNow`,
+  `signIn(role)` returning a session cookie, `request(path, { method, cookie, body })`), and
+  load fixtures with `createCatalog` (`setup/catalog.ts`). Requests go through `app.request`,
+  without an HTTP server.
+- End to end (`apps/web/tests/e2e/`): `global-setup.ts` starts its own PostgreSQL, migrates,
+  seeds, adds test merchants, and runs the API on :3100 (`NODE_ENV=test`,
+  `DOMY_FAKE_NOW=2026-10-01T15:00:00Z`) and Vite on :5174, saving one session per role. Tests
+  use the `ownerPage`, `dispatcherPage`, `courierPage`, and `setServerNow` fixtures of
+  `fixtures.ts`; every passing test then runs axe (WCAG 2.2 AA) on the page it ended on, so an
+  accessibility violation fails the test.
 
 ## Working with the owner
 
@@ -42,5 +172,5 @@ wins in any conflict.
 
 ## Quality gates
 
-`pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` must pass with zero warnings.
-Commits follow Conventional Commits.
+`pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` must pass with zero warnings, as
+in CI (`.github/workflows/ci.yml`). Commits follow Conventional Commits.
