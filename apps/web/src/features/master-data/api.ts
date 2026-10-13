@@ -55,8 +55,11 @@ export async function listCouriers(q: string, active?: Active): Promise<Courier[
 }
 export const createCourier = (input: CourierCreateInput) =>
   unwrap<Courier>(api.api.couriers.$post({ json: input }));
+/** Answers with the courier's routes in preparation or in progress (feature 002, FR-010). */
 export const updateCourier = (id: string, input: CourierUpdateInput) =>
-  unwrap<Courier>(api.api.couriers[":id"].$patch({ param: { id }, json: input }));
+  unwrap<Courier & { openRoutes: number }>(
+    api.api.couriers[":id"].$patch({ param: { id }, json: input }),
+  );
 
 export async function listAllCarriers(q: string): Promise<Carrier[]> {
   const { items } = await unwrap<{ items: Carrier[] }>(api.api.carriers.$get({ query: { q } }));

@@ -1,7 +1,13 @@
 import type { RouteDetail, Shipment, ShipmentStatus } from "@domy/domain";
 import { and, eq, sql } from "drizzle-orm";
 import type { Db, Executor } from "../../src/db/client.ts";
-import { couriers, routes, routeTasks, shipments } from "../../src/db/schema/index.ts";
+import {
+  couriers,
+  routes,
+  routeTasks,
+  shipmentEvents,
+  shipments,
+} from "../../src/db/schema/index.ts";
 import { refreshRouteStatus } from "../../src/lib/route-status.ts";
 
 /**
@@ -59,14 +65,14 @@ async function routeOf(db: Executor, shipmentId: string) {
 
 /**
  * Completes the pending pickup task of a shipment and marks it picked up by the route's
- * courier, as the courier app will (feature 003).
+ * courier, who takes custody, as the courier app will (feature 003).
  */
-export async function pickUp(db: Db, shipmentId: string): Promise<void> {
+export async function pickUp(db: Db, shipmentId: string, at = new Date()): Promise<void> {
   await db.transaction(async (tx) => {
     const route = await routeOf(tx, shipmentId);
     await tx
       .update(routeTasks)
-      .set({ status: "completed", completedAt: new Date(), completedByCourierId: route.courierId })
+      .set({ status: "completed", completedAt: at, completedByCourierId: route.courierId })
       .where(
         and(
           eq(routeTasks.shipmentId, shipmentId),
@@ -74,23 +80,39 @@ export async function pickUp(db: Db, shipmentId: string): Promise<void> {
           eq(routeTasks.status, "pending"),
         ),
       );
+    const [before] = await tx
+      .select({ status: shipments.status })
+      .from(shipments)
+      .where(eq(shipments.id, shipmentId));
     await tx
       .update(shipments)
       .set({ status: "picked_up", custodyCourierId: route.courierId })
       .where(eq(shipments.id, shipmentId));
     // The route's author stands in for the courier who will record it (feature 003).
-    await refreshRouteStatus(tx, route.id, { actorUserId: route.createdBy, now: new Date() });
+    await tx.insert(shipmentEvents).values({
+      shipmentId,
+      type: "status_changed",
+      fromStatus: before?.status ?? null,
+      toStatus: "picked_up",
+      actorUserId: route.createdBy,
+      occurredAt: at,
+      routeId: route.id,
+      changes: { custodyCourierId: [null, route.courierId] },
+    });
+    await refreshRouteStatus(tx, route.id, { actorUserId: route.createdBy, now: at });
   });
 }
 
 /**
  * Completes or fails the pending delivery (or errand) task of a shipment directly, and
  * finishes the route when nothing is left (FR-012), as the courier app will (feature 003).
+ * A delivery ends the custody of whoever held the package.
  */
 export async function finishTask(
   db: Db,
   shipmentId: string,
   outcome: "delivered" | "exception",
+  at = new Date(),
 ): Promise<void> {
   await db.transaction(async (tx) => {
     const route = await routeOf(tx, shipmentId);
@@ -98,7 +120,7 @@ export async function finishTask(
       .update(routeTasks)
       .set({
         status: outcome === "delivered" ? "completed" : "failed",
-        completedAt: new Date(),
+        completedAt: at,
         completedByCourierId: route.courierId,
       })
       .where(
@@ -108,8 +130,29 @@ export async function finishTask(
           sql`${routeTasks.kind} in ('delivery', 'errand')`,
         ),
       );
-    await tx.update(shipments).set({ status: outcome }).where(eq(shipments.id, shipmentId));
-    await refreshRouteStatus(tx, route.id, { actorUserId: route.createdBy, now: new Date() });
+    const [before] = await tx
+      .select({ status: shipments.status, custodyCourierId: shipments.custodyCourierId })
+      .from(shipments)
+      .where(eq(shipments.id, shipmentId));
+    const delivered = outcome === "delivered";
+    await tx
+      .update(shipments)
+      .set({ status: outcome, ...(delivered && { custodyCourierId: null }) })
+      .where(eq(shipments.id, shipmentId));
+    await tx.insert(shipmentEvents).values({
+      shipmentId,
+      type: "status_changed",
+      fromStatus: before?.status ?? null,
+      toStatus: outcome,
+      actorUserId: route.createdBy,
+      occurredAt: at,
+      routeId: route.id,
+      ...(delivered &&
+        before?.custodyCourierId && {
+          changes: { custodyCourierId: [before.custodyCourierId, null] },
+        }),
+    });
+    await refreshRouteStatus(tx, route.id, { actorUserId: route.createdBy, now: at });
   });
 }
 

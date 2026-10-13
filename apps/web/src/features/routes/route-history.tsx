@@ -1,4 +1,9 @@
-import { formatTrackingNumber, type RouteEvent, type RouteEventType } from "@domy/domain";
+import {
+  formatTrackingNumber,
+  type RouteEvent,
+  type RouteEventType,
+  type ShipmentEvent,
+} from "@domy/domain";
 import { useId } from "react";
 import { formatDateTime } from "@/lib/format";
 
@@ -46,6 +51,49 @@ export function RouteHistory({ events }: { events: RouteEvent[] }) {
               </p>
             )}
             {event.reason && <p className="text-body-m text-on-surface">{event.reason}</p>}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/**
+ * Who held a package and from when (SC-005): its pickup, each confirmed handover, and its
+ * delivery, from the custody changes in the shipment's history.
+ */
+export function CustodyHistory({ events }: { events: ShipmentEvent[] }) {
+  const headingId = useId();
+  const records = events.flatMap((event) => {
+    const change = event.changes?.["custodyCourierId"];
+    return change ? [{ event, from: change[0], to: change[1] }] : [];
+  });
+  if (records.length === 0) return null;
+  const text = ({ event, from, to }: (typeof records)[number]) => {
+    if (typeof to === "string") {
+      return event.type === "handover_confirmed"
+        ? `Lo recibe ${to} de ${String(from)}`
+        : `Lo recoge ${to}`;
+    }
+    return event.toStatus === "returned"
+      ? `Lo devuelve ${String(from)}`
+      : `Lo entrega ${String(from)}`;
+  };
+  return (
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="mb-2 text-title-m text-on-surface">
+        Custodia del paquete
+      </h2>
+      <ol className="ml-2 flex flex-col border-l-2 border-outline-variant">
+        {records.map((record) => (
+          <li
+            key={record.event.id}
+            className="relative pb-5 pl-6 before:absolute before:top-1.5 before:-left-[7px] before:size-3 before:rounded-full before:bg-primary before:ring-4 before:ring-surface last:pb-0"
+          >
+            <p className="text-body-l text-on-surface">{text(record)}</p>
+            <p className="text-body-m text-on-surface-variant">
+              {formatDateTime(record.event.occurredAt)} · Registró {record.event.actor.name}
+            </p>
           </li>
         ))}
       </ol>

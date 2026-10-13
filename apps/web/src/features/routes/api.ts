@@ -1,11 +1,16 @@
 import type {
   Courier,
+  Handover,
+  HandoverActionInput,
   RouteActionInput,
   RouteAddShipmentsInput,
   RouteCourierInput,
   RouteCreateInput,
   RouteDetail,
+  RouteReassignInput,
   RoutesBoard,
+  Shipment,
+  ShipmentReassignInput,
   StopOrderInput,
   UnassignedShipment,
 } from "@domy/domain";
@@ -45,6 +50,20 @@ export const removeRouteShipment = (id: string, shipmentId: string, input: Route
       json: input,
     }),
   );
+
+export const reassignRoute = (id: string, input: RouteReassignInput) =>
+  unwrap<RouteDetail>(api.api.routes[":id"].reassign.$post({ param: { id }, json: input }));
+
+export const reassignShipment = (id: string, input: ShipmentReassignInput) =>
+  unwrap<{ shipment: Shipment; handover: Handover | null }>(
+    api.api.shipments[":id"].reassign.$post({ param: { id }, json: input }),
+  );
+
+export const confirmHandover = (id: string, input: HandoverActionInput) =>
+  unwrap<Handover>(api.api.handovers[":id"].confirm.$post({ param: { id }, json: input }));
+
+export const cancelHandover = (id: string, input: HandoverActionInput) =>
+  unwrap<Handover>(api.api.handovers[":id"].cancel.$post({ param: { id }, json: input }));
 
 export const dispatchRoute = (id: string, input: RouteActionInput) =>
   unwrap<RouteDetail>(api.api.routes[":id"].dispatch.$post({ param: { id }, json: input }));
