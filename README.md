@@ -10,7 +10,6 @@ public tracking page.
 - [Business master](docs/business-master.md): how the business works and every decision taken
 - [Glossary](docs/glossary.md): English names in code, Spanish names in the interface
 - [Design system](docs/design-system.md): Material Design 3 over Tailwind CSS and shadcn/ui
-- [User research](docs/research/README.md): who uses Domy, their context and pains, and the research still needed
 - [Specifications](specs/): one folder per feature, written with GitHub Spec Kit
 
 ## Requirements
