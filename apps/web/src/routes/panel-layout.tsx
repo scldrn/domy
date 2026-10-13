@@ -5,6 +5,7 @@ import HistoryFillIcon from "@material-symbols/svg-400/rounded/history-fill.svg?
 import ManageHistoryFillIcon from "@material-symbols/svg-400/rounded/manage_history-fill.svg?react";
 import MapFillIcon from "@material-symbols/svg-400/rounded/map-fill.svg?react";
 import PostAddFillIcon from "@material-symbols/svg-400/rounded/post_add-fill.svg?react";
+import RouteFillIcon from "@material-symbols/svg-400/rounded/route-fill.svg?react";
 import SellFillIcon from "@material-symbols/svg-400/rounded/sell-fill.svg?react";
 import StorefrontFillIcon from "@material-symbols/svg-400/rounded/storefront-fill.svg?react";
 import TruckFillIcon from "@material-symbols/svg-400/rounded/local_shipping-fill.svg?react";
@@ -18,6 +19,7 @@ import AddIcon from "@material-symbols/svg-400/rounded/add.svg?react";
 import LogoutIcon from "@material-symbols/svg-400/rounded/logout.svg?react";
 import ManageHistoryIcon from "@material-symbols/svg-400/rounded/manage_history.svg?react";
 import MapIcon from "@material-symbols/svg-400/rounded/map.svg?react";
+import RouteIcon from "@material-symbols/svg-400/rounded/route.svg?react";
 import PostAddIcon from "@material-symbols/svg-400/rounded/post_add.svg?react";
 import SellIcon from "@material-symbols/svg-400/rounded/sell.svg?react";
 import StorefrontIcon from "@material-symbols/svg-400/rounded/storefront.svg?react";
@@ -60,6 +62,7 @@ type NavigationItem = {
     | "/envios/nuevo"
     | "/envios/masivo"
     | "/historial"
+    | "/rutas"
     | "/clientes"
     | "/mensajeros"
     | "/transportadoras"
@@ -100,6 +103,13 @@ const navigation: { label: string | null; items: NavigationItem[] }[] = [
         label: "Registro masivo",
         icon: PostAddIcon,
         activeIcon: PostAddFillIcon,
+        roles: office,
+      },
+      {
+        to: "/rutas",
+        label: "Rutas",
+        icon: RouteIcon,
+        activeIcon: RouteFillIcon,
         roles: office,
       },
       {

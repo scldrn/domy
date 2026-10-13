@@ -28,6 +28,9 @@ const eventLabels: Record<ShipmentEvent["type"], string> = {
   fee_confirmed: "Tarifa confirmada",
   voided: "Anulado",
   status_changed: "Cambio de estado",
+  reassigned: "Reasignado",
+  handover_confirmed: "Traspaso confirmado",
+  handover_cancelled: "Traspaso cancelado",
 };
 
 /** Field names and value formats of the change history (FR-016). */

@@ -35,7 +35,7 @@ English kebab-case file names; Spanish URLs mapped in `apps/web/src/routes.ts`.
 
 **Purpose**: the only new dependency of this feature
 
-- [ ] T001 Add `@dnd-kit/core` and `@dnd-kit/sortable` to `apps/web/package.json` and record them in the dependency list of `README.md`
+- [X] T001 Add `@dnd-kit/core` and `@dnd-kit/sortable` to `apps/web/package.json` and record them in the dependency list of `README.md`
 
 ---
 
@@ -47,28 +47,34 @@ English kebab-case file names; Spanish URLs mapped in `apps/web/src/routes.ts`.
 
 ### Tests first
 
-- [ ] T002 [P] Extend `packages/domain/src/shipment-lifecycle.test.ts` with the transitions owned by this feature (data-model.md §Shipment lifecycle): `registered → assigned`, `registered → dispatched`, `assigned → registered`, `assigned → dispatched`, `dispatched → registered`, `dispatched → assigned`; and refusal of each from `picked_up` on
-- [ ] T003 [P] Write failing unit tests in `packages/domain/src/routes.test.ts` for `buildStops` (FR-005): one pickup stop per pickup place (same pickup point, or same one-off address and neighborhood), one delivery stop per shipment even at the same place, reverse pickup (pickup at the recipient, delivery at the merchant's pickup point), carrier handoff (delivery at the handoff place), errand (single stop), initial order "pickup stops first, then delivery stops, each in the order the shipments were selected"
-- [ ] T004 Write failing unit tests in `packages/domain/src/routes.test.ts` for `addShipmentToStops` (joins the pending pickup stop of its place, otherwise a new pickup stop at the end immediately before the new delivery stop, FR-011), `removeShipmentFromStops` (removes its pending tasks and a pickup stop left empty, FR-012), `moveStop` and `validateStopOrder` (a delivery stop stays after the pickup stop of its shipment; errand stops unconstrained; completed stops do not move, FR-006)
-- [ ] T005 Write failing unit tests in `packages/domain/src/routes.test.ts` for `isRouteFinished` (no `pending` task and no `pending` handover, FR-012), `routeProgress` (stops with no pending task ÷ total stops, whatever their position, FR-007), and `canUndoDispatch` (no task `completed` or `failed` and no shipment `picked_up`, FR-026)
+- [X] T002 [P] Extend `packages/domain/src/shipment-lifecycle.test.ts` with the transitions owned by this feature (data-model.md §Shipment lifecycle): `registered → assigned`, `registered → dispatched`, `assigned → registered`, `assigned → dispatched`, `dispatched → registered`, `dispatched → assigned`; and refusal of each from `picked_up` on
+- [X] T003 [P] Write failing unit tests in `packages/domain/src/routes.test.ts` for `buildStops` (FR-005): one pickup stop per pickup place (same pickup point, or same one-off address and neighborhood), one delivery stop per shipment even at the same place, reverse pickup (pickup at the recipient, delivery at the merchant's pickup point), carrier handoff (delivery at the handoff place), errand (single stop), initial order "pickup stops first, then delivery stops, each in the order the shipments were selected"
+- [X] T004 Write failing unit tests in `packages/domain/src/routes.test.ts` for `addShipmentToStops` (joins the pending pickup stop of its place, otherwise a new pickup stop at the end immediately before the new delivery stop, FR-011), `removeShipmentFromStops` (removes its pending tasks and a pickup stop left empty, FR-012), `moveStop` and `validateStopOrder` (a delivery stop stays after the pickup stop of its shipment; errand stops unconstrained; completed stops do not move, FR-006)
+- [X] T005 Write failing unit tests in `packages/domain/src/routes.test.ts` for `isRouteFinished` (no `pending` task and no `pending` handover, FR-012), `routeProgress` (stops with no pending task ÷ total stops, whatever their position, FR-007), and `canUndoDispatch` (no task `completed` or `failed` and no shipment `picked_up`, FR-026)
 
 ### Domain
 
-- [ ] T006 Extend `packages/domain/src/shipment-lifecycle.ts` with this feature's transitions until T002 passes
-- [ ] T007 Implement `packages/domain/src/routes.ts` (`buildStops`, `addShipmentToStops`, `removeShipmentFromStops`, `moveStop`, `validateStopOrder`, `isRouteFinished`, `routeProgress`, `canUndoDispatch`, route status and task status labels in Spanish) until T003–T005 pass
-- [ ] T008 [P] Create `packages/domain/src/schemas/routes.ts`: `RouteCreateInput` (`id`, `actionId`, `serviceDate`, `shipmentIds`, optional `courierId`, optional `confirmed`), `RouteDetail`, `RouteSummary`, `RoutesBoard`, `Stop`, `Task`, `RouteEvent`, `Handover`, `UnassignedShipment`, action inputs with `actionId` and `version`, and reasons of 5–200 characters (FR-016)
+- [X] T006 Extend `packages/domain/src/shipment-lifecycle.ts` with this feature's transitions until T002 passes
+- [X] T007 Implement `packages/domain/src/routes.ts` (`buildStops`, `addShipmentToStops`, `removeShipmentFromStops`, `moveStop`, `validateStopOrder`, `isRouteFinished`, `routeProgress`, `canUndoDispatch`, route status and task status labels in Spanish) until T003–T005 pass
+- [X] T008 [P] Create `packages/domain/src/schemas/routes.ts`: `RouteCreateInput` (`id`, `actionId`, `serviceDate`, `shipmentIds`, optional `courierId`, optional `confirmed`), `RouteDetail`, `RouteSummary`, `RoutesBoard`, `Stop`, `Task`, `RouteEvent`, `Handover`, `UnassignedShipment`, action inputs with `actionId` and `version`, and reasons of 5–200 characters (FR-016)
 
 ### Database
 
-- [ ] T009 [P] Define `routes`, `route_stops`, `route_tasks`, `handovers`, `route_events` and their enums in `apps/server/src/db/schema/routes.ts` per data-model.md, including: unique `(service_date, number)`; partial unique index on `(courier_id) WHERE status = 'in_progress'`; checks "`status in ('in_progress', 'finished') ⇒ courier_id is not null`" and "`status = 'cancelled' ⇔ cancel_reason is not null`"; `position` unique with `route_id` (deferrable); partial unique index on `route_tasks (shipment_id, kind) WHERE status = 'pending'`; check "`blocked_by_handover_id is null or status = 'pending'`"; partial unique index on `handovers (shipment_id) WHERE status = 'pending'`; `route_events.client_event_id` unique and optional
-- [ ] T010 [P] Extend `apps/server/src/db/schema/shipments.ts`: `shipments.route_id`, `shipments.custody_courier_id`, the checks "`status = 'registered' ⇒ route_id is null`" and "`status in ('assigned', 'dispatched') ⇒ route_id is not null`", `shipment_events.route_id`, and the values `reassigned`, `handover_confirmed`, `handover_cancelled` in `shipment_event_type`
-- [ ] T011 Generate and review the migration for T009–T010 in `apps/server/src/db/migrations/`
-- [ ] T012 Create `apps/server/tests/setup/routes.ts`: helpers to create a route with shipments through the API, and a test-only helper that sets a task's status and a shipment's `picked_up` status directly, standing in for feature 003
+- [X] T009 [P] Define `routes`, `route_stops`, `route_tasks`, `handovers`, `route_events` and their enums in `apps/server/src/db/schema/routes.ts` per data-model.md, including: unique `(service_date, number)`; partial unique index on `(courier_id) WHERE status = 'in_progress'`; checks "`status in ('in_progress', 'finished') ⇒ courier_id is not null`" and "`status = 'cancelled' ⇔ cancel_reason is not null`"; `position` unique with `route_id` (deferrable); partial unique index on `route_tasks (shipment_id, kind) WHERE status = 'pending'`; check "`blocked_by_handover_id is null or status = 'pending'`"; partial unique index on `handovers (shipment_id) WHERE status = 'pending'`; `route_events.client_event_id` unique and optional
+- [X] T010 [P] Extend `apps/server/src/db/schema/shipments.ts`: `shipments.route_id`, `shipments.custody_courier_id`, the checks "`status = 'registered' ⇒ route_id is null`" and "`status in ('assigned', 'dispatched') ⇒ route_id is not null`", `shipment_events.route_id`, and the values `reassigned`, `handover_confirmed`, `handover_cancelled` in `shipment_event_type`
+- [X] T011 Generate and review the migration for T009–T010 in `apps/server/src/db/migrations/`
+- [X] T012 Create `apps/server/tests/setup/routes.ts`: helpers to create a route with shipments through the API, and a test-only helper that sets a task's status and a shipment's `picked_up` status directly, standing in for feature 003
 
 ### Skeleton
 
-- [ ] T013 Create `apps/server/src/routes/routes.ts` and `apps/server/src/routes/handovers.ts` mounted in `apps/server/src/app.ts` under `/api/routes` and `/api/handovers` with `requireRole('owner', 'dispatcher')` (FR-023) and the error codes of contracts/http-api.md added to `apps/server/src/lib/errors.ts`
-- [ ] T014 Register `/rutas` and `/rutas/$routeId` in `apps/web/src/routes.ts`, create the empty pages `apps/web/src/routes/routes-board.tsx` and `apps/web/src/routes/route-detail.tsx`, and add the "Rutas" item to the panel navigation in `apps/web/src/routes/panel-layout.tsx`
+- [X] T013 Create `apps/server/src/routes/routes.ts` and `apps/server/src/routes/handovers.ts` mounted in `apps/server/src/app.ts` under `/api/routes` and `/api/handovers` with `requireRole('owner', 'dispatcher')` (FR-023) and the error codes of contracts/http-api.md added to `apps/server/src/lib/errors.ts`
+- [X] T014 Register `/rutas` and `/rutas/$routeId` in `apps/web/src/routes.ts`, create the empty pages `apps/web/src/routes/routes-board.tsx` and `apps/web/src/routes/route-detail.tsx`, and add the "Rutas" item to the panel navigation in `apps/web/src/routes/panel-layout.tsx`
+
+**Note**: `route_stops (route_id, position)` is a plain unique constraint: a reorder first
+moves every position out of the way and then writes the final ones in the same transaction,
+which gives the effect the data model asked of a deferrable constraint without one.
+Feature 001's lifecycle already declared this feature's transitions, so T002 and T006 added
+a focused test only.
 
 **Checkpoint**: `pnpm check` and `pnpm test` pass; the "Rutas" page opens empty
 
@@ -85,22 +91,27 @@ and history
 
 ### Tests for User Story 1 ⚠️ write first, must fail
 
-- [ ] T015 [P] [US1] Integration tests in `apps/server/tests/shipments-unassigned.test.ts` (FR-001): only `registered` shipments with `service_date ≤` the date, with pickup point, rate zone, neighborhood, delivery window, COD amount, and flags; filters by rate zone and merchant
-- [ ] T016 [P] [US1] Integration tests in `apps/server/tests/routes-create.test.ts` covering spec US1 scenarios 1, 5, 6, 9: stops built per FR-005, shipments become `assigned`, route number unique per service date, `422 past_service_date`, the date rule of FR-003, `409 shipment_not_registered` for a shipment already on a route, `422 confirmation_required` beyond 15 shipments, two simultaneous creations that include the same shipment leave it on exactly one route (FR-004), a repeated create with the same `id` yields one route (FR-020), `created` event with author and time (FR-002, FR-022)
-- [ ] T017 [P] [US1] Integration tests in `apps/server/tests/routes-order-courier.test.ts` covering spec US1 scenarios 2 and 8 at the API level: `PUT /stop-order` accepts a valid order, returns `409 invalid_stop_order` for a delivery before its pickup and for a moved completed stop, `409 version_conflict` on a stale version, a repeated `actionId` has no second effect; `PATCH` sets and changes the courier of a route in preparation without a reason and records it (FR-006, FR-008, FR-021)
-- [ ] T018 [P] [US1] Integration tests in `apps/server/tests/routes-dispatch.test.ts` covering spec US1 scenarios 3, 4, 7: route `in_progress`, shipments `dispatched`, `dispatched` event; `422 courier_required`; `422 route_empty` for a route with no shipments; `409 courier_busy` with the current route number, including a route in progress from an earlier day and two simultaneous dispatches to the same courier (FR-009)
-- [ ] T019 [P] [US1] End-to-end test in `apps/web/tests/e2e/route-build-dispatch.spec.ts`: quickstart scenarios 1–5, including reordering with the keyboard only
+- [X] T015 [P] [US1] Integration tests in `apps/server/tests/shipments-unassigned.test.ts` (FR-001): only `registered` shipments with `service_date ≤` the date, with pickup point, rate zone, neighborhood, delivery window, COD amount, and flags; filters by rate zone and merchant
+- [X] T016 [P] [US1] Integration tests in `apps/server/tests/routes-create.test.ts` covering spec US1 scenarios 1, 5, 6, 9: stops built per FR-005, shipments become `assigned`, route number unique per service date, `422 past_service_date`, the date rule of FR-003, `409 shipment_not_registered` for a shipment already on a route, `422 confirmation_required` beyond 15 shipments, two simultaneous creations that include the same shipment leave it on exactly one route (FR-004), a repeated create with the same `id` yields one route (FR-020), `created` event with author and time (FR-002, FR-022)
+- [X] T017 [P] [US1] Integration tests in `apps/server/tests/routes-order-courier.test.ts` covering spec US1 scenarios 2 and 8 at the API level: `PUT /stop-order` accepts a valid order, returns `409 invalid_stop_order` for a delivery before its pickup and for a moved completed stop, `409 version_conflict` on a stale version, a repeated `actionId` has no second effect; `PATCH` sets and changes the courier of a route in preparation without a reason and records it (FR-006, FR-008, FR-021)
+- [X] T018 [P] [US1] Integration tests in `apps/server/tests/routes-dispatch.test.ts` covering spec US1 scenarios 3, 4, 7: route `in_progress`, shipments `dispatched`, `dispatched` event; `422 courier_required`; `422 route_empty` for a route with no shipments; `409 courier_busy` with the current route number, including a route in progress from an earlier day and two simultaneous dispatches to the same courier (FR-009)
+- [X] T019 [P] [US1] End-to-end test in `apps/web/tests/e2e/route-build-dispatch.spec.ts`: quickstart scenarios 1–5, including reordering with the keyboard only
 
 ### Implementation for User Story 1
 
-- [ ] T020 [US1] Implement `GET /api/shipments/unassigned` in `apps/server/src/routes/shipments.ts` until T015 passes
-- [ ] T021 [US1] Implement `POST /api/routes` and `GET /api/routes/:id` in `apps/server/src/routes/routes.ts` (one transaction: exactly-once check, route number, `buildStops`, shipment transitions with `shipment_events.route_id`, `route_events`) until T016 passes
-- [ ] T022 [US1] Implement `PATCH /api/routes/:id` and `PUT /api/routes/:id/stop-order` in `apps/server/src/routes/routes.ts` until T017 passes
-- [ ] T023 [US1] Implement `POST /api/routes/:id/dispatch` in `apps/server/src/routes/routes.ts` (maps the partial unique index violation to `409 courier_busy`) until T018 passes
-- [ ] T024 [P] [US1] Build `apps/web/src/features/routes/unassigned-list.tsx`: shipments grouped by pickup point, ordered by rate zone and neighborhood, filters by rate zone and merchant, multi-selection, flags, and the empty state of FR-027
-- [ ] T025 [P] [US1] Build `apps/web/src/features/routes/stop-list.tsx` with dnd-kit: sortable stops, keyboard sensor with Spanish announcements, moves validated with `validateStopOrder` before sending, completed stops locked
-- [ ] T026 [P] [US1] Build `apps/web/src/features/routes/courier-select.tsx` (active couriers by name or alias, with the empty state "no active couriers")
-- [ ] T027 [US1] Build the route page `apps/web/src/routes/route-detail.tsx`: create a route from the selection (client-generated `id`, confirmation beyond 15 shipments), stops in order with address, neighborhood, shipments, delivery windows, and status (FR-019), courier, "Despachar", the `courier_busy` message offering to add the shipments to the current route, the conflict message that keeps the selection (FR-021), until T019 passes
+- [X] T020 [US1] Implement `GET /api/shipments/unassigned` in `apps/server/src/routes/shipments.ts` until T015 passes
+- [X] T021 [US1] Implement `POST /api/routes` and `GET /api/routes/:id` in `apps/server/src/routes/routes.ts` (one transaction: exactly-once check, route number, `buildStops`, shipment transitions with `shipment_events.route_id`, `route_events`), loading and saving the route through `apps/server/src/lib/route-store.ts`, until T016 passes
+- [X] T022 [US1] Implement `PATCH /api/routes/:id` and `PUT /api/routes/:id/stop-order` in `apps/server/src/routes/routes.ts` until T017 passes
+- [X] T023 [US1] Implement `POST /api/routes/:id/dispatch` in `apps/server/src/routes/routes.ts` (maps the partial unique index violation to `409 courier_busy`) until T018 passes
+- [X] T024 [P] [US1] Build `apps/web/src/features/routes/unassigned-list.tsx`: shipments grouped by pickup point, ordered by rate zone and neighborhood, filters by rate zone and merchant, multi-selection, flags, and the empty state of FR-027
+- [X] T025 [P] [US1] Build `apps/web/src/features/routes/stop-list.tsx` with dnd-kit: sortable stops, keyboard sensor with Spanish announcements, moves validated with `validateStopOrder` before sending, completed stops locked
+- [X] T026 [P] [US1] Build `apps/web/src/features/routes/courier-select.tsx` (active couriers by name or alias, with the empty state "no active couriers")
+- [X] T027 [US1] Build the route page `apps/web/src/routes/route-detail.tsx`: create a route from the selection (client-generated `id`, confirmation beyond 15 shipments), stops in order with address, neighborhood, shipments, delivery windows, and status (FR-019), courier, "Despachar", the `courier_busy` message offering to add the shipments to the current route, the conflict message that keeps the selection (FR-021), until T019 passes
+
+### Alignment for User Story 1 (analysis of 2026-10-13, constitution 2.0.0)
+
+- [X] T057 [US1] Declare the 15-shipment confirmation threshold of FR-005 once, in `packages/domain/src/routes.ts`, and use it in `apps/server/src/routes/routes.ts` and `apps/web/src/routes/routes-board.tsx` in place of their own constants (Constitution III); the confirmation cases of T016 and T019 keep passing
+- [X] T058 [US1] Bring the route screens to `docs/design-system.md` (FR-024, Constitution VII): `PageHeader` with the page's actions (§8), the empty states of FR-027 with `EmptyState` (§8), sheets and data tables (§7), the supporting pane layout for route building (§5), and the route state mark in a new `apps/web/src/components/route-status-mark.tsx` (§3.3, §8), across `apps/web/src/routes/routes-board.tsx`, `apps/web/src/routes/route-detail.tsx`, and `apps/web/src/features/routes/*`, until T019 and its accessibility audit pass
 
 **Checkpoint**: a route can be built, ordered, assigned, and dispatched
 
@@ -204,7 +215,7 @@ nothing picked up; verify statuses and history
 
 - [ ] T052 [P] Extend `apps/server/tests/role-permissions.test.ts` with every endpoint of contracts/http-api.md: owner and dispatcher allowed, courier refused; no `DELETE` route registered (FR-023)
 - [ ] T053 [P] Add the invariant test `apps/server/tests/routes-invariants.test.ts` (SC-002): after a random sequence of route actions by two users, every shipment not in a final status is either unassigned or on exactly one route in preparation or in progress, and no courier has two routes in progress; every action of the sequence is sent twice with the same `actionId` and has exactly one effect, and a stale `version` is always refused with `409 version_conflict` (FR-020, FR-021)
-- [ ] T054 [P] Extend the accessibility checks in `apps/web/tests/e2e/fixtures.ts` to the routes screens: WCAG 2.2 AA, keyboard-only reordering, and usability at 600 px wide (FR-024)
+- [ ] T054 [P] Cover in the route end-to-end tests what the automatic WCAG 2.2 AA audit of `apps/web/tests/e2e/fixtures.ts` does not: keyboard-only reordering of stops and use at 600 px wide, and at least one passing test ending on each route screen so the audit reaches it (FR-024)
 - [ ] T055 Run every scenario of `specs/002-routes-dispatch/quickstart.md` (1–16) and record the results in `specs/002-routes-dispatch/quickstart-results.md`
 - [ ] T056 Confirm `pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` pass with zero warnings
 
@@ -237,7 +248,7 @@ US3, US4, and US5 are independent of each other.
 ### Parallel Opportunities
 
 - Foundational: T002 and T003 together (T004 and T005 extend the same test file, in order); T008–T010 together
-- US1: T015–T019 together; T024–T026 together
+- US1: T015–T019 together; T024–T026 together; T057 before T058 (both edit `routes-board.tsx`)
 - After US1: US2; after T030: US3, US4, and US5 in parallel
 - Polish: T052–T054 together
 
@@ -277,6 +288,25 @@ Task: "Build apps/web/src/features/routes/courier-select.tsx"
 
 Implementation starts only after features 003 and 004 have their own spec, plan, tasks, and
 analysis (decision #35 in the business master).
+
+### Delivery under Trunk-Based Development (constitution 2.0.0)
+
+Each slice lands on `main` through its own short-lived branch and pull request:
+
+| Branch | Tasks |
+| --- | --- |
+| `002-us1-routes` | Phases 1–3, including T057–T058 |
+| `002-us2-routes-board` | Phase 4 |
+| `002-us3-adjust-route` | Phase 5 |
+| `002-us4-reassign` | Phase 6 |
+| `002-us5-cancel-undo` | Phase 7 |
+| `002-polish` | Phase 8 |
+
+A story that would take more than two days splits into a tests-and-server branch and a web
+branch. A story's entry point lands with its last slice, so unfinished work stays
+unreachable: T032 (the routes board), T037 ("Agregar envíos", "Quitar de la ruta"), T047
+(reassignment), and T051 ("Cancelar ruta", "Deshacer despacho"). T014's navigation item
+landed together with User Story 1, in the same branch.
 
 ---
 

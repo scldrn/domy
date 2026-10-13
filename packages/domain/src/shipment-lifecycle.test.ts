@@ -48,6 +48,14 @@ describe("shipment lifecycle", () => {
     }
   });
 
+  it("lets routes move shipments only until they are picked up (feature 002)", () => {
+    for (const to of ["registered", "assigned", "dispatched"] as const) {
+      expect(canTransition("picked_up", to), `picked_up → ${to}`).toBe(false);
+    }
+    expect(canTransition("dispatched", "assigned"), "dispatch undone").toBe(true);
+    expect(canTransition("dispatched", "registered"), "removed before pickup").toBe(true);
+  });
+
   it("treats registered, assigned, and dispatched as editable", () => {
     expect(shipmentStatuses.filter(isEditable)).toEqual(["registered", "assigned", "dispatched"]);
   });

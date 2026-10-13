@@ -178,6 +178,9 @@ export const shipmentEventType = z.enum([
   "fee_confirmed",
   "voided",
   "status_changed",
+  "reassigned",
+  "handover_confirmed",
+  "handover_cancelled",
 ]);
 
 /** A shipment as the API returns it. */

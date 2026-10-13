@@ -73,6 +73,17 @@ detail)
   client-generated UUID" only to creations. Feature 001's spec, data model, contract, and
   tasks are aligned in this branch.
 
+**Re-check on 2026-10-13** (constitution 2.0.0, after User Story 1): ✅ with three
+corrections, now in the tasks.
+- Trunk-Based Development changes how the work lands, not the design: one short-lived
+  branch per user story (tasks.md, Implementation Strategy).
+- Principle III: the 15-shipment confirmation threshold was written in both server and web;
+  T057 moves it to `packages/domain`.
+- Principle VII: the route screens predate the panel identity of `docs/design-system.md`
+  (2026-10-01), which now also defines route state marks; T058 applies it.
+- Principle VIII: `lib/route-store.ts`, written in User Story 1, is now in the project
+  structure below.
+
 ## Project Structure
 
 ### Documentation (this feature)
@@ -114,11 +125,14 @@ apps/server/src/
 │   └── shipments.ts                  # + unassigned, reassign; void and edit update the route
 └── lib/
     ├── action-id.ts                  # exactly-once helper (created in feature 001), used by every route action
+    ├── route-store.ts                # loads and saves a route's stops, version, shipment transitions, and events in the caller's transaction
     └── route-status.ts               # recalculates "Finalizada" inside each transaction
 
 apps/server/tests/                    # routes-*.test.ts, handovers.test.ts
 
 apps/web/src/
+├── components/
+│   └── route-status-mark.tsx         # route state mark (design-system.md §3.3, §8)
 ├── routes.ts                         # + /rutas, /rutas/$routeId
 ├── routes/
 │   ├── routes-board.tsx              # "Rutas": routes of the day, previous days, "Sin asignar"

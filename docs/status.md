@@ -13,16 +13,13 @@ a short-lived branch, so the specification and implementation of every feature l
 | --- | --- |
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
-| 002 Routes and dispatch | Specified on `main`. Setup, foundation, and User Story 1 (T001–T027) are done but not yet on `main`: commit `37d56c3` on `002-routes-dispatch-impl`, the last branch of the retired scheme, which predates the panel redesign |
+| 002 Routes and dispatch | Specified on `main`; re-analyzed on 2026-10-13 against constitution 2.0.0. Setup, foundation, and User Story 1 (T001–T027, T057–T058) are done on the short-lived branch `002-us1-routes`, rebuilt on `main` from `37d56c3`, with the route screens on the design system and every gate green |
 | 003 Courier app | Specified, planned, tasked, and analyzed; implementation not started |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Bring User Story 1 of 002 to `main` on a short-lived branch from `main` (`002-us1-routes`):
-   apply `37d56c3`, resolve its conflicts with the panel redesign, restyle the route screens
-   (`routes/routes-board.tsx`, `routes/route-detail.tsx`, `features/routes/*`) to
-   [design-system.md](design-system.md), pass the gates, and squash-merge it. Then delete
+1. Merge `002-us1-routes` into `main` through its pull request once CI passes, then delete
    `002-routes-dispatch-impl`.
 2. Continue 002 with User Story 2, the routes of the day on the board (T028–T032), on its own
    branch. It adds the route and courier to the board's shipments and the courier filter,

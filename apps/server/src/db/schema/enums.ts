@@ -24,6 +24,9 @@ export const shipmentEventType = pgEnum("shipment_event_type", [
   "fee_confirmed",
   "voided",
   "status_changed",
+  "reassigned",
+  "handover_confirmed",
+  "handover_cancelled",
 ]);
 export const auditAction = pgEnum("audit_action", [
   "created",

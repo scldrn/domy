@@ -20,6 +20,7 @@ import {
   type ShipmentSearchQuery,
   type ShipmentSearchResult,
   type ShipmentSummary,
+  type UnassignedShipment,
   type DispatchBoard,
   type Shipment,
   type ShipmentDetail,
@@ -334,6 +335,12 @@ function searchConditions(db: Executor, query: Omit<ShipmentSearchQuery, "cursor
   );
 }
 
+const unassignedQuery = z.object({
+  date: z.iso.date().optional(),
+  rateZoneId: z.uuid().optional(),
+  merchantId: z.uuid().optional(),
+});
+
 const pageSize = 50;
 const newestFirst = [desc(shipments.registeredAt), desc(shipments.id)];
 
@@ -548,6 +555,64 @@ export const shipmentRoutes = new Hono<AppEnv>()
       serverTime: now.toISOString(),
       ...filterBoard(date, all, filters, now),
     } satisfies DispatchBoard);
+  })
+  // Shipments on no route up to a date, grouped by pickup place, by zone and neighborhood (FR-001).
+  .get("/unassigned", validate("query", unassignedQuery), async (c) => {
+    const { date, rateZoneId, merchantId } = c.req.valid("query");
+    const db = c.get("db");
+    const items = await findSummaries(
+      db,
+      and(
+        eq(shipments.status, "registered"),
+        lte(shipments.serviceDate, date ?? bogotaToday(c.get("clock")())),
+        rateZoneId ? eq(shipments.rateZoneId, rateZoneId) : undefined,
+        merchantId ? eq(shipments.merchantId, merchantId) : undefined,
+      ),
+      [
+        asc(shipments.pickupAddress),
+        asc(rateZones.name),
+        asc(neighborhoods.name),
+        asc(shipments.registeredAt),
+      ],
+    );
+    const pickups =
+      items.length === 0
+        ? []
+        : await db
+            .select({
+              id: shipments.id,
+              pickupAddress: shipments.pickupAddress,
+              pickupPoint: { id: pickupPoints.id, label: pickupPoints.label },
+              pickupNeighborhood: { id: pickupNeighborhoods.id, name: pickupNeighborhoods.name },
+            })
+            .from(shipments)
+            .leftJoin(pickupPoints, eq(pickupPoints.id, shipments.pickupPointId))
+            .innerJoin(
+              pickupNeighborhoods,
+              eq(pickupNeighborhoods.id, shipments.pickupNeighborhoodId),
+            )
+            .where(
+              inArray(
+                shipments.id,
+                items.map((item) => item.id),
+              ),
+            );
+    const byId = new Map(pickups.map((pickup) => [pickup.id, pickup]));
+    return c.json({
+      shipments: items.flatMap((item): UnassignedShipment[] => {
+        const pickup = byId.get(item.id);
+        return pickup
+          ? [
+              {
+                ...item,
+                pickupAddress: pickup.pickupAddress,
+                pickupPoint: present(pickup.pickupPoint),
+                pickupNeighborhood: pickup.pickupNeighborhood,
+              },
+            ]
+          : [];
+      }),
+    });
   })
   // History search, newest first, a page at a time (FR-024, SC-006).
   .get("/search", validate("query", shipmentSearchQuery), async (c) => {

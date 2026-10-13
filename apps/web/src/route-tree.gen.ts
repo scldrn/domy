@@ -21,6 +21,7 @@ import { Route as merchantsRouteImport } from './routes/merchants'
 import { Route as accountRouteImport } from './routes/account'
 import { Route as historyRouteImport } from './routes/history'
 import { Route as couriersRouteImport } from './routes/couriers'
+import { Route as routesBoardRouteImport } from './routes/routes-board'
 import { Route as rateCardRouteImport } from './routes/rate-card'
 import { Route as carriersRouteImport } from './routes/carriers'
 import { Route as usersRouteImport } from './routes/users'
@@ -28,6 +29,7 @@ import { Route as merchantDetailRouteImport } from './routes/merchant-detail'
 import { Route as shipmentDetailRouteImport } from './routes/shipment-detail'
 import { Route as shipmentBulkRouteImport } from './routes/shipment-bulk'
 import { Route as shipmentNewRouteImport } from './routes/shipment-new'
+import { Route as routeDetailRouteImport } from './routes/route-detail'
 import { Route as shipmentEditRouteImport } from './routes/shipment-edit'
 
 const panelLayoutRoute = panelLayoutRouteImport.update({
@@ -89,6 +91,11 @@ const couriersRoute = couriersRouteImport.update({
   path: '/mensajeros',
   getParentRoute: () => panelLayoutRoute,
 } as any)
+const routesBoardRoute = routesBoardRouteImport.update({
+  id: '/rutas',
+  path: '/rutas',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
 const rateCardRoute = rateCardRouteImport.update({
   id: '/tarifario',
   path: '/tarifario',
@@ -124,6 +131,11 @@ const shipmentNewRoute = shipmentNewRouteImport.update({
   path: '/envios/nuevo',
   getParentRoute: () => panelLayoutRoute,
 } as any)
+const routeDetailRoute = routeDetailRouteImport.update({
+  id: '/rutas/$routeId',
+  path: '/rutas/$routeId',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
 const shipmentEditRoute = shipmentEditRouteImport.update({
   id: '/envios/$trackingNumber/editar',
   path: '/envios/$trackingNumber/editar',
@@ -142,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/cuenta': typeof accountRoute
   '/historial': typeof historyRoute
   '/mensajeros': typeof couriersRoute
+  '/rutas': typeof routesBoardRoute
   '/tarifario': typeof rateCardRoute
   '/transportadoras': typeof carriersRoute
   '/usuarios': typeof usersRoute
@@ -149,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/envios/$trackingNumber': typeof shipmentDetailRoute
   '/envios/masivo': typeof shipmentBulkRoute
   '/envios/nuevo': typeof shipmentNewRoute
+  '/rutas/$routeId': typeof routeDetailRoute
   '/envios/$trackingNumber/editar': typeof shipmentEditRoute
 }
 export interface FileRoutesByTo {
@@ -163,6 +177,7 @@ export interface FileRoutesByTo {
   '/cuenta': typeof accountRoute
   '/historial': typeof historyRoute
   '/mensajeros': typeof couriersRoute
+  '/rutas': typeof routesBoardRoute
   '/tarifario': typeof rateCardRoute
   '/transportadoras': typeof carriersRoute
   '/usuarios': typeof usersRoute
@@ -170,6 +185,7 @@ export interface FileRoutesByTo {
   '/envios/$trackingNumber': typeof shipmentDetailRoute
   '/envios/masivo': typeof shipmentBulkRoute
   '/envios/nuevo': typeof shipmentNewRoute
+  '/rutas/$routeId': typeof routeDetailRoute
   '/envios/$trackingNumber/editar': typeof shipmentEditRoute
 }
 export interface FileRoutesById {
@@ -186,6 +202,7 @@ export interface FileRoutesById {
   '/_panel/cuenta': typeof accountRoute
   '/_panel/historial': typeof historyRoute
   '/_panel/mensajeros': typeof couriersRoute
+  '/_panel/rutas': typeof routesBoardRoute
   '/_panel/tarifario': typeof rateCardRoute
   '/_panel/transportadoras': typeof carriersRoute
   '/_panel/usuarios': typeof usersRoute
@@ -193,6 +210,7 @@ export interface FileRoutesById {
   '/_panel/envios/$trackingNumber': typeof shipmentDetailRoute
   '/_panel/envios/masivo': typeof shipmentBulkRoute
   '/_panel/envios/nuevo': typeof shipmentNewRoute
+  '/_panel/rutas/$routeId': typeof routeDetailRoute
   '/_panel/envios/$trackingNumber/editar': typeof shipmentEditRoute
 }
 export interface FileRouteTypes {
@@ -209,6 +227,7 @@ export interface FileRouteTypes {
     | '/cuenta'
     | '/historial'
     | '/mensajeros'
+    | '/rutas'
     | '/tarifario'
     | '/transportadoras'
     | '/usuarios'
@@ -216,6 +235,7 @@ export interface FileRouteTypes {
     | '/envios/$trackingNumber'
     | '/envios/masivo'
     | '/envios/nuevo'
+    | '/rutas/$routeId'
     | '/envios/$trackingNumber/editar'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -230,6 +250,7 @@ export interface FileRouteTypes {
     | '/cuenta'
     | '/historial'
     | '/mensajeros'
+    | '/rutas'
     | '/tarifario'
     | '/transportadoras'
     | '/usuarios'
@@ -237,6 +258,7 @@ export interface FileRouteTypes {
     | '/envios/$trackingNumber'
     | '/envios/masivo'
     | '/envios/nuevo'
+    | '/rutas/$routeId'
     | '/envios/$trackingNumber/editar'
   id:
     | '__root__'
@@ -252,6 +274,7 @@ export interface FileRouteTypes {
     | '/_panel/cuenta'
     | '/_panel/historial'
     | '/_panel/mensajeros'
+    | '/_panel/rutas'
     | '/_panel/tarifario'
     | '/_panel/transportadoras'
     | '/_panel/usuarios'
@@ -259,6 +282,7 @@ export interface FileRouteTypes {
     | '/_panel/envios/$trackingNumber'
     | '/_panel/envios/masivo'
     | '/_panel/envios/nuevo'
+    | '/_panel/rutas/$routeId'
     | '/_panel/envios/$trackingNumber/editar'
   fileRoutesById: FileRoutesById
 }
@@ -356,6 +380,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof couriersRouteImport
       parentRoute: typeof panelLayoutRoute
     }
+    '/_panel/rutas': {
+      id: '/_panel/rutas'
+      path: '/rutas'
+      fullPath: '/rutas'
+      preLoaderRoute: typeof routesBoardRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
     '/_panel/tarifario': {
       id: '/_panel/tarifario'
       path: '/tarifario'
@@ -405,6 +436,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof shipmentNewRouteImport
       parentRoute: typeof panelLayoutRoute
     }
+    '/_panel/rutas/$routeId': {
+      id: '/_panel/rutas/$routeId'
+      path: '/rutas/$routeId'
+      fullPath: '/rutas/$routeId'
+      preLoaderRoute: typeof routeDetailRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
     '/_panel/envios/$trackingNumber/editar': {
       id: '/_panel/envios/$trackingNumber/editar'
       path: '/envios/$trackingNumber/editar'
@@ -423,6 +461,7 @@ interface panelLayoutRouteChildren {
   accountRoute: typeof accountRoute
   historyRoute: typeof historyRoute
   couriersRoute: typeof couriersRoute
+  routesBoardRoute: typeof routesBoardRoute
   rateCardRoute: typeof rateCardRoute
   carriersRoute: typeof carriersRoute
   usersRoute: typeof usersRoute
@@ -430,6 +469,7 @@ interface panelLayoutRouteChildren {
   shipmentDetailRoute: typeof shipmentDetailRoute
   shipmentBulkRoute: typeof shipmentBulkRoute
   shipmentNewRoute: typeof shipmentNewRoute
+  routeDetailRoute: typeof routeDetailRoute
   shipmentEditRoute: typeof shipmentEditRoute
 }
 
@@ -441,6 +481,7 @@ const panelLayoutRouteChildren: panelLayoutRouteChildren = {
   accountRoute: accountRoute,
   historyRoute: historyRoute,
   couriersRoute: couriersRoute,
+  routesBoardRoute: routesBoardRoute,
   rateCardRoute: rateCardRoute,
   carriersRoute: carriersRoute,
   usersRoute: usersRoute,
@@ -448,6 +489,7 @@ const panelLayoutRouteChildren: panelLayoutRouteChildren = {
   shipmentDetailRoute: shipmentDetailRoute,
   shipmentBulkRoute: shipmentBulkRoute,
   shipmentNewRoute: shipmentNewRoute,
+  routeDetailRoute: routeDetailRoute,
   shipmentEditRoute: shipmentEditRoute,
 }
 
