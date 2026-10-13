@@ -245,3 +245,10 @@ export function canUndoDispatch(stops: StopTasks[], anyPickedUp: boolean): boole
     stops.every((existing) => existing.tasks.every((task) => task.status === "pending"))
   );
 }
+
+/** Creating or growing a route beyond this many shipments asks for confirmation (FR-005). */
+export const largeRouteThreshold = 15;
+
+export function needsLargeRouteConfirmation(shipmentCount: number): boolean {
+  return shipmentCount > largeRouteThreshold;
+}

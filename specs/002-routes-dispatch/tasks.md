@@ -110,8 +110,8 @@ and history
 
 ### Alignment for User Story 1 (analysis of 2026-10-13, constitution 2.0.0)
 
-- [ ] T057 [US1] Declare the 15-shipment confirmation threshold of FR-005 once, in `packages/domain/src/routes.ts`, and use it in `apps/server/src/routes/routes.ts` and `apps/web/src/routes/routes-board.tsx` in place of their own constants (Constitution III); the confirmation cases of T016 and T019 keep passing
-- [ ] T058 [US1] Bring the route screens to `docs/design-system.md` (FR-024, Constitution VII): `PageHeader` with the page's actions (§8), the empty states of FR-027 with `EmptyState` (§8), sheets and data tables (§7), the supporting pane layout for route building (§5), and the route state mark in a new `apps/web/src/components/route-status-mark.tsx` (§3.3, §8), across `apps/web/src/routes/routes-board.tsx`, `apps/web/src/routes/route-detail.tsx`, and `apps/web/src/features/routes/*`, until T019 and its accessibility audit pass
+- [X] T057 [US1] Declare the 15-shipment confirmation threshold of FR-005 once, in `packages/domain/src/routes.ts`, and use it in `apps/server/src/routes/routes.ts` and `apps/web/src/routes/routes-board.tsx` in place of their own constants (Constitution III); the confirmation cases of T016 and T019 keep passing
+- [X] T058 [US1] Bring the route screens to `docs/design-system.md` (FR-024, Constitution VII): `PageHeader` with the page's actions (§8), the empty states of FR-027 with `EmptyState` (§8), sheets and data tables (§7), the supporting pane layout for route building (§5), and the route state mark in a new `apps/web/src/components/route-status-mark.tsx` (§3.3, §8), across `apps/web/src/routes/routes-board.tsx`, `apps/web/src/routes/route-detail.tsx`, and `apps/web/src/features/routes/*`, until T019 and its accessibility audit pass
 
 **Checkpoint**: a route can be built, ordered, assigned, and dispatched
 

@@ -1,6 +1,7 @@
 import {
   bogotaToday,
   buildStops,
+  needsLargeRouteConfirmation,
   routeActionInput,
   routeCourierInput,
   routeCreateInput,
@@ -31,9 +32,6 @@ import {
 import { isUniqueViolation, validate } from "../lib/validate.ts";
 
 const idParam = z.object({ id: z.uuid() });
-/** Routes beyond this many shipments need an explicit confirmation (FR-005). */
-const largeRoute = 15;
-
 async function requireActiveCourier(db: Executor, courierId: string) {
   const [courier] = await db
     .select({ id: couriers.id, isActive: couriers.isActive })
@@ -118,7 +116,7 @@ export const routeRoutes = new Hono<AppEnv>()
     const today = bogotaToday(now);
     if (input.serviceDate < today) throw new AppError("past_service_date");
     const shipmentIds = [...new Set(input.shipmentIds)];
-    if (shipmentIds.length > largeRoute && !input.confirmed) {
+    if (needsLargeRouteConfirmation(shipmentIds.length) && !input.confirmed) {
       throw new AppError("confirmation_required", {
         message: `La ruta tendría ${String(shipmentIds.length)} envíos; confirma para crearla.`,
       });

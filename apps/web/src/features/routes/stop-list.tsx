@@ -19,7 +19,6 @@ import {
 import {
   formatTrackingNumber,
   stopKindLabels,
-  taskStatusLabels,
   validateStopOrder,
   type RouteStop,
   type RouteStopPlan,
@@ -27,7 +26,7 @@ import {
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/cn";
 import { Icon } from "@/components/icon";
-import { Badge } from "@/components/ui/badge";
+import { ShipmentStatusMark } from "@/components/shipment-status-mark";
 import { formatWindow } from "@/lib/format";
 
 const plan = (stops: RouteStop[]): RouteStopPlan[] =>
@@ -58,11 +57,7 @@ function StopItem({ stop, index, locked }: { stop: RouteStop; index: number; loc
         transform: transform ? `translate3d(0, ${String(transform.y)}px, 0)` : undefined,
         transition,
       }}
-      className={cn(
-        "flex gap-3 rounded-lg bg-surface-container-low p-3",
-        isDragging && "relative z-10 shadow-md",
-        !isPending(stop) && "opacity-70",
-      )}
+      className={cn("flex gap-3 px-3 py-3", isDragging && "relative z-10 bg-sheet shadow-md")}
     >
       <button
         type="button"
@@ -74,43 +69,36 @@ function StopItem({ stop, index, locked }: { stop: RouteStop; index: number; loc
       >
         <Icon symbol={DragIcon} />
       </button>
-      <div className="flex flex-1 flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-title-s tabular-nums">{index + 1}.</span>
-          <Badge variant={stop.kind === "pickup" ? "info" : "secondary"}>
-            {stopKindLabels[stop.kind]}
-          </Badge>
+      <span className="w-6 shrink-0 pt-3 text-title-m text-on-surface tabular-nums">
+        {index + 1}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-2 pt-3">
+        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="text-label-l text-on-surface-variant">{stopKindLabels[stop.kind]}</span>
           <span className="text-body-l text-on-surface">{stop.address}</span>
           {stop.neighborhood && (
             <span className="text-body-m text-on-surface-variant">{stop.neighborhood.name}</span>
           )}
-        </div>
-        <ul className="flex flex-col gap-1 text-body-m">
+        </p>
+        <ul className="flex flex-col gap-1">
           {stop.tasks.map((task) => (
-            <li key={task.id} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <li key={task.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-body-m">
               <Link
                 to="/envios/$trackingNumber"
                 params={{ trackingNumber: task.shipment.trackingNumber }}
-                className="text-primary tabular-nums underline-offset-4 hover:underline"
+                className="guia rounded-xs text-title-s text-on-surface underline-offset-4 hover:underline"
               >
                 {formatTrackingNumber(task.shipment.trackingNumber)}
               </Link>
-              <span>{task.shipment.merchant.name}</span>
-              {task.shipment.recipientName && <span>{task.shipment.recipientName}</span>}
-              <span className="text-on-surface-variant">
-                {formatWindow(task.shipment.windowStart, task.shipment.windowEnd)}
+              <span className="text-on-surface">
+                {[task.shipment.merchant.name, task.shipment.recipientName]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
-              <Badge
-                variant={
-                  task.status === "completed"
-                    ? "success"
-                    : task.status === "failed"
-                      ? "destructive"
-                      : "outline"
-                }
-              >
-                {taskStatusLabels[task.status]}
-              </Badge>
+              <span className="text-on-surface-variant">
+                {formatWindow(task.shipment.windowStart, task.shipment.windowEnd) ?? "Sin franja"}
+              </span>
+              <ShipmentStatusMark status={task.shipment.status} />
             </li>
           ))}
         </ul>
@@ -176,7 +164,10 @@ export function StopList({
       }}
     >
       <SortableContext items={stops.map((stop) => stop.id)} strategy={verticalListSortingStrategy}>
-        <ol className="flex flex-col gap-2" aria-label="Paradas de la ruta">
+        <ol
+          className="flex flex-col divide-y divide-outline-variant rounded-md border border-outline-variant bg-sheet"
+          aria-label="Paradas de la ruta"
+        >
           {stops.map((stop, index) => (
             <StopItem key={stop.id} stop={stop} index={index} locked={locked} />
           ))}

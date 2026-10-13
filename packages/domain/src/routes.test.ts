@@ -4,7 +4,9 @@ import {
   buildStops,
   canUndoDispatch,
   isRouteFinished,
+  largeRouteThreshold,
   moveStop,
+  needsLargeRouteConfirmation,
   removeShipmentFromStops,
   routeProgress,
   shipmentPlaces,
@@ -259,5 +261,13 @@ describe("route status rules", () => {
     expect(canUndoDispatch(stops, false)).toBe(true);
     expect(canUndoDispatch(stops, true)).toBe(false);
     expect(canUndoDispatch(complete(stops, "a", "failed"), false)).toBe(false);
+  });
+});
+
+describe("large route confirmation (FR-005)", () => {
+  it("asks for confirmation beyond 15 shipments, not at 15", () => {
+    expect(largeRouteThreshold).toBe(15);
+    expect(needsLargeRouteConfirmation(15)).toBe(false);
+    expect(needsLargeRouteConfirmation(16)).toBe(true);
   });
 });

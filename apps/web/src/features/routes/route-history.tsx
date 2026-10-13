@@ -22,13 +22,16 @@ const eventLabels: Record<RouteEventType, string> = {
 export function RouteHistory({ events }: { events: RouteEvent[] }) {
   const headingId = useId();
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-2">
-      <h2 id={headingId} className="text-title-m text-on-surface">
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="mb-2 text-title-m text-on-surface">
         Historial de la ruta
       </h2>
-      <ol className="flex flex-col gap-2">
+      <ol className="ml-2 flex flex-col border-l-2 border-outline-variant">
         {events.map((event) => (
-          <li key={event.id} className="rounded-sm bg-surface-container-low px-4 py-3">
+          <li
+            key={event.id}
+            className="relative pb-5 pl-6 before:absolute before:top-1.5 before:-left-[7px] before:size-3 before:rounded-full before:bg-primary before:ring-4 before:ring-surface last:pb-0"
+          >
             <p className="text-body-l text-on-surface">
               {eventLabels[event.type]}
               {event.shipment && ` · ${formatTrackingNumber(event.shipment.trackingNumber)}`}

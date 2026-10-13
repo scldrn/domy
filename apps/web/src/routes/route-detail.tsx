@@ -1,28 +1,24 @@
-import { routeStatusLabels, type RouteDetail } from "@domy/domain";
+import { bogotaToday, type RouteDetail } from "@domy/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/page-header";
+import { RouteStatusMark } from "@/components/route-status-mark";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CourierSelect } from "@/features/routes/courier-select";
 import { RouteHistory } from "@/features/routes/route-history";
 import { StopList } from "@/features/routes/stop-list";
 import { dispatchRoute, getRoute, setRouteCourier, setStopOrder } from "@/features/routes/api";
 import { ApiError } from "@/lib/api-client";
-import { formatCop, formatDate } from "@/lib/format";
+import { now } from "@/lib/clock";
+import { formatCop, formatLongDate } from "@/lib/format";
 
 export const Route = createFileRoute("/_panel/rutas/$routeId")({
   head: () => ({ meta: [{ title: "Ruta · Domy" }] }),
   component: RouteDetailPage,
 });
-
-const statusVariant = {
-  draft: "outline",
-  in_progress: "info",
-  finished: "success",
-  cancelled: "destructive",
-} as const;
 
 /** One route: stops in order, courier, dispatch, and history (FR-006–FR-009, FR-019). */
 function RouteDetailPage() {
@@ -56,59 +52,51 @@ function RouteDetailPage() {
     }
   }
 
-  if (route.isPending) return <p className="text-body-l">Cargando la ruta…</p>;
-  if (route.isError) return <p className="text-body-l text-error">{route.error.message}</p>;
+  if (route.isPending) {
+    return (
+      <div className="flex flex-col gap-6" aria-label="Cargando la ruta">
+        <Skeleton className="h-12 w-64" />
+        <Skeleton className="h-72 w-full rounded-md" />
+      </div>
+    );
+  }
+  if (route.isError) {
+    return (
+      <p
+        role="alert"
+        className="rounded-sm bg-error-container p-4 text-body-l text-on-error-container"
+      >
+        {route.error.message}
+      </p>
+    );
+  }
   const data = route.data;
   const editable = data.status === "draft" || data.status === "in_progress";
 
   return (
-    <div className="flex max-w-5xl flex-col gap-6">
-      <Link to="/rutas" className="text-body-m text-primary">
-        ← Rutas
-      </Link>
-      <header className="flex flex-wrap items-center gap-4">
-        <h1 className="text-headline-s text-on-surface">Ruta {data.number}</h1>
-        <Badge variant={statusVariant[data.status]}>{routeStatusLabels[data.status]}</Badge>
-        <span className="text-body-m text-on-surface-variant">{formatDate(data.serviceDate)}</span>
-      </header>
-
-      <div className="flex flex-wrap items-end gap-6">
-        <CourierSelect
-          value={data.courier}
-          disabled={data.status !== "draft" || busy}
-          onChange={(courier) =>
-            void act((current, actionId) =>
-              setRouteCourier(current.id, {
-                actionId,
-                version: current.version,
-                courierId: courier.id,
-              }),
-            )
-          }
-        />
-        <dl className="grid grid-cols-[auto_auto] gap-x-4 text-body-l">
-          <dt className="text-on-surface-variant">Paradas completadas</dt>
-          <dd className="tabular-nums">
-            {data.progress.completed} de {data.progress.total}
-          </dd>
-          <dt className="text-on-surface-variant">Valor a recaudar</dt>
-          <dd className="tabular-nums">{formatCop(data.codToCollect)}</dd>
-        </dl>
-        {data.status === "draft" && (
-          <Button
-            disabled={busy}
-            onClick={() =>
-              void act((current, actionId) =>
-                dispatchRoute(current.id, { actionId, version: current.version }),
-              ).then((updated) => {
-                if (updated) toast.success(`Ruta ${String(updated.number)} despachada`);
-              })
-            }
-          >
-            Despachar
-          </Button>
-        )}
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title={`Ruta ${String(data.number)}`}
+        description={`${formatLongDate(data.serviceDate, bogotaToday(now()))} · ${data.courier?.name ?? "Sin mensajero"}`}
+        actions={
+          data.status === "draft" && (
+            <Button
+              disabled={busy}
+              onClick={() =>
+                void act((current, actionId) =>
+                  dispatchRoute(current.id, { actionId, version: current.version }),
+                ).then((updated) => {
+                  if (updated) toast.success(`Ruta ${String(updated.number)} despachada`);
+                })
+              }
+            >
+              Despachar
+            </Button>
+          )
+        }
+      >
+        <RouteStatusMark status={data.status} />
+      </PageHeader>
 
       {problem && (
         <p
@@ -124,23 +112,81 @@ function RouteDetailPage() {
         </p>
       )}
 
-      <StopList
-        stops={data.stops}
-        locked={!editable || busy}
-        onInvalid={(message) => {
-          setProblem({ message });
-        }}
-        onReorder={(stopIds) => {
-          // Show the new order at once; the server's answer replaces it.
-          queryClient.setQueryData(queryKey, {
-            ...data,
-            stops: stopIds.flatMap((id) => data.stops.filter((stop) => stop.id === id)),
-          });
-          void act((current, actionId) =>
-            setStopOrder(current.id, { actionId, version: current.version, stopIds }),
-          );
-        }}
-      />
+      {/* The route editor in the supporting pane layout (design-system.md §5); the summary,
+          with the courier, comes first when the panes stack. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <section
+          aria-labelledby="summary-title"
+          className="flex flex-col gap-4 rounded-md border border-outline-variant bg-sheet p-6 xl:sticky xl:top-6 xl:col-start-2 xl:row-start-1"
+        >
+          <h2 id="summary-title" className="text-title-m text-on-surface">
+            Resumen
+          </h2>
+          <CourierSelect
+            value={data.courier}
+            disabled={data.status !== "draft" || busy}
+            onChange={(courier) =>
+              void act((current, actionId) =>
+                setRouteCourier(current.id, {
+                  actionId,
+                  version: current.version,
+                  courierId: courier.id,
+                }),
+              )
+            }
+          />
+          <dl className="flex flex-col gap-3">
+            <div>
+              <dt className="text-body-m text-on-surface-variant">Paradas completadas</dt>
+              <dd className="text-title-m text-on-surface tabular-nums">
+                {data.progress.completed} de {data.progress.total}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-body-m text-on-surface-variant">Valor a recaudar</dt>
+              <dd className="text-title-m text-on-surface tabular-nums">
+                {formatCop(data.codToCollect)}
+              </dd>
+            </div>
+          </dl>
+        </section>
+        <section
+          aria-labelledby="stops-title"
+          className="flex min-w-0 flex-col gap-3 xl:col-start-1 xl:row-start-1"
+        >
+          <div>
+            <h2 id="stops-title" className="flex items-baseline gap-2 text-title-m text-on-surface">
+              Paradas
+              <span className="text-body-l text-on-surface-variant tabular-nums">
+                {data.stops.length}
+              </span>
+            </h2>
+            {editable && (
+              <p className="text-body-m text-on-surface-variant">
+                El orden es una recomendación para el mensajero. Arrastra una parada, o usa su botón
+                con el teclado, para cambiarlo.
+              </p>
+            )}
+          </div>
+          <StopList
+            stops={data.stops}
+            locked={!editable || busy}
+            onInvalid={(message) => {
+              setProblem({ message });
+            }}
+            onReorder={(stopIds) => {
+              // Show the new order at once; the server's answer replaces it.
+              queryClient.setQueryData(queryKey, {
+                ...data,
+                stops: stopIds.flatMap((id) => data.stops.filter((stop) => stop.id === id)),
+              });
+              void act((current, actionId) =>
+                setStopOrder(current.id, { actionId, version: current.version, stopIds }),
+              );
+            }}
+          />
+        </section>
+      </div>
 
       <RouteHistory events={data.events} />
     </div>
