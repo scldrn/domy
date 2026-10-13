@@ -145,10 +145,12 @@ apps/web/src/
     ├── courier-select.tsx
     ├── add-shipments-dialog.tsx      # "Agregar envíos" of route-detail.tsx (FR-011)
     ├── reassign-dialog.tsx
+    ├── route-reason-dialog.tsx       # "Cancelar ruta" and "Deshacer despacho" (FR-017, FR-026)
+    ├── reason-field.tsx              # the reason of reassigning, undoing, and cancelling (FR-016)
     ├── handover-badge.tsx
     └── route-history.tsx
 
-apps/web/tests/e2e/                   # route-build-dispatch.spec.ts, route-adjust.spec.ts, route-reassign.spec.ts
+apps/web/tests/e2e/                   # route-build-dispatch.spec.ts, route-adjust.spec.ts, route-reassign.spec.ts, route-cancel-undo.spec.ts
 ```
 
 **Structure Decision**: no new package or folder convention; this feature adds files to the

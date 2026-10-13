@@ -118,7 +118,9 @@ while a handover is pending cancels it and creates a new one from the courier in
 | `client_event_id` | uuid | Unique, optional; the request's `actionId`, set on the first event an action writes; further events of the same action leave it null (research R4) |
 
 **Added to `shipment_events`** (feature 001): `route_id` uuid → routes, set on every status
-change caused by a route and on reassignment and handover events (FR-022, SC-005).
+change caused by a route and on reassignment and handover events (FR-022, SC-005). The
+existing `reason` is also set on the status changes caused by undoing a dispatch or
+cancelling a route (FR-016).
 
 ## Shipment lifecycle: transitions owned by this feature
 
@@ -153,7 +155,7 @@ that are on no route.
 | — | `draft` | Create | Service date today or later; at least one shipment; confirmation beyond 15 shipments |
 | `draft` | `in_progress` | Dispatch | Courier set, at least one shipment, courier without a route in progress |
 | `in_progress` | `draft` | Undo dispatch | No task `completed` or `failed`, and no shipment `picked_up` on the route (including one received through a handover); reason required (FR-026) |
-| `draft` | `cancelled` | Cancel | Reason required; shipments return to `registered` |
+| `draft` | `cancelled` | Cancel | Reason required; shipments return to `registered` and their stops are removed (research R10); the number is kept |
 | `in_progress` | `finished` | Automatic | No `pending` task and no `pending` handover (FR-012) |
 
 `finished` and `cancelled` are final.

@@ -7,6 +7,7 @@ import type {
   RouteCourierInput,
   RouteCreateInput,
   RouteDetail,
+  RouteReasonInput,
   RouteReassignInput,
   RoutesBoard,
   Shipment,
@@ -67,6 +68,12 @@ export const cancelHandover = (id: string, input: HandoverActionInput) =>
 
 export const dispatchRoute = (id: string, input: RouteActionInput) =>
   unwrap<RouteDetail>(api.api.routes[":id"].dispatch.$post({ param: { id }, json: input }));
+
+export const undoDispatch = (id: string, input: RouteReasonInput) =>
+  unwrap<RouteDetail>(api.api.routes[":id"]["undo-dispatch"].$post({ param: { id }, json: input }));
+
+export const cancelRoute = (id: string, input: RouteReasonInput) =>
+  unwrap<RouteDetail>(api.api.routes[":id"].cancel.$post({ param: { id }, json: input }));
 
 export async function listActiveCouriers(): Promise<Courier[]> {
   const { items } = await unwrap<{ items: Courier[] }>(

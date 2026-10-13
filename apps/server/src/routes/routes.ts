@@ -2,11 +2,13 @@ import {
   addShipmentToStops,
   bogotaToday,
   buildStops,
+  canUndoDispatch,
   needsLargeRouteConfirmation,
   routeActionInput,
   routeAddShipmentsInput,
   routeCourierInput,
   routeCreateInput,
+  routeReasonInput,
   routeReassignInput,
   routesBoardQuery,
   shipmentStatusLabels,
@@ -548,5 +550,98 @@ export const routeRoutes = new Hono<AppEnv>()
         }
         throw error;
       }
+    },
+  )
+  // A dispatch made by mistake, while nothing is done or picked up: the route is in
+  // preparation again and its courier is free (FR-026).
+  .post(
+    "/:id/undo-dispatch",
+    validate("param", idParam),
+    validate("json", routeReasonInput),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const input = c.req.valid("json");
+      return applyRouteAction(c, id, input, async (tx, route, now) => {
+        requireStatus(route, ["in_progress"], "Solo se deshace el despacho de una ruta en curso.");
+        const carried = await tx
+          .select({ id: shipments.id, status: shipments.status })
+          .from(shipments)
+          .where(eq(shipments.routeId, id))
+          .for("update");
+        // A package received through a handover counts as picked up on this route.
+        const anyPickedUp = carried.some((shipment) => shipment.status === "picked_up");
+        if (!canUndoDispatch(await loadPlan(tx, id), anyPickedUp)) {
+          throw new AppError("route_has_completed_stops");
+        }
+        const user = c.get("user");
+        await tx
+          .update(routes)
+          .set({ status: "draft", dispatchedAt: null, dispatchedBy: null })
+          .where(eq(routes.id, id));
+        await transitionShipments(tx, {
+          ids: carried.map((shipment) => shipment.id),
+          from: ["dispatched"],
+          to: "assigned",
+          routeId: id,
+          eventRouteId: id,
+          actorUserId: user.id,
+          occurredAt: now,
+          reason: input.reason,
+        });
+        return [
+          {
+            routeId: id,
+            type: "dispatch_undone",
+            actorUserId: user.id,
+            occurredAt: now,
+            fromCourierId: route.courierId,
+            reason: input.reason,
+          },
+        ];
+      });
+    },
+  )
+  // A route in preparation built by mistake: its shipments are "Registrado" again, its stops
+  // go, and the route stays in history as "Cancelada" with its number (FR-017, research R10).
+  .post(
+    "/:id/cancel",
+    validate("param", idParam),
+    validate("json", routeReasonInput),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const input = c.req.valid("json");
+      return applyRouteAction(c, id, input, async (tx, route, now) => {
+        // A route in progress is emptied or undone first (US5 scenario 2).
+        if (route.status === "in_progress") throw new AppError("route_in_progress");
+        requireStatus(route, ["draft"], "Solo se cancela una ruta en preparación.");
+        const user = c.get("user");
+        const released = await transitionShipments(tx, {
+          ids: (
+            await tx.select({ id: shipments.id }).from(shipments).where(eq(shipments.routeId, id))
+          ).map((row) => row.id),
+          from: ["assigned"],
+          to: "registered",
+          routeId: null,
+          eventRouteId: id,
+          actorUserId: user.id,
+          occurredAt: now,
+          reason: input.reason,
+        });
+        await savePlan(tx, id, await loadPlan(tx, id), []);
+        await tx
+          .update(routes)
+          .set({ status: "cancelled", cancelReason: input.reason })
+          .where(eq(routes.id, id));
+        return [
+          {
+            routeId: id,
+            type: "cancelled",
+            actorUserId: user.id,
+            occurredAt: now,
+            reason: input.reason,
+            changes: { shipmentIds: released.map((shipment) => shipment.id) },
+          },
+        ];
+      });
     },
   );
