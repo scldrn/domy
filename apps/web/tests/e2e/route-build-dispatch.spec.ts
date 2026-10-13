@@ -114,6 +114,7 @@ test("builds, orders, and dispatches a route (scenarios 1–4)", async ({ dispat
   await page.goto("/rutas");
   await select(page, [another]);
   await page.getByRole("button", { name: "Crear ruta con 1 envío" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: /^Ruta \d+$/ })).toBeVisible();
   await expect(page.getByText("En preparación", { exact: true })).toBeVisible();
   const field = page.getByRole("combobox", { name: "Mensajero" });
   await field.click();
