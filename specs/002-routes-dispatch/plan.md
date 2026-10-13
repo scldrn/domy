@@ -126,7 +126,8 @@ apps/server/src/
 └── lib/
     ├── action-id.ts                  # exactly-once helper (created in feature 001), used by every route action
     ├── route-store.ts                # loads and saves a route's stops, version, shipment transitions, and events in the caller's transaction
-    └── route-status.ts               # recalculates "Finalizada" inside each transaction
+    ├── route-status.ts               # recalculates "Finalizada" inside each transaction
+    └── reassignment.ts               # moves a shipment between routes; requests, confirms, and cancels handovers
 
 apps/server/tests/                    # routes-*.test.ts, handovers.test.ts
 

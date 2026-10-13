@@ -4,18 +4,24 @@ import {
   isEditable,
   packageSizeLabels,
   paymentModeLabels,
+  routeStatusLabels,
   serviceLevelLabels,
   shipmentKindLabels,
   shipmentStatusLabels,
   type ShipmentDetail as ShipmentDetailData,
   type ShipmentEvent,
 } from "@domy/domain";
+import { useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
-import { useId, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { ShipmentStatusMark } from "@/components/shipment-status-mark";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { HandoverBadge } from "@/features/routes/handover-badge";
+import { ReassignShipmentDialog } from "@/features/routes/reassign-dialog";
+import { CustodyHistory } from "@/features/routes/route-history";
 import { formatCop, formatDate, formatDateTime, formatWindow } from "@/lib/format";
 import { ConfirmFeeDialog } from "./confirm-fee-dialog";
 import { VoidDialog } from "./void-dialog";
@@ -60,6 +66,9 @@ const fieldLabels: Record<string, string> = {
   packageCount: "Unidades",
   merchantReference: "Referencia",
   instructions: "Indicaciones",
+  routeId: "Ruta",
+  courierId: "Mensajero",
+  custodyCourierId: "Tiene el paquete",
 };
 const moneyFields = new Set(["fee", "calculatedFee", "codAmount"]);
 const enumLabels: Record<string, Record<string, string>> = {
@@ -102,7 +111,19 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 /** A shipment with every recorded value and its history (FR-016). */
 export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
   const { user } = panelRoute.useRouteContext();
+  const queryClient = useQueryClient();
   const historyId = useId();
+  const [reassigning, setReassigning] = useState(false);
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["shipment", shipment.trackingNumber] });
+    await queryClient.invalidateQueries({ queryKey: ["routes-board"] });
+  };
+  // A shipment on a route can move to another one (feature 002, FR-014).
+  const movable =
+    shipment.route !== null &&
+    (shipment.status === "assigned" ||
+      shipment.status === "dispatched" ||
+      shipment.status === "picked_up");
   const recipientPlace = shipment.recipientNeighborhood
     ? `${shipment.recipientNeighborhood.name}, ${shipment.recipientNeighborhood.municipality}`
     : null;
@@ -115,6 +136,16 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
           <>
             {shipment.feeNeedsReview && user.role === "owner" && (
               <ConfirmFeeDialog shipment={shipment} />
+            )}
+            {movable && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setReassigning(true);
+                }}
+              >
+                Reasignar
+              </Button>
             )}
             {canVoid(shipment.status) && <VoidDialog shipment={shipment} />}
             {isEditable(shipment.status) && (
@@ -173,6 +204,36 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
           <Row label="Nivel de servicio">{serviceLevelLabels[shipment.serviceLevel]}</Row>
         </Section>
 
+        {(shipment.route ?? shipment.custodyCourier) && (
+          <Section title="Ruta y custodia">
+            {shipment.route && (
+              <Row label="Ruta">
+                <Link
+                  to="/rutas/$routeId"
+                  params={{ routeId: shipment.route.id }}
+                  className="rounded-xs underline-offset-4 hover:underline"
+                >
+                  Ruta {shipment.route.number}
+                </Link>{" "}
+                · {routeStatusLabels[shipment.route.status]}
+                {shipment.route.serviceDate !== shipment.serviceDate &&
+                  ` · ${formatDate(shipment.route.serviceDate)}`}
+              </Row>
+            )}
+            {shipment.route && (
+              <Row label="Mensajero de la ruta">
+                {shipment.route.courier?.name ?? "Sin mensajero"}
+              </Row>
+            )}
+            <Row label="Tiene el paquete">{shipment.custodyCourier?.name}</Row>
+            {shipment.handover && (
+              <div className="py-2">
+                <HandoverBadge handover={shipment.handover} onResolved={refresh} />
+              </div>
+            )}
+          </Section>
+        )}
+
         <Section title="Detalles">
           <Row label="Franja">
             {formatWindow(shipment.windowStart, shipment.windowEnd) ?? "Sin franja"}
@@ -186,6 +247,8 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
           <Row label="Motivo de anulación">{shipment.voidReason}</Row>
         </Section>
       </div>
+
+      <CustodyHistory events={shipment.events} />
 
       <section aria-labelledby={historyId}>
         <h2 id={historyId} className="mb-2 text-title-m text-on-surface">
@@ -221,6 +284,25 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
           ))}
         </ol>
       </section>
+
+      {reassigning && shipment.route && (
+        <ReassignShipmentDialog
+          shipment={shipment}
+          fromRoute={shipment.route}
+          onClose={() => {
+            setReassigning(false);
+          }}
+          onReassigned={async ({ handover }, target) => {
+            setReassigning(false);
+            await refresh();
+            toast.success(
+              handover
+                ? `Pasa a la Ruta ${String(target.number)}: queda «Traspaso pendiente» hasta que ${handover.toCourier.name} lo reciba`
+                : `Reasignado a la Ruta ${String(target.number)}`,
+            );
+          }}
+        />
+      )}
     </div>
   );
 }

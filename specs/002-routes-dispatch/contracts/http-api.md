@@ -47,9 +47,9 @@ record `id`s.
 | `POST /api/routes/:id/undo-dispatch` | `{ actionId, version, reason }` → `RouteDetail` (FR-026) |
 | `POST /api/routes/:id/cancel` | `{ actionId, version, reason }` → `RouteDetail` (FR-017) |
 | `POST /api/routes/:id/reassign` | `{ actionId, version, courierId, reason }` (route in progress) → `RouteDetail`; creates handovers for picked-up shipments; `409 courier_busy` (FR-015, FR-025) |
-| `POST /api/shipments/:id/reassign` | `{ actionId, toRouteId, reason }` → `{ shipment, handover? }`; a handover is created only for a picked-up shipment moving to another courier, replacing any pending one (FR-014, FR-025) |
+| `POST /api/shipments/:id/reassign` | `{ actionId, toRouteId, reason }` → `{ shipment, handover }`, `handover` being the shipment's pending handover or `null`; a handover is created only for a picked-up shipment moving to another courier, replacing any pending one (FR-014, FR-025) |
 | `POST /api/handovers/:id/confirm` | `{ actionId }` → `Handover` with `resolvedOnBehalf: true` (dispatcher confirms for the courier; the courier's own confirmation is feature 003) |
-| `POST /api/handovers/:id/cancel` | `{ actionId }` → `Handover`; the delivery task returns to the previous route (FR-025) |
+| `POST /api/handovers/:id/cancel` | `{ actionId }` → `Handover`; the delivery task returns to the previous route (FR-025). A handover inside a route reassigned as a whole has no other route to return to: `409 invalid_transition`, and the dispatcher reassigns the route or the shipment instead |
 
 Reasons are 5–200 characters. Removing uses `POST …/remove` because the API has no `DELETE`
 endpoints.
@@ -60,6 +60,10 @@ endpoints.
   `POST …/confirm-fee`, and every master data `PATCH` also carry `actionId`, stored as the
   resulting event's `client_event_id`; a repeated one returns the current record.
 - **`GET /api/shipments/board`**: each `BoardShipment` gains `routeId` and `routeNumber`.
+- **`GET /api/shipments/:id`** (and `?trackingNumber=`): `ShipmentDetail` gains `route` (`id`,
+  `number`, `serviceDate`, `status`, `courier`), `custodyCourier`, and `handover` (the pending
+  one, or `null`). History `changes` also record `routeId`, `courierId`, and
+  `custodyCourierId`, shown by name ("Ruta 3", the courier's name) (FR-016, SC-005).
 - **`POST /api/shipments/:id/void`** and **`PATCH /api/shipments/:id`**: when the shipment is
   on a route, the same transaction removes it from the route or updates its stops (FR-013).
 - **`PATCH /api/couriers/:id`** with `isActive: false`: the response includes

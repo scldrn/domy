@@ -7,6 +7,7 @@ import {
   routeAddShipmentsInput,
   routeCourierInput,
   routeCreateInput,
+  routeReassignInput,
   routesBoardQuery,
   shipmentStatusLabels,
   stopOrderInput,
@@ -14,12 +15,12 @@ import {
   type RoutesBoard,
   type RouteStopPlan,
 } from "@domy/domain";
-import { and, eq, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../app.ts";
 import type { Executor } from "../db/client.ts";
-import { couriers, routes, shipments } from "../db/schema/index.ts";
+import { couriers, routes, shipmentEvents, shipments } from "../db/schema/index.ts";
 import { findRouteAction } from "../lib/action-id.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
@@ -38,6 +39,12 @@ import {
   type NewRouteEvent,
   type RouteRow,
 } from "../lib/route-store.ts";
+import {
+  blockDelivery,
+  cancelPendingHandover,
+  handoverEvent,
+  requestHandover,
+} from "../lib/reassignment.ts";
 import { refreshRouteStatus } from "../lib/route-status.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
 
@@ -394,6 +401,102 @@ export const routeRoutes = new Hono<AppEnv>()
           await removeFromPlan(tx, id, shipmentId, { actorUserId: user.id, occurredAt: now }),
         ];
       });
+    },
+  )
+  // A route in progress passes to another courier with a reason (FR-015, FR-016, FR-025).
+  .post(
+    "/:id/reassign",
+    validate("param", idParam),
+    validate("json", routeReassignInput),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const input = c.req.valid("json");
+      await requireActiveCourier(c.get("db"), input.courierId);
+      try {
+        return await applyRouteAction(c, id, input, async (tx, route, now) => {
+          requireStatus(
+            route,
+            ["in_progress"],
+            "Solo se reasigna una ruta en curso; en una ruta en preparación, cambia el mensajero.",
+          );
+          if (route.courierId === input.courierId) {
+            throw new AppError("invalid_request", {
+              fields: { courierId: "La ruta ya es de ese mensajero." },
+            });
+          }
+          const by = { actorUserId: c.get("user").id, now };
+          await tx.update(routes).set({ courierId: input.courierId }).where(eq(routes.id, id));
+          const events: NewRouteEvent[] = [
+            {
+              routeId: id,
+              type: "reassigned",
+              actorUserId: by.actorUserId,
+              occurredAt: now,
+              fromCourierId: route.courierId,
+              toCourierId: input.courierId,
+              reason: input.reason,
+            },
+          ];
+          // Pending stops pass with the route; completed ones keep who did them. A package
+          // someone else holds waits for its handover, replacing a pending one (FR-025).
+          const carried = await tx
+            .select({
+              id: shipments.id,
+              status: shipments.status,
+              custodyCourierId: shipments.custodyCourierId,
+            })
+            .from(shipments)
+            .where(
+              and(
+                eq(shipments.routeId, id),
+                inArray(shipments.status, ["dispatched", "picked_up"]),
+              ),
+            );
+          for (const shipment of carried.filter((each) => each.status === "picked_up")) {
+            const cancelled = await cancelPendingHandover(tx, shipment.id, by);
+            if (cancelled) events.push(handoverEvent("handover_cancelled", id, cancelled, by));
+            const holder = shipment.custodyCourierId;
+            if (holder && holder !== input.courierId) {
+              const handover = await requestHandover(
+                tx,
+                {
+                  shipmentId: shipment.id,
+                  fromCourierId: holder,
+                  toCourierId: input.courierId,
+                  fromRouteId: cancelled?.fromRouteId ?? id,
+                  toRouteId: id,
+                  reason: input.reason,
+                },
+                by,
+              );
+              events.push(handoverEvent("handover_requested", id, handover, by));
+            } else if (cancelled) {
+              await blockDelivery(tx, shipment.id, null);
+            }
+          }
+          if (carried.length > 0) {
+            await tx.insert(shipmentEvents).values(
+              carried.map((shipment) => ({
+                shipmentId: shipment.id,
+                type: "reassigned" as const,
+                fromStatus: shipment.status,
+                toStatus: shipment.status,
+                reason: input.reason,
+                actorUserId: by.actorUserId,
+                occurredAt: now,
+                routeId: id,
+                changes: { courierId: [route.courierId, input.courierId] },
+              })),
+            );
+          }
+          return events;
+        });
+      } catch (error) {
+        if (isUniqueViolation(error, "routes_one_in_progress_per_courier")) {
+          throw await courierBusy(c.get("db"), input.courierId);
+        }
+        throw error;
+      }
     },
   )
   // Dispatch: the route goes to its courier and its shipments are on the way (FR-009).

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { packageSize, paymentMode, serviceLevel, shipmentKind, shipmentStatus } from "./enums.ts";
+import type { Handover } from "./routes.ts";
+import type { RouteStatus } from "../routes.ts";
 
 /** Reasons (fee override, errand fee, missing rate, voiding) are 5–200 characters (FR-040). */
 export const reason = z
@@ -234,4 +236,19 @@ export type ShipmentEvent = {
   changes: Record<string, [unknown, unknown]> | null;
 };
 
-export type ShipmentDetail = Shipment & { events: ShipmentEvent[] };
+/**
+ * A shipment with its history and where it is on the routes (feature 002): its route with
+ * that route's courier, who holds the package, and the handover waiting for confirmation.
+ */
+export type ShipmentDetail = Shipment & {
+  route: {
+    id: string;
+    number: number;
+    serviceDate: string;
+    status: RouteStatus;
+    courier: { id: string; name: string } | null;
+  } | null;
+  custodyCourier: { id: string; name: string } | null;
+  handover: Handover | null;
+  events: ShipmentEvent[];
+};

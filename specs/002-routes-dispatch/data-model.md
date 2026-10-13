@@ -166,5 +166,8 @@ that are on no route.
 - **Flags**: feature 001's flag rule applied to the route's shipments.
 - **Unassigned**: shipments `registered` with `service_date ≤` the selected date.
 - **Routes from previous days**: `status = 'in_progress'` and `service_date <` today.
-- **Custody history** (SC-005): the shipment's events of type `status_changed` to
-  `picked_up`, `reassigned`, and `handover_confirmed`, in order.
+- **Custody history** (SC-005): the shipment's events whose `changes` record
+  `custodyCourierId: [from, to]`, in order: the pickup (`[null, courier]`), each confirmed
+  handover (`[giver, receiver]`), and the delivery or return (`[courier, null]`). Feature 003
+  writes the pickup, delivery, and return events with that change; `reassigned` events record
+  `routeId` and `courierId` (the routes' couriers) without changing custody.

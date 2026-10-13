@@ -17,6 +17,7 @@ import {
   shipmentUpdateInput,
   shipmentVoidInput,
   shipmentExportQuery,
+  shipmentReassignInput,
   shipmentSearchQuery,
   type ShipmentSearchQuery,
   type ShipmentSearchResult,
@@ -52,6 +53,7 @@ import type { Db, Executor } from "../db/client.ts";
 import {
   carriers,
   couriers,
+  handovers,
   merchantAliases,
   merchants,
   municipalities,
@@ -75,8 +77,10 @@ import {
   rateEntriesFor,
   resolvePickup,
 } from "../lib/registration.ts";
+import { lockRoutes, moveShipment } from "../lib/reassignment.ts";
 import { refreshRouteStatus } from "../lib/route-status.ts";
 import {
+  loadHandovers,
   loadPlan,
   planShipments,
   recordRouteEvents,
@@ -179,6 +183,39 @@ async function loadShipment(db: Executor, id: string): Promise<Shipment> {
   return shipment;
 }
 
+/**
+ * Where a shipment is on the routes (feature 002): its route and that route's courier, who
+ * holds the package, and the handover waiting for confirmation (FR-019, FR-025).
+ */
+async function loadRouteState(db: Executor, id: string) {
+  const [row] = await db
+    .select({
+      route: {
+        id: routes.id,
+        number: routes.number,
+        serviceDate: routes.serviceDate,
+        status: routes.status,
+      },
+      routeCourier: { id: routeCouriers.id, name: routeCouriers.name },
+      custodyCourier: { id: custodyCouriers.id, name: custodyCouriers.name },
+    })
+    .from(shipments)
+    .leftJoin(routes, eq(routes.id, shipments.routeId))
+    .leftJoin(routeCouriers, eq(routeCouriers.id, routes.courierId))
+    .leftJoin(custodyCouriers, eq(custodyCouriers.id, shipments.custodyCourierId))
+    .where(eq(shipments.id, id));
+  const [handover] = await loadHandovers(
+    db,
+    and(eq(handovers.shipmentId, id), eq(handovers.status, "pending")),
+  );
+  const route = present(row?.route ?? null);
+  return {
+    route: route && { ...route, courier: present(row?.routeCourier ?? null) },
+    custodyCourier: present(row?.custodyCourier ?? null),
+    handover: handover ?? null,
+  };
+}
+
 async function loadDetail(db: Executor, id: string): Promise<ShipmentDetail> {
   const shipment = await loadShipment(db, id);
   const events = await db
@@ -195,6 +232,7 @@ async function loadDetail(db: Executor, id: string): Promise<ShipmentDetail> {
   );
   return {
     ...shipment,
+    ...(await loadRouteState(db, id)),
     events: events.map(({ event, actor }) => ({
       id: event.id,
       type: event.type,
@@ -222,13 +260,16 @@ async function loadDetail(db: Executor, id: string): Promise<ShipmentDetail> {
 type Changes = Record<string, [unknown, unknown]>;
 const changesOf = (event: { changes: unknown }) => (event.changes ?? {}) as Changes;
 
-/** Changed identifiers are shown by name in the history (FR-016). */
+/** Changed identifiers are shown by name in the history (FR-016; feature 002, FR-016). */
 const referenceFields = new Set([
   "recipientNeighborhoodId",
   "pickupNeighborhoodId",
   "pickupPointId",
   "rateZoneId",
   "carrierId",
+  "courierId",
+  "custodyCourierId",
+  "routeId",
 ]);
 
 const named = (names: Map<string, string>, value: unknown) =>
@@ -257,6 +298,14 @@ async function referenceNames(db: Executor, changes: [string, [unknown, unknown]
       .select({ id: pickupPoints.id, name: pickupPoints.label })
       .from(pickupPoints)
       .where(inArray(pickupPoints.id, ids)),
+    db
+      .select({ id: couriers.id, name: couriers.name })
+      .from(couriers)
+      .where(inArray(couriers.id, ids)),
+    db
+      .select({ id: routes.id, name: sql<string>`'Ruta ' || ${routes.number}` })
+      .from(routes)
+      .where(inArray(routes.id, ids)),
   ]);
   return new Map(rows.flat().map((row) => [row.id, row.name]));
 }
@@ -873,6 +922,47 @@ export const shipmentRoutes = new Hono<AppEnv>()
     );
     return c.json(await loadShipment(db, id));
   })
+  // Moving a shipment to another route with a reason (feature 002, FR-014, FR-016, FR-025).
+  .post(
+    "/:id/reassign",
+    validate("param", idParam),
+    validate("json", shipmentReassignInput),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { actionId, toRouteId, reason } = c.req.valid("json");
+      const db = c.get("db");
+      if (!(await findShipmentAction(db, actionId))) {
+        const by = { actorUserId: c.get("user").id, now: c.get("clock")(), reason, actionId };
+        await db
+          .transaction(async (tx) => {
+            const [found] = await tx
+              .select({ routeId: shipments.routeId })
+              .from(shipments)
+              .where(eq(shipments.id, id));
+            if (!found) throw new AppError("not_found", { message: "No encontramos ese envío." });
+            // Routes first, in the order every route action locks them.
+            await lockRoutes(tx, [found.routeId, toRouteId]);
+            const [shipment] = await tx
+              .select()
+              .from(shipments)
+              .where(eq(shipments.id, id))
+              .for("update");
+            if (!shipment || shipment.routeId !== found.routeId) {
+              throw new AppError("version_conflict", {
+                message: "Este envío cambió; revisa la versión más reciente.",
+              });
+            }
+            await moveShipment(tx, shipment, toRouteId, by);
+          })
+          .catch((error: unknown) => {
+            if (isUniqueViolation(error, "shipment_events_client_event_id_key")) return;
+            throw error;
+          });
+      }
+      const { handover } = await loadRouteState(db, id);
+      return c.json({ shipment: await loadShipment(db, id), handover });
+    },
+  )
   // The owner confirms or corrects a fee marked "Tarifa por revisar" (FR-035).
   .post(
     "/:id/confirm-fee",

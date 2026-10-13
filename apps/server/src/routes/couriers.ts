@@ -1,10 +1,10 @@
 import { courierCreateInput, courierUpdateInput, normalizeText, type Courier } from "@domy/domain";
-import { and, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../app.ts";
 import type { Executor } from "../db/client.ts";
-import { courierAliases, couriers } from "../db/schema/index.ts";
+import { courierAliases, couriers, routes } from "../db/schema/index.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
 import {
@@ -116,5 +116,11 @@ export const courierRoutes = new Hono<AppEnv>()
       if (aliases) await replaceAliases(tx, "courier", id, aliases);
       return changes;
     });
-    return c.json(await loadCourier(c.get("db"), id));
+    // Their routes in preparation or in progress stay with them until reassigned (FR-010).
+    const [open] = await c
+      .get("db")
+      .select({ count: count() })
+      .from(routes)
+      .where(and(eq(routes.courierId, id), inArray(routes.status, ["draft", "in_progress"])));
+    return c.json({ ...(await loadCourier(c.get("db"), id)), openRoutes: open?.count ?? 0 });
   });

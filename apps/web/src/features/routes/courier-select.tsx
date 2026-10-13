@@ -13,10 +13,16 @@ export function CourierSelect({
   value,
   onChange,
   disabled,
+  id = "route-courier",
+  label = "Mensajero",
+  invalid,
 }: {
   value: { id: string; name: string } | null;
   onChange: (courier: Courier) => void;
   disabled?: boolean;
+  id?: string;
+  label?: string;
+  invalid?: boolean;
 }) {
   const couriers = useQuery({ queryKey: ["couriers", "active"], queryFn: listActiveCouriers });
   if (couriers.data?.length === 0) {
@@ -45,15 +51,16 @@ export function CourierSelect({
   };
   const current = couriers.data?.find((courier) => courier.id === value?.id) ?? null;
   return (
-    <Field>
-      <FieldLabel htmlFor="route-courier">Mensajero</FieldLabel>
+    <Field data-invalid={invalid}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
       {disabled ? (
         <p className="text-body-l text-on-surface">{value?.name ?? "Sin mensajero"}</p>
       ) : (
         <SearchCombobox<Courier>
           key={value?.id ?? "none"}
-          id="route-courier"
-          label="Mensajero"
+          id={id}
+          label={label}
+          {...(invalid !== undefined && { invalid })}
           queryKey={["couriers", "search"]}
           search={search}
           value={current}

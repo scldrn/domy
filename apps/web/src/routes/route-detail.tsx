@@ -1,4 +1,4 @@
-import { bogotaToday, formatTrackingNumber, type RouteDetail } from "@domy/domain";
+import { bogotaToday, formatTrackingNumber, type RouteDetail, type RouteTask } from "@domy/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddShipmentsDialog } from "@/features/routes/add-shipments-dialog";
 import { CourierSelect } from "@/features/routes/courier-select";
+import { HandoverBadge } from "@/features/routes/handover-badge";
+import { ReassignRouteDialog, ReassignShipmentDialog } from "@/features/routes/reassign-dialog";
 import { RouteHistory } from "@/features/routes/route-history";
 import { StopList } from "@/features/routes/stop-list";
 import {
@@ -28,8 +30,8 @@ export const Route = createFileRoute("/_panel/rutas/$routeId")({
 });
 
 /**
- * One route: stops in order, courier, dispatch, shipments added and removed, and history
- * (FR-006–FR-009, FR-011, FR-012, FR-019).
+ * One route: stops in order, courier, dispatch, shipments added, removed, and reassigned,
+ * handovers, and history (FR-006–FR-009, FR-011, FR-012, FR-014, FR-015, FR-019, FR-025).
  */
 function RouteDetailPage() {
   const { routeId } = Route.useParams();
@@ -38,6 +40,13 @@ function RouteDetailPage() {
   const route = useQuery({ queryKey, queryFn: () => getRoute(routeId), refetchInterval: 20_000 });
   const [problem, setProblem] = useState<{ message: string; routeId?: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reassigning, setReassigning] = useState<RouteTask | null>(null);
+
+  /** Reloads the route after a change made through a shipment or a handover. */
+  async function refresh() {
+    await route.refetch();
+    await queryClient.invalidateQueries({ queryKey: ["routes-board"] });
+  }
 
   async function showUpdated(updated: RouteDetail) {
     queryClient.setQueryData(queryKey, updated);
@@ -88,25 +97,89 @@ function RouteDetailPage() {
   const data = route.data;
   const editable = data.status === "draft" || data.status === "in_progress";
 
+  /** Remove, reassign, or resolve the handover of a shipment at a stop (FR-012, FR-014, FR-025). */
+  function taskActions(task: RouteTask) {
+    if (task.blockedByHandoverId) {
+      const handover = data.handovers.find((each) => each.id === task.blockedByHandoverId);
+      return handover && <HandoverBadge handover={handover} onResolved={refresh} />;
+    }
+    if (!editable || task.kind === "pickup" || task.status !== "pending") return null;
+    const guide = formatTrackingNumber(task.shipment.trackingNumber);
+    const notPickedUp =
+      task.shipment.status === "assigned" || task.shipment.status === "dispatched";
+    return (
+      <>
+        {(notPickedUp || task.shipment.status === "picked_up") && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-my-3"
+            disabled={busy}
+            aria-label={`Reasignar ${guide}`}
+            onClick={() => {
+              setReassigning(task);
+            }}
+          >
+            Reasignar
+          </Button>
+        )}
+        {notPickedUp && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-my-3"
+            disabled={busy}
+            aria-label={`Quitar ${guide} de la ruta`}
+            onClick={() => {
+              void act((current, actionId) =>
+                removeRouteShipment(current.id, task.shipmentId, {
+                  actionId,
+                  version: current.version,
+                }),
+              ).then((updated) => {
+                if (updated) toast.success(`${guide} quitado de la ruta`);
+              });
+            }}
+          >
+            Quitar
+          </Button>
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title={`Ruta ${String(data.number)}`}
         description={`${formatLongDate(data.serviceDate, bogotaToday(now()))} · ${data.courier?.name ?? "Sin mensajero"}`}
         actions={
-          data.status === "draft" && (
-            <Button
+          data.status === "in_progress" ? (
+            <ReassignRouteDialog
+              route={data}
               disabled={busy}
-              onClick={() =>
-                void act((current, actionId) =>
-                  dispatchRoute(current.id, { actionId, version: current.version }),
-                ).then((updated) => {
-                  if (updated) toast.success(`Ruta ${String(updated.number)} despachada`);
-                })
-              }
-            >
-              Despachar
-            </Button>
+              onReassigned={async (updated) => {
+                await showUpdated(updated);
+                toast.success(
+                  `Ruta ${String(updated.number)} reasignada a ${updated.courier?.name ?? ""}`,
+                );
+              }}
+            />
+          ) : (
+            data.status === "draft" && (
+              <Button
+                disabled={busy}
+                onClick={() =>
+                  void act((current, actionId) =>
+                    dispatchRoute(current.id, { actionId, version: current.version }),
+                  ).then((updated) => {
+                    if (updated) toast.success(`Ruta ${String(updated.number)} despachada`);
+                  })
+                }
+              >
+                Despachar
+              </Button>
+            )
           )
         }
       >
@@ -207,22 +280,7 @@ function RouteDetailPage() {
             onInvalid={(message) => {
               setProblem({ message });
             }}
-            {...(editable && {
-              onRemove: (task) => {
-                void act((current, actionId) =>
-                  removeRouteShipment(current.id, task.shipmentId, {
-                    actionId,
-                    version: current.version,
-                  }),
-                ).then((updated) => {
-                  if (updated) {
-                    toast.success(
-                      `${formatTrackingNumber(task.shipment.trackingNumber)} quitado de la ruta`,
-                    );
-                  }
-                });
-              },
-            })}
+            taskActions={taskActions}
             onReorder={(stopIds) => {
               // Show the new order at once; the server's answer replaces it.
               queryClient.setQueryData(queryKey, {
@@ -236,6 +294,31 @@ function RouteDetailPage() {
           />
         </section>
       </div>
+
+      {reassigning && (
+        <ReassignShipmentDialog
+          key={reassigning.id}
+          shipment={{
+            id: reassigning.shipmentId,
+            trackingNumber: reassigning.shipment.trackingNumber,
+            status: reassigning.shipment.status,
+          }}
+          fromRoute={data}
+          onClose={() => {
+            setReassigning(null);
+          }}
+          onReassigned={async ({ handover }, target) => {
+            const guide = formatTrackingNumber(reassigning.shipment.trackingNumber);
+            setReassigning(null);
+            await refresh();
+            toast.success(
+              handover
+                ? `${guide} pasa a la Ruta ${String(target.number)}: queda «Traspaso pendiente» hasta que ${handover.toCourier.name} lo reciba`
+                : `${guide} reasignado a la Ruta ${String(target.number)}`,
+            );
+          }}
+        />
+      )}
 
       <RouteHistory events={data.events} />
     </div>
