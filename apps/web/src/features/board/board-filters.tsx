@@ -26,19 +26,21 @@ const flags = Object.keys(flagLabels) as BoardFlag[];
 export function BoardFilters({
   filters,
   merchants,
+  couriers,
   rateZones,
   counts,
   onChange,
 }: {
   filters: BoardQuery;
   merchants: { id: string; name: string }[];
+  couriers: { id: string; name: string }[];
   rateZones: { id: string; name: string }[];
   /** Shipments per status; the tabs appear once the board has loaded. */
   counts: Record<ShipmentStatus, number> | null;
   onChange: (next: Partial<BoardQuery>) => void;
 }) {
   const filtered = Boolean(
-    filters.merchantId ?? filters.rateZoneId ?? filters.flag ?? filters.status,
+    filters.merchantId ?? filters.courierId ?? filters.rateZoneId ?? filters.flag ?? filters.status,
   );
   return (
     <div className="flex flex-col gap-3">
@@ -82,6 +84,20 @@ export function BoardFilters({
           </Field>
           <Field className="w-full sm:w-56">
             <OptionSelect
+              label="Mensajero"
+              hideLabel
+              value={filters.courierId ?? all}
+              onChange={(value) => {
+                onChange({ courierId: value === all ? undefined : value });
+              }}
+              options={[
+                { value: all, label: "Todos los mensajeros" },
+                ...couriers.map((courier) => ({ value: courier.id, label: courier.name })),
+              ]}
+            />
+          </Field>
+          <Field className="w-full sm:w-56">
+            <OptionSelect
               label="Zona tarifaria"
               hideLabel
               value={filters.rateZoneId ?? all}
@@ -100,6 +116,7 @@ export function BoardFilters({
               onClick={() => {
                 onChange({
                   merchantId: undefined,
+                  courierId: undefined,
                   rateZoneId: undefined,
                   flag: undefined,
                   status: undefined,

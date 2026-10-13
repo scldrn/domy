@@ -169,6 +169,7 @@ function DispatchBoardPage() {
             <BoardFilters
               filters={search}
               merchants={distinctById(all.map((shipment) => shipment.merchant))}
+              couriers={distinctById(all.map((shipment) => shipment.courier))}
               rateZones={distinctById(all.map((shipment) => shipment.rateZone))}
               counts={view.counts}
               onChange={setFilters}

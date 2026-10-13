@@ -24,6 +24,9 @@ function shipment(
     windowEnd: window[1],
     codAmount: 0,
     feeNeedsReview: false,
+    routeId: null,
+    routeNumber: null,
+    courier: null,
   };
 }
 

@@ -1,7 +1,13 @@
-import { bogotaToday, largeRouteThreshold, needsLargeRouteConfirmation } from "@domy/domain";
+import RouteIcon from "@material-symbols/svg-400/rounded/route.svg?react";
+import {
+  bogotaToday,
+  largeRouteThreshold,
+  needsLargeRouteConfirmation,
+  type RouteSummary,
+} from "@domy/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { z } from "zod";
 import {
   AlertDialog,
@@ -12,12 +18,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { createRoute, listUnassigned } from "@/features/routes/api";
+import { createRoute, getRoutesBoard, listUnassigned } from "@/features/routes/api";
+import { RouteSummaryCard } from "@/features/routes/route-summary-card";
 import { UnassignedList } from "@/features/routes/unassigned-list";
 import { ApiError } from "@/lib/api-client";
 import { now } from "@/lib/clock";
@@ -29,6 +37,43 @@ export const Route = createFileRoute("/_panel/rutas")({
   component: RoutesBoardPage,
 });
 
+/** A titled group of route cards; `empty` shows when the group has none. */
+function RoutesSection({
+  title,
+  hint,
+  routes,
+  empty,
+}: {
+  title: string;
+  hint?: string;
+  routes: RouteSummary[];
+  empty?: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <section aria-labelledby={headingId} className="flex flex-col gap-3">
+      <div>
+        <h2 id={headingId} className="flex items-baseline gap-2 text-title-l text-on-surface">
+          {title}
+          <span className="text-body-l text-on-surface-variant tabular-nums">{routes.length}</span>
+        </h2>
+        {hint && <p className="text-body-m text-on-surface-variant">{hint}</p>}
+      </div>
+      {routes.length === 0 ? (
+        empty
+      ) : (
+        <ul aria-labelledby={headingId} className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+          {routes.map((route) => (
+            <li key={route.id}>
+              <RouteSummaryCard route={route} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 /** The routes of a date and the shipments still without a route (feature 002). */
 function RoutesBoardPage() {
   const search = Route.useSearch();
@@ -36,6 +81,12 @@ function RoutesBoardPage() {
   const queryClient = useQueryClient();
   const today = bogotaToday(now());
   const date = search.date ?? today;
+  // Changes by any user appear within 30 seconds (FR-018, SC-003).
+  const board = useQuery({
+    queryKey: ["routes-board", date],
+    queryFn: () => getRoutesBoard(date),
+    refetchInterval: 20_000,
+  });
   const unassigned = useQuery({
     queryKey: ["unassigned", date],
     queryFn: () => listUnassigned(date),
@@ -62,6 +113,7 @@ function RoutesBoardPage() {
       setSelected([]);
       setDraftId(crypto.randomUUID());
       await queryClient.invalidateQueries({ queryKey: ["unassigned"] });
+      await queryClient.invalidateQueries({ queryKey: ["routes-board"] });
       await navigate({ to: "/rutas/$routeId", params: { routeId: route.id } });
     } catch (error) {
       // The selection stays, so the dispatcher can adjust it and try again (FR-021).
@@ -100,6 +152,41 @@ function RoutesBoardPage() {
           </Field>
         }
       />
+
+      {board.isPending ? (
+        <div className="grid gap-3 md:grid-cols-2" aria-label="Cargando las rutas">
+          <Skeleton className="h-44 w-full rounded-md" />
+          <Skeleton className="h-44 w-full rounded-md" />
+        </div>
+      ) : board.isError ? (
+        <p
+          role="alert"
+          className="rounded-sm bg-error-container p-4 text-body-l text-on-error-container"
+        >
+          {board.error.message}
+        </p>
+      ) : (
+        <>
+          <RoutesSection
+            title="Rutas del día"
+            routes={board.data.routes}
+            empty={
+              <EmptyState
+                icon={RouteIcon}
+                title="No hay rutas para este día"
+                description="Elige envíos en «Sin asignar» y crea la primera ruta."
+              />
+            }
+          />
+          {board.data.routesFromPreviousDays.length > 0 && (
+            <RoutesSection
+              title="Rutas de días anteriores"
+              hint="Siguen en curso hasta que se resuelvan todos sus envíos."
+              routes={board.data.routesFromPreviousDays}
+            />
+          )}
+        </>
+      )}
 
       {/* Route building in the supporting pane layout (design-system.md §5); when the panes
           stack, the new route stays in view at the bottom. */}

@@ -1,7 +1,8 @@
 import type { RouteDetail, Shipment, ShipmentStatus } from "@domy/domain";
 import { and, eq, sql } from "drizzle-orm";
-import type { Db } from "../../src/db/client.ts";
+import type { Db, Executor } from "../../src/db/client.ts";
 import { couriers, routes, routeTasks, shipments } from "../../src/db/schema/index.ts";
+import { refreshRouteStatus } from "../../src/lib/route-status.ts";
 
 /**
  * Route helpers for integration tests. The database helpers stand in for feature 003 (the
@@ -45,62 +46,71 @@ export async function placeOnRoute(
   return routeId;
 }
 
+/** The route carrying a shipment, with its courier and its author. */
+async function routeOf(db: Executor, shipmentId: string) {
+  const [route] = await db
+    .select({ id: routes.id, courierId: routes.courierId, createdBy: routes.createdBy })
+    .from(shipments)
+    .innerJoin(routes, eq(routes.id, shipments.routeId))
+    .where(eq(shipments.id, shipmentId));
+  if (!route) throw new Error("The shipment is not on a route");
+  return route;
+}
+
 /**
  * Completes the pending pickup task of a shipment and marks it picked up by the route's
  * courier, as the courier app will (feature 003).
  */
 export async function pickUp(db: Db, shipmentId: string): Promise<void> {
-  const [shipment] = await db
-    .select({ courierId: routes.courierId })
-    .from(shipments)
-    .innerJoin(routes, eq(routes.id, shipments.routeId))
-    .where(eq(shipments.id, shipmentId));
-  await db
-    .update(routeTasks)
-    .set({
-      status: "completed",
-      completedAt: new Date(),
-      completedByCourierId: shipment?.courierId,
-    })
-    .where(
-      and(
-        eq(routeTasks.shipmentId, shipmentId),
-        eq(routeTasks.kind, "pickup"),
-        eq(routeTasks.status, "pending"),
-      ),
-    );
-  await db
-    .update(shipments)
-    .set({ status: "picked_up", custodyCourierId: shipment?.courierId })
-    .where(eq(shipments.id, shipmentId));
+  await db.transaction(async (tx) => {
+    const route = await routeOf(tx, shipmentId);
+    await tx
+      .update(routeTasks)
+      .set({ status: "completed", completedAt: new Date(), completedByCourierId: route.courierId })
+      .where(
+        and(
+          eq(routeTasks.shipmentId, shipmentId),
+          eq(routeTasks.kind, "pickup"),
+          eq(routeTasks.status, "pending"),
+        ),
+      );
+    await tx
+      .update(shipments)
+      .set({ status: "picked_up", custodyCourierId: route.courierId })
+      .where(eq(shipments.id, shipmentId));
+    // The route's author stands in for the courier who will record it (feature 003).
+    await refreshRouteStatus(tx, route.id, { actorUserId: route.createdBy, now: new Date() });
+  });
 }
 
-/** Completes or fails the pending delivery (or errand) task of a shipment directly. */
+/**
+ * Completes or fails the pending delivery (or errand) task of a shipment directly, and
+ * finishes the route when nothing is left (FR-012), as the courier app will (feature 003).
+ */
 export async function finishTask(
   db: Db,
   shipmentId: string,
   outcome: "delivered" | "exception",
 ): Promise<void> {
-  const [shipment] = await db
-    .select({ courierId: routes.courierId })
-    .from(shipments)
-    .innerJoin(routes, eq(routes.id, shipments.routeId))
-    .where(eq(shipments.id, shipmentId));
-  await db
-    .update(routeTasks)
-    .set({
-      status: outcome === "delivered" ? "completed" : "failed",
-      completedAt: new Date(),
-      completedByCourierId: shipment?.courierId,
-    })
-    .where(
-      and(
-        eq(routeTasks.shipmentId, shipmentId),
-        eq(routeTasks.status, "pending"),
-        sql`${routeTasks.kind} in ('delivery', 'errand')`,
-      ),
-    );
-  await db.update(shipments).set({ status: outcome }).where(eq(shipments.id, shipmentId));
+  await db.transaction(async (tx) => {
+    const route = await routeOf(tx, shipmentId);
+    await tx
+      .update(routeTasks)
+      .set({
+        status: outcome === "delivered" ? "completed" : "failed",
+        completedAt: new Date(),
+        completedByCourierId: route.courierId,
+      })
+      .where(
+        and(
+          eq(routeTasks.shipmentId, shipmentId),
+          eq(routeTasks.status, "pending"),
+          sql`${routeTasks.kind} in ('delivery', 'errand')`,
+        ),
+      );
+    await tx.update(shipments).set({ status: outcome }).where(eq(shipments.id, shipmentId));
+    await refreshRouteStatus(tx, route.id, { actorUserId: route.createdBy, now: new Date() });
+  });
 }
 
 type TestApp = {

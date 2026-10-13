@@ -21,6 +21,9 @@ function shipment(status: ShipmentStatus, extra: Partial<BoardShipment> = {}): B
     windowEnd: null,
     codAmount: 0,
     feeNeedsReview: false,
+    routeId: null,
+    routeNumber: null,
+    courier: null,
     ...extra,
   };
 }

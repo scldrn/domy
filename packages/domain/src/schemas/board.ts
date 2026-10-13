@@ -11,6 +11,7 @@ export const boardQuery = z.object({
   date: calendarDate.optional(),
   status: shipmentStatus.optional(),
   merchantId: z.uuid().optional(),
+  courierId: z.uuid().optional(),
   rateZoneId: z.uuid().optional(),
   flag: boardFlag.optional(),
 });
@@ -30,6 +31,11 @@ export type BoardShipment = {
   windowEnd: string | null;
   codAmount: number;
   feeNeedsReview: boolean;
+  /** The route carrying the shipment (feature 002, FR-018). */
+  routeId: string | null;
+  routeNumber: number | null;
+  /** Who is responsible for it: the courier holding the package, else the route's courier. */
+  courier: { id: string; name: string } | null;
 };
 
 /** The dispatch board of a date (FR-021); `serverTime` corrects the client's clock (R9). */

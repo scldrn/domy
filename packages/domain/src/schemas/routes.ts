@@ -24,6 +24,9 @@ export const routeCreateInput = z.object({
 });
 export type RouteCreateInput = z.input<typeof routeCreateInput>;
 
+/** The routes board of a date (FR-018); today when omitted. */
+export const routesBoardQuery = z.object({ date: calendarDate.optional() });
+
 export const routeActionInput = z.object({ actionId, version });
 export type RouteActionInput = z.input<typeof routeActionInput>;
 
