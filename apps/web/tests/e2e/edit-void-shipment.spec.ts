@@ -37,7 +37,12 @@ test("refuses the second of two concurrent saves and keeps its values (scenario 
 }) => {
   const shipment = await register(first);
   const second = await first.context().newPage();
-  for (const page of [first, second]) await page.goto(`/envios/${shipment.trackingNumber}/editar`);
+  // Both pages must show the first version before either saves: `goto` returns before the
+  // shipment arrives, and a page that loads it late would see the second version instead.
+  for (const page of [first, second]) {
+    await page.goto(`/envios/${shipment.trackingNumber}/editar`);
+    await expect(page.getByLabel("Dirección de entrega")).toHaveValue("Calle 10 # 43-12");
+  }
 
   await first.getByLabel("Dirección de entrega").fill("Calle 11 # 40-10");
   await first.getByRole("button", { name: "Guardar cambios" }).click();
