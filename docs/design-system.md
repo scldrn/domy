@@ -12,7 +12,7 @@ for how M3 is applied in Domy; anything it does not cover defers to the official
 - **Icons**: [Material Symbols](https://fonts.google.com/icons) **Rounded** (Apache 2.0),
   imported as individual SVGs, never as an icon font (§7.1)
 - **Owner**: Samuel Calderón owns visual decisions.
-- **Last updated**: 2026-10-01
+- **Last updated**: 2026-10-13
 
 ## 1. Principles for Domy
 
@@ -107,6 +107,11 @@ accent is kept as chosen:
 
 `error` covers late shipments, delivery exceptions, and failed sync; `tertiary` marks
 "Asignado". Color is never the only signal: every state also carries its label.
+
+Route statuses reuse these roles, so a route reads like its shipments (adopted 2026-10-13):
+"En preparación" `tertiary` (as "Asignado"), "En curso" `info` (as on the way), "Finalizada"
+`success` (as "Entregado"), and "Cancelada" neutral (`on-surface-variant` with an
+`outline-variant` dot, as "Anulado").
 
 ### 3.4 Mapping to shadcn/ui tokens
 
@@ -231,6 +236,7 @@ spec.
   when a sync completes or fails, with a retry action.
 - **Shipment state mark**: a dot and the label in the state's color (§3.3), identical on
   every surface; "Registrado" is a hollow dot.
+- **Route state mark**: the same dot and label, with the route status roles of §3.3.
 - **Tracking number**: `guia` style, the link to the shipment wherever it appears.
 - **At-risk and late**: `warning` and `error` roles with the remaining or overdue time.
 - **Photo skipped**: `warning` chip "Sin foto" on the dispatch board.

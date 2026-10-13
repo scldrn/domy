@@ -100,13 +100,18 @@ and history
 ### Implementation for User Story 1
 
 - [X] T020 [US1] Implement `GET /api/shipments/unassigned` in `apps/server/src/routes/shipments.ts` until T015 passes
-- [X] T021 [US1] Implement `POST /api/routes` and `GET /api/routes/:id` in `apps/server/src/routes/routes.ts` (one transaction: exactly-once check, route number, `buildStops`, shipment transitions with `shipment_events.route_id`, `route_events`) until T016 passes
+- [X] T021 [US1] Implement `POST /api/routes` and `GET /api/routes/:id` in `apps/server/src/routes/routes.ts` (one transaction: exactly-once check, route number, `buildStops`, shipment transitions with `shipment_events.route_id`, `route_events`), loading and saving the route through `apps/server/src/lib/route-store.ts`, until T016 passes
 - [X] T022 [US1] Implement `PATCH /api/routes/:id` and `PUT /api/routes/:id/stop-order` in `apps/server/src/routes/routes.ts` until T017 passes
 - [X] T023 [US1] Implement `POST /api/routes/:id/dispatch` in `apps/server/src/routes/routes.ts` (maps the partial unique index violation to `409 courier_busy`) until T018 passes
 - [X] T024 [P] [US1] Build `apps/web/src/features/routes/unassigned-list.tsx`: shipments grouped by pickup point, ordered by rate zone and neighborhood, filters by rate zone and merchant, multi-selection, flags, and the empty state of FR-027
 - [X] T025 [P] [US1] Build `apps/web/src/features/routes/stop-list.tsx` with dnd-kit: sortable stops, keyboard sensor with Spanish announcements, moves validated with `validateStopOrder` before sending, completed stops locked
 - [X] T026 [P] [US1] Build `apps/web/src/features/routes/courier-select.tsx` (active couriers by name or alias, with the empty state "no active couriers")
 - [X] T027 [US1] Build the route page `apps/web/src/routes/route-detail.tsx`: create a route from the selection (client-generated `id`, confirmation beyond 15 shipments), stops in order with address, neighborhood, shipments, delivery windows, and status (FR-019), courier, "Despachar", the `courier_busy` message offering to add the shipments to the current route, the conflict message that keeps the selection (FR-021), until T019 passes
+
+### Alignment for User Story 1 (analysis of 2026-10-13, constitution 2.0.0)
+
+- [ ] T057 [US1] Declare the 15-shipment confirmation threshold of FR-005 once, in `packages/domain/src/routes.ts`, and use it in `apps/server/src/routes/routes.ts` and `apps/web/src/routes/routes-board.tsx` in place of their own constants (Constitution III); the confirmation cases of T016 and T019 keep passing
+- [ ] T058 [US1] Bring the route screens to `docs/design-system.md` (FR-024, Constitution VII): `PageHeader` with the page's actions (§8), the empty states of FR-027 with `EmptyState` (§8), sheets and data tables (§7), the supporting pane layout for route building (§5), and the route state mark in a new `apps/web/src/components/route-status-mark.tsx` (§3.3, §8), across `apps/web/src/routes/routes-board.tsx`, `apps/web/src/routes/route-detail.tsx`, and `apps/web/src/features/routes/*`, until T019 and its accessibility audit pass
 
 **Checkpoint**: a route can be built, ordered, assigned, and dispatched
 
@@ -210,7 +215,7 @@ nothing picked up; verify statuses and history
 
 - [ ] T052 [P] Extend `apps/server/tests/role-permissions.test.ts` with every endpoint of contracts/http-api.md: owner and dispatcher allowed, courier refused; no `DELETE` route registered (FR-023)
 - [ ] T053 [P] Add the invariant test `apps/server/tests/routes-invariants.test.ts` (SC-002): after a random sequence of route actions by two users, every shipment not in a final status is either unassigned or on exactly one route in preparation or in progress, and no courier has two routes in progress; every action of the sequence is sent twice with the same `actionId` and has exactly one effect, and a stale `version` is always refused with `409 version_conflict` (FR-020, FR-021)
-- [ ] T054 [P] Extend the accessibility checks in `apps/web/tests/e2e/fixtures.ts` to the routes screens: WCAG 2.2 AA, keyboard-only reordering, and usability at 600 px wide (FR-024)
+- [ ] T054 [P] Cover in the route end-to-end tests what the automatic WCAG 2.2 AA audit of `apps/web/tests/e2e/fixtures.ts` does not: keyboard-only reordering of stops and use at 600 px wide, and at least one passing test ending on each route screen so the audit reaches it (FR-024)
 - [ ] T055 Run every scenario of `specs/002-routes-dispatch/quickstart.md` (1–16) and record the results in `specs/002-routes-dispatch/quickstart-results.md`
 - [ ] T056 Confirm `pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` pass with zero warnings
 
@@ -243,7 +248,7 @@ US3, US4, and US5 are independent of each other.
 ### Parallel Opportunities
 
 - Foundational: T002 and T003 together (T004 and T005 extend the same test file, in order); T008–T010 together
-- US1: T015–T019 together; T024–T026 together
+- US1: T015–T019 together; T024–T026 together; T057 before T058 (both edit `routes-board.tsx`)
 - After US1: US2; after T030: US3, US4, and US5 in parallel
 - Polish: T052–T054 together
 
@@ -283,6 +288,25 @@ Task: "Build apps/web/src/features/routes/courier-select.tsx"
 
 Implementation starts only after features 003 and 004 have their own spec, plan, tasks, and
 analysis (decision #35 in the business master).
+
+### Delivery under Trunk-Based Development (constitution 2.0.0)
+
+Each slice lands on `main` through its own short-lived branch and pull request:
+
+| Branch | Tasks |
+| --- | --- |
+| `002-us1-routes` | Phases 1–3, including T057–T058 |
+| `002-us2-routes-board` | Phase 4 |
+| `002-us3-adjust-route` | Phase 5 |
+| `002-us4-reassign` | Phase 6 |
+| `002-us5-cancel-undo` | Phase 7 |
+| `002-polish` | Phase 8 |
+
+A story that would take more than two days splits into a tests-and-server branch and a web
+branch. A story's entry point lands with its last slice, so unfinished work stays
+unreachable: T032 (the routes board), T037 ("Agregar envíos", "Quitar de la ruta"), T047
+(reassignment), and T051 ("Cancelar ruta", "Deshacer despacho"). T014's navigation item
+landed together with User Story 1, in the same branch.
 
 ---
 
