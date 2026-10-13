@@ -13,18 +13,16 @@ a short-lived branch, so the specification and implementation of every feature l
 | --- | --- |
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
-| 002 Routes and dispatch | Specified on `main`; re-analyzed on 2026-10-13 against constitution 2.0.0. Setup, foundation, and User Story 1 (T001–T027, T057–T058) are done on the short-lived branch `002-us1-routes`, rebuilt on `main` from `37d56c3`, with the route screens on the design system and every gate green |
+| 002 Routes and dispatch | User Story 1 on `main` (#4). User Story 2 (T028–T032), the routes of the day and the courier on the dispatch board, done on the short-lived branch `002-us2-routes-board` with every gate green. User Stories 3–5 and polish remain |
 | 003 Courier app | Specified, planned, tasked, and analyzed; implementation not started |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Merge `002-us1-routes` into `main` through its pull request once CI passes, then delete
-   `002-routes-dispatch-impl`.
-2. Continue 002 with User Story 2, the routes of the day on the board (T028–T032), on its own
-   branch. It adds the route and courier to the board's shipments and the courier filter,
-   which completes the courier column of 001's FR-021 and FR-023.
-3. Then User Stories 3–5, polish, and converge 002, one slice per branch; then 003 and 004
+1. Merge `002-us2-routes-board` into `main` through its pull request once CI passes.
+2. Continue 002 with User Story 3, adjusting a route (T033–T037), on `002-us3-adjust-route`:
+   add and remove shipments, and keep routes consistent when a shipment is voided or edited.
+3. Then User Stories 4–5, polish, and converge 002, one slice per branch; then 003 and 004
    the same way.
 
 ## Open with the client

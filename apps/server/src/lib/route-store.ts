@@ -1,15 +1,17 @@
 import {
   routeProgress,
+  shipmentFlag,
   shipmentPlaces,
   type Handover,
   type RouteDetail,
   type RouteEvent,
   type RoutePlanShipment,
   type RouteStopPlan,
+  type RouteSummary,
   type RouteTaskPlan,
   type ShipmentStatus,
 } from "@domy/domain";
-import { and, asc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Executor } from "../db/client.ts";
 import {
@@ -280,6 +282,96 @@ export async function loadHandovers(db: Executor, where: SQL | undefined): Promi
   }));
 }
 
+/** Shipments on no route up to a date: "Sin asignar" (FR-001, data model §Derived values). */
+export function unassignedUpTo(date: string): SQL | undefined {
+  return and(eq(shipments.status, "registered"), lte(shipments.serviceDate, date));
+}
+
+/** COD to collect per route: the sum over the shipments currently on it (FR-018). */
+async function codToCollect(db: Executor, routeIds: string[]): Promise<Map<string, number>> {
+  const rows = await db
+    .select({
+      routeId: shipments.routeId,
+      total: sql<number>`coalesce(sum(${shipments.codAmount}), 0)::int`,
+    })
+    .from(shipments)
+    .where(inArray(shipments.routeId, routeIds))
+    .groupBy(shipments.routeId);
+  return new Map(rows.flatMap((row) => (row.routeId ? [[row.routeId, row.total] as const] : [])));
+}
+
+/**
+ * Each route's line on the routes board (FR-018): courier, status, progress, COD to collect,
+ * the flags of its shipments at `now`, and the handovers waiting for its courier.
+ */
+export async function loadRouteSummaries(
+  db: Executor,
+  where: SQL | undefined,
+  now: Date,
+): Promise<RouteSummary[]> {
+  const rows = await db
+    .select({ route: routes, courier: { id: couriers.id, name: couriers.name } })
+    .from(routes)
+    .leftJoin(couriers, eq(couriers.id, routes.courierId))
+    .where(where)
+    .orderBy(asc(routes.serviceDate), asc(routes.number));
+  if (rows.length === 0) return [];
+  const ids = rows.map(({ route }) => route.id);
+  const stops = await db
+    .select({ id: routeStops.id, routeId: routeStops.routeId })
+    .from(routeStops)
+    .where(inArray(routeStops.routeId, ids));
+  const tasks =
+    stops.length === 0
+      ? []
+      : await db
+          .select({ stopId: routeTasks.stopId, status: routeTasks.status })
+          .from(routeTasks)
+          .where(
+            inArray(
+              routeTasks.stopId,
+              stops.map((stop) => stop.id),
+            ),
+          );
+  const carried = await db
+    .select({
+      routeId: shipments.routeId,
+      status: shipments.status,
+      windowEnd: shipments.windowEnd,
+    })
+    .from(shipments)
+    .where(inArray(shipments.routeId, ids));
+  const waiting = await db
+    .select({ routeId: handovers.toRouteId, count: sql<number>`count(*)::int` })
+    .from(handovers)
+    .where(and(eq(handovers.status, "pending"), inArray(handovers.toRouteId, ids)))
+    .groupBy(handovers.toRouteId);
+  const cod = await codToCollect(db, ids);
+  return rows.map(({ route, courier }) => {
+    const progress = routeProgress(
+      stops
+        .filter((stop) => stop.routeId === route.id)
+        .map((stop) => ({ tasks: tasks.filter((task) => task.stopId === stop.id) })),
+    );
+    const flags = carried
+      .filter((shipment) => shipment.routeId === route.id)
+      .map((shipment) => shipmentFlag(shipment, now)?.kind);
+    return {
+      id: route.id,
+      number: route.number,
+      serviceDate: route.serviceDate,
+      status: route.status,
+      courier: route.courierId ? courier : null,
+      completedStops: progress.completed,
+      totalStops: progress.total,
+      codToCollect: cod.get(route.id) ?? 0,
+      atRiskCount: flags.filter((kind) => kind === "at_risk").length,
+      lateCount: flags.filter((kind) => kind === "late").length,
+      pendingHandovers: waiting.find((row) => row.routeId === route.id)?.count ?? 0,
+    };
+  });
+}
+
 /** A route with its stops, tasks, handovers, and history, as the API returns it (FR-019). */
 export async function loadRouteDetail(db: Executor, id: string): Promise<RouteDetail> {
   const route = await loadRouteRow(db, id);
@@ -316,10 +408,7 @@ export async function loadRouteDetail(db: Executor, id: string): Promise<RouteDe
             ),
           )
           .orderBy(asc(routeTasks.id));
-  const [cod] = await db
-    .select({ total: sql<number>`coalesce(sum(${shipments.codAmount}), 0)::int` })
-    .from(shipments)
-    .where(eq(shipments.routeId, id));
+  const cod = await codToCollect(db, [id]);
   const events = await db
     .select({
       event: routeEvents,
@@ -374,7 +463,7 @@ export async function loadRouteDetail(db: Executor, id: string): Promise<RouteDe
     dispatchedAt: route.dispatchedAt?.toISOString() ?? null,
     finishedAt: route.finishedAt?.toISOString() ?? null,
     version: route.version,
-    codToCollect: cod?.total ?? 0,
+    codToCollect: cod.get(id) ?? 0,
     progress: routeProgress(detailStops),
     stops: detailStops,
     handovers: await loadHandovers(

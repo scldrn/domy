@@ -4,6 +4,7 @@ import type {
   RouteCourierInput,
   RouteCreateInput,
   RouteDetail,
+  RoutesBoard,
   StopOrderInput,
   UnassignedShipment,
 } from "@domy/domain";
@@ -17,6 +18,9 @@ export async function listUnassigned(date: string): Promise<UnassignedShipment[]
   );
   return shipments;
 }
+
+export const getRoutesBoard = (date: string) =>
+  unwrap<RoutesBoard>(api.api.routes.board.$get({ query: { date } }));
 
 export const createRoute = (input: RouteCreateInput) =>
   unwrap<RouteDetail>(api.api.routes.$post({ json: input }));

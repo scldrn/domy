@@ -144,6 +144,9 @@ describe("GET /api/shipments/search", () => {
       fee: 13000,
       feeNeedsReview: false,
       registeredAt: shipment.registeredAt,
+      routeId: null,
+      routeNumber: null,
+      courier: null,
     });
   });
 

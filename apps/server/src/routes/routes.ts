@@ -5,10 +5,12 @@ import {
   routeActionInput,
   routeCourierInput,
   routeCreateInput,
+  routesBoardQuery,
   stopOrderInput,
   validateStopOrder,
+  type RoutesBoard,
 } from "@domy/domain";
-import { and, eq, isNull, lte, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, lte, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../app.ts";
@@ -22,10 +24,12 @@ import {
   loadPlan,
   loadRouteDetail,
   loadRouteRow,
+  loadRouteSummaries,
   planShipments,
   recordRouteEvents,
   savePlan,
   transitionShipments,
+  unassignedUpTo,
   type NewRouteEvent,
   type RouteRow,
 } from "../lib/route-store.ts";
@@ -188,6 +192,32 @@ export const routeRoutes = new Hono<AppEnv>()
         throw error;
       }
     }
+  })
+  // The routes of a date and, on today's board, those still in progress from earlier days
+  // (FR-018, clarification Q1); flags use the server clock.
+  .get("/board", validate("query", routesBoardQuery), async (c) => {
+    const db = c.get("db");
+    const now = c.get("clock")();
+    const today = bogotaToday(now);
+    const date = c.req.valid("query").date ?? today;
+    const [unassigned] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(shipments)
+      .where(unassignedUpTo(date));
+    return c.json({
+      date,
+      serverTime: now.toISOString(),
+      routes: await loadRouteSummaries(db, eq(routes.serviceDate, date), now),
+      routesFromPreviousDays:
+        date === today
+          ? await loadRouteSummaries(
+              db,
+              and(eq(routes.status, "in_progress"), lt(routes.serviceDate, today)),
+              now,
+            )
+          : [],
+      unassignedCount: unassigned?.count ?? 0,
+    } satisfies RoutesBoard);
   })
   .get("/:id", validate("param", idParam), async (c) => {
     return c.json(await loadRouteDetail(c.get("db"), c.req.valid("param").id));

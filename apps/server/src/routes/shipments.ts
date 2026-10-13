@@ -50,12 +50,14 @@ import type { AppEnv } from "../app.ts";
 import type { Db, Executor } from "../db/client.ts";
 import {
   carriers,
+  couriers,
   merchantAliases,
   merchants,
   municipalities,
   neighborhoods,
   pickupPoints,
   rateZones,
+  routes,
   shipmentEvents,
   shipments,
   users,
@@ -72,6 +74,7 @@ import {
   rateEntriesFor,
   resolvePickup,
 } from "../lib/registration.ts";
+import { unassignedUpTo } from "../lib/route-store.ts";
 import { AppError } from "../lib/errors.ts";
 import { exportTable, findExportRecords, toCsv, toXlsx } from "../lib/export.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
@@ -79,6 +82,8 @@ import { isUniqueViolation, validate } from "../lib/validate.ts";
 const pickupNeighborhoods = alias(neighborhoods, "pickup_neighborhoods");
 const recipientNeighborhoods = alias(neighborhoods, "recipient_neighborhoods");
 const recipientMunicipalities = alias(municipalities, "recipient_municipalities");
+const routeCouriers = alias(couriers, "route_couriers");
+const custodyCouriers = alias(couriers, "custody_couriers");
 
 /** A left-joined record, or null when the join found nothing. */
 function present<T extends Record<string, unknown>>(
@@ -272,22 +277,31 @@ async function findSummaries(
       fee: shipments.fee,
       feeNeedsReview: shipments.feeNeedsReview,
       registeredAt: shipments.registeredAt,
+      routeId: shipments.routeId,
+      routeNumber: routes.number,
+      routeCourier: { id: routeCouriers.id, name: routeCouriers.name },
+      custodyCourier: { id: custodyCouriers.id, name: custodyCouriers.name },
     })
     .from(shipments)
     .innerJoin(merchants, eq(merchants.id, shipments.merchantId))
     .leftJoin(neighborhoods, eq(neighborhoods.id, shipments.recipientNeighborhoodId))
     .leftJoin(rateZones, eq(rateZones.id, shipments.rateZoneId))
+    .leftJoin(routes, eq(routes.id, shipments.routeId))
+    .leftJoin(routeCouriers, eq(routeCouriers.id, routes.courierId))
+    .leftJoin(custodyCouriers, eq(custodyCouriers.id, shipments.custodyCourierId))
     .where(where)
     .orderBy(...order)
     .$dynamic();
   const rows = await (limit === undefined ? query : query.limit(limit));
-  return rows.map((row) => ({
+  return rows.map(({ routeCourier, custodyCourier, ...row }) => ({
     ...row,
     recipientNeighborhood: present(row.recipientNeighborhood),
     rateZone: present(row.rateZone),
     windowStart: row.windowStart?.toISOString() ?? null,
     windowEnd: row.windowEnd?.toISOString() ?? null,
     registeredAt: row.registeredAt.toISOString(),
+    // Who is responsible: the courier holding the package, else the route's (feature 002).
+    courier: present(custodyCourier) ?? present(routeCourier),
   }));
 }
 
@@ -563,8 +577,7 @@ export const shipmentRoutes = new Hono<AppEnv>()
     const items = await findSummaries(
       db,
       and(
-        eq(shipments.status, "registered"),
-        lte(shipments.serviceDate, date ?? bogotaToday(c.get("clock")())),
+        unassignedUpTo(date ?? bogotaToday(c.get("clock")())),
         rateZoneId ? eq(shipments.rateZoneId, rateZoneId) : undefined,
         merchantId ? eq(shipments.merchantId, merchantId) : undefined,
       ),

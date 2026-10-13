@@ -47,12 +47,13 @@ export function BoardTable({
   onPoint: (id: string | null) => void;
 }) {
   return (
-    <Table className="min-w-[58rem] table-fixed">
+    <Table className="min-w-[68rem] table-fixed">
       <TableHeader>
         <TableRow>
           <TableHead className="w-40">Guía</TableHead>
           <TableHead>Cliente</TableHead>
           <TableHead>Destinatario</TableHead>
+          <TableHead className="w-44">Mensajero</TableHead>
           <TableHead className="w-56">Franja</TableHead>
           <TableHead className="w-32 text-right">Recaudo</TableHead>
           <TableHead className="w-40">Estado</TableHead>
@@ -95,6 +96,20 @@ export function BoardTable({
                 <span className="block truncate text-body-s text-on-surface-variant">
                   {shipment.recipientNeighborhood?.name ?? "Sin barrio"}
                 </span>
+              </TableCell>
+              <TableCell className="truncate">
+                {shipment.courier?.name ?? (
+                  <span className="text-on-surface-variant">Sin mensajero</span>
+                )}
+                {shipment.routeId && shipment.routeNumber !== null && (
+                  <Link
+                    to="/rutas/$routeId"
+                    params={{ routeId: shipment.routeId }}
+                    className="block w-fit rounded-xs text-body-s text-on-surface-variant underline-offset-4 hover:underline"
+                  >
+                    Ruta {shipment.routeNumber}
+                  </Link>
+                )}
               </TableCell>
               <TableCell>
                 {formatWindow(shipment.windowStart, shipment.windowEnd) ?? (

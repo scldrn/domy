@@ -21,6 +21,7 @@ export function filterBoard(
   const listed: BoardShipment[] = [];
   for (const shipment of shipments) {
     if (filters.merchantId && shipment.merchant.id !== filters.merchantId) continue;
+    if (filters.courierId && shipment.courier?.id !== filters.courierId) continue;
     if (filters.rateZoneId && shipment.rateZone?.id !== filters.rateZoneId) continue;
     if (filters.flag === "fee_review" && !shipment.feeNeedsReview) continue;
     if (filters.flag === "at_risk" || filters.flag === "late") {
