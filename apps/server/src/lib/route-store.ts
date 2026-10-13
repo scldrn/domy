@@ -238,6 +238,8 @@ export async function transitionShipments(
     actorUserId: string;
     occurredAt: Date;
     extraWhere?: SQL | undefined;
+    /** The reason of a route action that moves them back (FR-017, FR-026). */
+    reason?: string;
   },
 ): Promise<{ id: string; status: ShipmentStatus }[]> {
   if (change.ids.length === 0) return [];
@@ -273,6 +275,7 @@ export async function transitionShipments(
         actorUserId: change.actorUserId,
         occurredAt: change.occurredAt,
         routeId: change.eventRouteId,
+        reason: change.reason ?? null,
       })),
     );
   }

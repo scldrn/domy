@@ -1,8 +1,10 @@
+import RouteIcon from "@material-symbols/svg-400/rounded/route.svg?react";
 import { bogotaToday, formatTrackingNumber, type RouteDetail, type RouteTask } from "@domy/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { RouteStatusMark } from "@/components/route-status-mark";
 import { Button } from "@/components/ui/button";
@@ -12,6 +14,7 @@ import { CourierSelect } from "@/features/routes/courier-select";
 import { HandoverBadge } from "@/features/routes/handover-badge";
 import { ReassignRouteDialog, ReassignShipmentDialog } from "@/features/routes/reassign-dialog";
 import { RouteHistory } from "@/features/routes/route-history";
+import { CancelRouteDialog, UndoDispatchDialog } from "@/features/routes/route-reason-dialog";
 import { StopList } from "@/features/routes/stop-list";
 import {
   dispatchRoute,
@@ -31,7 +34,8 @@ export const Route = createFileRoute("/_panel/rutas/$routeId")({
 
 /**
  * One route: stops in order, courier, dispatch, shipments added, removed, and reassigned,
- * handovers, and history (FR-006–FR-009, FR-011, FR-012, FR-014, FR-015, FR-019, FR-025).
+ * handovers, undoing and cancelling, and history (FR-006–FR-009, FR-011, FR-012, FR-014,
+ * FR-015, FR-017, FR-019, FR-025, FR-026).
  */
 function RouteDetailPage() {
   const { routeId } = Route.useParams();
@@ -155,30 +159,52 @@ function RouteDetailPage() {
         description={`${formatLongDate(data.serviceDate, bogotaToday(now()))} · ${data.courier?.name ?? "Sin mensajero"}`}
         actions={
           data.status === "in_progress" ? (
-            <ReassignRouteDialog
-              route={data}
-              disabled={busy}
-              onReassigned={async (updated) => {
-                await showUpdated(updated);
-                toast.success(
-                  `Ruta ${String(updated.number)} reasignada a ${updated.courier?.name ?? ""}`,
-                );
-              }}
-            />
+            <>
+              <UndoDispatchDialog
+                route={data}
+                disabled={busy}
+                onDone={async (updated) => {
+                  await showUpdated(updated);
+                  toast.success(`Ruta ${String(updated.number)} de nuevo en preparación`);
+                }}
+                onRefused={() => route.refetch()}
+              />
+              <ReassignRouteDialog
+                route={data}
+                disabled={busy}
+                onReassigned={async (updated) => {
+                  await showUpdated(updated);
+                  toast.success(
+                    `Ruta ${String(updated.number)} reasignada a ${updated.courier?.name ?? ""}`,
+                  );
+                }}
+              />
+            </>
           ) : (
             data.status === "draft" && (
-              <Button
-                disabled={busy}
-                onClick={() =>
-                  void act((current, actionId) =>
-                    dispatchRoute(current.id, { actionId, version: current.version }),
-                  ).then((updated) => {
-                    if (updated) toast.success(`Ruta ${String(updated.number)} despachada`);
-                  })
-                }
-              >
-                Despachar
-              </Button>
+              <>
+                <CancelRouteDialog
+                  route={data}
+                  disabled={busy}
+                  onDone={async (updated) => {
+                    await showUpdated(updated);
+                    toast.success(`Ruta ${String(updated.number)} cancelada`);
+                  }}
+                  onRefused={() => route.refetch()}
+                />
+                <Button
+                  disabled={busy}
+                  onClick={() =>
+                    void act((current, actionId) =>
+                      dispatchRoute(current.id, { actionId, version: current.version }),
+                    ).then((updated) => {
+                      if (updated) toast.success(`Ruta ${String(updated.number)} despachada`);
+                    })
+                  }
+                >
+                  Despachar
+                </Button>
+              </>
             )
           )
         }
@@ -253,7 +279,7 @@ function RouteDetailPage() {
                   {data.stops.length}
                 </span>
               </h2>
-              {editable && (
+              {editable && data.stops.length > 0 && (
                 <p className="text-body-m text-on-surface-variant">
                   El orden es una recomendación para el mensajero. Arrastra una parada, o usa su
                   botón con el teclado, para cambiarlo.
@@ -274,24 +300,39 @@ function RouteDetailPage() {
               />
             )}
           </div>
-          <StopList
-            stops={data.stops}
-            locked={!editable || busy}
-            onInvalid={(message) => {
-              setProblem({ message });
-            }}
-            taskActions={taskActions}
-            onReorder={(stopIds) => {
-              // Show the new order at once; the server's answer replaces it.
-              queryClient.setQueryData(queryKey, {
-                ...data,
-                stops: stopIds.flatMap((id) => data.stops.filter((stop) => stop.id === id)),
-              });
-              void act((current, actionId) =>
-                setStopOrder(current.id, { actionId, version: current.version, stopIds }),
-              );
-            }}
-          />
+          {data.stops.length === 0 ? (
+            // A cancelled route, or one left without shipments (EC-08, FR-027).
+            <EmptyState
+              icon={RouteIcon}
+              title={data.status === "cancelled" ? "Ruta cancelada" : "La ruta no tiene envíos"}
+              description={
+                data.status === "cancelled"
+                  ? `Motivo: ${(data.cancelReason ?? "").replace(/[.\s]+$/, "")}. Sus envíos volvieron a «Sin asignar».`
+                  : editable
+                    ? "Agrega envíos o cancela la ruta."
+                    : "Sus envíos se quitaron o se reasignaron."
+              }
+            />
+          ) : (
+            <StopList
+              stops={data.stops}
+              locked={!editable || busy}
+              onInvalid={(message) => {
+                setProblem({ message });
+              }}
+              taskActions={taskActions}
+              onReorder={(stopIds) => {
+                // Show the new order at once; the server's answer replaces it.
+                queryClient.setQueryData(queryKey, {
+                  ...data,
+                  stops: stopIds.flatMap((id) => data.stops.filter((stop) => stop.id === id)),
+                });
+                void act((current, actionId) =>
+                  setStopOrder(current.id, { actionId, version: current.version, stopIds }),
+                );
+              }}
+            />
+          )}
         </section>
       </div>
 

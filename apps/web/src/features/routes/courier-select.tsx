@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/empty-state";
 import { SearchCombobox } from "@/components/search-combobox";
 import { buttonVariants } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { Skeleton } from "@/components/ui/skeleton";
 import { listActiveCouriers } from "./api";
 
 /** Active couriers by name or alias (FR-008), or how to add one when there are none (FR-027). */
@@ -55,6 +56,9 @@ export function CourierSelect({
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       {disabled ? (
         <p className="text-body-l text-on-surface">{value?.name ?? "Sin mensajero"}</p>
+      ) : couriers.isPending ? (
+        // The field takes its text when it mounts, so it waits for the route's courier.
+        <Skeleton className="h-12 w-full rounded-sm" />
       ) : (
         <SearchCombobox<Courier>
           key={value?.id ?? "none"}

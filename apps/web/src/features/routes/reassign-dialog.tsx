@@ -1,7 +1,6 @@
 import {
   bogotaToday,
   formatTrackingNumber,
-  reason as reasonSchema,
   routeStatusLabels,
   type Handover,
   type RouteDetail,
@@ -11,7 +10,7 @@ import {
 } from "@domy/domain";
 import { useQueries } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { OptionSelect } from "@/components/option-select";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,45 +23,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Textarea } from "@/components/ui/textarea";
+import { Field, FieldError } from "@/components/ui/field";
 import { ApiError } from "@/lib/api-client";
 import { now } from "@/lib/clock";
 import { formatDate } from "@/lib/format";
 import { CourierSelect } from "./courier-select";
 import { getRoutesBoard, reassignRoute, reassignShipment } from "./api";
-
-/** Every reassignment states why, in 5 to 200 characters (FR-016). */
-function ReasonField({
-  value,
-  onChange,
-  error,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  error: string | undefined;
-}) {
-  const id = useId();
-  return (
-    <Field data-invalid={Boolean(error)}>
-      <FieldLabel htmlFor={id}>Motivo</FieldLabel>
-      <Textarea
-        id={id}
-        value={value}
-        aria-invalid={Boolean(error)}
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
-      />
-      <FieldError>{error}</FieldError>
-    </Field>
-  );
-}
-
-function reasonError(reason: string): string | undefined {
-  const parsed = reasonSchema.safeParse(reason);
-  return parsed.success ? undefined : (parsed.error.issues[0]?.message ?? "Escribe el motivo.");
-}
+import { ReasonField, reasonError } from "./reason-field";
 
 /** A refusal, with a link to the route it names (a courier's route in progress, FR-009). */
 function Problem({ error }: { error: { message: string; routeId?: string } | null }) {

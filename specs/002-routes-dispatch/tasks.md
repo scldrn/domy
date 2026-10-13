@@ -199,13 +199,13 @@ nothing picked up; verify statuses and history
 
 ### Tests for User Story 5 ⚠️ write first, must fail
 
-- [ ] T048 [P] [US5] Integration tests in `apps/server/tests/routes-cancel-undo.test.ts` covering spec US5 scenarios 1–4: cancel in preparation with a reason → shipments `registered`, route `cancelled` keeping its number; `409 route_in_progress` when cancelling a route in progress; undo dispatch → route `draft`, shipments `assigned`, courier free for another route; `409 route_has_completed_stops` with a completed task or a picked-up shipment, including one received through a handover (FR-017, FR-026)
-- [ ] T049 [P] [US5] End-to-end test in `apps/web/tests/e2e/route-cancel-undo.spec.ts`: quickstart scenarios 14–15
+- [X] T048 [P] [US5] Integration tests in `apps/server/tests/routes-cancel-undo.test.ts` covering spec US5 scenarios 1–4: cancel in preparation with a reason → shipments `registered`, route `cancelled` keeping its number; `409 route_in_progress` when cancelling a route in progress; undo dispatch → route `draft`, shipments `assigned`, courier free for another route; `409 route_has_completed_stops` with a completed task or a picked-up shipment, including one received through a handover (FR-017, FR-026)
+- [X] T049 [P] [US5] End-to-end test in `apps/web/tests/e2e/route-cancel-undo.spec.ts`: quickstart scenarios 14–15 (the refusal of scenario 15 needs a completed stop, recorded only by the courier app, feature 003; T048 covers it)
 
 ### Implementation for User Story 5
 
-- [ ] T050 [US5] Implement `POST /api/routes/:id/cancel` and `POST /api/routes/:id/undo-dispatch` in `apps/server/src/routes/routes.ts` until T048 passes
-- [ ] T051 [US5] Add "Cancelar ruta" and "Deshacer despacho" with their reason dialogs to `apps/web/src/routes/route-detail.tsx`, until T049 passes
+- [X] T050 [US5] Implement `POST /api/routes/:id/cancel` and `POST /api/routes/:id/undo-dispatch` in `apps/server/src/routes/routes.ts` until T048 passes
+- [X] T051 [US5] Add "Cancelar ruta" and "Deshacer despacho" with their reason dialogs to `apps/web/src/routes/route-detail.tsx`, until T049 passes
 
 **Checkpoint**: all five user stories work independently
 

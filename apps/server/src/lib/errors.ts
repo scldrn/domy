@@ -20,10 +20,13 @@ const errorCatalog = {
   shipment_picked_up: [409, "Ese envío ya fue recogido; no se puede quitar de la ruta."],
   route_has_completed_stops: [
     409,
-    "La ruta ya tiene paradas completadas o envíos recogidos; no se puede deshacer el despacho.",
+    "La ruta ya tiene paradas completadas o paquetes recogidos; no se puede deshacer el despacho. Quita o reasigna sus envíos pendientes.",
   ],
   route_not_in_progress: [409, "La ruta no está en curso."],
-  route_in_progress: [409, "Una ruta en curso no se puede cancelar."],
+  route_in_progress: [
+    409,
+    "Una ruta en curso no se cancela: quita o reasigna sus envíos, o deshaz el despacho si no se ha recogido nada.",
+  ],
   shipment_not_movable: [409, "Ese envío no se puede mover en su estado actual."],
   past_service_date: [422, "No se crean rutas para fechas pasadas."],
   courier_required: [422, "Asigna un mensajero antes de despachar la ruta."],

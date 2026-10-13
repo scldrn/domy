@@ -23,9 +23,9 @@ record `id`s.
 | 409 | `invalid_stop_order` | A delivery stop before its pickup stop, or a completed stop moved (FR-006) |
 | 409 | `shipment_picked_up` | Removing a shipment already picked up (FR-012) |
 | 409 | `route_has_completed_stops` | Undoing a dispatch after a stop was completed or while the route holds a picked-up shipment (FR-026) |
-| 409 | `route_not_in_progress` | Moving a picked-up shipment to a route in preparation, or reassigning a whole route that is not in progress (FR-014, FR-015) |
+| 409 | `route_not_in_progress` | Moving a picked-up shipment to a route in preparation, reassigning a whole route or undoing the dispatch of a route that is not in progress, or acting on a route that is "Finalizada" or "Cancelada" (FR-012, FR-014, FR-015, FR-026) |
 | 422 | `past_service_date` | Creating a route for a past date (FR-002) |
-| 409 | `route_in_progress` | Cancelling a route in progress (FR-017) |
+| 409 | `route_in_progress` | Cancelling a route in progress; the message says to remove or reassign its shipments, or to undo the dispatch if nothing was picked up (FR-017) |
 | 409 | `shipment_not_movable` | Moving or removing a shipment in "Novedad" or in a final status (FR-012, FR-014) |
 | 422 | `courier_required` | Dispatching without a courier (FR-009) |
 | 422 | `route_empty` | Dispatching a route with no shipments (FR-009) |
@@ -44,8 +44,8 @@ record `id`s.
 | `POST /api/routes/:id/shipments` | `{ actionId, version, shipmentIds, confirmed? }` → `RouteDetail` (FR-011) |
 | `POST /api/routes/:id/shipments/:shipmentId/remove` | `{ actionId, version }` → `RouteDetail` (FR-012) |
 | `POST /api/routes/:id/dispatch` | `{ actionId, version }` → `RouteDetail`; `422 courier_required`, `422 route_empty`, `409 courier_busy` (FR-009) |
-| `POST /api/routes/:id/undo-dispatch` | `{ actionId, version, reason }` → `RouteDetail` (FR-026) |
-| `POST /api/routes/:id/cancel` | `{ actionId, version, reason }` → `RouteDetail` (FR-017) |
+| `POST /api/routes/:id/undo-dispatch` | `{ actionId, version, reason }` → `RouteDetail`, back to `draft` with the same courier and its shipments `assigned`; `409 route_has_completed_stops` (FR-026) |
+| `POST /api/routes/:id/cancel` | `{ actionId, version, reason }` → `RouteDetail` with `status: "cancelled"`, `cancelReason`, and no stops; its shipments are `registered` again; `409 route_in_progress` (FR-017) |
 | `POST /api/routes/:id/reassign` | `{ actionId, version, courierId, reason }` (route in progress) → `RouteDetail`; creates handovers for picked-up shipments; `409 courier_busy` (FR-015, FR-025) |
 | `POST /api/shipments/:id/reassign` | `{ actionId, toRouteId, reason }` → `{ shipment, handover }`, `handover` being the shipment's pending handover or `null`; a handover is created only for a picked-up shipment moving to another courier, replacing any pending one (FR-014, FR-025) |
 | `POST /api/handovers/:id/confirm` | `{ actionId }` → `Handover` with `resolvedOnBehalf: true` (dispatcher confirms for the courier; the courier's own confirmation is feature 003) |
@@ -63,7 +63,8 @@ endpoints.
 - **`GET /api/shipments/:id`** (and `?trackingNumber=`): `ShipmentDetail` gains `route` (`id`,
   `number`, `serviceDate`, `status`, `courier`), `custodyCourier`, and `handover` (the pending
   one, or `null`). History `changes` also record `routeId`, `courierId`, and
-  `custodyCourierId`, shown by name ("Ruta 3", the courier's name) (FR-016, SC-005).
+  `custodyCourierId`, shown by name ("Ruta 3", the courier's name) (FR-016, SC-005). The
+  status changes caused by undoing a dispatch or cancelling a route carry its `reason`.
 - **`POST /api/shipments/:id/void`** and **`PATCH /api/shipments/:id`**: when the shipment is
   on a route, the same transaction removes it from the route or updates its stops (FR-013).
 - **`PATCH /api/couriers/:id`** with `isActive: false`: the response includes
