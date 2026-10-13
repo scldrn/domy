@@ -149,14 +149,14 @@ reorder two pending stops, and verify statuses, stops, and history
 
 ### Tests for User Story 3 ⚠️ write first, must fail
 
-- [ ] T033 [P] [US3] Integration tests in `apps/server/tests/routes-adjust.test.ts` covering spec US3 scenarios 1–5: added shipment joins the pending pickup stop or gets a new one at the end before its delivery stop; status `assigned` in a draft route and `dispatched` in one in progress; removal returns the shipment to `registered`, deletes its pending tasks and an empty pickup stop; adding is refused with `409 shipment_not_registered` for a shipment already on a route or dated after the rule of FR-003, and with `422 confirmation_required` when the route grows beyond 15 shipments; `409 shipment_picked_up`; `409 shipment_not_movable` for a shipment in "Novedad"; voiding a shipment removes it from its route in the same transaction; editing its pickup point or address updates its stops; the last removal finishes a route in progress; every action recorded and exactly-once (FR-003, FR-005, FR-011, FR-012, FR-013, FR-020, FR-022)
-- [ ] T034 [P] [US3] End-to-end test in `apps/web/tests/e2e/route-adjust.spec.ts`: quickstart scenarios 9–10
+- [X] T033 [P] [US3] Integration tests in `apps/server/tests/routes-adjust.test.ts` covering spec US3 scenarios 1–5: added shipment joins the pending pickup stop or gets a new one at the end before its delivery stop; status `assigned` in a draft route and `dispatched` in one in progress; removal returns the shipment to `registered`, deletes its pending tasks and an empty pickup stop; adding is refused with `409 shipment_not_registered` for a shipment already on a route or dated after the rule of FR-003, and with `422 confirmation_required` when the route grows beyond 15 shipments; `409 shipment_picked_up`; `409 shipment_not_movable` for a shipment in "Novedad"; voiding a shipment removes it from its route in the same transaction; editing its pickup point or address updates its stops; the last removal finishes a route in progress; every action recorded and exactly-once (FR-003, FR-005, FR-011, FR-012, FR-013, FR-020, FR-022)
+- [X] T034 [P] [US3] End-to-end test in `apps/web/tests/e2e/route-adjust.spec.ts`: quickstart scenarios 9–10
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Implement `POST /api/routes/:id/shipments` and `POST /api/routes/:id/shipments/:shipmentId/remove` in `apps/server/src/routes/routes.ts` until T033 passes for adding and removing
-- [ ] T036 [US3] Update `POST /api/shipments/:id/void` and `PATCH /api/shipments/:id` in `apps/server/src/routes/shipments.ts` to remove the shipment from its route or update its stops in the same transaction, until T033 passes
-- [ ] T037 [US3] Add "Agregar envíos" (from the unassigned list) and "Quitar de la ruta" to `apps/web/src/routes/route-detail.tsx`, until T034 passes
+- [X] T035 [US3] Implement `POST /api/routes/:id/shipments` and `POST /api/routes/:id/shipments/:shipmentId/remove` in `apps/server/src/routes/routes.ts` until T033 passes for adding and removing
+- [X] T036 [US3] Update `POST /api/shipments/:id/void` and `PATCH /api/shipments/:id` in `apps/server/src/routes/shipments.ts` to remove the shipment from its route or update its stops in the same transaction, until T033 passes
+- [X] T037 [US3] Add "Agregar envíos" (from the unassigned list, in `apps/web/src/features/routes/add-shipments-dialog.tsx`) and "Quitar de la ruta" (on the stops of `apps/web/src/features/routes/stop-list.tsx`) to `apps/web/src/routes/route-detail.tsx`, until T034 passes
 
 **Checkpoint**: routes follow the day's changes without leaving the system
 

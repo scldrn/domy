@@ -142,6 +142,7 @@ apps/web/src/
     ├── stop-list.tsx                 # sortable stops (dnd-kit)
     ├── route-summary-card.tsx
     ├── courier-select.tsx
+    ├── add-shipments-dialog.tsx      # "Agregar envíos" of route-detail.tsx (FR-011)
     ├── reassign-dialog.tsx
     ├── handover-badge.tsx
     └── route-history.tsx

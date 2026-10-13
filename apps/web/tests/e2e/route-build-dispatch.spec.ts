@@ -75,7 +75,8 @@ test("builds, orders, and dispatches a route (scenarios 1–4)", async ({ dispat
   await select(page, shipments);
   await page.getByRole("button", { name: "Crear ruta con 9 envíos" }).click();
   await expect(page).toHaveURL(/\/rutas\/[0-9a-f-]{36}$/);
-  await expect(page.getByRole("heading", { name: /^Ruta \d+$/ })).toBeVisible();
+  // The board, with a card headed "Ruta N" per route, stays until the detail page renders.
+  await expect(page.getByRole("heading", { level: 1, name: /^Ruta \d+$/ })).toBeVisible();
   await expect(page.getByText("En preparación", { exact: true })).toBeVisible();
   await expect(stops(page)).toHaveCount(12);
   await expect(stops(page).filter({ hasText: "Recogida" })).toHaveCount(3);

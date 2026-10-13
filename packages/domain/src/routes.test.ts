@@ -7,6 +7,7 @@ import {
   largeRouteThreshold,
   moveStop,
   needsLargeRouteConfirmation,
+  relocateShipment,
   removeShipmentFromStops,
   routeProgress,
   shipmentPlaces,
@@ -174,6 +175,52 @@ describe("removeShipmentFromStops (FR-012)", () => {
         : stop,
     );
     expect(order(removeShipmentFromStops(stops, "a"))).toEqual(["pickup:a"]);
+  });
+});
+
+describe("relocateShipment (FR-013)", () => {
+  const elsewhere = { address: "Calle 50 # 20-30", neighborhoodId: "belen" };
+
+  it("moves its delivery stop to the new address in place", () => {
+    const stops = buildStops([delivery("a"), delivery("b")], newId);
+    const moved = relocateShipment(stops, { ...delivery("b"), delivery: elsewhere }, newId);
+    expect(order(moved)).toEqual(order(stops));
+    expect(moved[2]).toMatchObject({ id: stops[2]?.id, ...elsewhere });
+  });
+
+  it("moves a pickup shared with others to a new stop right before its delivery", () => {
+    const stops = buildStops([delivery("a"), delivery("b")], newId);
+    const moved = relocateShipment(stops, delivery("b", local), newId);
+    expect(order(moved)).toEqual(["pickup:a", "delivery:a", "pickup:b", "delivery:b"]);
+    expect(moved[2]).toMatchObject(local);
+    // The tasks that stay keep their identity, so only the moved one is replaced.
+    expect(moved[0]?.tasks[0]).toBe(stops[0]?.tasks[0]);
+  });
+
+  it("joins a pending pickup stop of the new place that comes before its delivery", () => {
+    const stops = buildStops([delivery("a", local), delivery("b")], newId);
+    expect(order(relocateShipment(stops, delivery("b", local), newId))).toEqual([
+      "pickup:a+b",
+      "delivery:a",
+      "delivery:b",
+    ]);
+  });
+
+  it("moves a pickup stop of its own in place", () => {
+    const stops = buildStops([delivery("a"), delivery("b", local)], newId);
+    const moved = relocateShipment(stops, delivery("b", elsewhere), newId);
+    expect(order(moved)).toEqual(order(stops));
+    expect(moved[1]).toMatchObject({ id: stops[1]?.id, ...elsewhere });
+  });
+
+  it("moves an errand stop and returns the same stops when nothing changes", () => {
+    const errand: RoutePlanShipment = { id: "e", kind: "errand", pickup: local, delivery: null };
+    const stops = buildStops([delivery("a"), errand], newId);
+    expect(relocateShipment(stops, { ...errand, pickup: elsewhere }, newId)[2]).toMatchObject(
+      elsewhere,
+    );
+    expect(relocateShipment(stops, errand, newId)).toBe(stops);
+    expect(relocateShipment(stops, delivery("a"), newId)).toBe(stops);
   });
 });
 

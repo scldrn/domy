@@ -1,6 +1,7 @@
 import type {
   Courier,
   RouteActionInput,
+  RouteAddShipmentsInput,
   RouteCourierInput,
   RouteCreateInput,
   RouteDetail,
@@ -33,6 +34,17 @@ export const setRouteCourier = (id: string, input: RouteCourierInput) =>
 
 export const setStopOrder = (id: string, input: StopOrderInput) =>
   unwrap<RouteDetail>(api.api.routes[":id"]["stop-order"].$put({ param: { id }, json: input }));
+
+export const addRouteShipments = (id: string, input: RouteAddShipmentsInput) =>
+  unwrap<RouteDetail>(api.api.routes[":id"].shipments.$post({ param: { id }, json: input }));
+
+export const removeRouteShipment = (id: string, shipmentId: string, input: RouteActionInput) =>
+  unwrap<RouteDetail>(
+    api.api.routes[":id"].shipments[":shipmentId"].remove.$post({
+      param: { id, shipmentId },
+      json: input,
+    }),
+  );
 
 export const dispatchRoute = (id: string, input: RouteActionInput) =>
   unwrap<RouteDetail>(api.api.routes[":id"].dispatch.$post({ param: { id }, json: input }));
