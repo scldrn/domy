@@ -52,7 +52,7 @@ async function signedInCourier(c: Context<AppEnv>): Promise<{ id: string }> {
     .where(eq(couriers.userId, c.get("user").id));
   if (!courier) {
     throw new AppError("forbidden", {
-      message: "Tu cuenta no está vinculada a un mensajero. Pide al coordinador que la vincule.",
+      message: "Tu cuenta no está vinculada a un mensajero. Pide al propietario que la vincule.",
     });
   }
   return courier;

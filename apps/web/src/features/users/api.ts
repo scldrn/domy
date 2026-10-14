@@ -24,7 +24,7 @@ export const createAccount = (input: {
   email: string;
   role: UserRole;
   password: string;
-}) => authCall("admin/create-user", input);
+}) => authCall<{ user: { id: string } }>("admin/create-user", input);
 
 export const updateAccount = (userId: string, data: { name: string; email: string }) =>
   authCall("admin/update-user", { userId, data });

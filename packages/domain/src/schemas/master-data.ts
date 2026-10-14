@@ -82,6 +82,16 @@ export const courierUpdateInput = z.object({
 });
 export type CourierUpdateInput = z.input<typeof courierUpdateInput>;
 
+/**
+ * `PUT /api/couriers/accounts/:userId` (feature 003, FR-002): the courier an account with the
+ * courier role works as, or none. Owner only.
+ */
+export const courierAccountInput = z.object({
+  actionId,
+  courierId: z.uuid("Elige el mensajero.").nullable(),
+});
+export type CourierAccountInput = z.input<typeof courierAccountInput>;
+
 export const carrierCreateInput = z.object({
   id: z.uuid(),
   name: name("Escribe el nombre de la transportadora."),
@@ -180,7 +190,13 @@ export type PickupPoint = {
   neighborhood: Named;
 };
 export type MerchantDetail = Merchant & { pickupPoints: PickupPoint[]; openShipments: number };
-export type Courier = Named & { phone: string; isActive: boolean; aliases: string[] };
+export type Courier = Named & {
+  phone: string;
+  isActive: boolean;
+  aliases: string[];
+  /** The account that signs in to the courier app as this courier (feature 003, FR-002). */
+  account: { id: string; email: string } | null;
+};
 export type Carrier = Named & { isActive: boolean };
 export type RateZone = Named & { isActive: boolean };
 export type NeighborhoodDetail = Named & {

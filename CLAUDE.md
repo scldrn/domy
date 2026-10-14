@@ -54,12 +54,15 @@ pnpm --filter @domy/web exec playwright test tests/e2e/register-shipment.spec.ts
 
 pnpm db:generate  # SQL migration from apps/server/src/db/schema/ (drizzle-kit)
 pnpm tokens       # regenerates apps/web/src/styles/tokens.css from the seed colors
+pnpm icons        # regenerates the installable app's icons in apps/web/public/icons/
 ```
 
 Generated, never edited by hand: `apps/web/src/route-tree.gen.ts` (TanStack Router plugin,
 on `vite dev` and `vite build`), `apps/web/src/styles/tokens.css` (`pnpm tokens`), and
 `apps/server/src/db/migrations/` (`pnpm db:generate`). Prettier skips Markdown, `docs/`,
-`.specify/`, and `.claude/`.
+`.specify/`, `.claude/`, and those generated files, but only when it runs from the repository
+root, where `.prettierignore` lives: `prettier --write src` from `apps/server` rewrites the
+migration snapshots.
 
 ## Branches
 
@@ -106,7 +109,9 @@ A pnpm workspace with three packages. Nothing is compiled except the web bundle:
 The only home of business rules: the shipment lifecycle state machine
 (`shipment-lifecycle.ts`), fee resolution against the rate card (`fees.ts`), payment modes,
 delivery windows, tracking numbers, text normalization for matching, Bogotá calendar time
-(fixed UTC−05:00), and the Zod schemas in `schemas/`, which validate requests on the server
+(fixed UTC−05:00), the confirmation thresholds of large amounts (`money.ts`), what each courier
+record does (`courier-records.ts`, `resolveCourierRecord`, used by the server and replayed by
+the phone), the courier's day summary (`day-summary.ts`), and the Zod schemas in `schemas/`, which validate requests on the server
 and forms on the web. Value lists such as `shipmentStatuses`, `shipmentKinds`, and `userRoles`
 are declared here and the server builds its `pgEnum`s from them, so a new value starts here
 and then needs a migration.
@@ -115,13 +120,15 @@ and then needs a migration.
 
 - `src/index.ts` wires the real dependencies from the environment (`env.ts` validates it with
   Zod and exits on error). `createApp(deps)` in `src/app.ts` receives `db`, `auth`, `clock`,
-  and `logger`, so tests build the same app around a test database and a controlled clock.
+  `logger`, and `storage` (the private photo bucket, `lib/storage.ts`, S3 API), so tests build
+  the same app around a test database and a controlled clock.
   With `NODE_ENV=production` the same process also serves `apps/web/dist`.
 - Each resource is a Hono sub-app in `src/routes/`, mounted in `app.ts`. Routes must stay
   chained (`new Hono<AppEnv>().use(...).get(...).post(...)`), in their module and in
   `app.ts`, or their types never reach `AppType` and the web client.
 - Input goes through `validate(target, schema)` (`lib/validate.ts`) with the domain schemas;
-  access through `requireRole(...)` (`lib/auth-guard.ts`), which also sets `c.get("user")`.
+  access through `requireRole(...)` (`lib/auth-guard.ts`), which also sets `c.get("user")`
+  and `c.get("sessionExpiresAt")`.
 - Errors are `throw new AppError(code, { message?, fields? })`. Codes, HTTP statuses, and
   default Spanish messages are catalogued in `lib/errors.ts`; every error response is
   `{ error: { code, message, fields? } }`. Unexpected errors are logged without SQL
@@ -134,6 +141,11 @@ and then needs a migration.
   record with 200 instead of 201). Any other mutation's `actionId` is stored as the unique
   `client_event_id` of the shipment or audit event it writes, and `lib/action-id.ts` detects
   a replay. Shipments also carry a `version` for optimistic concurrency (`version_conflict`).
+  A courier record is keyed by the `id` the phone generated (`courier_records` primary key):
+  `applyCourierRecord` (`lib/courier-records.ts`) stores it once with its outcome (`applied`,
+  `duplicate`, or `not_applied` with its reason; a well-formed record is never refused for the
+  shipment's state) and executes the domain's decision on the shipment, task, custody, and
+  history in one transaction per record.
 - A change and its event share one transaction: `saveChange` in `routes/shipments.ts` for the
   append-only shipment history; `auditedCreate` and `auditedChange` (`lib/master-data.ts`) and
   `recordAudit` (`lib/audit.ts`) for master data and accounts. Shipments are voided and master
@@ -141,7 +153,13 @@ and then needs a migration.
 - Auth is Better Auth (`src/auth.ts`) under `/api/auth`, with the admin plugin and the roles
   `owner`, `dispatcher`, and `courier`. Sign-up is disabled: the owner creates accounts.
   `routes/auth.ts` wraps the endpoints that need Domy's own rules (lockout, last active owner,
-  audit); every other `/api/auth/*` request goes straight to `auth.handler`.
+  a linked courier account's role, audit); every other `/api/auth/*` request goes straight
+  to `auth.handler`.
+- The courier app's API is `routes/courier.ts` under `/api/courier` (`requireRole("courier")`):
+  the caller is the courier whose `couriers.user_id` is the signed-in account, linked by the
+  owner (`PUT /api/couriers/accounts/:userId`); an account not linked gets `403`. Photos go
+  through the server (`PUT /api/courier/photos/:id`, `GET /api/photos/:id`), never through
+  public URLs. `lib/record-views.ts` gives the panel the records and their flags.
 - Database: Drizzle with `casing: "snake_case"` (camelCase in TypeScript, snake_case in
   PostgreSQL), schema by area in `src/db/schema/`. Invariants are also CHECK constraints there
   (payment mode against COD amount, required fields per shipment kind, void and fee-override
@@ -154,8 +172,16 @@ and then needs a migration.
 
 - Routes are TanStack Router virtual routes declared in `src/routes.ts`: Spanish URLs,
   English files in `src/routes/`. `panel-layout.tsx` is the signed-in panel of owner and
-  dispatcher; couriers are sent to `/mensajero`. Search params stay strings (`main.tsx`) and
-  each route validates its own.
+  dispatcher; couriers are sent to `/mensajero`, the courier app of `courier-layout.tsx`
+  (navigation bar, high contrast). Search params stay strings (`main.tsx`) and each route
+  validates its own.
+- The courier app works without signal (feature 003, research R2–R4): a service worker
+  (`src/sw.ts`, vite-plugin-pwa, production builds only) serves the app offline, and
+  `src/lib/offline/` keeps the data in IndexedDB (`db.ts`: snapshot, outbox, photos, meta).
+  A record is saved there first (`outbox.ts`), shown at once by replaying the outbox over the
+  last snapshot with the domain's rules, and sent by `sync.ts`, which uses plain `fetch`
+  rather than the typed client so it can run and be tested outside React. One store,
+  `src/features/courier/courier-store.ts`, feeds every courier screen and runs the sync.
 - Server calls live in each area's `src/features/<area>/api.ts` as
   `unwrap<T>(api.api.<resource>.$get(...))`. `api` is `hc<AppType>` from `@domy/server/app`
   (`src/lib/api-client.ts`); `unwrap` turns an error body into an `ApiError` carrying the
@@ -177,9 +203,14 @@ and then needs a migration.
   app with `createTestApp(db, { now })` from `setup/app.ts` (fixed clock with `setNow`,
   `signIn(role)` returning a session cookie, `request(path, { method, cookie, body })`), and
   load fixtures with `createCatalog` (`setup/catalog.ts`). Requests go through `app.request`,
-  without an HTTP server.
-- End to end (`apps/web/tests/e2e/`): `global-setup.ts` starts its own PostgreSQL and photo storage (S3Proxy), migrates,
-  seeds, adds test merchants, and runs the API on :3100 (`NODE_ENV=test`,
+  without an HTTP server. Courier tests use `courierWithAccount`, `snapshot`, and
+  `sendRecords` (`setup/courier.ts`); route tests pick up and deliver through `pickUp` and
+  `finishTask` (`setup/routes.ts`), which send real courier records; photo tests start
+  S3Proxy in memory with `startStorage` (`setup/storage.ts`) and pass it as
+  `createTestApp(db, { storage })`.
+- End to end (`apps/web/tests/e2e/`): `global-setup.ts` starts its own PostgreSQL and photo
+  storage (S3Proxy), migrates, seeds, adds test merchants, links the courier account to the
+  courier "Mensajero Uno", and runs the API on :3100 (`NODE_ENV=test`,
   `DOMY_FAKE_NOW=2026-10-01T15:00:00Z`) and Vite on :5174, saving one session per role. Tests
   use the `ownerPage`, `dispatcherPage`, `courierPage`, and `setServerNow` fixtures of
   `fixtures.ts`; every passing test then runs axe (WCAG 2.2 AA) on the page it ended on, so an

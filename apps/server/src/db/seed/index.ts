@@ -217,21 +217,20 @@ export async function seed(db: Db, auth: Auth, log: (line: string) => void): Pro
   }
   log("Caldas and Girardota have no confirmed rate: their shipments need a manual fee.");
 
-  // Feature 003, FR-041: a sample office, so "Recibido en oficina" works before the owner
-  // sets the real address in "Configuración". Never overwrites an address already set.
+  // Feature 003, FR-041: the office, the only place besides couriers that holds packages,
+  // as the owner gave it on 2026-10-14. Never overwrites an address already set.
   const [office] = await db
     .select({ id: neighborhoods.id })
     .from(neighborhoods)
-    .where(eq(neighborhoods.nameNormalized, normalizeText("El Poblado")));
+    .where(eq(neighborhoods.nameNormalized, normalizeText("Robledo")));
   if (office) {
-    const added = await db
+    await db
       .insert(companySettings)
-      .values({ officeAddress: "Calle 10 # 43-00", officeNeighborhoodId: office.id })
-      .onConflictDoNothing()
-      .returning({ id: companySettings.id });
-    if (added.length > 0) {
-      log("The office address is a sample; the owner sets the real one in Configuración.");
-    }
+      .values({
+        officeAddress: "Carrera 90 # 65C-10, Urbanización Mirador de Barcelona",
+        officeNeighborhoodId: office.id,
+      })
+      .onConflictDoNothing();
   }
 }
 

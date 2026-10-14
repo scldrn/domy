@@ -12,18 +12,7 @@ Nada. La 003 avanza con valores provisionales donde hace falta.
 
 ## Antes de terminar la 003 (app del mensajero)
 
-0. **¿Dónde se vincula la cuenta de un mensajero con su ficha?** La app necesita saber qué
-   mensajero de «Mensajeros» es cada cuenta con rol Mensajero, y hoy no hay dónde indicarlo.
-   Recomiendo un campo «Cuenta de acceso» en la ficha del mensajero (Mensajeros → Editar),
-   que liste las cuentas de mensajero aún sin vincular. La alternativa es elegir la ficha al
-   crear la cuenta en «Usuarios». Si no dices otra cosa, hago la primera (tarea T094).
-
-1. **Dirección real de la oficina** (FR-041). El seed usa una de ejemplo, «Calle 10 # 43-00»,
-   El Poblado. La necesito para «Recibido en oficina» y la parada de recogida en oficina. Se
-   registra en «Configuración» cuando exista esa pantalla (historia 4); basta con que me la
-   digas.
-2. **Un teléfono Android y un iPhone** (iOS 16.4 o posterior, para las notificaciones) para la
-   validación manual en dispositivos reales (tarea T087).
+Nada pendiente por ahora.
 
 ## Antes de salir a producción
 
@@ -49,3 +38,6 @@ Nada. La 003 avanza con valores provisionales donde hace falta.
 | --- | --- | --- |
 | 2026-10-14 | Íconos de la app instalable mientras no hay logo | Provisional «domy» |
 | 2026-10-14 | ¿Avisar al mensajero cuando se edita un envío de su ruta? | Sí, con aviso |
+| 2026-10-14 | ¿Dónde se vincula la cuenta de un mensajero con su ficha? | En «Usuarios», solo el propietario, al crear o editar una cuenta con rol Mensajero (T094) |
+| 2026-10-14 | Dirección real de la oficina | Carrera 90 # 65C-10, Urbanización Mirador de Barcelona, barrio Robledo, Medellín |
+| 2026-10-14 | Teléfonos para la validación manual (T087) | Samuel tiene un Android y un iPhone |

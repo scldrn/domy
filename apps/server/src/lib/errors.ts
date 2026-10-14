@@ -42,6 +42,11 @@ const errorCatalog = {
   ],
   office_not_configured: [409, "Primero registra la dirección de la oficina en «Configuración»."],
   occurred_in_future: [422, "La hora del registro no puede ser posterior a la actual."],
+  courier_account_invalid: [409, "Solo se vincula una cuenta activa con rol Mensajero."],
+  courier_account_linked: [
+    409,
+    "Esta cuenta está vinculada a un mensajero; desvincúlala antes de cambiar su rol.",
+  ],
   account_locked: [423, "La cuenta está bloqueada temporalmente."],
 } as const satisfies Record<string, readonly [ContentfulStatusCode, string]>;
 

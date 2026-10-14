@@ -66,6 +66,16 @@ Reasons and notes are 5–200 characters.
 
 ## Changes to the contracts of features 001 and 002
 
+- **`GET /api/couriers`**: each courier gains `account: { id, email } | null` (FR-002).
+- **`PUT /api/couriers/accounts/:userId`** (owner only, new): `{ actionId, courierId | null }`
+  → `{ courier: Courier | null }`. Links the account to the courier, or unlinks it, in one
+  transaction: the account leaves its previous courier and replaces the courier's previous
+  account, with an audit event per courier changed. `409 courier_account_invalid` for an
+  account that is not an active courier account or a courier that is deactivated; `404` for
+  an unknown account or courier (FR-002).
+- **`POST /api/auth/admin/set-role`**: `409 courier_account_linked` when a linked courier
+  account would stop being a courier; it is unlinked first (FR-002).
+
 - **`GET /api/shipments/:id`**: gains `records: CourierRecord[]` (with `outcome`, `onBehalf`,
   photos and their `uploaded` state, revert data) and `recordFlags`, then `attempts`,
   `heldAtOffice`, `returnDecided`, `needsReview` (FR-036).
