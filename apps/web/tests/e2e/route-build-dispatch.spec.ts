@@ -125,8 +125,15 @@ test("builds, orders, and dispatches a route (scenarios 1–4)", async ({ dispat
   await expect(
     page.getByText(new RegExp(`${courier} ya tiene la Ruta \\d+ en curso`)),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Ver esa ruta" }).click();
+  await expect(page.getByRole("link", { name: "Ver esa ruta" })).toBeVisible();
+  // The system offers to add the shipment to that route instead (US1 scenario 5).
+  await page.getByRole("button", { name: /^Agregar el envío a la Ruta \d+$/ }).click();
   await expect(page).toHaveURL(firstRoute);
+  await expect(page.getByRole("list", { name: "Paradas de la ruta" })).toContainText(
+    formatTrackingNumber(another.trackingNumber),
+  );
+  // The refusal belonged to the other route; this one opens clean.
+  await expect(page.getByText(/ya tiene la Ruta \d+ en curso/)).toBeHidden();
 });
 
 test("places reverse pickups, carrier handoffs, and errands (scenario 5)", async ({

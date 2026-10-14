@@ -262,7 +262,7 @@ describe("endpoints (contracts/http-api.md)", () => {
 
   it("registers every documented endpoint", () => {
     const documented = documentedEndpoints();
-    expect(documented).toHaveLength(15);
+    expect(documented).toHaveLength(16);
     const missing = documented.filter((endpoint) => !registered().has(endpoint));
     expect(missing).toEqual([]);
   });

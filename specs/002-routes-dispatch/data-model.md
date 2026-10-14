@@ -159,6 +159,7 @@ that are on no route.
 | `draft` | `in_progress` | Dispatch | Courier set, at least one shipment, courier without a route in progress |
 | `in_progress` | `draft` | Undo dispatch | No task `completed` or `failed`, and no shipment `picked_up` on the route (including one received through a handover); reason required (FR-026) |
 | `draft` | `cancelled` | Cancel | Reason required; shipments return to `registered` and their stops are removed (research R10); the number is kept |
+| `draft` | `cancelled` | Join a route in progress | Its shipments move to the target route in progress (FR-014) and become `dispatched`; the reason names the target route (FR-009) |
 | `in_progress` | `finished` | Automatic | No `pending` task and no `pending` handover (FR-012) |
 
 `finished` and `cancelled` are final.

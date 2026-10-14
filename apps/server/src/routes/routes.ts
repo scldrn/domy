@@ -8,6 +8,7 @@ import {
   routeAddShipmentsInput,
   routeCourierInput,
   routeCreateInput,
+  routeJoinInput,
   routeReasonInput,
   routeReassignInput,
   routesBoardQuery,
@@ -45,6 +46,8 @@ import {
   blockDelivery,
   cancelPendingHandover,
   handoverEvent,
+  lockRoutes,
+  moveShipment,
   requestHandover,
 } from "../lib/reassignment.ts";
 import { refreshRouteStatus } from "../lib/route-status.ts";
@@ -90,6 +93,8 @@ async function applyRouteAction(
   routeId: string,
   input: { actionId: string; version: number },
   apply: (tx: Executor, route: RouteRow, now: Date) => Promise<NewRouteEvent[]>,
+  /** Another route the action changes, locked with this one in the shared order. */
+  alsoLock?: string,
 ): Promise<Response> {
   const db = c.get("db");
   if (await findRouteAction(db, input.actionId)) return c.json(await loadRouteDetail(db, routeId));
@@ -97,6 +102,7 @@ async function applyRouteAction(
   await db
     .transaction(async (tx) => {
       await loadRouteRow(tx, routeId);
+      if (alsoLock) await lockRoutes(tx, [routeId, alsoLock]);
       await claimVersion(tx, routeId, input.version, now);
       const events = await apply(tx, await loadRouteRow(tx, routeId), now);
       // An action that changes nothing keeps the version, so repeating it answers the same.
@@ -650,4 +656,61 @@ export const routeRoutes = new Hono<AppEnv>()
         ];
       });
     },
-  );
+  )
+  // A route its courier cannot take yet (they have one in progress) joins that route: its
+  // shipments are added there, and the emptied route is cancelled (FR-009, US1 scenario 5).
+  .post("/:id/join", validate("param", idParam), validate("json", routeJoinInput), async (c) => {
+    const { id } = c.req.valid("param");
+    const input = c.req.valid("json");
+    return applyRouteAction(
+      c,
+      id,
+      input,
+      async (tx, route, now) => {
+        requireStatus(route, ["draft"], "Solo se une a otra una ruta en preparación.");
+        const target = await loadRouteRow(tx, input.toRouteId);
+        if (target.status !== "in_progress") {
+          throw new AppError("route_not_in_progress", {
+            message: `La Ruta ${String(target.number)} ya no está en curso.`,
+          });
+        }
+        const carried = await tx
+          .select()
+          .from(shipments)
+          .where(eq(shipments.routeId, id))
+          .for("update");
+        if (carried.length === 0) throw new AppError("route_empty");
+        const [onTarget] = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(shipments)
+          .where(eq(shipments.routeId, target.id));
+        const total = (onTarget?.count ?? 0) + carried.length;
+        if (needsLargeRouteConfirmation(total) && !input.confirmed) {
+          throw new AppError("confirmation_required", {
+            message: `La Ruta ${String(target.number)} quedaría con ${String(total)} envíos; confirma para agregarlos.`,
+          });
+        }
+        const reason = `Sus envíos pasaron a la Ruta ${String(target.number)}, que su mensajero ya tenía en curso.`;
+        const by = { actorUserId: c.get("user").id, now, reason };
+        for (const shipment of carried) await moveShipment(tx, shipment, target.id, by);
+        await tx
+          .update(routes)
+          .set({ status: "cancelled", cancelReason: reason })
+          .where(eq(routes.id, id));
+        return [
+          {
+            routeId: id,
+            type: "cancelled",
+            actorUserId: by.actorUserId,
+            occurredAt: now,
+            reason,
+            changes: {
+              shipmentIds: carried.map((shipment) => shipment.id),
+              toRouteId: target.id,
+            },
+          },
+        ];
+      },
+      input.toRouteId,
+    );
+  });

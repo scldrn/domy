@@ -13,14 +13,14 @@ a short-lived branch, so the specification and implementation of every feature l
 | --- | --- |
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
-| 002 Routes and dispatch | All five user stories on `main` (#4–#7, #9). Polish (T052–T061) done on the short-lived branch `002-polish`: contract, security, performance, invariant, accessibility, and usability testing, with the fixes they found recorded in `specs/002-routes-dispatch/quickstart-results.md`. Converging remains |
+| 002 Routes and dispatch | All five user stories on `main` (#4–#7, #9). Polish (T052–T061) on `main` (#10), with the fixes its testing found recorded in `specs/002-routes-dispatch/quickstart-results.md`. Convergence found one gap, T062 (offer to add a route's shipments to the courier's route in progress), done on the short-lived branch `002-converge` |
 | 003 Courier app | Specified, planned, tasked, and analyzed; implementation not started |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Merge `002-polish` into `main` through its pull request once CI passes, then converge
-   002 (`/speckit-converge`).
+1. Merge `002-converge` into `main` through its pull request once CI passes; feature 002 is
+   then complete.
 2. Then 003 and 004 the same way, one slice per branch. For 003: the courier's pickup,
    delivery, and return events must record `custodyCourierId: [from, to]` in their `changes`,
    as the custody history of 002 reads it (002 data-model, Derived values), and set

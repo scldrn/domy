@@ -1,7 +1,7 @@
 import RouteIcon from "@material-symbols/svg-400/rounded/route.svg?react";
 import { bogotaToday, formatTrackingNumber, type RouteDetail, type RouteTask } from "@domy/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
@@ -19,6 +19,7 @@ import { StopList } from "@/features/routes/stop-list";
 import {
   dispatchRoute,
   getRoute,
+  joinRoute,
   removeRouteShipment,
   setRouteCourier,
   setStopOrder,
@@ -29,7 +30,10 @@ import { formatCop, formatLongDate } from "@/lib/format";
 
 export const Route = createFileRoute("/_panel/rutas/$routeId")({
   head: () => ({ meta: [{ title: "Ruta · Domy" }] }),
-  component: RouteDetailPage,
+  // A page per route: a refusal or a dialog of one route never shows on the next one.
+  component: function RoutePage() {
+    return <RouteDetailPage key={Route.useParams().routeId} />;
+  },
 });
 
 /**
@@ -42,9 +46,19 @@ function RouteDetailPage() {
   const queryClient = useQueryClient();
   const queryKey = ["route", routeId];
   const route = useQuery({ queryKey, queryFn: () => getRoute(routeId), refetchInterval: 20_000 });
-  const [problem, setProblem] = useState<{ message: string; routeId?: string } | null>(null);
+  const navigate = useNavigate();
+  const [problem, setProblem] = useState<{
+    message: string;
+    routeId?: string;
+    routeNumber?: number;
+    /** The join beyond 15 shipments waits for this confirmation (FR-005). */
+    confirmJoin?: boolean;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [reassigning, setReassigning] = useState<RouteTask | null>(null);
+  const shipmentCount = new Set(
+    route.data?.stops.flatMap((stop) => stop.tasks.map((task) => task.shipmentId)),
+  ).size;
 
   /** Reloads the route after a change made through a shipment or a handover. */
   async function refresh() {
@@ -74,6 +88,43 @@ function RouteDetailPage() {
         message: error instanceof ApiError ? error.message : "No pudimos guardar el cambio.",
         ...(error instanceof ApiError &&
           typeof error.details["routeId"] === "string" && { routeId: error.details["routeId"] }),
+        ...(error instanceof ApiError &&
+          typeof error.details["routeNumber"] === "number" && {
+            routeNumber: error.details["routeNumber"],
+          }),
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * The courier already has a route in progress: this route's shipments join it, and this
+   * route, left empty, is cancelled (FR-009, US1 scenario 5).
+   */
+  async function join(target: { id: string; number: number }, confirmed: boolean) {
+    if (!route.data) return;
+    setBusy(true);
+    try {
+      await joinRoute(route.data.id, {
+        actionId: crypto.randomUUID(),
+        version: route.data.version,
+        toRouteId: target.id,
+        confirmed,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["routes-board"] });
+      toast.success(
+        `${shipmentCount === 1 ? "Envío agregado" : `${String(shipmentCount)} envíos agregados`} a la Ruta ${String(target.number)}; la Ruta ${String(route.data.number)} quedó cancelada`,
+      );
+      await navigate({ to: "/rutas/$routeId", params: { routeId: target.id } });
+    } catch (error) {
+      await route.refetch();
+      setProblem({
+        message: error instanceof ApiError ? error.message : "No pudimos agregar los envíos.",
+        routeId: target.id,
+        routeNumber: target.number,
+        ...(error instanceof ApiError &&
+          error.code === "confirmation_required" && { confirmJoin: true }),
       });
     } finally {
       setBusy(false);
@@ -213,17 +264,46 @@ function RouteDetailPage() {
       </PageHeader>
 
       {problem && (
-        <p
+        <div
           role="alert"
-          className="rounded-sm bg-error-container p-3 text-body-m text-on-error-container"
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-sm bg-error-container p-3 text-body-m text-on-error-container"
         >
-          {problem.message}{" "}
-          {problem.routeId && (
-            <Link to="/rutas/$routeId" params={{ routeId: problem.routeId }} className="underline">
-              Ver esa ruta
-            </Link>
-          )}
-        </p>
+          <p className="min-w-60 flex-1">
+            {problem.message}{" "}
+            {problem.routeId && (
+              <Link
+                to="/rutas/$routeId"
+                params={{ routeId: problem.routeId }}
+                className="underline"
+              >
+                Ver esa ruta
+              </Link>
+            )}
+          </p>
+          {problem.routeId &&
+            problem.routeNumber !== undefined &&
+            data.status === "draft" &&
+            shipmentCount > 0 && (
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  if (problem.routeId && problem.routeNumber !== undefined) {
+                    void join(
+                      { id: problem.routeId, number: problem.routeNumber },
+                      problem.confirmJoin === true,
+                    );
+                  }
+                }}
+              >
+                {problem.confirmJoin
+                  ? "Agregar de todos modos"
+                  : shipmentCount === 1
+                    ? `Agregar el envío a la Ruta ${String(problem.routeNumber)}`
+                    : `Agregar los ${String(shipmentCount)} envíos a la Ruta ${String(problem.routeNumber)}`}
+              </Button>
+            )}
+        </div>
       )}
 
       {/* The route editor in the supporting pane layout (design-system.md §5); the summary,

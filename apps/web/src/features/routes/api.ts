@@ -7,6 +7,7 @@ import type {
   RouteCourierInput,
   RouteCreateInput,
   RouteDetail,
+  RouteJoinInput,
   RouteReasonInput,
   RouteReassignInput,
   RoutesBoard,
@@ -81,3 +82,6 @@ export async function listActiveCouriers(): Promise<Courier[]> {
   );
   return items;
 }
+
+export const joinRoute = (id: string, input: RouteJoinInput) =>
+  unwrap<RouteDetail>(api.api.routes[":id"].join.$post({ param: { id }, json: input }));

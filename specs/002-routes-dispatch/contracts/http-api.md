@@ -48,6 +48,7 @@ record `id`s.
 | `POST /api/routes/:id/shipments` | `{ actionId, version, shipmentIds, confirmed? }` → `RouteDetail` (FR-011) |
 | `POST /api/routes/:id/shipments/:shipmentId/remove` | `{ actionId, version }` → `RouteDetail` (FR-012) |
 | `POST /api/routes/:id/dispatch` | `{ actionId, version }` → `RouteDetail`; `422 courier_required`, `422 route_empty`, `409 courier_busy` (FR-009) |
+| `POST /api/routes/:id/join` | `{ actionId, version, toRouteId, confirmed? }` (route in preparation, target in progress) → `RouteDetail` of the route, now `cancelled`: its shipments are added to the target under FR-011 and FR-014 and become `dispatched`, each recording the move; `422 confirmation_required` beyond 15 shipments on the target; offered when dispatching is refused with `courier_busy` (FR-009, US1 scenario 5) |
 | `POST /api/routes/:id/undo-dispatch` | `{ actionId, version, reason }` → `RouteDetail`, back to `draft` with the same courier and its shipments `assigned`; `409 route_has_completed_stops` (FR-026) |
 | `POST /api/routes/:id/cancel` | `{ actionId, version, reason }` → `RouteDetail` with `status: "cancelled"`, `cancelReason`, and no stops; its shipments are `registered` again; `409 route_in_progress` (FR-017) |
 | `POST /api/routes/:id/reassign` | `{ actionId, version, courierId, reason }` (route in progress) → `RouteDetail`; creates handovers for picked-up shipments; `409 courier_busy` (FR-015, FR-025) |
