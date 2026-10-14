@@ -3,6 +3,7 @@ import {
   bogotaToday,
   filterBoard,
   type BoardQuery,
+  type BoardEntry,
   type BoardShipment,
   type DispatchBoard,
 } from "@domy/domain";
@@ -79,7 +80,7 @@ function DispatchBoardPage() {
   const data = board.data;
   const currentTime = now();
   const today = bogotaToday(currentTime);
-  const all: BoardShipment[] = data ? [...data.shipments, ...data.pendingFromPreviousDays] : [];
+  const all: BoardEntry[] = data ? [...data.shipments, ...data.pendingFromPreviousDays] : [];
   const view = data ? filterBoard(data.date, all, search, currentTime) : null;
   const date = data?.date ?? search.date ?? today;
   const isToday = date === today;

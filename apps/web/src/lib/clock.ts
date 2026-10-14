@@ -13,6 +13,11 @@ export function syncClock(serverTime: string | null | undefined): void {
   }
 }
 
+/** Restores an offset measured earlier, as the courier app does without signal (feature 003). */
+export function setClockOffset(ms: number): void {
+  offsetMs = ms;
+}
+
 export function now(): Date {
   return new Date(Date.now() + offsetMs);
 }

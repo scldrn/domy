@@ -25,6 +25,7 @@ import { ReassignShipmentDialog } from "@/features/routes/reassign-dialog";
 import { CustodyHistory } from "@/features/routes/route-history";
 import { formatCop, formatDate, formatDateTime, formatWindow } from "@/lib/format";
 import { ConfirmFeeDialog } from "./confirm-fee-dialog";
+import { ShipmentRecords } from "./shipment-records";
 import { VoidDialog } from "./void-dialog";
 
 const panelRoute = getRouteApi("/_panel");
@@ -253,6 +254,8 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
           <Row label="Motivo de anulación">{shipment.voidReason}</Row>
         </Section>
       </div>
+
+      <ShipmentRecords records={shipment.records} />
 
       <CustodyHistory events={shipment.events} />
 

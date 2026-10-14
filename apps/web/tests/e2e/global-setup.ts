@@ -190,6 +190,20 @@ export default async function globalSetup() {
     });
   }
 
+  // The courier account is linked to its courier, as the courier app needs (feature 003).
+  const linked = await container.exec([
+    "psql",
+    "-U",
+    container.getUsername(),
+    "-d",
+    container.getDatabase(),
+    "-c",
+    `insert into couriers (id, name, phone, user_id)
+      select gen_random_uuid(), 'Mensajero Uno', '3004445566', id
+      from users where email = 'courier@example.com';`,
+  ]);
+  if (linked.exitCode !== 0) throw new Error(`Courier link failed: ${linked.output}`);
+
   await mkdir(authDir, { recursive: true });
   await saveStorageState("owner", await signIn("propietario@example.com"));
   await saveStorageState("dispatcher", await signIn("dispatcher@example.com"));

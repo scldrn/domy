@@ -1,4 +1,6 @@
 import {
+  codConfirmationThreshold,
+  feeConfirmationThreshold,
   bogotaToday,
   calculateFee,
   codAmountError,
@@ -33,9 +35,6 @@ import { isUniqueViolation } from "./validate.ts";
  * that edits reuse (FR-001–FR-013, FR-035, FR-037).
  */
 
-/** Amounts that require an explicit confirmation before saving (FR-037). */
-export const feeConfirmationThreshold = 100_000;
-export const codConfirmationThreshold = 2_000_000;
 const handoffKinds = ["terminal", "airport", "carrier_office"] as const;
 
 /** The rate card entries that can apply to a merchant: its own and the standard ones. */

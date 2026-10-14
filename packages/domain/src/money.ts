@@ -24,3 +24,8 @@ export function parseCop(input: string): number | null {
   const amount = Number(compact.replaceAll(".", ""));
   return Number.isSafeInteger(amount) ? amount : null;
 }
+
+/** Amounts that require an explicit confirmation before saving (feature 001, FR-037). */
+export const feeConfirmationThreshold = 100_000;
+/** Also the threshold of a collected total or a disbursement (feature 003, FR-011). */
+export const codConfirmationThreshold = 2_000_000;

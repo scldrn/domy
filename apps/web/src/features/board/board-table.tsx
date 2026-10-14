@@ -1,8 +1,10 @@
 import {
   flagLabel,
   formatTrackingNumber,
+  recordFlagLabels,
   shipmentFlag,
   shipmentKindLabels,
+  type BoardEntry,
   type BoardShipment,
 } from "@domy/domain";
 import { Link } from "@tanstack/react-router";
@@ -40,7 +42,7 @@ export function BoardTable({
   pointed,
   onPoint,
 }: {
-  shipments: BoardShipment[];
+  shipments: BoardEntry[];
   now: Date;
   today?: string;
   pointed: string | null;
@@ -138,6 +140,18 @@ export function BoardTable({
                 {shipment.feeNeedsReview && (
                   <span className="block text-label-m text-warning">Tarifa por revisar</span>
                 )}
+                {/* The courier's records: "Sin foto", "Recaudo diferente"… (feature 003, FR-033). */}
+                {shipment.recordFlags.map((recordFlag) => (
+                  <span
+                    key={recordFlag}
+                    className={cn(
+                      "block text-label-m",
+                      recordFlag === "photo_pending" ? "text-on-surface-variant" : "text-warning",
+                    )}
+                  >
+                    {recordFlagLabels[recordFlag]}
+                  </span>
+                ))}
               </TableCell>
             </TableRow>
           );
