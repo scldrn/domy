@@ -69,9 +69,12 @@ npm registry on 2026-09-30 and again on 2026-10-14, after feature 002 shipped (R
   the browser's `online` event, when the app becomes visible, and every 30 seconds while it
   is visible:
   1. send the outbox in order with `POST /api/courier/records` (at most 50 per request);
-     each acknowledged record leaves the outbox;
+     each acknowledged record leaves the outbox together with the refreshed snapshot
+     at step 3, keeping its locally replayed result visible if that refresh fails;
   2. upload pending photos whose record was acknowledged (R6);
-  3. fetch `GET /api/courier/route` and replace `snapshot`.
+  3. fetch `GET /api/courier/route`, then replace `snapshot` and remove only the acknowledged
+     outbox entries in one IndexedDB transaction. Photos may upload once their record is
+     acknowledged, even while that record is retained for the snapshot commit.
 
   A failed step stops the loop until the next trigger; nothing is removed from the phone
   before the server acknowledges it. A `401` keeps everything and asks the courier to sign
@@ -234,8 +237,12 @@ npm registry on 2026-09-30 and again on 2026-10-14, after feature 002 shipped (R
   loaded route with an expired session; only synchronization asks to sign in again. The
   server answers `401` both for an expired session and for withdrawn access; the phone
   tells them apart by time: a `401` before the known `sessionExpiresAt` is withdrawn
-  access (FR-004), after it an expired session.
-  Sign-out is refused while the outbox is not empty and clears the IndexedDB database.
+  access (FR-004), after it an expired session, using the response's server time or the
+  stored clock offset. A `403` means withdrawn access even after the known expiry.
+  Network failures and temporary server failures keep the cached route. Sign-out is
+  refused while records or photos are pending and otherwise clears the IndexedDB database.
+  Both sign-in and sign-out use the shared ownership guard, also in the panel's consumer;
+  unreadable ownership is refused without deleting data.
 - **Rationale**: FR-003, FR-004 (clarification Q5).
 
 ## R14. Shortcuts

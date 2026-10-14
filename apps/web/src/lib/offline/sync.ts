@@ -1,21 +1,35 @@
-import { maxRecordsPerRequest, type CourierSnapshot } from "@domy/domain";
-import type { CourierDb } from "./db";
+import {
+  courierRecordResults,
+  courierSnapshot,
+  maxRecordsPerRequest,
+  type CourierSnapshot,
+} from "@domy/domain";
+import { z } from "zod";
+import {
+  claimCourierDb,
+  courierMeta,
+  CourierDataError,
+  outboxItem,
+  readCourierMeta,
+  storedPhoto,
+  type CourierDb,
+  type OutboxItem,
+} from "./db";
 
-/**
- * One synchronization (feature 003, research R4): send the outbox in order, upload the photos
- * whose record was acknowledged, then fetch the route and replace the snapshot. A failed step
- * stops there until the next run; nothing leaves the phone before the server acknowledges it.
- */
-
+/** One sync: records, notice acknowledgments, photos, then atomic outbox/snapshot commit (US2). */
 export class SyncError extends Error {
   readonly status: number;
-  constructor(status: number, message: string) {
+  readonly serverTime: string | null;
+  constructor(status: number, message: string, serverTime: string | null = null) {
     super(message);
     this.status = status;
+    this.serverTime = serverTime;
   }
 }
 
 type Fetch = typeof fetch;
+type Entry = { key: number; item: OutboxItem };
+const errorBody = z.object({ error: z.object({ message: z.string() }) });
 
 async function request(fetcher: Fetch, path: string, init?: RequestInit): Promise<Response> {
   let response: Response;
@@ -25,50 +39,111 @@ async function request(fetcher: Fetch, path: string, init?: RequestInit): Promis
     throw new SyncError(0, "Sin conexión.");
   }
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      error?: { message: string };
-    } | null;
-    throw new SyncError(response.status, body?.error?.message ?? "No se pudo sincronizar.");
+    const parsed = errorBody.safeParse(await response.json().catch(() => null));
+    throw new SyncError(
+      response.status,
+      parsed.success
+        ? parsed.data.error.message
+        : "No se pudo sincronizar. Tus registros siguen guardados.",
+      response.headers.get("date"),
+    );
   }
   return response;
 }
 
-/** Sends the records of the outbox, oldest first, at most 50 per request (FR-019). */
-async function sendRecords(db: CourierDb, fetcher: Fetch, now: () => Date): Promise<void> {
+/** Cursor keys and values belong to one read transaction, including items added during a sync. */
+async function entries(db: CourierDb): Promise<Entry[]> {
+  const tx = db.transaction("outbox");
+  const result: Entry[] = [];
+  let cursor = await tx.store.openCursor();
+  while (cursor) {
+    const parsed = outboxItem.safeParse(cursor.value);
+    if (!parsed.success)
+      throw new CourierDataError(
+        "Un registro guardado no se pudo leer. No lo borres; comunícate con el coordinador.",
+      );
+    result.push({ key: cursor.key, item: parsed.data });
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+  return result;
+}
+
+async function sendRecords(
+  db: CourierDb,
+  fetcher: Fetch,
+  now: () => Date,
+  accepted: Set<number>,
+): Promise<void> {
   for (;;) {
-    const keys = await db.getAllKeys("outbox", null, maxRecordsPerRequest);
-    const items = await db.getAll("outbox", null, maxRecordsPerRequest);
-    const batch = items.flatMap((item, index) =>
-      item.type === "record" ? [{ key: keys[index], record: item.record }] : [],
-    );
+    const batch = (await entries(db))
+      .flatMap(({ key, item }) =>
+        item.type === "record" && !accepted.has(key) ? [{ key, record: item.record }] : [],
+      )
+      .slice(0, maxRecordsPerRequest);
     if (batch.length === 0) return;
     const response = await request(fetcher, "/api/courier/records", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         deviceNow: now().toISOString(),
-        records: batch.map((item) => item.record),
+        records: batch.map((entry) => entry.record),
       }),
     });
-    const { results } = (await response.json()) as { results: { id: string }[] };
-    const acknowledged = new Set(results.map((result) => result.id));
-    const tx = db.transaction("outbox", "readwrite");
-    await Promise.all([
-      ...batch
-        .filter((item) => item.key !== undefined && acknowledged.has(item.record.id))
-        .map((item) => tx.store.delete(item.key as number)),
-      tx.done,
-    ]);
-    if (batch.length < maxRecordsPerRequest) return;
+    const parsed = courierRecordResults.safeParse(await response.json().catch(() => null));
+    if (!parsed.success)
+      throw new SyncError(
+        502,
+        "El servidor no confirmó tus registros. Siguen guardados en el teléfono.",
+      );
+    const acknowledged = new Set(parsed.data.results.map((entry) => entry.id));
+    for (const entry of batch) if (acknowledged.has(entry.record.id)) accepted.add(entry.key);
+    // A partial/empty answer is retried on the next trigger, never in an unbounded loop.
+    if (batch.some((entry) => !accepted.has(entry.key))) return;
   }
 }
 
-/** Uploads the photos of acknowledged records; a photo the server refuses never blocks. */
-async function uploadPhotos(db: CourierDb, fetcher: Fetch): Promise<void> {
+async function sendAcknowledgments(
+  db: CourierDb,
+  fetcher: Fetch,
+  accepted: Set<number>,
+): Promise<void> {
+  const pending = await entries(db);
+  if (pending.some(({ key, item }) => item.type === "record" && !accepted.has(key))) return;
+  for (const { key, item } of pending) {
+    if (item.type !== "acknowledgment") continue;
+    await request(fetcher, "/api/courier/notices/acknowledge", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        actionId: item.actionId,
+        noticeIds: item.noticeIds,
+        occurredAt: item.occurredAt,
+      }),
+    });
+    accepted.add(key);
+  }
+}
+
+/** A refused photo stays on the phone; other uploads and records still progress (FR-009). */
+async function uploadPhotos(
+  db: CourierDb,
+  fetcher: Fetch,
+  accepted: Set<number>,
+): Promise<SyncError | null> {
   const waiting = new Set(
-    (await db.getAll("outbox")).flatMap((item) => (item.type === "record" ? [item.record.id] : [])),
+    (await entries(db)).flatMap(({ key, item }) =>
+      item.type === "record" && !accepted.has(key) ? [item.record.id] : [],
+    ),
   );
-  for (const photo of await db.getAll("photos")) {
+  let refusal: SyncError | null = null;
+  for (const value of await db.getAll("photos")) {
+    const parsed = storedPhoto.safeParse(value);
+    if (!parsed.success)
+      throw new CourierDataError(
+        "Una foto guardada no se pudo leer. No la borres; comunícate con el coordinador.",
+      );
+    const photo = parsed.data;
     if (waiting.has(photo.recordId)) continue;
     try {
       await request(fetcher, `/api/courier/photos/${photo.id}`, {
@@ -77,12 +152,53 @@ async function uploadPhotos(db: CourierDb, fetcher: Fetch): Promise<void> {
         body: photo.image,
       });
     } catch (error) {
-      // Too large, malformed, or unknown to the server: keeping it would block the rest, and a
-      // photo problem never blocks (FR-009). A failed connection keeps it for the next run.
-      const refused = error instanceof SyncError && [400, 404, 413].includes(error.status);
-      if (!refused) throw error;
+      if (!(error instanceof SyncError) || ![400, 404, 413].includes(error.status)) throw error;
+      refusal ??= error;
+      continue;
     }
     await db.delete("photos", photo.id);
+  }
+  return refusal;
+}
+
+/** Expiry keeps the route; withdrawal removes it, while neither removes pending work (FR-004). */
+export async function refuseCourierSession(
+  db: CourierDb,
+  options: { userId: string; now: () => Date; serverTime?: string | null; status?: 401 | 403 },
+): Promise<void> {
+  const meta = await readCourierMeta(db);
+  if (!meta || meta.userId !== options.userId) return;
+  // A malformed stored snapshot cannot lend authority to one valid-looking field (T098).
+  const stored = courierSnapshot.safeParse(await db.get("snapshot", "current"));
+  const known = meta.sessionExpiresAt ?? (stored.success ? stored.data.sessionExpiresAt : null);
+  const receivedTime = Date.parse(options.serverTime ?? "");
+  const time = Number.isFinite(receivedTime)
+    ? receivedTime
+    : options.now().getTime() + meta.clockOffsetMs;
+  const withdrawn = options.status === 403 || !known || time < Date.parse(known);
+  const tx = db.transaction(["meta", "snapshot"], "readwrite");
+  try {
+    const value = await tx.objectStore("meta").get("current");
+    const current = value ? courierMeta.parse(value) : null;
+    if (current?.userId === options.userId) {
+      await tx.objectStore("meta").put(
+        {
+          ...current,
+          sessionStatus: withdrawn ? "withdrawn" : "expired",
+          sessionExpiresAt: known,
+          ...(Number.isFinite(receivedTime) && {
+            clockOffsetMs: receivedTime - options.now().getTime(),
+          }),
+        },
+        "current",
+      );
+      if (withdrawn) await tx.objectStore("snapshot").clear();
+    }
+    await tx.done;
+  } catch (error) {
+    tx.abort();
+    await tx.done.catch(() => undefined);
+    throw error;
   }
 }
 
@@ -92,22 +208,57 @@ export async function synchronize(
 ): Promise<CourierSnapshot> {
   const fetcher = options.fetcher ?? fetch.bind(globalThis);
   const now = options.now ?? (() => new Date());
-  await sendRecords(db, fetcher, now);
-  await uploadPhotos(db, fetcher);
-  const response = await request(fetcher, "/api/courier/route");
-  const snapshot = (await response.json()) as CourierSnapshot;
-  const tx = db.transaction(["snapshot", "meta"], "readwrite");
-  await Promise.all([
-    tx.objectStore("snapshot").put(snapshot, "current"),
-    tx.objectStore("meta").put(
-      {
+  await claimCourierDb(db, options.userId);
+  try {
+    const accepted = new Set<number>();
+    await sendRecords(db, fetcher, now, accepted);
+    await sendAcknowledgments(db, fetcher, accepted);
+    const photoRefusal = await uploadPhotos(db, fetcher, accepted);
+    const response = await request(fetcher, "/api/courier/route");
+    const parsed = courierSnapshot.safeParse(await response.json().catch(() => null));
+    if (!parsed.success)
+      throw new SyncError(
+        502,
+        "No pudimos cargar la ruta actualizada. Tus registros siguen guardados; reintentaremos la sincronización.",
+      );
+    const snapshot = parsed.data;
+    const tx = db.transaction(["snapshot", "meta", "outbox"], "readwrite");
+    try {
+      const meta = courierMeta.parse(await tx.objectStore("meta").get("current"));
+      if (meta.userId !== options.userId)
+        throw new CourierDataError(
+          "La cuenta cambió durante la sincronización. Tus registros siguen guardados.",
+        );
+      await Promise.all([
+        tx.objectStore("snapshot").put(snapshot, "current"),
+        tx.objectStore("meta").put(
+          {
+            ...meta,
+            clockOffsetMs: Date.parse(snapshot.serverTime) - now().getTime(),
+            lastSyncedAt: snapshot.serverTime,
+            sessionStatus: "active",
+            sessionExpiresAt: snapshot.sessionExpiresAt,
+          },
+          "current",
+        ),
+        ...[...accepted].map((key) => tx.objectStore("outbox").delete(key)),
+      ]);
+      await tx.done;
+    } catch (error) {
+      tx.abort();
+      await tx.done.catch(() => undefined);
+      throw error;
+    }
+    if (photoRefusal) throw photoRefusal;
+    return snapshot;
+  } catch (error) {
+    if (error instanceof SyncError && (error.status === 401 || error.status === 403))
+      await refuseCourierSession(db, {
         userId: options.userId,
-        clockOffsetMs: Date.parse(snapshot.serverTime) - now().getTime(),
-        lastSyncedAt: snapshot.serverTime,
-      },
-      "current",
-    ),
-    tx.done,
-  ]);
-  return snapshot;
+        now,
+        serverTime: error.serverTime,
+        status: error.status,
+      });
+    throw error;
+  }
 }

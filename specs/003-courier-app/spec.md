@@ -98,9 +98,13 @@ lost collection, and a dispute (E-05; Constitution II). Without this the app is 
 reliable than WhatsApp.
 
 **Independent Test**: load a route, turn on airplane mode, record a pickup, a delivery with
-photo and collection, and an exception; close and reopen the app; turn the connection back
+photo and collection; close and reopen the app; turn the connection back
 on; verify every record reaches the dispatch board exactly once, with the time at which it
 happened.
+
+US2 validates persistence and synchronization for every record kind at the technical
+level. The same phone journey including an exception is validated after US3 adds its
+exception form (quickstart scenario 8); US2 does not implement that form ahead of US3.
 
 **Acceptance Scenarios**:
 

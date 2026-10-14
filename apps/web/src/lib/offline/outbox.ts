@@ -1,11 +1,19 @@
 import {
   resolveCourierRecord,
+  courierRecordInput,
   type CourierRecordInput,
   type CourierSnapshot,
   type CourierTask,
   type ShipmentForRecord,
 } from "@domy/domain";
-import type { CourierDb, StoredPhoto } from "./db";
+import {
+  bindCourierIdentity,
+  courierStores,
+  outboxItem,
+  storedPhoto,
+  type CourierDb,
+  type StoredPhoto,
+} from "./db";
 
 /**
  * The courier's records on the phone (feature 003, research R3, R5): saved before any network
@@ -18,12 +26,22 @@ export async function saveRecord(
   db: CourierDb,
   record: CourierRecordInput,
   photos: StoredPhoto[] = [],
+  identity?: { userId: string; trackingNumber?: string },
 ): Promise<void> {
-  const tx = db.transaction(["outbox", "photos"], "readwrite");
+  const input = courierRecordInput.parse(record);
+  const images = photos.map((photo) => storedPhoto.parse(photo));
+  const tx = db.transaction(courierStores, "readwrite");
   const requests: Promise<unknown>[] = [tx.done];
   try {
-    requests.push(tx.objectStore("outbox").add({ type: "record", record }));
-    for (const photo of photos) requests.push(tx.objectStore("photos").put(photo));
+    if (identity) await bindCourierIdentity(tx, identity.userId);
+    requests.push(
+      tx.objectStore("outbox").add({
+        type: "record",
+        record: input,
+        ...(identity?.trackingNumber && { trackingNumber: identity.trackingNumber }),
+      }),
+    );
+    for (const photo of images) requests.push(tx.objectStore("photos").put(photo));
   } catch (error) {
     // A request refused outright (an invalid photo) does not end the transaction by itself.
     for (const request of requests) request.catch(() => undefined);
@@ -35,7 +53,7 @@ export async function saveRecord(
 
 /** The records not yet acknowledged by the server, in the order they were saved. */
 export async function pendingRecords(db: CourierDb): Promise<CourierRecordInput[]> {
-  const items = await db.getAll("outbox");
+  const items = (await db.getAll("outbox")).map((item) => outboxItem.parse(item));
   return items.flatMap((item) => (item.type === "record" ? [item.record] : []));
 }
 

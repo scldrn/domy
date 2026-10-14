@@ -54,6 +54,11 @@ The offline behavior and the service worker are those of the built app: try them
 `pnpm build` and the production command below, as `pnpm dev` does not register the service
 worker. Without VAPID keys in `.env`, development runs without phone notifications.
 
+"Pendientes" shows saved actions and photos separately. Pending work survives reopening,
+loss of signal, and session expiry; reconnecting sends it automatically. Sign-out and a
+different account's sign-in are refused until it is synchronized. Keep browser storage
+enabled and never clear site data while there are pending actions or photos.
+
 ## Quality gates
 
 ```bash
@@ -62,6 +67,9 @@ pnpm test       # unit and integration tests (real PostgreSQL through Testcontai
 pnpm test:e2e   # end-to-end tests (Playwright)
 pnpm build
 ```
+
+Playwright builds and serves the web app with Vite preview, including its real service
+worker; offline cases use independent courier accounts and disposable test data.
 
 ## Production
 

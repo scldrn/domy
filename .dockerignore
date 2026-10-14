@@ -1,0 +1,17 @@
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.git/
+Dockerfile*
+.dockerignore
+*.log*
+.env*
+coverage/
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
+apps/web/tests/e2e/.auth/
+docs/discovery/raw/
+.DS_Store

@@ -109,6 +109,15 @@ const tasksOf = (state: CourierSnapshot) => state.route?.stops.flatMap((stop) =>
 
 /** The phone's outbox (feature 003, research R3, R5, FR-018). */
 describe("saveRecord", () => {
+  it("binds the account in the same save and rejects a different account without adding data", async () => {
+    const { db } = await freshDb();
+    await saveRecord(db, pickup, [], { userId: id(700), trackingNumber: "AB12CD34" });
+    expect(await db.get("meta", "current")).toMatchObject({ userId: id(700) });
+    await expect(saveRecord(db, delivery, [], { userId: id(701) })).rejects.toThrow("otra cuenta");
+    expect((await pendingRecords(db)).map((record) => record.id)).toEqual([pickup.id]);
+    expect(await db.get("meta", "current")).toMatchObject({ userId: id(700) });
+    db.close();
+  });
   it("keeps a saved record and its photos across reopening the database", async () => {
     const { name, db } = await freshDb();
     const photo: StoredPhoto = {

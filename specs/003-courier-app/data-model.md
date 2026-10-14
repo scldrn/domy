@@ -209,12 +209,17 @@ courier's own records, including their handover confirmation, write `false`.
 | Store | Content | Removed |
 | --- | --- | --- |
 | `snapshot` | Last response of `GET /api/courier/route` | Replaced at every sync; cleared at sign-out |
-| `outbox` | Items not yet acknowledged, in order, of two types: a **record** (its input and `occurredAt`) and a **notice acknowledgment** (`actionId`, notice ids, `occurredAt`). Records are sent first, then acknowledgments | When the server acknowledges each |
+| `outbox` | Pending items, in order, of two types: a **record** (its input and `occurredAt`) and a **notice acknowledgment** (`actionId`, notice ids, `occurredAt`). Records are sent first, then acknowledgments | Once acknowledged, together with the refreshed snapshot, in one transaction |
 | `photos` | Compressed images with their `id` and record `id` | When the upload is acknowledged |
-| `meta` | User id, clock offset, last synchronization time | At sign-out |
+| `meta` | User id, clock offset, last synchronization time, known session expiry, and active/expired/withdrawn status | At sign-out |
 
 A finished route is absent from the next snapshot, so its personal data leaves the phone at
 that sync (FR-023). A `401` received before the `sessionExpiresAt` of the stored snapshot means access was
 withdrawn (deactivation or sessions ended): it clears `snapshot` and keeps `outbox`
 readable. A `401` after that time means the session expired: everything is kept (FR-003,
 FR-004).
+
+A `403` also means withdrawal, regardless of the known expiry. Network failures and
+temporary server errors do not imply withdrawal. Identity and pending counts are checked
+atomically before saving, changing accounts, or clearing data; unreadable ownership fails
+closed without deleting anything. Stored items and snapshot responses use runtime schemas.

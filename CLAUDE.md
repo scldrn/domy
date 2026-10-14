@@ -211,7 +211,8 @@ and then needs a migration.
 - End to end (`apps/web/tests/e2e/`): `global-setup.ts` starts its own PostgreSQL and photo
   storage (S3Proxy), migrates, seeds, adds test merchants, links the courier account to the
   courier "Mensajero Uno", and runs the API on :3100 (`NODE_ENV=test`,
-  `DOMY_FAKE_NOW=2026-10-01T15:00:00Z`) and Vite on :5174, saving one session per role. Tests
+  `DOMY_FAKE_NOW=2026-10-01T15:00:00Z`) and the built web app with Vite preview on :5174,
+  saving one session per role. The real service worker supports offline reopening. Tests
   use the `ownerPage`, `dispatcherPage`, `courierPage`, and `setServerNow` fixtures of
   `fixtures.ts`; every passing test then runs axe (WCAG 2.2 AA) on the page it ended on, so an
   accessibility violation fails the test.

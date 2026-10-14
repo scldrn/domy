@@ -28,6 +28,8 @@ import TwoWheelerIcon from "@material-symbols/svg-400/rounded/two_wheeler.svg?re
 import { userRoleLabels, type UserRole } from "@domy/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { ApiError } from "@/lib/api-client";
 import {
   createFileRoute,
   Link,
@@ -196,9 +198,17 @@ function PanelLayout() {
   const navigate = useNavigate();
 
   const onSignOut = async () => {
-    await signOut();
-    queryClient.clear();
-    await navigate({ to: "/ingresar" });
+    try {
+      await signOut();
+      queryClient.clear();
+      await navigate({ to: "/ingresar" });
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : "No pudimos cerrar la sesión. Intenta de nuevo.",
+      );
+    }
   };
 
   return (

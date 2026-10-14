@@ -162,6 +162,8 @@ apps/web/src/
 │   ├── disbursement-form.tsx
 │   ├── photo-input.tsx
 │   ├── notice-list.tsx
+│   ├── courier-store.ts              # shared view, identity, and synchronization triggers
+│   ├── sync-status.ts                # tested warning boundaries and count wording
 │   └── install-hint.tsx
 ├── features/shipments/
 │   ├── shipment-records.tsx          # proof, collection, attempts, records not applied
@@ -191,6 +193,32 @@ apps/web/tests/e2e/global-setup.ts    # + S3Proxy container, storage and test no
 screen.
 
 ## Cross-feature alignment
+
+US2 delivery scope (owner approval 2026-10-14): technical outbox and synchronization tests
+cover all record kinds; its phone journey covers pickups and deliveries. US3 adds the
+exception form (T051) and completes the exception step of offline quickstart scenario 8
+(T049). This preserves the feature's full offline requirement without claiming an unbuilt
+screen in US2. The end-to-end environment must serve the built app for T043, so its real
+service worker is active; the existing end-to-end suite uses that same environment.
+
+US2 follows identity through `lib/offline/db.ts`, `outbox.ts`, `sync.ts`, the courier store,
+the courier layout's session guard, and `features/auth/session.ts`. Ownership is established
+before saving or sending, including sign-in and sign-out. Records and photos belonging to
+another account cannot be taken over. Sync commits acknowledged outbox removals with the
+refreshed snapshot, preserving the locally replayed result if the refresh fails. The
+existing triggers stay in the shared courier store. Session refusal is classified using
+the server's response time (or the stored clock offset) and the known expiry; a withdrawn
+session clears the route snapshot but keeps pending actions. No new service is needed.
+
+The shared auth consumer is covered by `features/auth/session.test.ts`; both courier and
+panel layouts handle its guarded sign-out errors. A temporary server failure preserves the
+cached route rather than pretending that the account was withdrawn. A `403` explicitly
+withdraws access; an expired `401` does not. Unknown or unreadable local ownership blocks
+account changes with storage guidance, without deleting pending work.
+
+Stored items and transport responses are validated at their boundaries (Constitution V).
+The snapshot's shared types are derived from its Zod schemas in
+`packages/domain/src/schemas/courier.ts`, rather than copied into the phone's sync code.
 
 Features 001 and 002 already carry the alignment below in their documents and code (the
 shared lifecycle has this feature's transitions, `handovers.from_route_id` accepts null, the

@@ -1,9 +1,22 @@
-import type { UserRole } from "@domy/domain";
+import { userRole } from "@domy/domain";
 import { queryOptions } from "@tanstack/react-query";
+import { z } from "zod";
+import {
+  courierDatabase,
+  pauseCourierSynchronization,
+  resetCourierState,
+  resumeCourierSynchronization,
+} from "@/features/courier/courier-store";
+import { claimCourierDb, clearCourierDb, courierMeta, CourierDataError } from "@/lib/offline/db";
 import { ApiError } from "@/lib/api-client";
 import { syncClock } from "@/lib/clock";
 
-export type SessionUser = { id: string; name: string; email: string; role: UserRole };
+const sessionUser = z.object({ id: z.uuid(), name: z.string(), email: z.email(), role: userRole });
+export type SessionUser = z.output<typeof sessionUser>;
+const sessionBody = z.object({
+  user: sessionUser,
+  session: z.object({ expiresAt: z.iso.datetime({ offset: true }) }).optional(),
+});
 
 const networkError = new ApiError(0, {
   code: "network_error",
@@ -30,9 +43,39 @@ async function authRequest(path: string, body?: unknown): Promise<Response> {
 /** The signed-in user, or null. */
 async function getSession(): Promise<SessionUser | null> {
   const response = await authRequest("get-session");
-  if (!response.ok) return null;
-  const body = (await response.json()) as { user: SessionUser } | null;
-  return body?.user ?? null;
+  if (response.status === 401) return null;
+  if (!response.ok)
+    throw new ApiError(response.status, {
+      code:
+        response.status >= 500 || [408, 429].includes(response.status)
+          ? "session_unavailable"
+          : "session_refused",
+      message:
+        "No pudimos verificar tu sesión con el servidor. Tus datos siguen guardados; intenta de nuevo.",
+    });
+  const json: unknown = await response.json();
+  if (json === null) return null;
+  const parsed = sessionBody.safeParse(json);
+  if (!parsed.success)
+    throw new ApiError(502, {
+      code: "invalid_session",
+      message: "No pudimos verificar tu sesión. Intenta de nuevo.",
+    });
+  const { user, session } = parsed.data;
+  if (user.role === "courier" && session) {
+    const db = await courierDatabase();
+    const tx = db.transaction("meta", "readwrite");
+    const value = await tx.store.get("current");
+    const parsedMeta = value ? courierMeta.safeParse(value) : null;
+    const meta = parsedMeta?.success ? parsedMeta.data : null;
+    if (meta?.userId === user.id)
+      await tx.store.put(
+        { ...meta, sessionStatus: "active", sessionExpiresAt: session.expiresAt },
+        "current",
+      );
+    await tx.done;
+  }
+  return user;
 }
 
 export const sessionQuery = queryOptions({
@@ -43,25 +86,74 @@ export const sessionQuery = queryOptions({
 
 /** Signs in with email and password; errors carry Spanish messages. */
 export async function signIn(email: string, password: string): Promise<void> {
-  const response = await authRequest("sign-in/email", { email, password });
-  if (response.ok) return;
-  const body = (await response.json().catch(() => ({}))) as {
-    code?: string;
-    error?: { code: string; message: string };
-  };
-  if (body.error) throw new ApiError(response.status, body.error);
-  const messages: Record<number, string> = {
-    401: "El correo o la contraseña no son correctos.",
-    403: "Tu cuenta está desactivada. Comunícate con el propietario.",
-    429: "Demasiados intentos. Espera un momento e intenta de nuevo.",
-  };
-  const message =
-    messages[response.status] ?? "No pudimos iniciar sesión. Intenta de nuevo en un momento.";
-  throw new ApiError(response.status, { code: body.code ?? "sign_in_failed", message });
+  await pauseCourierSynchronization();
+  try {
+    const response = await authRequest("sign-in/email", { email, password });
+    if (response.ok) {
+      try {
+        const parsed = sessionBody.safeParse(await response.json());
+        if (!parsed.success)
+          throw new ApiError(502, {
+            code: "invalid_session",
+            message: "No pudimos verificar la cuenta. Intenta de nuevo.",
+          });
+        const db = await courierDatabase();
+        await claimCourierDb(db, parsed.data.user.id);
+        if (parsed.data.user.role !== "courier") await clearCourierDb(db);
+        resetCourierState();
+      } catch (error) {
+        // A different account must not remain signed in over another courier's pending data.
+        await authRequest("sign-out", {}).catch(() => undefined);
+        if (error instanceof ApiError) throw error;
+        throw new ApiError(409, {
+          code: "courier_data_owned",
+          message:
+            error instanceof CourierDataError
+              ? error.message
+              : "No pudimos acceder al almacenamiento del sitio. Permite que el navegador guarde datos e intenta de nuevo. No borres los datos si tienes pendientes.",
+        });
+      }
+      return;
+    }
+    const body = (await response.json().catch(() => ({}))) as {
+      code?: string;
+      error?: { code: string; message: string };
+    };
+    if (body.error) throw new ApiError(response.status, body.error);
+    const messages: Record<number, string> = {
+      401: "El correo o la contraseña no son correctos.",
+      403: "Tu cuenta está desactivada. Comunícate con el propietario.",
+      429: "Demasiados intentos. Espera un momento e intenta de nuevo.",
+    };
+    const message =
+      messages[response.status] ?? "No pudimos iniciar sesión. Intenta de nuevo en un momento.";
+    throw new ApiError(response.status, { code: body.code ?? "sign_in_failed", message });
+  } finally {
+    resumeCourierSynchronization();
+  }
 }
 
 export async function signOut(): Promise<void> {
-  await authRequest("sign-out", {});
+  await pauseCourierSynchronization();
+  try {
+    const db = await courierDatabase();
+    if ((await db.count("outbox")) > 0 || (await db.count("photos")) > 0)
+      throw new ApiError(409, {
+        code: "courier_pending",
+        message:
+          "Tienes registros o fotos pendientes por sincronizar. Espera a que lleguen antes de cerrar sesión.",
+      });
+    const response = await authRequest("sign-out", {});
+    if (!response.ok)
+      throw new ApiError(response.status, {
+        code: "sign_out_failed",
+        message: "No pudimos cerrar la sesión. Intenta de nuevo.",
+      });
+    await clearCourierDb(db);
+    resetCourierState();
+  } finally {
+    resumeCourierSynchronization();
+  }
 }
 
 /** Better Auth error codes, said in Spanish. */
