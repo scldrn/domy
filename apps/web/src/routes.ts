@@ -8,7 +8,13 @@ export const routes = rootRoute("root.tsx", [
   route("/ingresar", "sign-in.tsx"),
   route("/recuperar", "recover.tsx"),
   route("/restablecer", "reset-password.tsx"),
-  route("/mensajero", "courier-home.tsx"),
+  // The courier app (feature 003).
+  layout("courier", "courier-layout.tsx", [
+    route("/mensajero", "courier-route.tsx"),
+    route("/mensajero/parada/$stopId", "courier-stop.tsx"),
+    route("/mensajero/mi-dia", "courier-day.tsx"),
+    route("/mensajero/pendientes", "courier-pending.tsx"),
+  ]),
   layout("panel", "panel-layout.tsx", [
     index("dispatch-board.tsx"),
     route("/envios/nuevo", "shipment-new.tsx"),
@@ -27,5 +33,6 @@ export const routes = rootRoute("root.tsx", [
     route("/auditoria", "audit-log.tsx"),
     route("/usuarios", "users.tsx"),
     route("/cuenta", "account.tsx"),
+    route("/configuracion", "settings.tsx"),
   ]),
 ]);

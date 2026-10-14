@@ -56,7 +56,14 @@ test("gives each role its own access (scenario 13)", async ({ ownerPage, browser
 
   const courier = await signInAs(browser, `mensajero${run}@example.com`);
   await expect(courier).toHaveURL(/\/mensajero$/);
-  await expect(courier.getByText("La aplicación del mensajero")).toBeVisible();
+  // The courier app (feature 003), not the panel.
+  await expect(courier.getByRole("heading", { name: "Mi ruta" })).toBeVisible();
+  const navigation = courier.getByRole("navigation", { name: "Navegación principal" });
+  await expect(navigation.getByRole("link", { name: "Mi ruta" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(navigation.getByRole("link", { name: "Mi día" })).toBeVisible();
   await courier.goto("/historial");
   await expect(courier).toHaveURL(/\/mensajero$/);
 });

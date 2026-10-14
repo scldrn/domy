@@ -68,23 +68,23 @@ stores, which every user story needs
 
 ### Database
 
-- [ ] T015 [P] Define `courier_records`, `record_photos`, `courier_notices`, and `push_subscriptions` with their enums, kind-specific checks, and indexes in `apps/server/src/db/schema/courier-records.ts` per data-model.md
-- [ ] T016 [P] Define `company_settings` (single row) in `apps/server/src/db/schema/settings.ts`
-- [ ] T017 Extend `apps/server/src/db/schema/shipments.ts` (`held_at_office`, `return_decided`, `needs_review`, their checks, and the new `shipment_event_type` values), `apps/server/src/db/schema/routes.ts` (`stop_kind` value `return`, `route_tasks.problem_note`; `handovers.from_route_id` is already optional), and `apps/server/src/db/schema/directories.ts` (`couriers.last_synced_at`)
-- [ ] T018 Generate and review the migration for T015–T017 in `apps/server/src/db/migrations/`, and set a sample office address in `apps/server/src/db/seed/index.ts`
+- [X] T015 [P] Define `courier_records`, `record_photos`, `courier_notices`, and `push_subscriptions` with their enums, kind-specific checks, and indexes in `apps/server/src/db/schema/courier-records.ts` per data-model.md
+- [X] T016 [P] Define `company_settings` (single row) in `apps/server/src/db/schema/settings.ts`
+- [X] T017 Extend `apps/server/src/db/schema/shipments.ts` (`held_at_office`, `return_decided`, `needs_review`, their checks, and the new `shipment_event_type` values), `apps/server/src/db/schema/routes.ts` (`stop_kind` value `return`, `route_tasks.problem_note`; `handovers.from_route_id` is already optional), and `apps/server/src/db/schema/directories.ts` (`couriers.last_synced_at`)
+- [X] T018 Generate and review the migration for T015–T017 in `apps/server/src/db/migrations/`, and set a sample office address in `apps/server/src/db/seed/index.ts`
 
 ### Applying a record
 
-- [ ] T019 [P] Create `apps/server/tests/setup/storage.ts` (in-memory S3Proxy 4.1.1 through Testcontainers' `GenericContainer`, research R6) and `apps/server/src/lib/storage.ts` (`putPhoto`, `getPhoto` over `@aws-sdk/client-s3`)
-- [ ] T020 Write failing integration tests in `apps/server/tests/courier-records-apply.test.ts` for `applyCourierRecord`: a pickup sets status, custody, and the task in one transaction with `occurred_at` and `recorded_at`; the same `id` sent twice has one effect and returns the stored outcome; a record that cannot be applied is stored with outcome `not_applied`; the route status is recalculated; shipment events carry author, time it happened, and time received (FR-019, FR-024, FR-039); every custody move writes `changes.custodyCourierId` (and `heldAtOffice` for the office) as the custody history of feature 002 reads it, and the courier's own records write `on_behalf = false` (research R17)
-- [ ] T021 Implement `apps/server/src/lib/courier-records.ts` (`applyCourierRecord`: insert the record by its `id`, execute the result of `resolveCourierRecord` on the shipment, task, custody, photos expected, and events, then `lib/route-status.ts`) until T020 passes
-- [ ] T022 Replace the test-only stand-in of feature 002 in `apps/server/tests/setup/routes.ts` with calls to `applyCourierRecord`, and confirm the tests of feature 002 still pass
+- [X] T019 [P] Create `apps/server/tests/setup/storage.ts` (in-memory S3Proxy 4.1.1 through Testcontainers' `GenericContainer`, research R6) and `apps/server/src/lib/storage.ts` (`putPhoto`, `getPhoto` over `@aws-sdk/client-s3`)
+- [X] T020 Write failing integration tests in `apps/server/tests/courier-records-apply.test.ts` for `applyCourierRecord`: a pickup sets status, custody, and the task in one transaction with `occurred_at` and `recorded_at`; the same `id` sent twice has one effect and returns the stored outcome; a record that cannot be applied is stored with outcome `not_applied`; the route status is recalculated; shipment events carry author, time it happened, and time received (FR-019, FR-024, FR-039); every custody move writes `changes.custodyCourierId` (and `heldAtOffice` for the office) as the custody history of feature 002 reads it, and the courier's own records write `on_behalf = false` (research R17)
+- [X] T021 Implement `apps/server/src/lib/courier-records.ts` (`applyCourierRecord`: insert the record by its `id`, execute the result of `resolveCourierRecord` on the shipment, task, custody, photos expected, and events, then `lib/route-status.ts`) until T020 passes
+- [X] T022 Replace the test-only stand-in of feature 002 in `apps/server/tests/setup/routes.ts` with calls to `applyCourierRecord`, and confirm the tests of feature 002 still pass
 
 ### Skeleton
 
-- [ ] T023 Create `apps/server/src/routes/courier.ts` (`requireRole('courier')`), `apps/server/src/routes/courier-records.ts`, `apps/server/src/routes/photos.ts`, and `apps/server/src/routes/settings.ts`, mounted in `apps/server/src/app.ts`, with the error codes of contracts/http-api.md added to `apps/server/src/lib/errors.ts`
-- [ ] T024 [P] Create `apps/web/src/lib/offline/db.ts`: the IndexedDB database with the stores `snapshot`, `outbox`, `photos`, and `meta` (data-model.md §Data on the phone)
-- [ ] T025 Register `/mensajero`, `/mensajero/parada/$stopId`, `/mensajero/mi-dia`, `/mensajero/pendientes`, and `/configuracion` in `apps/web/src/routes.ts`; create `apps/web/src/routes/courier-layout.tsx` (navigation bar, high-contrast option with the `[data-scheme="high-contrast"]` tokens that already exist) and the empty pages `courier-route.tsx`, `courier-stop.tsx`, `courier-day.tsx`, `courier-pending.tsx`, and `settings.tsx` in `apps/web/src/routes/`, replacing the waiting page `apps/web/src/routes/courier-home.tsx` (the panel already sends a courier to `/mensajero`)
+- [X] T023 Create `apps/server/src/routes/courier.ts` (`requireRole('courier')`), `apps/server/src/routes/courier-records.ts`, `apps/server/src/routes/photos.ts`, and `apps/server/src/routes/settings.ts`, mounted in `apps/server/src/app.ts`, with the error codes of contracts/http-api.md added to `apps/server/src/lib/errors.ts`
+- [X] T024 [P] Create `apps/web/src/lib/offline/db.ts`: the IndexedDB database with the stores `snapshot`, `outbox`, `photos`, and `meta` (data-model.md §Data on the phone)
+- [X] T025 Register `/mensajero`, `/mensajero/parada/$stopId`, `/mensajero/mi-dia`, `/mensajero/pendientes`, and `/configuracion` in `apps/web/src/routes.ts`; create `apps/web/src/routes/courier-layout.tsx` (navigation bar, high-contrast option with the `[data-scheme="high-contrast"]` tokens that already exist) and the empty pages `courier-route.tsx`, `courier-stop.tsx`, `courier-day.tsx`, `courier-pending.tsx`, and `settings.tsx` in `apps/web/src/routes/`, replacing the waiting page `apps/web/src/routes/courier-home.tsx` (the panel already sends a courier to `/mensajero`)
 
 **Checkpoint**: `pnpm check` and `pnpm test` pass, including feature 002's suite; a courier
 signs in and lands on an empty "Mi ruta"

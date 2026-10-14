@@ -38,6 +38,11 @@ const eventLabels: Record<ShipmentEvent["type"], string> = {
   reassigned: "Reasignado",
   handover_confirmed: "Traspaso confirmado",
   handover_cancelled: "Traspaso cancelado",
+  exception_decided: "Decisión de la novedad",
+  office_received: "Recibido en oficina",
+  record_corrected: "Registro corregido",
+  record_reverted: "Registro revertido",
+  review_cleared: "Revisión resuelta",
 };
 
 /** Field names and value formats of the change history (FR-016). */

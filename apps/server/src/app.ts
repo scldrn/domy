@@ -8,11 +8,14 @@ import type { UserRole } from "@domy/domain";
 import type { Auth } from "./auth.ts";
 import type { Db } from "./db/client.ts";
 import type { Clock } from "./lib/clock.ts";
+import type { PhotoStorage } from "./lib/storage.ts";
 import { AppError, handleError } from "./lib/errors.ts";
 import { bulkRoutes } from "./routes/bulk.ts";
 import { carrierRoutes } from "./routes/carriers.ts";
 import { auditEventRoutes } from "./routes/audit-events.ts";
 import { authRoutes } from "./routes/auth.ts";
+import { courierAppRoutes } from "./routes/courier.ts";
+import { courierRecordRoutes } from "./routes/courier-records.ts";
 import { courierRoutes } from "./routes/couriers.ts";
 import { exportRoutes } from "./routes/export.ts";
 import { handoverRoutes } from "./routes/handovers.ts";
@@ -20,7 +23,9 @@ import { merchantRoutes, pickupPointRoutes } from "./routes/merchants.ts";
 import { rateCardRoutes } from "./routes/rate-card.ts";
 import { routeRoutes } from "./routes/routes.ts";
 import { municipalityRoutes, neighborhoodRoutes } from "./routes/neighborhoods.ts";
+import { photoRoutes } from "./routes/photos.ts";
 import { rateZoneRoutes } from "./routes/rate-zones.ts";
+import { settingsRoutes } from "./routes/settings.ts";
 import { shipmentRoutes } from "./routes/shipments.ts";
 
 export type AppDeps = {
@@ -28,6 +33,8 @@ export type AppDeps = {
   auth: Auth;
   clock: Clock;
   logger: Logger;
+  /** The private bucket of the courier's photos (feature 003, research R6). */
+  storage: PhotoStorage;
   /** Built web app served in production; absent in development and tests. */
   webDist?: string;
   /** End-to-end tests only: lets a test move the server clock (research R9). */
@@ -50,6 +57,7 @@ export function createApp(deps: AppDeps) {
       c.set("db", deps.db);
       c.set("auth", deps.auth);
       c.set("clock", deps.clock);
+      c.set("storage", deps.storage);
       c.set("logger", deps.logger.child({ requestId: c.get("requestId") }));
       const started = performance.now();
       await next();
@@ -99,7 +107,11 @@ export function createApp(deps: AppDeps) {
     .route("/api/neighborhoods", neighborhoodRoutes)
     .route("/api/municipalities", municipalityRoutes)
     .route("/api/carriers", carrierRoutes)
-    .route("/api/rate-zones", rateZoneRoutes);
+    .route("/api/rate-zones", rateZoneRoutes)
+    .route("/api/courier", courierAppRoutes)
+    .route("/api/courier-records", courierRecordRoutes)
+    .route("/api/photos", photoRoutes)
+    .route("/api/settings", settingsRoutes);
 
   const { setNow, testEmails } = deps;
   if (testEmails) {

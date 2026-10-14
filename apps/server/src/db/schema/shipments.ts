@@ -84,6 +84,12 @@ export const shipments = pgTable(
     routeId: uuid().references((): AnyPgColumn => routes.id),
     /** Who holds the package: set at pickup, changed only by a confirmed handover (FR-025). */
     custodyCourierId: uuid().references(() => couriers.id),
+    /** The office holds the package (feature 003, FR-041). */
+    heldAtOffice: boolean().notNull().default(false),
+    /** A return to sender was decided and is not completed: "Devolución en curso" (FR-029). */
+    returnDecided: boolean().notNull().default(false),
+    /** "Por revisar" (feature 003, FR-025, FR-026). */
+    needsReview: boolean().notNull().default(false),
     version: integer().notNull().default(1),
     registeredAt: timestamp({ withTimezone: true }).notNull(),
     registeredBy: uuid()
@@ -132,6 +138,15 @@ export const shipments = pgTable(
         and (${table.status} not in ('assigned', 'dispatched') or ${table.routeId} is not null)`,
     ),
     index("shipments_route_idx").on(table.routeId),
+    // Feature 003: the holder is a courier or the office, never both.
+    check(
+      "shipments_custody_check",
+      sql`not (${table.heldAtOffice} and ${table.custodyCourierId} is not null)`,
+    ),
+    check(
+      "shipments_return_decided_check",
+      sql`not ${table.returnDecided} or ${table.status} in ('exception', 'returned')`,
+    ),
     check("shipments_cod_amount_check", sql`${table.codAmount} >= 0`),
     check(
       "shipments_window_check",

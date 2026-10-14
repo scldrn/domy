@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { users } from "./auth.ts";
 import { createdAt, updatedAt } from "./columns.ts";
 import { neighborhoods } from "./geography.ts";
@@ -58,6 +58,8 @@ export const couriers = pgTable("couriers", {
     .unique("couriers_user_id_key")
     .references(() => users.id),
   isActive: boolean().notNull().default(true),
+  /** The courier app's last snapshot request (feature 003, FR-033). */
+  lastSyncedAt: timestamp({ withTimezone: true }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

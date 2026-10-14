@@ -33,6 +33,15 @@ const errorCatalog = {
   past_service_date: [422, "No se crean rutas para fechas pasadas."],
   courier_required: [422, "Asigna un mensajero antes de despachar la ruta."],
   route_empty: [422, "La ruta no tiene envíos."],
+  // Courier app (feature 003).
+  no_exception_to_decide: [409, "Ese envío no tiene una novedad por decidir."],
+  not_held_by_courier: [409, "Ningún mensajero tiene ese paquete."],
+  record_not_revertible: [
+    409,
+    "Solo se revierte la última entrega, novedad o devolución aplicada del envío.",
+  ],
+  office_not_configured: [409, "Primero registra la dirección de la oficina en «Configuración»."],
+  occurred_in_future: [422, "La hora del registro no puede ser posterior a la actual."],
   account_locked: [423, "La cuenta está bloqueada temporalmente."],
 } as const satisfies Record<string, readonly [ContentfulStatusCode, string]>;
 

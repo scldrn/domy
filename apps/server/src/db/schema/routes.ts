@@ -154,6 +154,8 @@ export const routeTasks = pgTable(
     completedAt: timestamp({ withTimezone: true }),
     completedByCourierId: uuid().references(() => couriers.id),
     blockedByHandoverId: uuid().references(() => handovers.id),
+    /** "Problema de recogida", cleared when the task is completed (feature 003, FR-014). */
+    problemNote: text(),
   },
   (table) => [
     uniqueIndex("route_tasks_one_pending_per_shipment_kind")
@@ -163,6 +165,10 @@ export const routeTasks = pgTable(
     check(
       "route_tasks_blocked_check",
       sql`${table.blockedByHandoverId} is null or ${table.status} = 'pending'`,
+    ),
+    check(
+      "route_tasks_problem_note_check",
+      sql`${table.problemNote} is null or char_length(${table.problemNote}) between 5 and 200`,
     ),
     index("route_tasks_stop_idx").on(table.stopId),
   ],
