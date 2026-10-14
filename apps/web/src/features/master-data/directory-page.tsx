@@ -41,7 +41,8 @@ export function DirectoryPage<T extends { id: string; name: string; isActive: bo
   columns: { header: string; cell: (item: T) => ReactNode }[];
   create: ReactNode;
   edit: (item: T) => ReactNode;
-  setActive: (item: T, isActive: boolean) => Promise<unknown>;
+  /** Saves the change; a warning it returns replaces the plain confirmation. */
+  setActive: (item: T, isActive: boolean) => Promise<string | undefined>;
 }) {
   const queryClient = useQueryClient();
   const [q, setQ] = useState("");
@@ -108,11 +109,13 @@ export function DirectoryPage<T extends { id: string; name: string; isActive: bo
                     variant="ghost"
                     onClick={() => {
                       setActive(item, !item.isActive).then(
-                        async () => {
+                        async (warning) => {
                           await queryClient.invalidateQueries({ queryKey: ["master", queryKey] });
-                          toast.success(
-                            item.isActive ? `${item.name} desactivado` : `${item.name} reactivado`,
-                          );
+                          const done = item.isActive
+                            ? `${item.name} desactivado`
+                            : `${item.name} reactivado`;
+                          if (warning) toast.warning(`${done}. ${warning}`);
+                          else toast.success(done);
                         },
                         (error: unknown) => {
                           toast.error(

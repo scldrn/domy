@@ -211,12 +211,23 @@ export function ShipmentForm({ shipment }: { shipment?: Shipment }) {
     }
   }
 
-  const submit = form.handleSubmit((formValues) => save(formValues, false));
+  /**
+   * The domain schema validates in `save`, which marks the fields by hand; those marks are
+   * cleared first, or one left on a field that was disabled then (the pickup point before a
+   * merchant) would keep `handleSubmit` from ever saving (FR-038).
+   */
+  const attempt = (confirmed: boolean) => {
+    clearErrors();
+    return form.handleSubmit((formValues) => save(formValues, confirmed))();
+  };
 
   return (
     <FormProvider {...form}>
       <form
-        onSubmit={(event) => void submit(event)}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void attempt(false);
+        }}
         noValidate
         className="grid max-w-5xl items-start gap-4 lg:grid-cols-2"
       >
@@ -445,7 +456,7 @@ export function ShipmentForm({ shipment }: { shipment?: Shipment }) {
             <AlertDialogAction
               onClick={() => {
                 setConfirming(false);
-                void form.handleSubmit((formValues) => save(formValues, true))();
+                void attempt(true);
               }}
             >
               {shipment ? "Confirmar y guardar" : "Confirmar y registrar"}

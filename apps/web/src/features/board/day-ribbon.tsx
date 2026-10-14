@@ -202,7 +202,8 @@ export function DayRibbon({
               ))}
               <div className="relative max-h-[15rem] overflow-y-auto py-1">
                 {lanes === 0 && (
-                  <p className="flex h-8 items-center px-2 text-body-s text-on-surface-variant">
+                  // Above the "now" line, which would otherwise cross the sentence.
+                  <p className="relative z-[1] my-1.5 w-fit rounded-xs bg-sheet px-2 py-0.5 text-body-s text-on-surface-variant">
                     Ningún envío con franja.
                   </p>
                 )}

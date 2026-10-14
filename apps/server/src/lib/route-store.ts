@@ -527,6 +527,7 @@ export async function loadRouteDetail(db: Executor, id: string): Promise<RouteDe
       toCourier: event.toCourierId ? to : null,
       reason: event.reason,
       changes: event.changes as Record<string, unknown> | null,
+      onBehalf: event.onBehalf,
     })),
   };
 }

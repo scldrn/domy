@@ -131,6 +131,16 @@ test("keeps the values after a failed save and registers once on retry (FR-038)"
   await registerAndOpen(page);
 });
 
+test("registers once the fields a first try marked are fixed (FR-038)", async ({
+  dispatcherPage: page,
+}) => {
+  await page.getByRole("button", { name: "Registrar envío" }).click();
+  await expect(page.getByText("Elige un cliente.")).toBeVisible();
+  await fillDelivery(page, "Bullish Hype", "Laureles");
+  await page.getByRole("button", { name: "Crédito del cliente" }).click();
+  await registerAndOpen(page);
+});
+
 test("registers a shipment with the keyboard only", async ({ dispatcherPage: page }) => {
   await expect(page.getByRole("combobox", { name: "Cliente" })).toBeFocused();
   await page.keyboard.type("bullish");

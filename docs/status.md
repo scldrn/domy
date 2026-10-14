@@ -13,17 +13,20 @@ a short-lived branch, so the specification and implementation of every feature l
 | --- | --- |
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
-| 002 Routes and dispatch | User Stories 1–4 on `main` (#4, #5, #6, #7). User Story 5 (T048–T051), cancelling a route in preparation and undoing a dispatch, done on the short-lived branch `002-us5-cancel-undo` with every gate green. Polish (T052–T056) remains |
+| 002 Routes and dispatch | All five user stories on `main` (#4–#7, #9). Polish (T052–T061) done on the short-lived branch `002-polish`: contract, security, performance, invariant, accessibility, and usability testing, with the fixes they found recorded in `specs/002-routes-dispatch/quickstart-results.md`. Converging remains |
 | 003 Courier app | Specified, planned, tasked, and analyzed; implementation not started |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Merge `002-us5-cancel-undo` into `main` through its pull request once CI passes.
-2. Finish 002 with polish (T052–T056) on `002-polish`, then converge 002.
-3. Then 003 and 004 the same way, one slice per branch. For 003: the courier's pickup,
+1. Merge `002-polish` into `main` through its pull request once CI passes, then converge
+   002 (`/speckit-converge`).
+2. Then 003 and 004 the same way, one slice per branch. For 003: the courier's pickup,
    delivery, and return events must record `custodyCourierId: [from, to]` in their `changes`,
-   as the custody history of 002 reads it (002 data-model, Derived values).
+   as the custody history of 002 reads it (002 data-model, Derived values), and set
+   `on_behalf` on any event dispatch records for a courier ("Registrado por despacho").
+3. Before go-live: time SC-001, SC-004, and SC-006 with the dispatcher, and add a content
+   security policy tested on the production host (002 quickstart-results).
 
 ## Open with the client
 

@@ -181,6 +181,8 @@ export const shipmentEvents = pgTable(
     clientEventId: uuid().unique("shipment_events_client_event_id_key"),
     /** The route a status change, reassignment, or handover refers to (feature 002). */
     routeId: uuid().references((): AnyPgColumn => routes.id),
+    /** Recorded by dispatch for a courier, as confirming a handover (feature 002, FR-025). */
+    onBehalf: boolean().notNull().default(false),
   },
   (table) => [index("shipment_events_shipment_idx").on(table.shipmentId, table.occurredAt)],
 );

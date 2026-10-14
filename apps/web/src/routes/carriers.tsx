@@ -14,9 +14,10 @@ export const Route = createFileRoute("/_panel/transportadoras")({
       columns={[{ header: "Transportadora", cell: (carrier) => carrier.name }]}
       create={<CarrierDialog />}
       edit={(carrier) => <CarrierDialog carrier={carrier} />}
-      setActive={(carrier, isActive) =>
-        updateCarrier(carrier.id, { actionId: crypto.randomUUID(), isActive })
-      }
+      setActive={async (carrier, isActive) => {
+        await updateCarrier(carrier.id, { actionId: crypto.randomUUID(), isActive });
+        return undefined;
+      }}
     />
   ),
 });

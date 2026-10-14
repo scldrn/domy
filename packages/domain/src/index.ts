@@ -1,3 +1,4 @@
+import "./schemas/locale.ts";
 export * from "./bogota-time.ts";
 export * from "./delivery-windows.ts";
 export * from "./fees.ts";

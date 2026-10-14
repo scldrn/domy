@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import type { AppEnv } from "../app.ts";
+import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 /** Error codes of the API contract, each with its HTTP status and default Spanish message. */
@@ -13,6 +14,7 @@ const errorCatalog = {
   duplicate_alias: [409, "Ese nombre ya identifica a otro registro."],
   last_owner: [409, "Debe quedar al menos un propietario activo."],
   confirmation_required: [422, "Confirma el valor antes de guardar."],
+  payload_too_large: [413, "La solicitud es demasiado grande; envía menos datos a la vez."],
   // Routes and dispatch (feature 002).
   shipment_not_registered: [409, "Ese envío ya no está «Registrado» o ya está en una ruta."],
   courier_busy: [409, "Ese mensajero ya tiene una ruta en curso."],
@@ -92,6 +94,17 @@ export function setErrorReporter(reporter: (error: Error) => void): void {
 
 /** Hono error handler: every non-2xx response has the body `{ error: { code, message, fields? } }`. */
 export function handleError(error: Error, c: Context<AppEnv>) {
+  // A body Hono could not read (broken JSON) is the client's mistake, not ours (research R13).
+  if (error instanceof HTTPException && error.status < 500) {
+    return handleError(
+      new AppError(error.status === 413 ? "payload_too_large" : "invalid_request", {
+        ...(error.status !== 413 && {
+          message: "La solicitud no tiene un formato válido. Recarga la página e intenta de nuevo.",
+        }),
+      }),
+      c,
+    );
+  }
   if (error instanceof AppError) {
     return c.json(
       {

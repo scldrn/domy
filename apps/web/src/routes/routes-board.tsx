@@ -92,7 +92,12 @@ function RoutesBoardPage() {
     queryFn: () => listUnassigned(date),
     refetchInterval: 20_000,
   });
-  const [selected, setSelected] = useState<string[]>([]);
+  const [picked, setPicked] = useState<string[]>([]);
+  // Only what is still "Sin asignar": a shipment another dispatcher took leaves the selection
+  // and the rest stays (FR-021).
+  const selected = unassigned.data
+    ? picked.filter((id) => unassigned.data.some((shipment) => shipment.id === id))
+    : picked;
   // Kept across retries of the same creation so it happens once (FR-020).
   const [draftId, setDraftId] = useState(() => crypto.randomUUID());
   const [confirming, setConfirming] = useState(false);
@@ -110,7 +115,7 @@ function RoutesBoardPage() {
         shipmentIds: selected,
         confirmed,
       });
-      setSelected([]);
+      setPicked([]);
       setDraftId(crypto.randomUUID());
       await queryClient.invalidateQueries({ queryKey: ["unassigned"] });
       await queryClient.invalidateQueries({ queryKey: ["routes-board"] });
@@ -228,7 +233,7 @@ function RoutesBoardPage() {
               now={now()}
               selected={selected}
               onToggle={(ids, checked) => {
-                setSelected((current) =>
+                setPicked((current) =>
                   checked
                     ? [...current, ...ids.filter((id) => !current.includes(id))]
                     : current.filter((id) => !ids.includes(id)),

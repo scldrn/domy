@@ -234,6 +234,8 @@ export type ShipmentEvent = {
   reason: string | null;
   /** `{ field: [old, new] }` of edits and fee confirmations; referenced records by name. */
   changes: Record<string, [unknown, unknown]> | null;
+  /** Recorded by dispatch for a courier: "Registrado por despacho" (feature 002, FR-025). */
+  onBehalf: boolean;
 };
 
 /**

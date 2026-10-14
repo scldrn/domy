@@ -116,11 +116,14 @@ while a handover is pending cancels it and creates a new one from the courier in
 | `reason` | text | Reassign, undo dispatch, cancel |
 | `changes` | jsonb | Before and after (stop order, shipments, status) |
 | `client_event_id` | uuid | Unique, optional; the request's `actionId`, set on the first event an action writes; further events of the same action leave it null (research R4) |
+| `on_behalf` | boolean | Default false; true when dispatch recorded the event for a courier, as a handover confirmed on the receiving courier's behalf ("Registrado por despacho", FR-025) |
 
 **Added to `shipment_events`** (feature 001): `route_id` uuid → routes, set on every status
 change caused by a route and on reassignment and handover events (FR-022, SC-005). The
 existing `reason` is also set on the status changes caused by undoing a dispatch or
-cancelling a route (FR-016).
+cancelling a route (FR-016). `on_behalf` boolean, default false, as on `route_events`: the
+courier app (feature 003) leaves it false for the courier's own actions and sets it when
+dispatch records one for a courier.
 
 ## Shipment lifecycle: transitions owned by this feature
 

@@ -11,7 +11,12 @@ import { calendarDate, reason } from "./shipment.ts";
 
 const actionId = z.uuid("Falta el identificador de la acción.");
 const version = z.number().int().min(1);
-const shipmentIds = z.array(z.uuid()).min(1, "Elige al menos un envío.");
+/** Shipments per request: far beyond any route, short of a body that strains the server. */
+export const maxShipmentsPerRequest = 200;
+const shipmentIds = z
+  .array(z.uuid())
+  .min(1, "Elige al menos un envío.")
+  .max(maxShipmentsPerRequest, `Elige máximo ${String(maxShipmentsPerRequest)} envíos a la vez.`);
 
 export const routeCreateInput = z.object({
   id: z.uuid(),
@@ -37,7 +42,14 @@ export const routeCourierInput = z.object({
 });
 export type RouteCourierInput = z.input<typeof routeCourierInput>;
 
-export const stopOrderInput = z.object({ actionId, version, stopIds: z.array(z.uuid()).min(1) });
+export const stopOrderInput = z.object({
+  actionId,
+  version,
+  stopIds: z
+    .array(z.uuid())
+    .min(1, "La ruta no tiene paradas para ordenar.")
+    .max(2 * maxShipmentsPerRequest + 100, "La ruta tiene demasiadas paradas para ordenarlas."),
+});
 export type StopOrderInput = z.input<typeof stopOrderInput>;
 
 export const routeAddShipmentsInput = z.object({
@@ -127,6 +139,8 @@ export type RouteEvent = {
   toCourier: Named | null;
   reason: string | null;
   changes: Record<string, unknown> | null;
+  /** Recorded by dispatch for a courier: "Registrado por despacho" (FR-025). */
+  onBehalf: boolean;
 };
 
 export type Handover = {

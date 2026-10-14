@@ -112,13 +112,15 @@ packages/domain/src/
 ├── routes.ts                         # buildStops, add/remove, moveStop, validateStopOrder, isRouteFinished, routeProgress, canUndoDispatch
 ├── shipment-lifecycle.ts             # + transitions owned by this feature
 └── schemas/
-    └── routes.ts                     # request and response schemas
+    ├── routes.ts                     # request and response schemas
+    └── locale.ts                     # Zod's own messages in Spanish (Constitution VII, polish)
 
 apps/server/src/
 ├── db/schema/
 │   ├── routes.ts                     # routes, route_stops, route_tasks, handovers, route_events
-│   └── shipments.ts                  # + route_id, custody_courier_id; shipment_events.route_id
-├── db/migrations/                    # one new reviewed migration
+│   └── shipments.ts                  # + route_id, custody_courier_id; shipment_events.route_id and on_behalf
+├── db/migrations/                    # 0002_routes; 0003_events_on_behalf ("Registrado por despacho", polish)
+├── app.ts                            # + secure headers and a 1 MB body limit (research R13)
 ├── routes/
 │   ├── routes.ts                     # /api/routes/*
 │   ├── handovers.ts                  # /api/handovers/*
@@ -129,11 +131,13 @@ apps/server/src/
     ├── route-status.ts               # recalculates "Finalizada" inside each transaction
     └── reassignment.ts               # moves a shipment between routes; requests, confirms, and cancels handovers
 
-apps/server/tests/                    # routes-*.test.ts, handovers.test.ts
+apps/server/tests/                    # routes-*.test.ts, handovers.test.ts; polish adds routes-contract,
+                                      # routes-security, routes-scale, and routes-invariants
 
 apps/web/src/
 ├── components/
-│   └── route-status-mark.tsx         # route state mark (design-system.md §3.3, §8)
+│   ├── route-status-mark.tsx         # route state mark (design-system.md §3.3, §8)
+│   └── on-behalf-mark.tsx            # "Registrado por despacho" in every history (§8, FR-025)
 ├── routes.ts                         # + /rutas, /rutas/$routeId
 ├── routes/
 │   ├── routes-board.tsx              # "Rutas": routes of the day, previous days, "Sin asignar"
@@ -150,7 +154,7 @@ apps/web/src/
     ├── handover-badge.tsx
     └── route-history.tsx
 
-apps/web/tests/e2e/                   # route-build-dispatch.spec.ts, route-adjust.spec.ts, route-reassign.spec.ts, route-cancel-undo.spec.ts
+apps/web/tests/e2e/                   # route-build-dispatch.spec.ts, route-adjust.spec.ts, route-reassign.spec.ts, route-cancel-undo.spec.ts, route-concurrent-edit.spec.ts
 ```
 
 **Structure Decision**: no new package or folder convention; this feature adds files to the

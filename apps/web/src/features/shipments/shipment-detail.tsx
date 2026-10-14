@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useId, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { OnBehalfMark } from "@/components/on-behalf-mark";
 import { PageHeader } from "@/components/page-header";
 import { ShipmentStatusMark } from "@/components/shipment-status-mark";
 import { Badge } from "@/components/ui/badge";
@@ -260,11 +261,12 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
               key={event.id}
               className="relative pb-5 pl-6 before:absolute before:top-1.5 before:-left-[7px] before:size-3 before:rounded-full before:bg-primary before:ring-4 before:ring-surface last:pb-0"
             >
-              <p className="text-body-l text-on-surface">
+              <p className="flex flex-wrap items-center gap-x-2 text-body-l text-on-surface">
                 {eventLabels[event.type]}
                 {event.toStatus && event.type === "status_changed"
                   ? `: ${shipmentStatusLabels[event.toStatus]}`
                   : ""}
+                {event.onBehalf && <OnBehalfMark />}
               </p>
               <p className="text-body-m text-on-surface-variant">
                 {event.actor.name} · {formatDateTime(event.occurredAt)}

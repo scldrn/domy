@@ -120,16 +120,24 @@ describe("Handovers (FR-025)", () => {
     });
     expect(await custody()).toBe(beto);
     expect(deliveryTask(await getRoute(betoRoute.id))?.blockedByHandoverId).toBeNull();
-    expect((await detail()).events.at(-1)).toMatchObject({
+    // Marked as registered by dispatch in both histories (FR-025, design-system.md §8).
+    const history = (await detail()).events;
+    expect(history.at(-1)).toMatchObject({
       type: "handover_confirmed",
       actor: { name: "John Coordinador" },
+      onBehalf: true,
       changes: { custodyCourierId: ["Ana Ruiz", "Beto Gómez"] },
     });
-    expect((await getRoute(betoRoute.id)).events.at(-1)).toMatchObject({
-      type: "handover_confirmed",
-      fromCourier: { name: "Ana Ruiz" },
-      toCourier: { name: "Beto Gómez" },
-    });
+    expect(history.slice(0, -1).every((event) => !event.onBehalf)).toBe(true);
+    for (const route of [betoRoute, anaRoute]) {
+      const events = (await getRoute(route.id)).events;
+      expect(events.find((event) => event.type === "handover_confirmed")).toMatchObject({
+        fromCourier: { name: "Ana Ruiz" },
+        toCourier: { name: "Beto Gómez" },
+        onBehalf: true,
+      });
+      expect(events.filter((event) => event.onBehalf)).toHaveLength(1);
+    }
     // With nothing left, Ana's route finishes.
     expect((await getRoute(anaRoute.id)).status).toBe("finished");
 

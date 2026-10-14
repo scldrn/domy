@@ -15,6 +15,9 @@ record `id`s.
   and the handover endpoints address a shipment or a handover, so they carry no `version`;
   they increment the `version` of every route they change.
 - **Roles**: every endpoint below is for the owner and the dispatcher only (FR-023).
+- **Limits** (research R13): a request carries at most 200 shipment identifiers; request
+  bodies under `/api` are limited to 1 MB; a body that is not valid JSON answers
+  `400 invalid_request`. Mutations accept only `application/json`.
 
 | Status | `code` | When |
 | --- | --- | --- |
@@ -30,6 +33,7 @@ record `id`s.
 | 422 | `courier_required` | Dispatching without a courier (FR-009) |
 | 422 | `route_empty` | Dispatching a route with no shipments (FR-009) |
 | 422 | `confirmation_required` | More than 15 shipments without `confirmed: true` (FR-005) |
+| 413 | `payload_too_large` | A request body over 1 MB (research R13) |
 
 ## Endpoints
 
@@ -38,7 +42,7 @@ record `id`s.
 | `GET /api/shipments/unassigned?date=YYYY-MM-DD` | → `{ shipments: UnassignedShipment[] }` with pickup point, rate zone, neighborhood, delivery window, COD amount, flags (FR-001) |
 | `GET /api/routes/board?date=YYYY-MM-DD` | → `RoutesBoard` = `{ date, serverTime, routes: RouteSummary[], routesFromPreviousDays: RouteSummary[], unassignedCount }`; `RouteSummary` = number, courier, status, `completedStops`, `totalStops`, `codToCollect`, `atRiskCount`, `lateCount`, `pendingHandovers` (FR-018) |
 | `POST /api/routes` | `{ id, actionId, serviceDate, shipmentIds, courierId?, confirmed? }` → `201 RouteDetail` (FR-002, FR-005) |
-| `GET /api/routes/:id` | → `RouteDetail` = route + `stops: Stop[]` (each with `tasks`) + `events: RouteEvent[]` (FR-019) |
+| `GET /api/routes/:id` | → `RouteDetail` = route + `stops: Stop[]` (each with `tasks`) + `events: RouteEvent[]`, each event with `onBehalf` when dispatch recorded it for a courier (FR-019, FR-025) |
 | `PATCH /api/routes/:id` | `{ actionId, version, courierId }` (route in preparation) → `RouteDetail` (FR-008) |
 | `PUT /api/routes/:id/stop-order` | `{ actionId, version, stopIds: string[] }` → `RouteDetail`; `409 invalid_stop_order` (FR-006) |
 | `POST /api/routes/:id/shipments` | `{ actionId, version, shipmentIds, confirmed? }` → `RouteDetail` (FR-011) |
@@ -65,6 +69,8 @@ endpoints.
   one, or `null`). History `changes` also record `routeId`, `courierId`, and
   `custodyCourierId`, shown by name ("Ruta 3", the courier's name) (FR-016, SC-005). The
   status changes caused by undoing a dispatch or cancelling a route carry its `reason`.
+  Every event gains `onBehalf`, true when dispatch recorded it for a courier (a handover
+  confirmed on the receiving courier's behalf), shown as "Registrado por despacho" (FR-025).
 - **`POST /api/shipments/:id/void`** and **`PATCH /api/shipments/:id`**: when the shipment is
   on a route, the same transaction removes it from the route or updates its stops (FR-013).
 - **`PATCH /api/couriers/:id`** with `isActive: false`: the response includes

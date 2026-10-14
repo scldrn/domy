@@ -213,11 +213,21 @@ nothing picked up; verify statuses and history
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T052 [P] Extend `apps/server/tests/role-permissions.test.ts` with every endpoint of contracts/http-api.md: owner and dispatcher allowed, courier refused; no `DELETE` route registered (FR-023)
-- [ ] T053 [P] Add the invariant test `apps/server/tests/routes-invariants.test.ts` (SC-002): after a random sequence of route actions by two users, every shipment not in a final status is either unassigned or on exactly one route in preparation or in progress, and no courier has two routes in progress; every action of the sequence is sent twice with the same `actionId` and has exactly one effect, and a stale `version` is always refused with `409 version_conflict` (FR-020, FR-021)
-- [ ] T054 [P] Cover in the route end-to-end tests what the automatic WCAG 2.2 AA audit of `apps/web/tests/e2e/fixtures.ts` does not: keyboard-only reordering of stops and use at 600 px wide, and at least one passing test ending on each route screen so the audit reaches it (FR-024)
-- [ ] T055 Run every scenario of `specs/002-routes-dispatch/quickstart.md` (1–16) and record the results in `specs/002-routes-dispatch/quickstart-results.md`
-- [ ] T056 Confirm `pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` pass with zero warnings
+- [X] T052 [P] Extend `apps/server/tests/role-permissions.test.ts` with every endpoint of contracts/http-api.md: owner and dispatcher allowed, courier refused; no `DELETE` route registered (FR-023)
+- [X] T053 [P] Add the invariant test `apps/server/tests/routes-invariants.test.ts` (SC-002): after a random sequence of route actions by two users, every shipment not in a final status is either unassigned or on exactly one route in preparation or in progress, and no courier has two routes in progress; every action of the sequence is sent twice with the same `actionId` and has exactly one effect, and a stale `version` is always refused with `409 version_conflict` (FR-020, FR-021)
+- [X] T054 [P] Cover in the route end-to-end tests what the automatic WCAG 2.2 AA audit of `apps/web/tests/e2e/fixtures.ts` does not: keyboard-only reordering of stops and use at 600 px wide, and at least one passing test ending on each route screen so the audit reaches it (FR-024)
+- [X] T055 Run every scenario of `specs/002-routes-dispatch/quickstart.md` (1–16) and record the results in `specs/002-routes-dispatch/quickstart-results.md`
+- [X] T056 Confirm `pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` pass with zero warnings
+
+### Added on 2026-10-13 at the owner's request: a full test and review pass before converging
+
+They run before T055 and T056, which close the phase.
+
+- [X] T057 [P] Contract test `apps/server/tests/routes-contract.test.ts`: every endpoint of contracts/http-api.md is registered with its method, and every registered route of `/api/routes`, `/api/handovers`, and the shipment endpoints this feature adds is documented; every error code of the contract's table exists with its HTTP status; the body of every endpoint matches the documented shape (RoutesBoard, RouteDetail, Handover, `{ shipment, handover }`, the `ShipmentDetail` additions, the error body)
+- [X] T058 [P] Performance test `apps/server/tests/routes-scale.test.ts` on a busy day over a large history (research R13): the routes board, "Sin asignar", a route's detail, and a shipment's detail answer within the budget, and creating, ordering, and dispatching a route of 15 shipments too
+- [X] T059 [P] Security test `apps/server/tests/routes-security.test.ts`: malformed identifiers and bodies are refused with `400` and never answer `500`; oversized lists and bodies are refused; fields outside the schema change nothing; a cross-site form post (not `application/json`) is refused; errors never expose SQL or stack traces; reasons with markup are stored and returned as text; the production headers forbid framing and MIME sniffing (research R13)
+- [X] T060 [P] Web unit tests next to the code for the pure logic of the routes screens (labels, messages, the custody text, the reason rule)
+- [X] T061 Usability and interface review: walk the whole workflow (feature 001 registration through every route action) at 1440, 1024, and 600 px, in light and dark schemes, and with the keyboard only; check every screen against `docs/design-system.md` and the usability heuristics; fix what fails, test-first when it is behavior; record the findings in `specs/002-routes-dispatch/quickstart-results.md`
 
 ---
 
