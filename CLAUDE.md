@@ -197,6 +197,8 @@ and then needs a migration.
   open them, and let him choose.
 - `.env` and the client's data in `docs/discovery/raw/` never enter git.
 - Current state and next step: [docs/status.md](docs/status.md).
+- Questions for the owner and what he must provide go in [OWNER-REQUESTS.md](OWNER-REQUESTS.md),
+  in Spanish: add each one when it comes up, and move it to «Resueltas» with his answer.
 
 ## Quality gates
 

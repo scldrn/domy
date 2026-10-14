@@ -1,9 +1,15 @@
-import { shipmentStatuses, type DispatchBoard, type Shipment } from "@domy/domain";
+import {
+  shipmentStatuses,
+  type DispatchBoard,
+  type Shipment,
+  type ShipmentDetail,
+} from "@domy/domain";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { shipments } from "../src/db/schema/index.ts";
+import { recordPhotos, shipments } from "../src/db/schema/index.ts";
 import { createTestApp } from "./setup/app.ts";
-import { placeOnRoute } from "./setup/routes.ts";
+import { courierWithAccount, sendRecords } from "./setup/courier.ts";
+import { createRoute, placeOnRoute, routeAction, send } from "./setup/routes.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
 import { startDatabase, type TestDatabase } from "./setup/database.ts";
 
@@ -191,5 +197,122 @@ describe("GET /api/shipments/board", () => {
     const courier = await t.signIn("courier");
     const response = await t.request("/api/shipments/board", { cookie: courier.cookie });
     expect(response.status).toBe(403);
+  });
+});
+
+/** The courier's records on the panel (feature 003, FR-033, FR-036, research R11). */
+describe("courier records on the board and the shipment", () => {
+  async function delivered(
+    delivery: Record<string, unknown>,
+    overrides: Record<string, unknown> = {},
+  ) {
+    const ana = await courierWithAccount(t, database.db);
+    const shipment = await register(overrides);
+    const route = await createRoute(t, dispatcher.cookie, {
+      shipmentIds: [shipment.id],
+      courierId: ana.id,
+    });
+    await routeAction(t, dispatcher.cookie, route, "/dispatch");
+    await sendRecords(t, ana, [
+      { shipmentId: shipment.id, kind: "pickup" },
+      { shipmentId: shipment.id, kind: "delivery", receivedByName: "Laura Gómez", ...delivery },
+    ]);
+    return shipment;
+  }
+
+  const flagsOf = async (shipment: Shipment) =>
+    (await board()).shipments.find((each) => each.id === shipment.id)?.recordFlags;
+
+  it("flags a delivery without photo, and one whose photo is on its way (US1 scenario 4)", async () => {
+    const withoutPhoto = await delivered({ cashAmount: 85_000 });
+    const photoId = crypto.randomUUID();
+    const withPhoto = await delivered({
+      cashAmount: 85_000,
+      photos: [{ id: photoId, kind: "proof" }],
+    });
+
+    expect(await flagsOf(withoutPhoto)).toEqual(["no_photo"]);
+    expect(await flagsOf(withPhoto)).toEqual(["photo_pending"]);
+
+    await database.db
+      .update(recordPhotos)
+      .set({ uploadedAt: t.now(), byteSize: 2048 })
+      .where(eq(recordPhotos.id, photoId));
+    expect(await flagsOf(withPhoto)).toEqual([]);
+  });
+
+  it("treats a photo missing for 24 hours as no photo (FR-023)", async () => {
+    const shipment = await delivered({
+      cashAmount: 85_000,
+      photos: [{ id: crypto.randomUUID(), kind: "proof" }],
+    });
+    t.setNow("2026-10-02T15:01:00Z");
+    const result = await board("?date=2026-10-01");
+    expect(result.shipments.find((each) => each.id === shipment.id)?.recordFlags).toEqual([
+      "no_photo",
+    ]);
+  });
+
+  it("flags a collection different from the COD amount (US1 scenario 6)", async () => {
+    const shipment = await delivered({
+      cashAmount: 80_000,
+      note: "Pagó 80.000; el resto mañana",
+      photos: [{ id: crypto.randomUUID(), kind: "proof" }],
+    });
+    expect(await flagsOf(shipment)).toEqual(["photo_pending", "collection_differs"]);
+  });
+
+  it("has no flags before any record", async () => {
+    const shipment = await register();
+    expect(await flagsOf(shipment)).toEqual([]);
+  });
+
+  it("shows the records, their photos, and the collection in the shipment (FR-036)", async () => {
+    const photoId = crypto.randomUUID();
+    const shipment = await delivered({
+      cashAmount: 50_000,
+      companyTransferAmount: 35_000,
+      location: { latitude: 6.2442, longitude: -75.5812, accuracyM: 12 },
+      photos: [
+        { id: photoId, kind: "proof" },
+        { id: crypto.randomUUID(), kind: "transfer_receipt" },
+      ],
+    });
+    await database.db
+      .update(recordPhotos)
+      .set({ uploadedAt: t.now(), byteSize: 2048 })
+      .where(eq(recordPhotos.id, photoId));
+
+    const { body } = await send<ShipmentDetail>(
+      t,
+      dispatcher.cookie,
+      `/api/shipments/${shipment.id}`,
+    );
+
+    expect(body.records.map((record) => record.kind)).toEqual(["pickup", "delivery"]);
+    expect(body.records[1]).toMatchObject({
+      outcome: "applied",
+      courier: { name: "Ana Ruiz" },
+      author: { name: "Ana Ruiz" },
+      onBehalf: false,
+      occurredAt: "2026-10-01T15:00:00.000Z",
+      recordedAt: "2026-10-01T15:00:00.000Z",
+      location: { latitude: 6.2442, longitude: -75.5812, accuracyM: 12 },
+      receivedByName: "Laura Gómez",
+      cashAmount: 50_000,
+      companyTransferAmount: 35_000,
+      merchantTransferAmount: 0,
+      exceptionReason: null,
+      disbursementAmount: null,
+      payee: null,
+      reverted: null,
+    });
+    expect(body.records[1]?.photos).toEqual(
+      expect.arrayContaining([
+        { id: photoId, kind: "proof", uploaded: true },
+        { id: expect.any(String), kind: "transfer_receipt", uploaded: false },
+      ]),
+    );
+    expect(body.recordFlags).toEqual(["photo_pending"]);
   });
 });

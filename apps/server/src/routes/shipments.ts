@@ -90,6 +90,7 @@ import {
   unassignedUpTo,
 } from "../lib/route-store.ts";
 import { AppError } from "../lib/errors.ts";
+import { loadRecordFlags, loadShipmentRecords } from "../lib/record-views.ts";
 import { exportTable, findExportRecords, toCsv, toXlsx } from "../lib/export.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
 
@@ -216,7 +217,7 @@ async function loadRouteState(db: Executor, id: string) {
   };
 }
 
-async function loadDetail(db: Executor, id: string): Promise<ShipmentDetail> {
+async function loadDetail(db: Executor, id: string, now: Date): Promise<ShipmentDetail> {
   const shipment = await loadShipment(db, id);
   const events = await db
     .select({ event: shipmentEvents, actor: { id: users.id, name: users.name } })
@@ -255,6 +256,9 @@ async function loadDetail(db: Executor, id: string): Promise<ShipmentDetail> {
             ),
       onBehalf: event.onBehalf,
     })),
+    // The courier's records and their flags (feature 003, FR-036).
+    records: await loadShipmentRecords(db, id),
+    recordFlags: (await loadRecordFlags(db, [id], now)).get(id) ?? [],
   };
 }
 
@@ -635,10 +639,20 @@ export const shipmentRoutes = new Hono<AppEnv>()
         asc(shipments.registeredAt),
       ],
     );
+    // The flags of the courier's records (feature 003, FR-033).
+    const flags = await loadRecordFlags(
+      c.get("db"),
+      all.map((shipment) => shipment.id),
+      now,
+    );
+    const entries = all.map((shipment) => ({
+      ...shipment,
+      recordFlags: flags.get(shipment.id) ?? [],
+    }));
     return c.json({
       date,
       serverTime: now.toISOString(),
-      ...filterBoard(date, all, filters, now),
+      ...filterBoard(date, entries, filters, now),
     } satisfies DispatchBoard);
   })
   // Shipments on no route up to a date, grouped by pickup place, by zone and neighborhood (FR-001).
@@ -754,10 +768,10 @@ export const shipmentRoutes = new Hono<AppEnv>()
       : [];
     if (!row)
       throw new AppError("not_found", { message: "No hay un envío con ese número de guía." });
-    return c.json(await loadDetail(db, row.id));
+    return c.json(await loadDetail(db, row.id, c.get("clock")()));
   })
   .get("/:id", validate("param", idParam), async (c) => {
-    return c.json(await loadDetail(c.get("db"), c.req.valid("param").id));
+    return c.json(await loadDetail(c.get("db"), c.req.valid("param").id, c.get("clock")()));
   })
   // Corrections while the shipment is not picked up (FR-015, FR-016, FR-018, FR-042).
   .patch("/:id", validate("param", idParam), validate("json", shipmentUpdateInput), async (c) => {

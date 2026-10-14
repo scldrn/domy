@@ -19,7 +19,7 @@ export type StorageConfig = Env["storage"];
 export type PhotoStorage = {
   putPhoto: (key: string, image: Uint8Array) => Promise<void>;
   /** The image, or null when the object is gone (12-month retention, FR-036). */
-  getPhoto: (key: string) => Promise<Uint8Array | null>;
+  getPhoto: (key: string) => Promise<Uint8Array<ArrayBuffer> | null>;
   /** Creates the bucket if missing: development and tests; production provisions its own. */
   ensureBucket: () => Promise<void>;
 };
@@ -46,7 +46,7 @@ export function createStorage(config: StorageConfig): PhotoStorage {
     getPhoto: async (key) => {
       try {
         const object = await client.send(new GetObjectCommand({ Bucket, Key: key }));
-        return object.Body ? await object.Body.transformToByteArray() : null;
+        return object.Body ? new Uint8Array(await object.Body.transformToByteArray()) : null;
       } catch (error) {
         if (error instanceof NoSuchKey) return null;
         throw error;
