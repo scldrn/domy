@@ -15,6 +15,7 @@ export function requireRole(...allowed: UserRole[]) {
       throw new AppError("forbidden");
     }
     c.set("user", { id: result.user.id, name: result.user.name, role });
+    c.set("sessionExpiresAt", result.session.expiresAt);
     await next();
   });
 }

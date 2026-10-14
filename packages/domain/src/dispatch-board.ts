@@ -8,17 +8,17 @@ import { shipmentStatuses, type ShipmentStatus } from "./shipment-lifecycle.ts";
  * web can recompute flags every 30 seconds without another request. Counts ignore the status
  * filter so every status keeps its number.
  */
-export function filterBoard(
+export function filterBoard<Entry extends BoardShipment>(
   date: string,
-  shipments: BoardShipment[],
+  shipments: Entry[],
   filters: Omit<BoardQuery, "date">,
   now: Date,
-): Pick<DispatchBoard, "counts" | "shipments" | "pendingFromPreviousDays"> {
+): Pick<DispatchBoard, "counts"> & { shipments: Entry[]; pendingFromPreviousDays: Entry[] } {
   const counts = Object.fromEntries(shipmentStatuses.map((status) => [status, 0])) as Record<
     ShipmentStatus,
     number
   >;
-  const listed: BoardShipment[] = [];
+  const listed: Entry[] = [];
   for (const shipment of shipments) {
     if (filters.merchantId && shipment.merchant.id !== filters.merchantId) continue;
     if (filters.courierId && shipment.courier?.id !== filters.courierId) continue;

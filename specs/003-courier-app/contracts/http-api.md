@@ -29,7 +29,7 @@ every mutation.
 
 | Method and path | Request → Response |
 | --- | --- |
-| `GET /api/courier/route` | → `CourierSnapshot` = `{ serverTime, sessionExpiresAt, route: CourierRoute \| null, handoversToGive: HandoverToGive[], heldOffRoute: HeldShipment[], notices: Notice[], summary: DaySummary }`; `DaySummary` (today, Bogotá) = counts of deliveries, exceptions, returns, pending stops; `cash`, `companyTransfer`, `merchantTransfer`, `disbursements`, `cashToHandOver` (FR-037). `CourierRoute` = number, service date, `stops` in order, each with kind, address, neighborhood, contact phone (the recipient's on a delivery stop; the merchant's `whatsappPhone` on a pickup or return stop; absent when not registered, FR-016), and `tasks` (shipment id, tracking number, merchant, recipient name and phone, instructions, package count and size, delivery window, COD amount, status, flags, `blockedByHandover`, `problemNote`). Updates `couriers.last_synced_at` (FR-005, FR-022, FR-028) |
+| `GET /api/courier/route` | → `CourierSnapshot` = `{ serverTime, sessionExpiresAt, route: CourierRoute \| null, handoversToGive: HandoverToGive[], heldOffRoute: HeldShipment[], notices: Notice[], summary: DaySummary }`; `DaySummary` (today, Bogotá) = counts of deliveries, exceptions, returns, pending stops; `cash`, `companyTransfer`, `merchantTransfer`, `disbursements`, `cashToHandOver` (FR-037). `CourierRoute` = number, service date, `stops` in order, each with kind, address, neighborhood, contact phone (the recipient's on a delivery stop; the merchant's `whatsappPhone` on a pickup or return stop; absent when not registered, FR-016), and `tasks` (shipment id, tracking number, merchant, recipient name and phone, carrier, destination town, errand description, instructions, package count and size, delivery window, COD amount, status, `blockedByHandover`, `problemNote`; the phone computes the at-risk or late flag from the window and its corrected clock, so it stays right without signal). Updates `couriers.last_synced_at`. An account not linked to a courier gets `403` (FR-005, FR-022, FR-028) |
 | `POST /api/courier/records` | `{ deviceNow, records: CourierRecordInput[] }` (1–50, in the order they happened) → `{ results: { id, outcome }[] }`. Each record is applied in its own transaction (FR-018–FR-026) |
 | `PUT /api/courier/photos/:id` | Body: the JPEG image (`image/jpeg`, ≤ 1 MB, else `413 payload_too_large`) → `204`. `404` while its record has not arrived; repeating it is harmless (FR-023) |
 | `POST /api/courier/notices/acknowledge` | `{ actionId, noticeIds, occurredAt }` → `204`; sets `acknowledged_at` only where empty (FR-027) |
@@ -67,11 +67,11 @@ Reasons and notes are 5–200 characters.
 ## Changes to the contracts of features 001 and 002
 
 - **`GET /api/shipments/:id`**: gains `records: CourierRecord[]` (with `outcome`, `onBehalf`,
-  photos and their `uploaded` state, revert data), `attempts`, `heldAtOffice`,
-  `custodyCourier`, `returnDecided`, `needsReview` (FR-036).
-- **`GET /api/shipments/board`**: each shipment gains the flags `noPhoto`, `photoPending`,
-  `collectionDiffers`, `pickupProblem`, `needsReview`; the board gains
-  `exceptionsToDecide: number` (FR-033).
+  photos and their `uploaded` state, revert data) and `recordFlags`, then `attempts`,
+  `heldAtOffice`, `returnDecided`, `needsReview` (FR-036).
+- **`GET /api/shipments/board`**: each shipment gains `recordFlags`, a list of
+  `no_photo`, `photo_pending`, `collection_differs`, `pickup_problem`, and `needs_review`
+  (`recordFlags` of `packages/domain`); the board gains `exceptionsToDecide: number` (FR-033).
 - **`GET /api/routes/board`**: each `RouteSummary` gains `courierLastSyncedAt` and
   `unacknowledgedNotices: number` (FR-033).
 - **`GET /api/shipments/unassigned`**: also returns held shipments that are on no route, each

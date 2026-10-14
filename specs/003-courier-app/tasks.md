@@ -102,18 +102,18 @@ board and that the route is "Finalizada"
 
 ### Tests for User Story 1 ⚠️ write first, must fail
 
-- [ ] T026 [P] [US1] Integration tests in `apps/server/tests/courier-route.test.ts` (FR-002, FR-005): `GET /api/courier/route` returns only the caller's route in progress with every field of `CourierRoute`, `null` without one, `sessionExpiresAt`, and updates `couriers.last_synced_at`; owner and dispatcher get `403`
-- [ ] T027 [P] [US1] Integration tests in `apps/server/tests/courier-records.test.ts` covering spec US1 scenarios 2–9: pickups one by one; delivery with received-by name, location, and photos declared; collection split among the three payment methods; a total different from the COD amount requires a note; errand completed with an optional note; delivery of a shipment not picked up is `not_applied`; disbursement stored; stops completed out of order; the route becomes `finished` (FR-006–FR-012, FR-015)
-- [ ] T028 [P] [US1] Integration tests in `apps/server/tests/photos.test.ts` (FR-009, FR-023, FR-036): `PUT /api/courier/photos/:id` stores the object and sets `uploaded_at`; `404` before its record; `413 payload_too_large` above 1 MB (the body limit of feature 002); repeating it is harmless; `GET /api/photos/:id` for owner and dispatcher, for the courier only on their own records, `404` when the object is gone
-- [ ] T029 [P] [US1] Extend `apps/server/tests/board.test.ts` with the flags `noPhoto`, `photoPending`, and `collectionDiffers` on `GET /api/shipments/board`, and the records, photos, and collection on `GET /api/shipments/:id` (FR-033, FR-036)
+- [X] T026 [P] [US1] Integration tests in `apps/server/tests/courier-route.test.ts` (FR-002, FR-005): `GET /api/courier/route` returns only the caller's route in progress with every field of `CourierRoute`, `null` without one, `sessionExpiresAt`, and updates `couriers.last_synced_at`; owner and dispatcher get `403`
+- [X] T027 [P] [US1] Integration tests in `apps/server/tests/courier-records.test.ts` covering spec US1 scenarios 2–9: pickups one by one; delivery with received-by name, location, and photos declared; collection split among the three payment methods; a total different from the COD amount requires a note; errand completed with an optional note; delivery of a shipment not picked up is `not_applied`; disbursement stored; stops completed out of order; the route becomes `finished` (FR-006–FR-012, FR-015)
+- [X] T028 [P] [US1] Integration tests in `apps/server/tests/photos.test.ts` (FR-009, FR-023, FR-036): `PUT /api/courier/photos/:id` stores the object and sets `uploaded_at`; `404` before its record; `413 payload_too_large` above 1 MB (the body limit of feature 002); repeating it is harmless; `GET /api/photos/:id` for owner and dispatcher, for the courier only on their own records, `404` when the object is gone
+- [X] T029 [P] [US1] Extend `apps/server/tests/board.test.ts` with the flags `noPhoto`, `photoPending`, and `collectionDiffers` on `GET /api/shipments/board`, and the records, photos, and collection on `GET /api/shipments/:id` (FR-033, FR-036)
 - [ ] T030 [P] [US1] Unit tests in `apps/web/src/lib/offline/outbox.test.ts` with `fake-indexeddb`: a saved record survives reopening the database; replaying the outbox over the snapshot gives the state `resolveCourierRecord` produces; a record that cannot be saved rejects and nothing is shown as done (FR-018)
 - [ ] T031 [P] [US1] End-to-end test in `apps/web/tests/e2e/courier-route.spec.ts` with a phone viewport: quickstart scenarios 1–7, the photo through the file chooser
 
 ### Implementation for User Story 1
 
-- [ ] T032 [US1] Implement `GET /api/courier/route` and `POST /api/courier/records` (each record in its own transaction through `applyCourierRecord`) in `apps/server/src/routes/courier.ts` until T026 and T027 pass
-- [ ] T033 [US1] Implement `PUT /api/courier/photos/:id` in `apps/server/src/routes/courier.ts` and `GET /api/photos/:id` in `apps/server/src/routes/photos.ts` until T028 passes
-- [ ] T034 [US1] Add the three flags and the records to the board and shipment detail responses in `apps/server/src/routes/shipments.ts` and `packages/domain/src/schemas/board.ts` until T029 passes
+- [X] T032 [US1] Implement `GET /api/courier/route` and `POST /api/courier/records` (each record in its own transaction through `applyCourierRecord`) in `apps/server/src/routes/courier.ts` until T026 and T027 pass
+- [X] T033 [US1] Implement `PUT /api/courier/photos/:id` in `apps/server/src/routes/courier.ts` and `GET /api/photos/:id` in `apps/server/src/routes/photos.ts` until T028 passes
+- [X] T034 [US1] Add the three flags and the records to the board and shipment detail responses in `apps/server/src/routes/shipments.ts` and `packages/domain/src/schemas/board.ts` until T029 passes
 - [ ] T035 [US1] Implement `apps/web/src/lib/offline/outbox.ts` (save a record with its phone-generated `id` or a notice acknowledgment, replay records over the snapshot) and a first `apps/web/src/lib/offline/sync.ts` (send the outbox, upload photos whose record was acknowledged, fetch the snapshot; run on open and after each save) until T030 passes
 - [ ] T036 [P] [US1] Implement `apps/web/src/lib/offline/photos.ts` (reduce to 1600 px JPEG of about 200 KB with a canvas) and `apps/web/src/lib/offline/location.ts` (last position at most 2 minutes old, never awaited)
 - [ ] T037 [P] [US1] Build `apps/web/src/features/courier/photo-input.tsx` (camera through a file input, up to three photos, skippable) and `apps/web/src/features/courier/collection-fields.tsx` (full COD amount proposed in cash, split among the three payment methods, note when the total differs, confirmation above COP 2.000.000)
@@ -379,7 +379,8 @@ two days:
 | `003-setup` | Phase 1 (T001–T003) |
 | `003-foundation-domain` | Phase 2: T004–T014 |
 | `003-foundation-records` | Phase 2: T015–T025 |
-| `003-us1-route` | Phase 3 |
+| `003-us1-server` | Phase 3: tests and server (T026–T029, T032–T034) |
+| `003-us1-web` | Phase 3: the courier's screens and the panel's records (T030, T031, T035–T040) |
 | `003-us2-offline` | Phase 4 |
 | `003-us3-exceptions` | Phase 5 |
 | `003-us4-decisions` | Phase 6 |

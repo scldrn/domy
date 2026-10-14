@@ -1,6 +1,7 @@
 import type { UserRole } from "@domy/domain";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestApp } from "./setup/app.ts";
+import { courierWithAccount } from "./setup/courier.ts";
 import { startDatabase, type TestDatabase } from "./setup/database.ts";
 
 let database: TestDatabase;
@@ -10,9 +11,11 @@ const cookies = {} as Record<UserRole, string>;
 beforeAll(async () => {
   database = await startDatabase();
   t = createTestApp(database.db);
-  for (const role of ["owner", "dispatcher", "courier"] as const) {
+  for (const role of ["owner", "dispatcher"] as const) {
     cookies[role] = (await t.signIn(role)).cookie;
   }
+  // A courier account linked to its courier, as the courier app needs (feature 003).
+  cookies.courier = (await courierWithAccount(t, database.db)).cookie;
 });
 afterAll(async () => {
   await database.stop();

@@ -47,6 +47,8 @@ export type AppEnv = {
   Variables: RequestIdVariables &
     Omit<AppDeps, "webDist" | "setNow"> & {
       user: { id: string; name: string; role: UserRole };
+      /** When the signed-in session ends; the courier app warns before it (feature 003, FR-003). */
+      sessionExpiresAt: Date;
     };
 };
 

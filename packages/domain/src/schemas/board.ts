@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { RecordFlagKind } from "../shipment-flags.ts";
 import type { ShipmentStatus } from "../shipment-lifecycle.ts";
 import { shipmentKind, shipmentStatus } from "./enums.ts";
 import { calendarDate } from "./shipment.ts";
@@ -38,11 +39,14 @@ export type BoardShipment = {
   courier: { id: string; name: string } | null;
 };
 
+/** A shipment on the board, with the flags of its courier records (feature 003, FR-033). */
+export type BoardEntry = BoardShipment & { recordFlags: RecordFlagKind[] };
+
 /** The dispatch board of a date (FR-021); `serverTime` corrects the client's clock (R9). */
 export type DispatchBoard = {
   date: string;
   serverTime: string;
   counts: Record<ShipmentStatus, number>;
-  shipments: BoardShipment[];
-  pendingFromPreviousDays: BoardShipment[];
+  shipments: BoardEntry[];
+  pendingFromPreviousDays: BoardEntry[];
 };

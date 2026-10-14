@@ -2,6 +2,8 @@ import { z } from "zod";
 import { packageSize, paymentMode, serviceLevel, shipmentKind, shipmentStatus } from "./enums.ts";
 import type { Handover } from "./routes.ts";
 import type { RouteStatus } from "../routes.ts";
+import type { RecordFlagKind } from "../shipment-flags.ts";
+import type { CourierRecord } from "./courier.ts";
 
 /** Reasons (fee override, errand fee, missing rate, voiding) are 5–200 characters (FR-040). */
 export const reason = z
@@ -261,4 +263,7 @@ export type ShipmentDetail = Shipment & {
   custodyCourier: { id: string; name: string } | null;
   handover: Handover | null;
   events: ShipmentEvent[];
+  /** The courier's records, oldest first, including those not applied (feature 003, FR-036). */
+  records: CourierRecord[];
+  recordFlags: RecordFlagKind[];
 };

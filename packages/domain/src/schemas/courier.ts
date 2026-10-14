@@ -287,13 +287,22 @@ export type CourierTask = {
   merchant: Named;
   recipientName: string | null;
   recipientPhone: string | null;
+  /** A carrier handoff's carrier, proposed as who received it (FR-008). */
+  carrier: Named | null;
+  destinationTown: string | null;
+  /** What an errand is about. */
+  errandDescription: string | null;
   instructions: string | null;
   packageCount: number | null;
   packageSize: PackageSize | null;
   windowStart: string | null;
   windowEnd: string | null;
   codAmount: number;
-  /** The handover this delivery waits for (feature 002, FR-025). */
+  /**
+   * The handover this delivery waits for (feature 002, FR-025). The at-risk or late flag is
+   * computed on the phone with `shipmentFlag` and its corrected clock, so it stays right
+   * without signal (FR-005, FR-022).
+   */
   blockedByHandover: { id: string; fromCourier: Named } | null;
   problemNote: string | null;
 };
