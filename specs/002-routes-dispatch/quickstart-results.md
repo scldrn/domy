@@ -17,7 +17,7 @@ security, usability, and interface testing; its results follow the scenarios.
 | 1 | US1 | Pass | `route-build-dispatch.spec.ts` › builds, orders, and dispatches a route (scenarios 1–4) |
 | 2 | US1 | Pass | same test: a delivery dragged or moved with the keyboard above its pickup is refused |
 | 3 | US1 | Pass | same test: dispatching without a courier is refused, then dispatched |
-| 4 | US1 | Pass | same test: a second route in progress for the courier is refused, with a link to the first |
+| 4 | US1 | Pass | same test: a second route in progress for the courier is refused, with a link to the first and the offer to add the shipments to it (T062, convergence) |
 | 5 | US1 | Pass | `route-build-dispatch.spec.ts` › places reverse pickups, carrier handoffs, and errands |
 | 6 | US2 | Pass | `routes-board.spec.ts` › shows the routes of the day with courier, progress, amount, and flags |
 | 7 | US2 ⚙ | Pass | `routes-board.test.ts` › counts completed stops whatever their position |
@@ -88,6 +88,7 @@ severe first, each fixed test-first where it was behavior:
 | 9 | Tracking numbers in the route history were plain text, not links in the label style (design-system.md §8) | Design rule | Fixed |
 | 10 | The board's "now" line crossed the sentence "Ningún envío con franja." (feature 001) | Interface | Fixed: the sentence sits above the line |
 | 11 | "Rutas" was missing from the accessibility sweep; route screens and dialogs were not checked in dark mode or on a phone; scenario 16 had no end-to-end test | Coverage | Fixed |
+| 12 | A refusal shown on one route stayed on screen after following its link to another route | Interface | Fixed: each route opens its own page (convergence) |
 
 Checked and kept as they are:
 

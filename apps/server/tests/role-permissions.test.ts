@@ -79,6 +79,7 @@ const endpoints: [method: string, path: string, allowed: UserRole[]][] = [
   ["POST", `/api/routes/${id}/undo-dispatch`, office],
   ["POST", `/api/routes/${id}/cancel`, office],
   ["POST", `/api/routes/${id}/reassign`, office],
+  ["POST", `/api/routes/${id}/join`, office],
   ["POST", `/api/shipments/${id}/reassign`, office],
   ["POST", `/api/handovers/${id}/confirm`, office],
   ["POST", `/api/handovers/${id}/cancel`, office],

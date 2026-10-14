@@ -97,3 +97,65 @@ describe("POST /api/routes/:id/dispatch (FR-009)", () => {
     expect(again.body.events.filter((event) => event.type === "dispatched")).toHaveLength(1);
   });
 });
+
+describe("POST /api/routes/:id/join (FR-009, US1 scenario 5)", () => {
+  it("adds the shipments of a route its courier cannot take yet to their route in progress", async () => {
+    const current = (await routeAction(t, cookie, await routeWith(1, courier), "/dispatch")).body;
+    const waiting = await routeWith(2, courier);
+    expect((await routeAction(t, cookie, waiting, "/dispatch")).status).toBe(409);
+
+    const joined = await routeAction(t, cookie, waiting, "/join", { toRouteId: current.id });
+    expect(joined.status).toBe(200);
+    // The emptied route is cancelled, saying where its shipments went.
+    expect(joined.body).toMatchObject({
+      status: "cancelled",
+      cancelReason: `Sus envíos pasaron a la Ruta ${String(current.number)}, que su mensajero ya tenía en curso.`,
+      stops: [],
+    });
+    const target = (await send<RouteDetail>(t, cookie, `/api/routes/${current.id}`)).body;
+    const tasks = target.stops.flatMap((stop) => stop.tasks);
+    expect(tasks).toHaveLength(6);
+    expect(tasks.every((task) => task.shipment.status === "dispatched")).toBe(true);
+    // The shipments share the pickup stop already on the route (FR-011).
+    expect(target.stops.filter((stop) => stop.kind === "pickup")).toHaveLength(1);
+    const moved = waiting.stops.flatMap((stop) => stop.tasks).map((task) => task.shipmentId);
+    const shipment = (await send<ShipmentDetail>(t, cookie, `/api/shipments/${moved[0] ?? ""}`))
+      .body;
+    expect(shipment.events.at(-1)).toMatchObject({
+      type: "reassigned",
+      toStatus: "dispatched",
+      changes: { routeId: [`Ruta ${String(waiting.number)}`, `Ruta ${String(current.number)}`] },
+    });
+  });
+
+  it("acts once, and only from a route in preparation to a route in progress (FR-020)", async () => {
+    const current = (await routeAction(t, cookie, await routeWith(1, courier), "/dispatch")).body;
+    const waiting = await routeWith(1, courier);
+    const body = { actionId: crypto.randomUUID(), version: waiting.version, toRouteId: current.id };
+    const first = await send<RouteDetail>(t, cookie, `/api/routes/${waiting.id}/join`, body);
+    const replay = await send<RouteDetail>(t, cookie, `/api/routes/${waiting.id}/join`, body);
+    expect([first.status, replay.status]).toEqual([200, 200]);
+    expect(replay.body.events.filter((event) => event.type === "cancelled")).toHaveLength(1);
+
+    const draft = await routeWith(1);
+    const another = await routeWith(1);
+    const notInProgress = await routeAction(t, cookie, draft, "/join", { toRouteId: another.id });
+    expect(notInProgress.status).toBe(409);
+    expect(notInProgress.body).toMatchObject({ error: { code: "route_not_in_progress" } });
+    const fromInProgress = await routeAction(t, cookie, current, "/join", { toRouteId: draft.id });
+    expect(fromInProgress.status).toBe(409);
+  });
+
+  it("asks to confirm a route that would carry more than 15 shipments (FR-005)", async () => {
+    const current = (await routeAction(t, cookie, await routeWith(14, courier), "/dispatch")).body;
+    const waiting = await routeWith(2, courier);
+    const refused = await routeAction(t, cookie, waiting, "/join", { toRouteId: current.id });
+    expect(refused.status).toBe(422);
+    expect(refused.body).toMatchObject({ error: { code: "confirmation_required" } });
+    const confirmed = await routeAction(t, cookie, waiting, "/join", {
+      toRouteId: current.id,
+      confirmed: true,
+    });
+    expect(confirmed.status).toBe(200);
+  });
+});

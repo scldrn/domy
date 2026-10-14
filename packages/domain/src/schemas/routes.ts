@@ -72,6 +72,15 @@ export const routeReassignInput = z.object({
 });
 export type RouteReassignInput = z.input<typeof routeReassignInput>;
 
+/** The shipments of a route in preparation join a route in progress (FR-009, FR-011). */
+export const routeJoinInput = z.object({
+  actionId,
+  version,
+  toRouteId: z.uuid("Elige la ruta."),
+  confirmed: z.boolean().optional(),
+});
+export type RouteJoinInput = z.input<typeof routeJoinInput>;
+
 export const shipmentReassignInput = z.object({
   actionId,
   toRouteId: z.uuid("Elige la ruta."),

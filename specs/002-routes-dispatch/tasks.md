@@ -327,3 +327,9 @@ landed together with User Story 1, in the same branch.
   `apps/web/src/routes/route-detail.tsx`; they are sequential on purpose
 - Verify each test fails before implementing; commit after each task or logical group
 - Every task must leave `pnpm check` clean
+
+---
+
+## Phase 9: Convergence
+
+- [X] T062 Offer, in the refusal of dispatching a route whose courier already has a route in progress, to add its shipments to that route (FR-011 rules) through `POST /api/routes/:id/join`, which cancels the emptied route with a reason naming the target, with an end-to-end test of quickstart scenario 4, per US1/AC5 (partial)

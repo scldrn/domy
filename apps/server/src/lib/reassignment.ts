@@ -116,7 +116,8 @@ export async function moveShipment(
   tx: Executor,
   shipment: ShipmentRow,
   toRouteId: string,
-  by: Author & { reason: string; actionId: string },
+  /** Without `actionId` when a route action moves several shipments and keeps it itself. */
+  by: Author & { reason: string; actionId?: string },
 ): Promise<void> {
   const pickedUp = shipment.status === "picked_up";
   if (
@@ -197,7 +198,7 @@ export async function moveShipment(
         routeId: [from.id, target.id],
         courierId: [from.courierId, target.courierId],
       },
-      clientEventId: by.actionId,
+      clientEventId: by.actionId ?? null,
     },
     ...(cancelled
       ? [
