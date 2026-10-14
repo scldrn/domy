@@ -70,6 +70,40 @@ test("gives each role its own access (scenario 13)", async ({ ownerPage, browser
   await expect(courier).toHaveURL(/\/mensajero$/);
 });
 
+test("links a courier account to its courier (feature 003, FR-002)", async ({
+  ownerPage,
+  browser,
+}) => {
+  const run = unique();
+  const name = `Mensajera ${run}`;
+  const created = await ownerPage.request.post("/api/couriers", {
+    data: { id: crypto.randomUUID(), name, phone: "3004445566", aliases: [] },
+  });
+  expect(created.status()).toBe(201);
+
+  await ownerPage.goto("/usuarios");
+  await ownerPage.getByRole("button", { name: "Nueva cuenta" }).click();
+  const dialog = ownerPage.getByRole("dialog");
+  await dialog.getByLabel("Nombre").fill(name);
+  await dialog.getByLabel("Correo").fill(`mensajera${run}@example.com`);
+  await chooseOption(ownerPage, "Rol", "Mensajero");
+  await chooseOption(ownerPage, "Mensajero vinculado", name);
+  await dialog.getByLabel("Contraseña inicial").fill(password);
+  await dialog.getByRole("button", { name: "Crear cuenta" }).click();
+  const row = ownerPage.getByRole("row").filter({ hasText: `mensajera${run}@example.com` });
+  await expect(row).toContainText(name);
+
+  // The courier's app shows their route, not the warning of an unlinked account.
+  const courier = await signInAs(browser, `mensajera${run}@example.com`);
+  await expect(courier.getByText("No tienes una ruta despachada")).toBeVisible();
+
+  // "Mensajeros" shows the account, read only.
+  await ownerPage.goto("/mensajeros");
+  await expect(ownerPage.getByRole("row").filter({ hasText: name })).toContainText(
+    `mensajera${run}@example.com`,
+  );
+});
+
 test("locks sign-in after five failures and says when to retry (scenario 14)", async ({
   ownerPage,
   browser,

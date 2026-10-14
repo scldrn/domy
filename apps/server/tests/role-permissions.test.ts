@@ -103,6 +103,7 @@ const endpoints: [method: string, path: string, allowed: UserRole[]][] = [
   ["POST", `/api/courier-records/${id}/revert`, office],
   ["GET", `/api/photos/${id}`, everyone],
   ["GET", "/api/settings", office],
+  ["PUT", `/api/couriers/accounts/${id}`, owner],
 ];
 
 describe("permissions by role (FR-031)", () => {

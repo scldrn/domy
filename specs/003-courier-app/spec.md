@@ -29,6 +29,8 @@ stops, reassignment, custody, handovers). UI terms appear in Spanish between quo
 
 - Q: When the dispatcher edits a dispatched shipment (address, phone, or instructions), must the courier get a notice? → A: Yes. A notice "Envío actualizado" that stays until "Entendido", with a phone notification, like any other change to the route (FR-027, FR-040).
 - Q: Which icons does the installable app use while the logo artwork is pending? → A: A provisional icon following design-system.md §11: the name "domy" in white on the seed color, replaced by the logo when it exists (FR-001).
+- Q: Where is a courier account linked to the courier it works as? → A: In "Usuarios", by the owner only, when creating or editing an account with the courier role ("Mensajero vinculado"); "Mensajeros" shows each courier's account, read only. One account per courier and one courier per account; only an active courier account is linked; a linked account keeps its role until unlinked (FR-002).
+- Q: Where is the office? → A: Carrera 90 # 65C-10, Urbanización Mirador de Barcelona, barrio Robledo, Medellín (FR-041).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -363,7 +365,10 @@ over equal to cash collected minus disbursements.
   installable on the phone's home screen.
 - **FR-002**: A courier MUST see only the routes dispatched to them and the shipments on
   those routes, plus packages in their custody. Owner and dispatcher accounts do not use
-  the courier app.
+  the courier app. The owner links each account with the courier role to the courier it
+  works as, in "Usuarios"; an account not linked sees no route and is told to ask the owner.
+  A linked account keeps the courier role until it is unlinked, and a courier's records stay
+  with the courier when its account changes.
 - **FR-003**: A courier session MUST last until the courier signs out, for at most 30 days
   (the same rule as feature 001, FR-033a); then the app asks for the password again. The
   app MUST warn the courier when 2 days or fewer remain, so they can sign in again before

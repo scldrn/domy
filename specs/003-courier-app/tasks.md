@@ -291,7 +291,7 @@ They run before T087 and T088, which close the phase.
 - [ ] T091 [P] Performance test `apps/server/tests/courier-scale.test.ts` over the busy day of feature 002's `routes-scale.test.ts`: the snapshot of a route of 15 shipments answers in under 500 ms and a batch of 50 records is applied in under 2 seconds; record the timings in `specs/003-courier-app/quickstart-results.md` (SC-003, SC-004)
 - [ ] T092 [P] Web unit tests next to the code for the courier screens' pure logic and components rendered to HTML: the collection split and its note rule, the received-by name proposed per shipment kind, notice texts per type, the pending counter and its 2-hour warning, the session warning, and the stop actions shown per task state (FR-005–FR-017, FR-020, FR-027)
 - [ ] T093 Usability and interface review of the courier app on a phone (360 and 390 px, light, dark, and high contrast, one hand): walk a whole route offline and online, time SC-002's deliveries, count the taps of FR-038, check every screen against `docs/design-system.md` (courier app first: bottom navigation, connectivity banner, sync badge, primary actions in the bottom third), and the panel additions against feature 002's screens; fix what fails, test-first when it is behavior, and record the findings in `specs/003-courier-app/quickstart-results.md`
-- [ ] T094 [P] Link a courier account to its courier (FR-002): a "Cuenta de acceso" field in the courier's edit dialog of `apps/web/src/features/master-data/couriers/`, listing courier accounts not yet linked, through `PATCH /api/couriers/:id` (`userId`, unique) with its audit event; integration tests in `apps/server/tests/couriers-carriers.test.ts` and an end-to-end step that links an account and opens "Mi ruta" (found while building US1: nothing linked an account to its courier)
+- [X] T094 Link a courier account to its courier (FR-002): `PUT /api/couriers/accounts/:userId` (owner only, one transaction, an audit event per courier changed) in `apps/server/src/routes/couriers.ts`, `account` on `GET /api/couriers`, the role of a linked account locked in `apps/server/src/routes/auth.ts`; "Mensajero vinculado" in `apps/web/src/features/users/account-dialog.tsx`, the linked courier on "Usuarios" and the account on "Mensajeros"; integration tests in `apps/server/tests/courier-accounts.test.ts` and an end-to-end step in `apps/web/tests/e2e/access.spec.ts` (found while building US1: nothing linked an account to its courier)
 
 ---
 
@@ -382,6 +382,7 @@ two days:
 | `003-foundation-records` | Phase 2: T015–T025 |
 | `003-us1-server` | Phase 3: tests and server (T026–T029, T032–T034) |
 | `003-us1-web` | Phase 3: the courier's screens and the panel's records (T030, T031, T035–T040) |
+| `003-courier-accounts` | T094 |
 | `003-us2-offline` | Phase 4 |
 | `003-us3-exceptions` | Phase 5 |
 | `003-us4-decisions` | Phase 6 |

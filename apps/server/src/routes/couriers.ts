@@ -1,10 +1,18 @@
-import { courierCreateInput, courierUpdateInput, normalizeText, type Courier } from "@domy/domain";
+import {
+  courierAccountInput,
+  courierCreateInput,
+  courierUpdateInput,
+  normalizeText,
+  type Courier,
+} from "@domy/domain";
 import { and, count, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../app.ts";
 import type { Executor } from "../db/client.ts";
-import { courierAliases, couriers, routes } from "../db/schema/index.ts";
+import { courierAliases, couriers, routes, users } from "../db/schema/index.ts";
+import { findAuditAction } from "../lib/action-id.ts";
+import { recordAudit } from "../lib/audit.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
 import {
@@ -14,7 +22,7 @@ import {
   diffValues,
   replaceAliases,
 } from "../lib/master-data.ts";
-import { validate } from "../lib/validate.ts";
+import { isUniqueViolation, validate } from "../lib/validate.ts";
 
 const listQuery = z.object({
   q: z.string().optional(),
@@ -29,8 +37,10 @@ async function loadCouriers(db: Executor, where: SQL | undefined): Promise<Couri
       name: couriers.name,
       phone: couriers.phone,
       isActive: couriers.isActive,
+      account: { id: users.id, email: users.email },
     })
     .from(couriers)
+    .leftJoin(users, eq(users.id, couriers.userId))
     .where(where)
     .orderBy(couriers.name);
   const aliases =
@@ -48,6 +58,7 @@ async function loadCouriers(db: Executor, where: SQL | undefined): Promise<Couri
       : [];
   return rows.map((row) => ({
     ...row,
+    account: row.account?.id && row.account.email ? row.account : null,
     aliases: aliases.filter((alias) => alias.courierId === row.id).map((alias) => alias.alias),
   }));
 }
@@ -56,6 +67,71 @@ async function loadCourier(db: Executor, id: string): Promise<Courier> {
   const [courier] = await loadCouriers(db, eq(couriers.id, id));
   if (!courier) throw new AppError("not_found", { message: "No encontramos ese mensajero." });
   return courier;
+}
+
+const userParam = z.object({ userId: z.uuid() });
+
+/**
+ * Links an account with the courier role to the courier it works as, or unlinks it (feature
+ * 003, FR-002). An account belongs to one courier and a courier has one account, so linking
+ * moves the account from its previous courier and replaces the courier's previous account, in
+ * one transaction with an audit event per courier changed. Records stay with the courier.
+ */
+async function linkAccount(
+  tx: Executor,
+  input: { userId: string; courierId: string | null; actionId: string },
+  by: { actorUserId: string; now: Date },
+): Promise<void> {
+  const [user] = await tx.select().from(users).where(eq(users.id, input.userId));
+  if (!user) throw new AppError("not_found", { message: "No encontramos esa cuenta." });
+  // Couriers in a fixed order, as every action locks them, so two links never deadlock.
+  const involved = await tx
+    .select()
+    .from(couriers)
+    .where(
+      or(
+        eq(couriers.userId, input.userId),
+        input.courierId ? eq(couriers.id, input.courierId) : undefined,
+      ),
+    )
+    .orderBy(couriers.id)
+    .for("update");
+  const current = involved.find((row) => row.userId === input.userId) ?? null;
+  const target = input.courierId ? involved.find((row) => row.id === input.courierId) : null;
+  if (input.courierId && !target) {
+    throw new AppError("not_found", { message: "No encontramos ese mensajero." });
+  }
+  if (target && (user.role !== "courier" || user.banned)) {
+    throw new AppError("courier_account_invalid");
+  }
+  if (target && !target.isActive) {
+    throw new AppError("courier_account_invalid", {
+      message: "Ese mensajero está desactivado; reactívalo antes de vincular una cuenta.",
+    });
+  }
+  if (current?.id === target?.id) return;
+
+  let first = true;
+  const change = async (courierId: string, before: string | null, after: string | null) => {
+    await tx
+      .update(couriers)
+      .set({ userId: after, updatedAt: by.now })
+      .where(eq(couriers.id, courierId));
+    await recordAudit(tx, {
+      entityType: "courier",
+      entityId: courierId,
+      action: "updated",
+      actorUserId: by.actorUserId,
+      occurredAt: by.now,
+      changes: { userId: [before, after] },
+      // The action's identifier goes on its first event (exactly once).
+      ...(first && { clientEventId: input.actionId }),
+    });
+    first = false;
+  };
+  // The previous courier lets go first: `couriers.user_id` is unique.
+  if (current) await change(current.id, input.userId, null);
+  if (target) await change(target.id, target.userId, input.userId);
 }
 
 /** The couriers directory (FR-026, FR-027): names, aliases, phone. */
@@ -123,4 +199,33 @@ export const courierRoutes = new Hono<AppEnv>()
       .from(routes)
       .where(and(eq(routes.courierId, id), inArray(routes.status, ["draft", "in_progress"])));
     return c.json({ ...(await loadCourier(c.get("db"), id)), openRoutes: open?.count ?? 0 });
-  });
+  })
+  // Which routes an account sees is the owner's decision (feature 003, FR-002).
+  .put(
+    "/accounts/:userId",
+    requireRole("owner"),
+    validate("param", userParam),
+    validate("json", courierAccountInput),
+    async (c) => {
+      const { userId } = c.req.valid("param");
+      const { actionId, courierId } = c.req.valid("json");
+      const db = c.get("db");
+      if (!(await findAuditAction(db, actionId))) {
+        await db
+          .transaction((tx) =>
+            linkAccount(
+              tx,
+              { userId, courierId, actionId },
+              { actorUserId: c.get("user").id, now: c.get("clock")() },
+            ),
+          )
+          .catch((error: unknown) => {
+            // The same action applied by a concurrent retry.
+            if (isUniqueViolation(error, "audit_events_client_event_id_key")) return;
+            throw error;
+          });
+      }
+      const [linked] = await loadCouriers(db, eq(couriers.userId, userId));
+      return c.json({ courier: linked ?? null });
+    },
+  );

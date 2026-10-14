@@ -61,6 +61,15 @@ export const updateCourier = (id: string, input: CourierUpdateInput) =>
     api.api.couriers[":id"].$patch({ param: { id }, json: input }),
   );
 
+/** Links an account with the courier role to its courier, or unlinks it (feature 003, FR-002). */
+export const linkCourierAccount = (userId: string, courierId: string | null) =>
+  unwrap<{ courier: Courier | null }>(
+    api.api.couriers.accounts[":userId"].$put({
+      param: { userId },
+      json: { actionId: crypto.randomUUID(), courierId },
+    }),
+  );
+
 export async function listAllCarriers(q: string): Promise<Carrier[]> {
   const { items } = await unwrap<{ items: Carrier[] }>(api.api.carriers.$get({ query: { q } }));
   return items;

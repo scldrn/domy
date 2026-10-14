@@ -1,7 +1,7 @@
 import { and, eq, ne, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import type { AppEnv } from "../app.ts";
-import { users } from "../db/schema/index.ts";
+import { couriers, users } from "../db/schema/index.ts";
 import { recordAudit } from "../lib/audit.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
@@ -144,6 +144,16 @@ export const authRoutes = new Hono<AppEnv>()
     const before = await findUser(c, body.userId);
     if (before?.role === "owner" && body.role !== "owner" && (await isLastOwner(c, before.id))) {
       throw new AppError("last_owner");
+    }
+    // A linked courier account keeps its role until it is unlinked, so an account with another
+    // role never sees a route (feature 003, FR-002).
+    if (before?.role === "courier" && body.role !== "courier") {
+      const [linked] = await c
+        .get("db")
+        .select({ id: couriers.id })
+        .from(couriers)
+        .where(eq(couriers.userId, before.id));
+      if (linked) throw new AppError("courier_account_linked");
     }
     return forwardAudited(c, request, () =>
       before

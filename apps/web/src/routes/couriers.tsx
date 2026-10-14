@@ -15,6 +15,12 @@ export const Route = createFileRoute("/_panel/mensajeros")({
         { header: "Mensajero", cell: (courier) => courier.name },
         { header: "Alias", cell: (courier) => courier.aliases.join(", ") },
         { header: "Teléfono", cell: (courier) => courier.phone },
+        // Linked by the owner in "Usuarios" (feature 003, FR-002).
+        {
+          header: "Cuenta de acceso",
+          cell: (courier) =>
+            courier.account?.email ?? <span className="text-on-surface-variant">Sin cuenta</span>,
+        },
       ]}
       create={<CourierDialog />}
       edit={(courier) => <CourierDialog courier={courier} />}

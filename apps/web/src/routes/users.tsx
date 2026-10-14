@@ -22,7 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AccountDialog } from "@/features/users/account-dialog";
+import {
+  AccountDialog,
+  courierAccountsQuery,
+  linkedCourier,
+} from "@/features/users/account-dialog";
 import {
   deactivateAccount,
   endSessions,
@@ -45,6 +49,7 @@ export const Route = createFileRoute("/_panel/usuarios")({
 function UsersPage() {
   const queryClient = useQueryClient();
   const accounts = useQuery({ queryKey: ["accounts"], queryFn: listAccounts });
+  const couriers = useQuery(courierAccountsQuery);
   const [deactivating, setDeactivating] = useState<Account | null>(null);
 
   async function act(action: () => Promise<unknown>, message: string) {
@@ -82,7 +87,14 @@ function UsersPage() {
             <TableRow key={account.id}>
               <TableCell>{account.name}</TableCell>
               <TableCell>{account.email}</TableCell>
-              <TableCell>{userRoleLabels[account.role]}</TableCell>
+              <TableCell>
+                {userRoleLabels[account.role]}
+                {account.role === "courier" && (
+                  <span className="block text-body-s text-on-surface-variant">
+                    {linkedCourier(couriers.data, account.id)?.name ?? "Sin vincular"}
+                  </span>
+                )}
+              </TableCell>
               <TableCell>
                 {account.banned ? (
                   <Badge variant="outline">Inactiva</Badge>

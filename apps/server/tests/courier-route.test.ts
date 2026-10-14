@@ -211,7 +211,7 @@ describe("an account without a courier", () => {
     );
     expect(result.status).toBe(403);
     expect(result.body.error.message).toBe(
-      "Tu cuenta no está vinculada a un mensajero. Pide al coordinador que la vincule.",
+      "Tu cuenta no está vinculada a un mensajero. Pide al propietario que la vincule.",
     );
   });
 });
