@@ -1,7 +1,7 @@
 # Project status
 
 Where Domy stands and what comes next, so any session can resume without the conversation
-that produced it. Updated 2026-10-13; update it whenever a slice is merged or the next step
+that produced it. Updated 2026-10-14; update it whenever a slice is merged or the next step
 changes.
 
 ## Features
@@ -13,20 +13,23 @@ a short-lived branch, so the specification and implementation of every feature l
 | --- | --- |
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
-| 002 Routes and dispatch | All five user stories on `main` (#4–#7, #9). Polish (T052–T061) on `main` (#10), with the fixes its testing found recorded in `specs/002-routes-dispatch/quickstart-results.md`. Convergence found one gap, T062 (offer to add a route's shipments to the courier's route in progress), done on the short-lived branch `002-converge` |
-| 003 Courier app | Specified, planned, tasked, and analyzed; implementation not started |
+| 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
+| 003 Courier app | Specified, planned, tasked, and analyzed again on 2026-10-14 against 002 as built (research R17): storage for development and tests moved from MinIO, whose images are gone, to S3Proxy; custody and "Registrado por despacho" aligned with 002; the quality tests of 002 added (T089–T093); slices and branches defined in tasks.md. Ready to implement |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Merge `002-converge` into `main` through its pull request once CI passes; feature 002 is
-   then complete.
-2. Then 003 and 004 the same way, one slice per branch. For 003: the courier's pickup,
-   delivery, and return events must record `custodyCourierId: [from, to]` in their `changes`,
-   as the custody history of 002 reads it (002 data-model, Derived values), and set
-   `on_behalf` on any event dispatch records for a courier ("Registrado por despacho").
-3. Before go-live: time SC-001, SC-004, and SC-006 with the dispatcher, and add a content
-   security policy tested on the production host (002 quickstart-results).
+1. Implement 003 one slice per branch, in the order of the table in
+   `specs/003-courier-app/tasks.md` (Delivery under Trunk-Based Development), starting with
+   `003-setup` (T001–T003): run `export SPECIFY_FEATURE_DIRECTORY=specs/003-courier-app`
+   once, then `/speckit-implement` for that phase only, tests first.
+2. Needed before the end of 003, not before starting: an Android phone and an iPhone (iOS
+   16.4 or later for notifications) for the manual validation T087, and the owner's
+   DigitalOcean Spaces bucket (in the client's name) only at deployment.
+3. Then 004 the same way.
+4. Before go-live: time SC-001, SC-004, and SC-006 of 002 with the dispatcher, and add a
+   content security policy tested on the production host (002 quickstart-results; 003
+   research R17 lists what the courier app needs from it).
 
 ## Open with the client
 

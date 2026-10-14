@@ -25,6 +25,11 @@ stops, reassignment, custody, handovers). UI terms appear in Spanish between quo
 - Q: If a courier records a delivery or an exception by mistake, who can undo it? → A: Only the owner or the dispatcher, with a reason; the courier asks them (FR-017, FR-035).
 - Q: How long does a courier's session stay open on the phone? → A: The same as the dispatcher's: until the courier signs out, for at most 30 days; then the password is asked again.
 
+### Session 2026-10-14
+
+- Q: When the dispatcher edits a dispatched shipment (address, phone, or instructions), must the courier get a notice? → A: Yes. A notice "Envío actualizado" that stays until "Entendido", with a phone notification, like any other change to the route (FR-027, FR-040).
+- Q: Which icons does the installable app use while the logo artwork is pending? → A: A provisional icon following design-system.md §11: the name "domy" in white on the seed color, replaced by the logo when it exists (FR-001).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Carry out a route (Priority: P1)
@@ -488,7 +493,9 @@ over equal to cash collected minus disbursements.
 **Changes and handovers**
 
 - **FR-027**: The app MUST show a notice for every change the dispatcher makes to the
-  courier's route: route dispatched, shipment added, removed, or voided, stops reordered,
+  courier's route: route dispatched, shipment added (including the shipments of a route
+  joined to the courier's route in progress), removed, voided, or updated (address, phone,
+  or instructions edited while on the route), stops reordered,
   shipment reassigned to or from another courier, route reassigned, dispatch undone,
   exception decided, package received at the office, record corrected or reverted, record
   not applied. Notices stay until the courier taps "Entendido", which acknowledges all the

@@ -14,6 +14,8 @@ every mutation.
   `deviceNow`; the server stores `occurredAt` corrected by its offset to `deviceNow`.
 - **Never refused for state** (FR-024): a well-formed record is always stored. The response
   says what happened to it: `applied`, `duplicate`, or `not_applied`.
+- **Limits** (feature 002, research R13): every body is limited to 1 MB, so a photo above
+  1 MB is refused with `413 payload_too_large`; a request carries at most 50 records.
 
 | Status | `code` | When |
 | --- | --- | --- |
@@ -21,16 +23,15 @@ every mutation.
 | 409 | `not_held_by_courier` | "Recibido en oficina" for a package no courier holds (FR-041) |
 | 409 | `record_not_revertible` | Reverting a record that is not the shipment's latest applied delivery, exception, or return (FR-035) |
 | 409 | `office_not_configured` | "Recibido en oficina" before the office address is set (FR-041) |
-| 413 | `photo_too_large` | Photo above 1 MB (FR-009) |
 | 422 | `occurred_in_future` | A record on behalf with `occurredAt` later than now (FR-034) |
 
 ## Courier endpoints (role: courier)
 
 | Method and path | Request → Response |
 | --- | --- |
-| `GET /api/courier/route` | → `CourierSnapshot` = `{ serverTime, sessionExpiresAt, route: CourierRoute \| null, handoversToGive: HandoverToGive[], heldOffRoute: HeldShipment[], notices: Notice[], summary: DaySummary }`; `DaySummary` (today, Bogotá) = counts of deliveries, exceptions, returns, pending stops; `cash`, `companyTransfer`, `merchantTransfer`, `disbursements`, `cashToHandOver` (FR-037). `CourierRoute` = number, service date, `stops` in order, each with kind, address, neighborhood, contact phone, and `tasks` (shipment id, tracking number, merchant, recipient name and phone, instructions, package count and size, delivery window, COD amount, status, flags, `blockedByHandover`, `problemNote`). Updates `couriers.last_synced_at` (FR-005, FR-022, FR-028) |
+| `GET /api/courier/route` | → `CourierSnapshot` = `{ serverTime, sessionExpiresAt, route: CourierRoute \| null, handoversToGive: HandoverToGive[], heldOffRoute: HeldShipment[], notices: Notice[], summary: DaySummary }`; `DaySummary` (today, Bogotá) = counts of deliveries, exceptions, returns, pending stops; `cash`, `companyTransfer`, `merchantTransfer`, `disbursements`, `cashToHandOver` (FR-037). `CourierRoute` = number, service date, `stops` in order, each with kind, address, neighborhood, contact phone (the recipient's on a delivery stop; the merchant's `whatsappPhone` on a pickup or return stop; absent when not registered, FR-016), and `tasks` (shipment id, tracking number, merchant, recipient name and phone, instructions, package count and size, delivery window, COD amount, status, flags, `blockedByHandover`, `problemNote`). Updates `couriers.last_synced_at` (FR-005, FR-022, FR-028) |
 | `POST /api/courier/records` | `{ deviceNow, records: CourierRecordInput[] }` (1–50, in the order they happened) → `{ results: { id, outcome }[] }`. Each record is applied in its own transaction (FR-018–FR-026) |
-| `PUT /api/courier/photos/:id` | Body: the JPEG image (`image/jpeg`, ≤ 1 MB) → `204`. `404` while its record has not arrived; repeating it is harmless (FR-023) |
+| `PUT /api/courier/photos/:id` | Body: the JPEG image (`image/jpeg`, ≤ 1 MB, else `413 payload_too_large`) → `204`. `404` while its record has not arrived; repeating it is harmless (FR-023) |
 | `POST /api/courier/notices/acknowledge` | `{ actionId, noticeIds, occurredAt }` → `204`; sets `acknowledged_at` only where empty (FR-027) |
 | `POST /api/courier/push-subscriptions` | `{ actionId, endpoint, keys: { p256dh, auth } }` → `204` (FR-040) |
 | `POST /api/courier/push-subscriptions/remove` | `{ actionId, endpoint }` → `204` |
@@ -85,7 +86,14 @@ Reasons and notes are 5–200 characters.
 - **`GET /api/export/:dataset?format=csv`** (owner): gains the datasets `courier-records`,
   `routes` (one row per stop task), and `handovers`, with Spanish headers (FR-042).
 - **Every route and shipment mutation of feature 002** that affects a courier with a route in
-  progress also creates a notice and sends a phone notification (FR-027, FR-040).
+  progress also creates a notice and sends a phone notification (FR-027, FR-040), including
+  `POST /api/routes/:id/join` (`shipment_added` on the target route) and `PATCH
+  /api/shipments/:id` of a shipment on the route (`shipment_updated`). `POST
+  /api/routes/:id/cancel` reaches no courier: a route in preparation is not on any phone.
+- **`POST /api/handovers/:id/cancel`**: a handover with no origin route (a package held off
+  route) is cancelled too, leaving the shipment off route with its holder (FR-031).
+- **Events** (`RouteEvent`, `ShipmentEvent`): `onBehalf` is true on the events of a record
+  entered on a courier's behalf (FR-034).
 
 ## Phone notification payload (FR-040)
 

@@ -7,7 +7,7 @@ endpoints in [contracts/http-api.md](contracts/http-api.md). Setup and gates are
 ## Prerequisites
 
 - Features 001 and 002 implemented and their quickstarts passing
-- `docker compose up -d` also starts MinIO (object storage for photos)
+- `docker compose up -d` also starts S3Proxy (object storage for photos, research R6)
 - `.env` with the storage and notification keys listed in `.env.example`
   (`pnpm dlx web-push generate-vapid-keys` prints a new key pair)
 - The seed loaded, with at least two courier users and the office address set
@@ -40,7 +40,7 @@ pnpm test:e2e
 | 11 | US3 | Report "Destinatario ausente" on a delivery; report a problem on a pickup | The first is "Novedad" under "Novedades por decidir"; the second keeps its status, flagged "Problema de recogida" |
 | 12 | US4 | Decide "Nuevo intento" on the same route and deliver it; decide "Devolver al remitente" for another and complete the return stop | First "Entregado" with two attempts in its history; second "Devuelto" |
 | 13 | US4 | Reschedule a shipment in "Novedad" for tomorrow; then record "Recibido en oficina"; tomorrow add it to a route | "Recogido", off route, "En custodia de {courier}"; then "En oficina" and "Registrado"; the route gets a pickup stop at the office |
-| 14 | US5 | With the app open, add a shipment, remove another, and reorder from the panel; then close the app and add one more | Notices appear within a minute and stay until "Entendido"; with the app closed the phone shows a notification; the board shows the last synchronization and unacknowledged changes |
+| 14 | US5 | With the app open, add a shipment, remove another, reorder, and edit a recipient's address from the panel; then close the app and add one more | Notices appear within a minute and stay until "Entendido"; with the app closed the phone shows a notification; the board shows the last synchronization and unacknowledged changes |
 | 15 | US5 | Reassign a picked-up shipment to a second courier; confirm "Recibí el paquete" on that courier's phone | "Traspaso pendiente" until confirmed; then custody passes and the stop can be completed |
 | 16 | US5 | Put courier A offline; A confirms a pickup; the dispatcher removes that shipment from A's route; A goes online | The shipment is "Recogido" in A's custody, off route, flagged "Por revisar" |
 | 17 | US5 | Put A offline; A delivers a picked-up shipment; the dispatcher reassigns it to B; A goes online | "Entregado" by A; the handover is cancelled; B's stop disappears with a notice |

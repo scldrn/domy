@@ -1,6 +1,8 @@
 # Implementation Plan: Courier App
 
-**Branch**: `003-courier-app` | **Date**: 2026-09-30 | **Spec**: [spec.md](spec.md)
+**Branches**: short-lived, one per slice ([tasks.md](tasks.md), Delivery under Trunk-Based
+Development) | **Date**: 2026-09-30, aligned with feature 002 as built on 2026-10-14 |
+**Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/003-courier-app/spec.md`
 
@@ -25,17 +27,20 @@ foundations of features [001](../001-shipment-registration/plan.md) and
 **Language/Version**: TypeScript 6.0 (strict), Node.js 24 LTS — as feature 001
 
 **Primary Dependencies**: those of features 001 and 002, plus:
-- Web: `vite-plugin-pwa` 1.3 with `workbox-precaching` 7.4 (service worker and manifest),
-  `idb` 8 (IndexedDB).
-- Server: `@aws-sdk/client-s3` 3 (photo storage), `web-push` 3.6 (phone notifications).
-- Tests: `fake-indexeddb` 6.
+- Web: `vite-plugin-pwa` 1.3.0 with `workbox-precaching` and `workbox-window` 7.4.1 (service
+  worker and manifest), `idb` 8.0.4 (IndexedDB); `@vite-pwa/assets-generator` 1 (development:
+  the app icons from one SVG).
+- Server: `@aws-sdk/client-s3` 3 (photo storage), `web-push` 3.6.7 (phone notifications).
+- Tests: `fake-indexeddb` 6.2.5.
+- Exact versions are pinned when T001 adds them (verified 2026-10-14, research R17).
 
 **Storage**: PostgreSQL 18 (new tables `courier_records`, `record_photos`,
 `courier_notices`, `push_subscriptions`, `company_settings`; new columns on `shipments`,
 `route_tasks`, `couriers`); S3-compatible object storage for photos (DigitalOcean Spaces;
-MinIO in development and tests); IndexedDB on the phone ([data-model.md](data-model.md))
+S3Proxy in development and tests, research R6); IndexedDB on the phone
+([data-model.md](data-model.md))
 
-**Testing**: Vitest 5 (unit; integration against real PostgreSQL and MinIO via
+**Testing**: Vitest 5 (unit; integration against real PostgreSQL and S3Proxy via
 Testcontainers), Playwright 1.63 with a phone viewport and offline mode — as feature 001
 
 **Target Platform**: Linux server as feature 001; courier app on Android 10+ with Chrome and
@@ -68,9 +73,9 @@ in under 30 s of user time (SC-002)
 | III. Single Source of Truth | `resolveCourierRecord`, the day summary, the extended route rules, flags, and lifecycle live in `packages/domain`; the phone replays its outbox with the same function the server executes | ✅ |
 | IV. Transactional Integrity & Traceability | One transaction per record: the record, shipment and task changes, route status, events, and notices. Records, photos rows, and notices are never deleted; corrections and reverts keep previous values in the append-only history. Database checks for custody holder and kind-specific columns | ✅ |
 | V. Type Safety at Every Boundary | Zod union for records in `packages/domain`, used by the phone before saving and by the server on receipt; IndexedDB stores typed through `idb` | ✅ |
-| VI. Test-First Business Logic | Record rules, the conflict matrix, and the day summary written test-first; integration tests on real PostgreSQL and MinIO; outbox tests with `fake-indexeddb`; Playwright for "complete a delivery with photo and COD collection" and "offline action then sync", both named by the constitution | ✅ |
+| VI. Test-First Business Logic | Record rules, the conflict matrix, and the day summary written test-first; integration tests on real PostgreSQL and S3Proxy; outbox tests with `fake-indexeddb`; Playwright for "complete a delivery with photo and COD collection" and "offline action then sync", both named by the constitution | ✅ |
 | VII. Effortless UX | Spanish glossary terms; M3 courier patterns from the design system (navigation bar, bottom sheets, connectivity banner, sync badge, high contrast); 48 px targets; pickup, delivery, and exception within 3 taps of the route screen; Android 10+ and iOS 16+ | ✅ |
-| VIII. Absolute Repository Order | Files in the places feature 001 defined; new terms in the glossary; features 001 and 002 documents aligned in this branch | ✅ |
+| VIII. Absolute Repository Order | Files in the places feature 001 defined; new terms in the glossary; features 001 and 002 documents aligned (research R17); every slice on its own short-lived branch (constitution 2.0.0) | ✅ |
 | IX. Security, Privacy & Data Ownership | Couriers reach only `/api/courier/*` and their own photos, checked on the server; private bucket with no public URLs; notification payloads without personal data; route data cleared from the phone at sign-out and when a route finishes; keys from validated environment variables | ✅ |
 
 **Post-design re-check (after Phase 1)**: ✅ all principles hold.
@@ -138,7 +143,7 @@ apps/server/src/
     ├── push.ts                       # web-push client
     └── storage.ts                    # S3 client: put, get
 
-apps/server/tests/                    # courier-*.test.ts, exception-decision.test.ts, office-receipt.test.ts, records-*.test.ts, photos.test.ts, setup/storage.ts
+apps/server/tests/                    # courier-*.test.ts (including courier-contract, courier-security, courier-scale), exception-decision.test.ts, office-receipt.test.ts, records-*.test.ts, photos.test.ts, setup/storage.ts
 
 apps/web/src/
 ├── sw.ts                             # service worker: app shell precache, notifications
@@ -175,8 +180,10 @@ apps/web/src/
     └── push.ts                       # permission and subscription
 
 apps/web/tests/e2e/                   # courier-*.spec.ts, exception-decision.spec.ts, records-on-behalf.spec.ts
-compose.yaml                          # + MinIO
+compose.yaml                          # + S3Proxy (research R6)
 .env.example                          # + S3_*, VAPID_*
+apps/web/public/icon.svg              # provisional app icon (design-system.md §11), source of the PNG sizes
+apps/web/tests/e2e/global-setup.ts    # + S3Proxy container, storage and test notification keys
 ```
 
 **Structure Decision**: no new package or folder convention. The only new folder is
@@ -185,7 +192,12 @@ screen.
 
 ## Cross-feature alignment
 
-Made in this branch, so features 001 and 002 stay consistent with this one:
+Features 001 and 002 already carry the alignment below in their documents and code (the
+shared lifecycle has this feature's transitions, `handovers.from_route_id` accepts null, the
+002 spec lists what this feature extends). What feature 002 built after this plan was
+written, and how this feature follows it, is in [research R17](research.md): custody
+changes in the shipment history, `on_behalf` on events, the 1 MB body limit, handovers
+without an origin route, and the notices for `join` and shipment edits.
 
 - Feature 001 data model: the lifecycle rows owned by 003 are replaced by the transitions in
   [data-model.md](data-model.md).
@@ -205,6 +217,7 @@ No constitution violations.
 | --- | --- | --- |
 | `vite-plugin-pwa` and a service worker | FR-001, FR-022: the app must open without signal and be installable | Without a service worker a closed app cannot open offline |
 | `idb` | Constitution II: records and photos persisted on the phone | Raw IndexedDB is callback-based and untyped; `localStorage` cannot hold photos |
-| `@aws-sdk/client-s3` and MinIO for development | Ratified stack: S3-compatible storage for photos | Photos in PostgreSQL bloat backups; the local disk of one VPS has no retention rule or redundancy |
+| `@aws-sdk/client-s3`, and S3Proxy for development and tests | Ratified stack: S3-compatible storage for photos | Photos in PostgreSQL bloat backups; the local disk of one VPS has no retention rule or redundancy; MinIO no longer publishes images (research R6) |
+| `@vite-pwa/assets-generator` (development only) | FR-001: an installable app needs PNG icons in several sizes | Drawing each size by hand repeats the work when the logo arrives |
 | `web-push` | FR-040 (clarified): notification with the app closed | Polling cannot reach a closed app |
 | `courier_notices` table | FR-027: per-notice acknowledgment shown to the dispatcher | Deriving notices from two event tables misses shipment-level changes |
