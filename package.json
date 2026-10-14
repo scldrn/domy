@@ -15,7 +15,8 @@
     "db:generate": "pnpm --filter @domy/server db:generate",
     "db:migrate": "pnpm --filter @domy/server db:migrate",
     "db:seed": "pnpm --filter @domy/server db:seed",
-    "tokens": "node scripts/generate-design-tokens.ts"
+    "tokens": "node scripts/generate-design-tokens.ts",
+    "icons": "pnpm --filter @domy/web icons"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

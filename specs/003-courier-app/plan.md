@@ -27,9 +27,8 @@ foundations of features [001](../001-shipment-registration/plan.md) and
 **Language/Version**: TypeScript 6.0 (strict), Node.js 24 LTS — as feature 001
 
 **Primary Dependencies**: those of features 001 and 002, plus:
-- Web: `vite-plugin-pwa` 1.3.0 with `workbox-precaching` and `workbox-window` 7.4.1 (service
-  worker and manifest), `idb` 8.0.4 (IndexedDB); `@vite-pwa/assets-generator` 1 (development:
-  the app icons from one SVG).
+- Web: `vite-plugin-pwa` 1.3.0 (development) with `workbox-precaching`, `workbox-routing`, and
+  `workbox-window` 7.4.1 (service worker and manifest), `idb` 8.0.4 (IndexedDB).
 - Server: `@aws-sdk/client-s3` 3 (photo storage), `web-push` 3.6.7 (phone notifications).
 - Tests: `fake-indexeddb` 6.2.5.
 - Exact versions are pinned when T001 adds them (verified 2026-10-14, research R17).
@@ -182,7 +181,8 @@ apps/web/src/
 apps/web/tests/e2e/                   # courier-*.spec.ts, exception-decision.spec.ts, records-on-behalf.spec.ts
 compose.yaml                          # + S3Proxy (research R6)
 .env.example                          # + S3_*, VAPID_*
-apps/web/public/icon.svg              # provisional app icon (design-system.md §11), source of the PNG sizes
+apps/web/public/icons/                # provisional app icons (design-system.md §11)
+apps/web/scripts/generate-app-icons.ts  # renders them (pnpm icons)
 apps/web/tests/e2e/global-setup.ts    # + S3Proxy container, storage and test notification keys
 ```
 
@@ -218,6 +218,6 @@ No constitution violations.
 | `vite-plugin-pwa` and a service worker | FR-001, FR-022: the app must open without signal and be installable | Without a service worker a closed app cannot open offline |
 | `idb` | Constitution II: records and photos persisted on the phone | Raw IndexedDB is callback-based and untyped; `localStorage` cannot hold photos |
 | `@aws-sdk/client-s3`, and S3Proxy for development and tests | Ratified stack: S3-compatible storage for photos | Photos in PostgreSQL bloat backups; the local disk of one VPS has no retention rule or redundancy; MinIO no longer publishes images (research R6) |
-| `@vite-pwa/assets-generator` (development only) | FR-001: an installable app needs PNG icons in several sizes | Drawing each size by hand repeats the work when the logo arrives |
+| `apps/web/scripts/generate-app-icons.ts` (`pnpm icons`) | FR-001: an installable app needs PNG icons in several sizes | Drawing each size by hand repeats the work when the logo arrives; an SVG rasterizer cannot draw the wordmark without its font |
 | `web-push` | FR-040 (clarified): notification with the app closed | Polling cannot reach a closed app |
 | `courier_notices` table | FR-027: per-notice acknowledgment shown to the dispatcher | Deriving notices from two event tables misses shipment-level changes |

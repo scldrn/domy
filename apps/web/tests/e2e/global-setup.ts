@@ -1,11 +1,14 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
+import { createECDH } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
+import { GenericContainer } from "testcontainers";
 import { apiPort, webPort } from "./ports";
 
 /**
- * Starts the end-to-end environment: a fresh PostgreSQL 18, migrations and seed, the API in
- * test mode, and the web app; then signs in one user per role and saves their sessions.
+ * Starts the end-to-end environment: a fresh PostgreSQL 18, photo storage in memory, migrations
+ * and seed, the API in test mode, and the web app; then signs in one user per role and saves
+ * their sessions.
  */
 
 const serverDir = new URL("../../../server/", import.meta.url).pathname;
@@ -69,8 +72,34 @@ async function saveStorageState(role: string, cookieHeader: string): Promise<voi
   await writeFile(`${authDir}${role}.json`, JSON.stringify({ cookies, origins: [] }));
 }
 
+/** A Web Push key pair for the test run: P-256, base64url, as `web-push` expects (FR-040). */
+function testVapidKeys() {
+  const ecdh = createECDH("prime256v1");
+  ecdh.generateKeys();
+  return {
+    VAPID_PUBLIC_KEY: ecdh.getPublicKey().toString("base64url"),
+    // 32 bytes always: a key that starts with a zero byte comes back one byte short.
+    VAPID_PRIVATE_KEY: Buffer.concat([Buffer.alloc(32), ecdh.getPrivateKey()])
+      .subarray(-32)
+      .toString("base64url"),
+    VAPID_SUBJECT: "mailto:pruebas@example.com",
+  };
+}
+
 export default async function globalSetup() {
-  const container = await new PostgreSqlContainer("postgres:18").start();
+  const [container, storage] = await Promise.all([
+    new PostgreSqlContainer("postgres:18").start(),
+    // Photo storage with the S3 API, in memory (feature 003, research R6).
+    new GenericContainer("andrewgaul/s3proxy:4.1.1")
+      .withEnvironment({
+        S3PROXY_AUTHORIZATION: "aws-v2-or-v4",
+        S3PROXY_IDENTITY: "domy",
+        S3PROXY_CREDENTIAL: "domy-secreto",
+        JCLOUDS_PROVIDER: "transient",
+      })
+      .withExposedPorts(80)
+      .start(),
+  ]);
   const env = {
     NODE_ENV: "test",
     DATABASE_URL: container.getConnectionUri(),
@@ -79,6 +108,13 @@ export default async function globalSetup() {
     API_PORT: String(apiPort),
     EMAIL_FROM: "Domy <no-reply@example.com>",
     DOMY_FAKE_NOW: "2026-10-01T15:00:00Z",
+    S3_ENDPOINT: `http://${storage.getHost()}:${String(storage.getMappedPort(80))}`,
+    S3_REGION: "us-east-1",
+    S3_BUCKET: "domy-fotos",
+    S3_ACCESS_KEY_ID: "domy",
+    S3_SECRET_ACCESS_KEY: "domy-secreto",
+    S3_FORCE_PATH_STYLE: "true",
+    ...testVapidKeys(),
   };
 
   await run("node", ["src/db/migrate.ts"], serverDir, env);
@@ -161,6 +197,6 @@ export default async function globalSetup() {
 
   return async () => {
     for (const child of processes) if (child.pid) process.kill(-child.pid);
-    await container.stop();
+    await Promise.all([container.stop(), storage.stop()]);
   };
 }

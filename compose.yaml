@@ -19,5 +19,21 @@ services:
     depends_on:
       - postgres
 
+  # Photo storage with the S3 API (feature 003, research R6): http://localhost:9100, keys
+  # domy / domy-secreto. The server creates its bucket on start outside production.
+  s3:
+    image: andrewgaul/s3proxy:4.1.1
+    environment:
+      S3PROXY_AUTHORIZATION: aws-v2-or-v4
+      S3PROXY_IDENTITY: domy
+      S3PROXY_CREDENTIAL: domy-secreto
+      JCLOUDS_PROVIDER: filesystem
+      JCLOUDS_FILESYSTEM_BASEDIR: /data
+    ports:
+      - "9100:80"
+    volumes:
+      - s3-data:/data
+
 volumes:
   postgres-data:
+  s3-data:

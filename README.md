@@ -75,3 +75,9 @@ each feature's `plan.md` and `research.md`. Additions by feature:
 
 - 002: `@dnd-kit/core` and `@dnd-kit/sortable`, to reorder route stops by dragging and with
   the keyboard (research R3).
+- 003: `vite-plugin-pwa` (development) with `workbox-precaching`, `workbox-routing`, and
+  `workbox-window`, for the installable courier app that opens without signal (research
+  R2); `idb`, for the records kept on the phone (research R3), tested with `fake-indexeddb`;
+  `@aws-sdk/client-s3`, for photo storage (research R6); `web-push`, for phone notifications
+  (research R8); `testcontainers` in the web package, for the photo storage of the end-to-end
+  tests.

@@ -41,6 +41,12 @@ if (sentryDsn) {
   });
 }
 
+// The installable app's service worker, in the built app only (feature 003, research R2). A
+// new version waits for the app to close, so it never reloads a page mid-delivery.
+if (import.meta.env.PROD) {
+  void import("virtual:pwa-register").then(({ registerSW }) => registerSW({ immediate: true }));
+}
+
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root element");
 
