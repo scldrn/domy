@@ -73,6 +73,12 @@ Reasons and notes are 5–200 characters.
   account, with an audit event per courier changed. `409 courier_account_invalid` for an
   account that is not an active courier account or a courier that is deactivated; `404` for
   an unknown account or courier (FR-002).
+  Every accepted `actionId` is remembered, including an unchanged link or unlink. Such a
+  request writes an `updated` audit receipt with empty `changes`, for the courier when
+  linked or the user when already unlinked, without updating the courier. A replay returns
+  the current link and cannot undo an intervening change (Constitution II).
+  These receipts use the shared `auditedChange` mechanism of feature 001's master data.
+  `GET /api/audit-events` excludes empty-change receipts from the owner's history.
 - **`POST /api/auth/admin/set-role`**: `409 courier_account_linked` when a linked courier
   account would stop being a courier; it is unlinked first (FR-002).
 

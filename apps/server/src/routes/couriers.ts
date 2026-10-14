@@ -11,8 +11,6 @@ import { z } from "zod";
 import type { AppEnv } from "../app.ts";
 import type { Executor } from "../db/client.ts";
 import { courierAliases, couriers, routes, users } from "../db/schema/index.ts";
-import { findAuditAction } from "../lib/action-id.ts";
-import { recordAudit } from "../lib/audit.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
 import {
@@ -21,8 +19,9 @@ import {
   checkNames,
   diffValues,
   replaceAliases,
+  type AuditChange,
 } from "../lib/master-data.ts";
-import { isUniqueViolation, validate } from "../lib/validate.ts";
+import { validate } from "../lib/validate.ts";
 
 const listQuery = z.object({
   q: z.string().optional(),
@@ -79,9 +78,9 @@ const userParam = z.object({ userId: z.uuid() });
  */
 async function linkAccount(
   tx: Executor,
-  input: { userId: string; courierId: string | null; actionId: string },
-  by: { actorUserId: string; now: Date },
-): Promise<void> {
+  input: { userId: string; courierId: string | null },
+  now: Date,
+): Promise<AuditChange[]> {
   const [user] = await tx.select().from(users).where(eq(users.id, input.userId));
   if (!user) throw new AppError("not_found", { message: "No encontramos esa cuenta." });
   // Couriers in a fixed order, as every action locks them, so two links never deadlock.
@@ -109,29 +108,24 @@ async function linkAccount(
       message: "Ese mensajero está desactivado; reactívalo antes de vincular una cuenta.",
     });
   }
-  if (current?.id === target?.id) return;
+  if (current?.id === target?.id) return [];
 
-  let first = true;
+  const events: AuditChange[] = [];
   const change = async (courierId: string, before: string | null, after: string | null) => {
     await tx
       .update(couriers)
-      .set({ userId: after, updatedAt: by.now })
+      .set({ userId: after, updatedAt: now })
       .where(eq(couriers.id, courierId));
-    await recordAudit(tx, {
-      entityType: "courier",
-      entityId: courierId,
-      action: "updated",
-      actorUserId: by.actorUserId,
-      occurredAt: by.now,
+    events.push({
+      type: "courier",
+      id: courierId,
       changes: { userId: [before, after] },
-      // The action's identifier goes on its first event (exactly once).
-      ...(first && { clientEventId: input.actionId }),
     });
-    first = false;
   };
   // The previous courier lets go first: `couriers.user_id` is unique.
   if (current) await change(current.id, input.userId, null);
   if (target) await change(target.id, target.userId, input.userId);
+  return events;
 }
 
 /** The couriers directory (FR-026, FR-027): names, aliases, phone. */
@@ -210,21 +204,11 @@ export const courierRoutes = new Hono<AppEnv>()
       const { userId } = c.req.valid("param");
       const { actionId, courierId } = c.req.valid("json");
       const db = c.get("db");
-      if (!(await findAuditAction(db, actionId))) {
-        await db
-          .transaction((tx) =>
-            linkAccount(
-              tx,
-              { userId, courierId, actionId },
-              { actorUserId: c.get("user").id, now: c.get("clock")() },
-            ),
-          )
-          .catch((error: unknown) => {
-            // The same action applied by a concurrent retry.
-            if (isUniqueViolation(error, "audit_events_client_event_id_key")) return;
-            throw error;
-          });
-      }
+      await auditedChange(
+        c,
+        { type: courierId ? "courier" : "user", id: courierId ?? userId, actionId },
+        (tx) => linkAccount(tx, { userId, courierId }, c.get("clock")()),
+      );
       const [linked] = await loadCouriers(db, eq(couriers.userId, userId));
       return c.json({ courier: linked ?? null });
     },

@@ -99,3 +99,10 @@ are `camelCase`.
 
 There are no `DELETE` endpoints: records are deactivated through `PATCH { isActive: false }`
 (FR-017, FR-029).
+
+Accepted master data edits, including unchanged values, remember their `actionId` in the
+same transaction. An unchanged edit stores an `updated` audit receipt with `changes: {}`;
+replaying it returns the current record without restoring older values (FR-042).
+`GET /api/audit-events` shows only events with non-empty changes: empty and null `changes`
+are excluded before filtering by cursor and taking the page, so receipts neither appear as
+edits nor consume page slots (FR-036).

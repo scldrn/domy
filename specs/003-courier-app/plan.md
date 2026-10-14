@@ -213,6 +213,18 @@ without an origin route, and the notices for `join` and shipment edits.
 
 No constitution violations.
 
+Account-link and master data idempotency (FR-002, Constitution II, T095–T097) use the
+existing audit event's unique `client_event_id`, including an empty-change receipt for an
+accepted request that already matches the current values. No new table, migration, or
+dependency is needed. The receipt is written inside the edit transaction; concurrent
+retries roll back on the existing unique constraint, and the endpoint returns the current
+state.
+`lib/master-data.ts`'s `auditedChange` owns these receipts and audit writes for both normal
+edits and account links affecting several couriers. The link callback returns the changed
+couriers and their old/new account ids, or no changes; its fallback receipt identifies the
+target courier or the unlinked user. `GET /api/audit-events` excludes empty and null changes
+before pagination, while retaining the receipts in the database (feature 001 FR-036).
+
 | Addition | Why needed | Simpler alternative rejected because |
 | --- | --- | --- |
 | `vite-plugin-pwa` and a service worker | FR-001, FR-022: the app must open without signal and be installable | Without a service worker a closed app cannot open offline |

@@ -227,10 +227,14 @@ returns the first result (FR-042).
 | `action` | `audit_action` | Not null |
 | `actor_user_id` | uuid → users | Not null |
 | `occurred_at` | timestamptz | Not null |
-| `changes` | jsonb | `{ field: [old, new] }` |
+| `changes` | jsonb | `{ field: [old, new] }`; `{}` for an internal accepted no-op receipt |
 | `client_event_id` | uuid | Unique; the request's `actionId` (FR-042) |
 
-Written in the same transaction as the change it records. Visible to the owner only.
+Written in the same transaction as the change it records. Accepted unchanged edits also
+write a receipt so their action identifiers remain remembered. When one action changes
+several entities, only its first event carries `client_event_id`. The owner's history
+excludes events with empty or null changes before pagination; the stored rows remain
+append-only (FR-036, FR-042).
 
 ## Shipment lifecycle
 

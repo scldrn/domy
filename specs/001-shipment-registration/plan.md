@@ -169,6 +169,14 @@ domy/
 
 ## Complexity Tracking
 
+Accepted master data edits use `lib/master-data.ts`'s `auditedChange` to store the action's
+audit event in the same transaction, including an empty-change receipt when nothing changed
+(FR-042; review correction in feature 003, T097). The helper also accepts multiple changed
+entities for account linking; the first event carries the action id. Empty-change receipts
+remain stored but are excluded by `GET /api/audit-events` before pagination (FR-036, T096).
+The existing unique `client_event_id` arbitrates concurrent retries; no migration or new
+dependency is needed.
+
 No constitution violations. Two additions that could look like extra moving parts are
 justified inside the principles:
 

@@ -62,31 +62,46 @@ export async function auditedCreate(
   });
 }
 
+export type AuditChange = {
+  type: AuditEntity;
+  id: string;
+  changes: Record<string, [unknown, unknown]>;
+};
+
 /**
- * Applies a change once per `actionId`. `apply` returns the changed fields (old and new), or
- * null when nothing changed; deactivation and reactivation are recorded as such.
+ * Applies a change once per `actionId`. `apply` returns changed fields, multiple entity
+ * changes, or null/an empty list for an accepted no-op. Even a no-op gets a receipt in the
+ * same transaction, so a late retry cannot undo a later change. Only the first event carries
+ * the action identifier; a concurrent retry rolls back all its changes on that unique key.
  */
 export async function auditedChange(
   c: Context<AppEnv>,
   entity: { type: AuditEntity; id: string; actionId: string },
-  apply: (tx: Executor) => Promise<Record<string, [unknown, unknown]> | null>,
+  apply: (tx: Executor) => Promise<Record<string, [unknown, unknown]> | AuditChange[] | null>,
 ): Promise<void> {
   const db: Db = c.get("db");
   if (await findAuditAction(db, entity.actionId)) return;
   await db
     .transaction(async (tx) => {
-      const changes = await apply(tx);
-      if (!changes || Object.keys(changes).length === 0) return;
-      const active = changes["isActive"]?.[1];
-      await recordAudit(tx, {
-        entityType: entity.type,
-        entityId: entity.id,
-        action: active === false ? "deactivated" : active === true ? "reactivated" : "updated",
-        actorUserId: c.get("user").id,
-        occurredAt: c.get("clock")(),
-        changes,
-        clientEventId: entity.actionId,
-      });
+      const result = await apply(tx);
+      const events: AuditChange[] = Array.isArray(result)
+        ? result
+        : [{ type: entity.type, id: entity.id, changes: result ?? {} }];
+      if (events.length === 0) {
+        events.push({ type: entity.type, id: entity.id, changes: {} });
+      }
+      for (const [index, event] of events.entries()) {
+        const active = event.changes["isActive"]?.[1];
+        await recordAudit(tx, {
+          entityType: event.type,
+          entityId: event.id,
+          action: active === false ? "deactivated" : active === true ? "reactivated" : "updated",
+          actorUserId: c.get("user").id,
+          occurredAt: c.get("clock")(),
+          changes: event.changes,
+          ...(index === 0 && { clientEventId: entity.actionId }),
+        });
+      }
     })
     .catch((error: unknown) => {
       // The same action applied by a concurrent retry.
