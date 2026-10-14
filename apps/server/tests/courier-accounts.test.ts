@@ -8,7 +8,7 @@ import { send } from "./setup/routes.ts";
 
 let database: TestDatabase;
 let t: ReturnType<typeof createTestApp>;
-let owner: { cookie: string };
+let owner: { cookie: string; user: { id: string } };
 
 beforeAll(async () => {
   database = await startDatabase();
@@ -94,6 +94,65 @@ describe("PUT /api/couriers/accounts/:userId", () => {
     expect(await auditOf(carlos)).toHaveLength(2);
   });
 
+  // An accepted action remembers its id even when it changed nothing (T095, Constitution II).
+  it.each(["link", "unlink"] as const)(
+    "remembers an unchanged %s so its replay cannot undo a later change",
+    async (operation) => {
+      const carlos = await courier("Carlos Pérez");
+      const account = await t.signIn("courier");
+      const target = operation === "link" ? carlos : null;
+      if (target) await link(account.user.id, target);
+      const [before] = await database.db.select().from(couriers).where(eq(couriers.id, carlos));
+      const actionId = crypto.randomUUID();
+
+      expect((await link(account.user.id, target, actionId)).status).toBe(200);
+      expect((await link(account.user.id, target, actionId)).status).toBe(200);
+      const [unchanged] = await database.db.select().from(couriers).where(eq(couriers.id, carlos));
+      expect(unchanged).toEqual(before);
+
+      const next = target ? null : carlos;
+      await link(account.user.id, next);
+      const replay = await link(account.user.id, target, actionId);
+
+      expect(replay.status).toBe(200);
+      expect(await linkedUser(carlos)).toBe(next ? account.user.id : null);
+      expect(replay.body.courier?.id ?? null).toBe(next);
+      const receipts = await database.db
+        .select()
+        .from(auditEvents)
+        .where(eq(auditEvents.clientEventId, actionId));
+      expect(receipts).toEqual([
+        expect.objectContaining({
+          entityType: target ? "courier" : "user",
+          entityId: target ?? account.user.id,
+          action: "updated",
+          actorUserId: owner.user.id,
+          occurredAt: t.now(),
+          changes: {},
+        }),
+      ]);
+    },
+  );
+
+  it("remembers concurrent unchanged links only once", async () => {
+    const carlos = await courier("Carlos Pérez");
+    const account = await t.signIn("courier");
+    await link(account.user.id, carlos);
+    const actionId = crypto.randomUUID();
+
+    const results = await Promise.all([
+      link(account.user.id, carlos, actionId),
+      link(account.user.id, carlos, actionId),
+    ]);
+    expect(results.map((result) => result.status)).toEqual([200, 200]);
+    const receipts = await database.db
+      .select()
+      .from(auditEvents)
+      .where(eq(auditEvents.clientEventId, actionId));
+    expect(receipts).toHaveLength(1);
+    expect(await auditOf(carlos)).toHaveLength(1);
+  });
+
   it("moves an account to another courier, and replaces a courier's account, at once", async () => {
     const carlos = await courier("Carlos Pérez");
     const diana = await courier("Diana Ruiz");
@@ -103,7 +162,8 @@ describe("PUT /api/couriers/accounts/:userId", () => {
     await link(second.user.id, diana);
 
     // The first account moves to Diana, whose account is replaced.
-    expect((await link(first.user.id, diana)).status).toBe(200);
+    const actionId = crypto.randomUUID();
+    expect((await link(first.user.id, diana, actionId)).status).toBe(200);
 
     expect(await linkedUser(carlos)).toBeNull();
     expect(await linkedUser(diana)).toBe(first.user.id);
@@ -111,7 +171,18 @@ describe("PUT /api/couriers/accounts/:userId", () => {
     expect((await auditOf(diana)).at(-1)?.changes).toEqual({
       userId: [second.user.id, first.user.id],
     });
+    expect((await auditOf(carlos)).at(-1)?.clientEventId).toBe(actionId);
+    expect((await auditOf(diana)).at(-1)?.clientEventId).toBeNull();
     expect((await send(t, second.cookie, "/api/courier/route")).status).toBe(403);
+
+    await link(first.user.id, null);
+    const replay = await link(first.user.id, diana, actionId);
+    expect(replay.status).toBe(200);
+    expect(replay.body.courier).toBeNull();
+    expect(await linkedUser(carlos)).toBeNull();
+    expect(await linkedUser(diana)).toBeNull();
+    expect(await auditOf(carlos)).toHaveLength(2);
+    expect(await auditOf(diana)).toHaveLength(3);
   });
 
   it("unlinks: the courier app then says the account is not linked", async () => {

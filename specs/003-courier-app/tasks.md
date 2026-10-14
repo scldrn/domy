@@ -383,6 +383,7 @@ two days:
 | `003-us1-server` | Phase 3: tests and server (T026–T029, T032–T034) |
 | `003-us1-web` | Phase 3: the courier's screens and the panel's records (T030, T031, T035–T040) |
 | `003-courier-accounts` | T094 |
+| `003-fix-account-idempotency` | T095–T097 |
 | `003-us2-offline` | Phase 4 |
 | `003-us3-exceptions` | Phase 5 |
 | `003-us4-decisions` | Phase 6 |
@@ -409,3 +410,31 @@ the go-live checklist of feature 001 is done.
   are sequential on purpose
 - Verify each test fails before implementing; commit after each task or logical group
 - Every task must leave `pnpm check` clean
+
+## Phase 11: Account-link Idempotency Correction
+
+- [X] T095 Write failing regression tests in `apps/server/tests/courier-accounts.test.ts` for accepted unchanged links and unlinks, retries after an intervening change, and concurrent retries; then remember those actions in `apps/server/src/routes/couriers.ts` with an empty-change audit receipt in the existing transaction, until the tests pass (FR-002, Constitution II). Update `docs/status.md` with PR #18's completed merge and the next slice, US2 (T041–T047).
+
+Validation on 2026-10-14: the three new regressions failed before implementation, then all
+10 courier account tests passed. `pnpm check`, `pnpm build`, and
+`pnpm test --maxWorkers=2` passed (domain 201, server 362, web 135), and `pnpm test:e2e`
+passed all 60 scenarios. Scoped convergence for
+T095 found no remaining work; US2–US7 and polish keep their existing unchecked tasks. The
+initial default-worker suite timed out in the existing route-invariants test; that file
+passed alone, and the complete suite passed with two workers without changing its timeout.
+
+## Phase 12: Convergence — Owner Review Corrections
+
+- [X] T096 Write failing integration tests in `apps/server/tests/audit-events.test.ts` for hiding empty-change receipts, preserving their rows, and paging/filtering actual changes correctly; then filter receipts in `apps/server/src/routes/audit-events.ts` before pagination (feature 001 FR-036, Constitution VII; contradicts).
+- [X] T097 Write failing regression tests in `apps/server/tests/master-data-idempotency.test.ts` for unchanged edits followed by another edit across merchants, couriers, carriers, neighborhoods, pickup points, and rate zones, unchanged deactivation followed by reactivation, concurrent retries, and invalid edits without a receipt. Centralize accepted-action receipts and single/multiple-entity audit events in `apps/server/src/lib/master-data.ts` (`auditedChange`), and use it in `apps/server/src/routes/couriers.ts` for account linking, preserving T095's regressions and per-courier audit events (feature 001 FR-042, feature 003 FR-002, Constitution II; CRITICAL, contradicts). Keep spec, contracts, plans, and `docs/status.md` aligned; remove status claims that become stale at commit.
+
+Scope: complete these two corrections on the existing fix branch before US2. T097's
+regressions are written before its implementation; T095's existing tests remain required.
+
+Validation on 2026-10-14: before implementation, the focused PostgreSQL suite had 10
+failures reproducing visible receipts and lost later edits, with 13 tests already passing
+(including invalid edits without a receipt). After implementation, all 23 focused tests
+passed. The existing multi-courier transfer test also verifies one keyed event, both
+couriers' audit histories, and replay after an intervening unlink. All four gates passed:
+`pnpm check`, `pnpm build`, default-worker `pnpm test` (domain 201, server 373, web 135;
+709 total), and `pnpm test:e2e` (60 scenarios). The route-invariants timeout did not recur.

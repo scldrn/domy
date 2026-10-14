@@ -27,6 +27,8 @@ export const auditEventRoutes = new Hono<AppEnv>()
       .innerJoin(users, eq(users.id, auditEvents.actorUserId))
       .where(
         and(
+          // Internal no-op receipts (and absent changes) are not owner-visible edits.
+          sql`${auditEvents.changes} <> '{}'::jsonb`,
           entityType ? eq(auditEvents.entityType, entityType) : undefined,
           entityId ? eq(auditEvents.entityId, entityId) : undefined,
           cursor ? sql`${auditEvents.id} < ${cursor}::uuid` : undefined,

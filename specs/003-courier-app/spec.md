@@ -368,7 +368,10 @@ over equal to cash collected minus disbursements.
   the courier app. The owner links each account with the courier role to the courier it
   works as, in "Usuarios"; an account not linked sees no route and is told to ask the owner.
   A linked account keeps the courier role until it is unlinked, and a courier's records stay
-  with the courier when its account changes.
+  with the courier when its account changes. Linking and unlinking have exactly one effect
+  per action identifier, including a request whose desired link already exists (or whose
+  account is already unlinked): retrying it after a later change MUST NOT restore the old
+  link or remove the new one.
 - **FR-003**: A courier session MUST last until the courier signs out, for at most 30 days
   (the same rule as feature 001, FR-033a); then the app asks for the password again. The
   app MUST warn the courier when 2 days or fewer remain, so they can sign in again before
