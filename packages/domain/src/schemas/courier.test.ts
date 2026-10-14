@@ -1,0 +1,209 @@
+import { describe, expect, it } from "vitest";
+import {
+  collectionProblem,
+  courierRecordInput,
+  courierRecordsBatch,
+  exceptionDecisionInput,
+  noticeAcknowledgeInput,
+  recordCorrectionInput,
+  recordOnBehalfInput,
+} from "./courier.ts";
+
+const id = (n: number) => `0194d9f0-0000-7000-8000-${String(n).padStart(12, "0")}`;
+const base = { id: id(1), shipmentId: id(2), occurredAt: "2026-10-01T15:00:00.000Z" };
+const messages = (result: { success: boolean; error?: { issues: { message: string }[] } }) =>
+  result.error?.issues.map((issue) => issue.message) ?? [];
+
+/** The courier's records as the phone saves them and the server receives them (FR-019). */
+describe("courierRecordInput", () => {
+  it("accepts each kind with its own fields", () => {
+    for (const input of [
+      { ...base, kind: "pickup" },
+      {
+        ...base,
+        kind: "delivery",
+        receivedByName: "Laura Gómez",
+        cashAmount: 50_000,
+        companyTransferAmount: 35_000,
+        photos: [
+          { id: id(3), kind: "proof" },
+          { id: id(4), kind: "transfer_receipt" },
+        ],
+        location: { latitude: 6.2442, longitude: -75.5812, accuracyM: 12 },
+      },
+      { ...base, kind: "exception", reason: "recipient_absent" },
+      { ...base, kind: "problem", note: "El cliente no tenía el paquete listo" },
+      { ...base, kind: "return", receivedByName: "Bodega Estadio" },
+      { ...base, kind: "disbursement", amount: 12_000, payee: "Coonorte" },
+      { ...base, kind: "handover_confirmation" },
+    ]) {
+      expect(courierRecordInput.safeParse(input).success, input.kind).toBe(true);
+    }
+  });
+
+  it("fills the amounts not collected with zero", () => {
+    const parsed = courierRecordInput.parse({ ...base, kind: "delivery", receivedByName: "Laura" });
+    expect(parsed).toMatchObject({
+      cashAmount: 0,
+      companyTransferAmount: 0,
+      merchantTransferAmount: 0,
+      photos: [],
+    });
+  });
+
+  it("explains in Spanish what a record is missing", () => {
+    expect(
+      messages(courierRecordInput.safeParse({ ...base, kind: "problem", note: "no" })),
+    ).toEqual(["Escribe una nota de al menos 5 caracteres."]);
+    expect(
+      messages(courierRecordInput.safeParse({ ...base, kind: "delivery", receivedByName: "L" })),
+    ).toEqual(["Escribe el nombre de quien recibe, de al menos 2 letras."]);
+    expect(
+      messages(
+        courierRecordInput.safeParse({
+          ...base,
+          kind: "disbursement",
+          amount: 0,
+          payee: "Coonorte",
+        }),
+      ),
+    ).toEqual(["El pago debe ser mayor que cero."]);
+    expect(
+      messages(courierRecordInput.safeParse({ ...base, kind: "delivery", cashAmount: 1.5 })),
+    ).toContain("Usa pesos enteros, sin decimales.");
+  });
+
+  it("takes at most three proof photos (FR-009)", () => {
+    const photos = [3, 4, 5, 6].map((n) => ({ id: id(n), kind: "proof" }));
+    expect(
+      messages(
+        courierRecordInput.safeParse({
+          ...base,
+          kind: "delivery",
+          receivedByName: "Laura",
+          photos,
+        }),
+      ),
+    ).toEqual(["Toma máximo 3 fotos de la prueba de entrega."]);
+  });
+
+  it("takes only the photo kinds of its record kind", () => {
+    const result = courierRecordInput.safeParse({
+      ...base,
+      kind: "exception",
+      reason: "rejected",
+      photos: [{ id: id(3), kind: "proof" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("refuses a kind it does not know and a location off the globe", () => {
+    expect(courierRecordInput.safeParse({ ...base, kind: "teleport" }).success).toBe(false);
+    expect(
+      courierRecordInput.safeParse({
+        ...base,
+        kind: "pickup",
+        location: { latitude: 120, longitude: 0, accuracyM: 5 },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("courierRecordsBatch", () => {
+  it("carries the phone's time and 1 to 50 records in the order they happened", () => {
+    const records = Array.from({ length: 51 }, (_, n) => ({
+      ...base,
+      id: id(n + 10),
+      kind: "pickup",
+    }));
+    const deviceNow = "2026-10-01T15:01:00.000Z";
+    expect(
+      courierRecordsBatch.safeParse({ deviceNow, records: records.slice(0, 50) }).success,
+    ).toBe(true);
+    expect(courierRecordsBatch.safeParse({ deviceNow, records }).success).toBe(false);
+    expect(courierRecordsBatch.safeParse({ deviceNow, records: [] }).success).toBe(false);
+  });
+});
+
+describe("collectionProblem (FR-010, FR-011)", () => {
+  const delivery = { cashAmount: 80_000, companyTransferAmount: 0, merchantTransferAmount: 0 };
+
+  it("asks for a note when the collected total differs from the COD amount", () => {
+    expect(collectionProblem(85_000, delivery)).toBe(
+      "Lo cobrado es distinto del valor a recaudar: escribe una nota de al menos 5 caracteres.",
+    );
+    expect(
+      collectionProblem(85_000, { ...delivery, note: "Pagó 80.000, el resto mañana" }),
+    ).toBeNull();
+    expect(collectionProblem(80_000, delivery)).toBeNull();
+  });
+});
+
+describe("recordOnBehalfInput (FR-034)", () => {
+  it("takes a record without its shipment, with the time it happened optional", () => {
+    const { shipmentId: _, occurredAt: __, ...rest } = base;
+    expect(
+      recordOnBehalfInput.safeParse({ ...rest, kind: "delivery", receivedByName: "Laura" }).success,
+    ).toBe(true);
+    expect(recordOnBehalfInput.safeParse({ ...rest, kind: "handover_confirmation" }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe("exceptionDecisionInput (FR-029)", () => {
+  it("is a new attempt, optionally dated and on a route, or a return", () => {
+    const actionId = id(9);
+    expect(exceptionDecisionInput.safeParse({ actionId, decision: "new_attempt" }).success).toBe(
+      true,
+    );
+    expect(
+      exceptionDecisionInput.safeParse({
+        actionId,
+        decision: "new_attempt",
+        serviceDate: "2026-10-02",
+        routeId: id(8),
+      }).success,
+    ).toBe(true);
+    expect(
+      exceptionDecisionInput.safeParse({ actionId, decision: "return", routeId: id(8) }).success,
+    ).toBe(true);
+    expect(exceptionDecisionInput.safeParse({ actionId, decision: "discard" }).success).toBe(false);
+  });
+});
+
+describe("recordCorrectionInput (FR-035)", () => {
+  it("needs a reason and at least one value to correct", () => {
+    expect(
+      messages(
+        recordCorrectionInput.safeParse({ actionId: id(9), reason: "Se digitó mal el monto" }),
+      ),
+    ).toEqual(["Indica qué valor corriges."]);
+    expect(
+      recordCorrectionInput.safeParse({
+        actionId: id(9),
+        reason: "Se digitó mal el monto",
+        cashAmount: 85_000,
+      }).success,
+    ).toBe(true);
+  });
+});
+
+describe("noticeAcknowledgeInput (FR-027)", () => {
+  it("acknowledges the notices shown, with the time it happened", () => {
+    expect(
+      noticeAcknowledgeInput.safeParse({
+        actionId: id(9),
+        noticeIds: [id(1)],
+        occurredAt: base.occurredAt,
+      }).success,
+    ).toBe(true);
+    expect(
+      noticeAcknowledgeInput.safeParse({
+        actionId: id(9),
+        noticeIds: [],
+        occurredAt: base.occurredAt,
+      }).success,
+    ).toBe(false);
+  });
+});

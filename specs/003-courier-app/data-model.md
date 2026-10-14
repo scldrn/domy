@@ -132,7 +132,7 @@ progress of the record's courier.
 | `exception` | the courier holds custody and status is `picked_up` | `exception`; delivery task `failed`; custody unchanged | `duplicate` / `not_applied` as above |
 | `return` | the courier holds custody, status `exception`, `return_decided` | `returned`; custody ends; return task completed; `return_decided` false | `duplicate` / `not_applied` |
 | `problem` | a pending pickup, errand, or return task on the author's route | `problem_note` set; no status change | `not_applied` |
-| `disbursement` | the shipment is not `voided` | stored; `needs_review` if the shipment is not on the author's route | `not_applied` |
+| `disbursement` | the shipment is not `voided` | stored; `needs_review` unless the shipment's route is the author's (whatever its status, so a delivered stop counts) or the author holds the package | `not_applied` |
 | `handover_confirmation` | a pending handover to this courier | handover `confirmed`; custody to the courier; task unblocked (feature 002) | `duplicate` if already confirmed to this courier; else `not_applied` |
 
 Every `not_applied` outcome sets `needs_review` and creates a `record_not_applied` notice;

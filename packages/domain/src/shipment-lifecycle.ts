@@ -1,3 +1,5 @@
+import type { ShipmentKind } from "./schemas/enums.ts";
+
 /**
  * The shared shipment lifecycle (data-model.md of feature 001, completed by features 002 and
  * 003). Every status change in the system goes through this table.
@@ -42,6 +44,18 @@ const finalStatuses: readonly ShipmentStatus[] = ["delivered", "returned", "void
 
 export function canTransition(from: ShipmentStatus, to: ShipmentStatus): boolean {
   return transitions[from].includes(to);
+}
+
+/**
+ * A transition for a given shipment (feature 003): only an errand, which has no pickup, is
+ * delivered straight from "En ruta"; every other kind is picked up first (FR-007).
+ */
+export function canChangeStatus(
+  shipment: { kind: ShipmentKind; status: ShipmentStatus },
+  to: ShipmentStatus,
+): boolean {
+  if (shipment.status === "dispatched" && to === "delivered") return shipment.kind === "errand";
+  return canTransition(shipment.status, to);
 }
 
 /** A shipment can be edited until it is picked up (FR-015). */

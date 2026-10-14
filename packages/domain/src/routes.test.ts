@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addHeldShipmentToStops,
   addShipmentToStops,
   buildStops,
   canUndoDispatch,
@@ -153,6 +154,87 @@ describe("addShipmentToStops (FR-011)", () => {
       deliveryOnly: true,
     });
     expect(order(stops)).toEqual(["pickup:a", "delivery:a", "delivery:b"]);
+  });
+});
+
+describe("addHeldShipmentToStops (feature 003: FR-029, FR-031, FR-041)", () => {
+  const office = { address: "Cl 50 # 40-20", neighborhoodId: "centro" };
+  const reverse: RoutePlanShipment = {
+    id: "r",
+    kind: "reverse_pickup",
+    pickup: { address: "Calle 10 # 43-12", neighborhoodId: "belen" },
+    delivery: bodega,
+  };
+
+  it("gives a package a courier holds only its delivery stop", () => {
+    const stops = addHeldShipmentToStops(buildStops([delivery("a")], newId), delivery("h"), newId, {
+      holder: "courier",
+      purpose: "delivery",
+    });
+    expect(order(stops)).toEqual(["pickup:a", "delivery:a", "delivery:h"]);
+  });
+
+  it("returns a package a courier holds where it was picked up", () => {
+    const stops = addHeldShipmentToStops([], delivery("h"), newId, {
+      holder: "courier",
+      purpose: "return",
+    });
+    expect(stops).toMatchObject([
+      { kind: "return", address: bodega.address, tasks: [{ shipmentId: "h", kind: "return" }] },
+    ]);
+    const back = addHeldShipmentToStops([], reverse, newId, {
+      holder: "courier",
+      purpose: "return",
+    });
+    // A reverse pickup goes back to the recipient it was collected from.
+    expect(back[0]).toMatchObject({ kind: "return", address: "Calle 10 # 43-12" });
+  });
+
+  it("picks a package up at the office before its delivery or return stop", () => {
+    const stops = addHeldShipmentToStops(buildStops([delivery("a")], newId), delivery("h"), newId, {
+      holder: "office",
+      office,
+      purpose: "delivery",
+    });
+    expect(order(stops)).toEqual(["pickup:a", "delivery:a", "pickup:h", "delivery:h"]);
+    expect(stops[2]).toMatchObject({ address: office.address, neighborhoodId: "centro" });
+
+    const returned = addHeldShipmentToStops(stops, delivery("j"), newId, {
+      holder: "office",
+      office,
+      purpose: "return",
+    });
+    // A second package at the office joins its pending pickup stop.
+    expect(order(returned)).toEqual([
+      "pickup:a",
+      "delivery:a",
+      "pickup:h+j",
+      "delivery:h",
+      "return:j",
+    ]);
+    expect(validateStopOrder(returned, returned)).toBeNull();
+  });
+
+  it("keeps a return stop after its office pickup when the stops are reordered", () => {
+    const stops = addHeldShipmentToStops([], delivery("h"), newId, {
+      holder: "office",
+      office,
+      purpose: "return",
+    });
+    const [pickup, back] = stops;
+    if (!pickup || !back) throw new Error("expected two stops");
+    expect(validateStopOrder(stops, [back, pickup])).toBe(
+      "La entrega de un envío debe quedar después de su recogida.",
+    );
+  });
+
+  it("counts a pending return stop as pending work of the route", () => {
+    const stops = addHeldShipmentToStops([], delivery("h"), newId, {
+      holder: "courier",
+      purpose: "return",
+    });
+    expect(routeProgress(stops)).toEqual({ completed: 0, total: 1 });
+    expect(isRouteFinished(stops, 0)).toBe(false);
   });
 });
 

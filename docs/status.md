@@ -14,16 +14,16 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Specified, planned, tasked, and analyzed again on 2026-10-14 against 002 as built (research R17): storage for development and tests moved from MinIO, whose images are gone, to S3Proxy; custody and "Registrado por despacho" aligned with 002; the quality tests of 002 added (T089–T093); slices and branches defined in tasks.md. Setup (T001–T003: dependencies, S3Proxy, installable app with provisional icons) done on the short-lived branch `003-setup` with every gate green |
+| 003 Courier app | Specified, planned, tasked, and analyzed again on 2026-10-14 against 002 as built (research R17): storage for development and tests moved from MinIO, whose images are gone, to S3Proxy; custody and "Registrado por despacho" aligned with 002; the quality tests of 002 added (T089–T093); slices and branches defined in tasks.md. Setup (T001–T003) on `main` (#13). The domain rules (T004–T014: what each courier record does, the day summary, return and office stops, the record flags, the courier schemas) done on the short-lived branch `003-foundation-domain` with every gate green; the stop kind `return` is in the domain and reaches the database with T017–T018 |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Merge `003-setup` into `main` through its pull request once CI passes. Then continue 003
-   one slice per branch, in the order of the table in `specs/003-courier-app/tasks.md`
-   (Delivery under Trunk-Based Development): next `003-foundation-domain` (T004–T014),
-   with `/speckit-implement` for that part only, tests first. After pulling, run
-   `docker compose up -d` again: it now also starts S3Proxy for photos.
+1. Merge `003-foundation-domain` into `main` through its pull request once CI passes. Then
+   continue 003 one slice per branch, in the order of the table in
+   `specs/003-courier-app/tasks.md` (Delivery under Trunk-Based Development): next
+   `003-foundation-records` (T015–T025: tables and migration, storage client, applying a
+   record, the courier skeleton), with `/speckit-implement` for that part only, tests first.
 2. Needed before the end of 003, not before starting: an Android phone and an iPhone (iOS
    16.4 or later for notifications) for the manual validation T087, and the owner's
    DigitalOcean Spaces bucket (in the client's name) only at deployment.

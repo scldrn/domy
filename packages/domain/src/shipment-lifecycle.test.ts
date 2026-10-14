@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canChangeStatus,
   canTransition,
   canVoid,
   isEditable,
@@ -54,6 +55,15 @@ describe("shipment lifecycle", () => {
     }
     expect(canTransition("dispatched", "assigned"), "dispatch undone").toBe(true);
     expect(canTransition("dispatched", "registered"), "removed before pickup").toBe(true);
+  });
+
+  it("delivers straight from «En ruta» only an errand, which has no pickup (feature 003)", () => {
+    expect(canChangeStatus({ kind: "errand", status: "dispatched" }, "delivered")).toBe(true);
+    for (const kind of ["delivery", "reverse_pickup", "carrier_handoff"] as const) {
+      expect(canChangeStatus({ kind, status: "dispatched" }, "delivered"), kind).toBe(false);
+      expect(canChangeStatus({ kind, status: "picked_up" }, "delivered"), kind).toBe(true);
+    }
+    expect(canChangeStatus({ kind: "errand", status: "picked_up" }, "voided")).toBe(false);
   });
 
   it("treats registered, assigned, and dispatched as editable", () => {
