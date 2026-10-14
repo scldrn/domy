@@ -45,3 +45,54 @@ export function flagLabel(flag: ShipmentFlag): string {
   const time = duration(flag.minutes);
   return `${shipmentFlagLabels[flag.kind]} · ${flag.kind === "at_risk" ? `quedan ${time}` : time}`;
 }
+
+/** The flags of a shipment's courier records (feature 003, FR-033, research R11). */
+export const recordFlagKinds = [
+  "no_photo",
+  "photo_pending",
+  "collection_differs",
+  "pickup_problem",
+  "needs_review",
+] as const;
+export type RecordFlagKind = (typeof recordFlagKinds)[number];
+export const recordFlagLabels: Record<RecordFlagKind, string> = {
+  no_photo: "Sin foto",
+  photo_pending: "Foto pendiente",
+  collection_differs: "Recaudo diferente",
+  pickup_problem: "Problema de recogida",
+  needs_review: "Por revisar",
+};
+
+/** A photo that has not arrived 24 hours after its record counts as missing (FR-023). */
+const photoWaitMs = 24 * 60 * 60 * 1000;
+
+export function recordFlags(
+  input: {
+    /** The latest applied delivery, return, or completed errand, with its proof photos. */
+    proof: { recordedAt: Date; photos: { uploaded: boolean }[] } | null;
+    /** The collected total of that delivery against the COD amount. */
+    collection: { total: number; codAmount: number } | null;
+    pickupProblem: boolean;
+    needsReview: boolean;
+    /** Other photos of the shipment's records still on their way, within 24 hours. */
+    pendingPhotos?: number;
+  },
+  now: Date,
+): RecordFlagKind[] {
+  const flags: RecordFlagKind[] = [];
+  if (input.proof) {
+    const waiting = now.getTime() - input.proof.recordedAt.getTime() < photoWaitMs;
+    const arrived = input.proof.photos.some((photo) => photo.uploaded);
+    const onTheWay = waiting && input.proof.photos.some((photo) => !photo.uploaded);
+    if (onTheWay || (input.pendingPhotos ?? 0) > 0) flags.push("photo_pending");
+    else if (!arrived) flags.push("no_photo");
+  } else if ((input.pendingPhotos ?? 0) > 0) {
+    flags.push("photo_pending");
+  }
+  if (input.collection && input.collection.total !== input.collection.codAmount) {
+    flags.push("collection_differs");
+  }
+  if (input.pickupProblem) flags.push("pickup_problem");
+  if (input.needsReview) flags.push("needs_review");
+  return flags;
+}

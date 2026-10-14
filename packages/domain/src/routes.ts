@@ -16,12 +16,14 @@ export const routeStatusLabels: Record<RouteStatus, string> = {
   cancelled: "Cancelada",
 };
 
-export const stopKinds = ["pickup", "delivery", "errand"] as const;
+/** A return stop gives an undeliverable package back where it was picked up (feature 003). */
+export const stopKinds = ["pickup", "delivery", "errand", "return"] as const;
 export type StopKind = (typeof stopKinds)[number];
 export const stopKindLabels: Record<StopKind, string> = {
   pickup: "Recogida",
   delivery: "Entrega",
   errand: "Diligencia",
+  return: "Devolución",
 };
 
 export const taskStatuses = ["pending", "completed", "failed"] as const;
@@ -143,29 +145,59 @@ export function addShipmentToStops(
   if (!shipment.delivery) return [...stops, stop(newId(), "errand", shipment.pickup, shipment.id)];
   const deliveryStop = stop(newId(), "delivery", shipment.delivery, shipment.id);
   if (options.deliveryOnly) return [...stops, deliveryStop];
+  return [...withPickup(stops, shipment.pickup, shipment.id, newId), deliveryStop];
+}
+
+/** A pickup at a place: in the route's pending pickup stop of that place, or a new last stop. */
+function withPickup(
+  stops: RouteStopPlan[],
+  place: Place,
+  shipmentId: string,
+  newId: () => string,
+): RouteStopPlan[] {
   const shared = stops.find(
     (existing) =>
-      existing.kind === "pickup" &&
-      isPending(existing) &&
-      placeKey(existing) === placeKey(shipment.pickup),
+      existing.kind === "pickup" && isPending(existing) && placeKey(existing) === placeKey(place),
   );
-  if (shared) {
-    return [
-      ...stops.map((existing) =>
-        existing === shared
-          ? {
-              ...existing,
-              tasks: [
-                ...existing.tasks,
-                { shipmentId: shipment.id, kind: "pickup" as const, status: "pending" as const },
-              ],
-            }
-          : existing,
-      ),
-      deliveryStop,
-    ];
-  }
-  return [...stops, stop(newId(), "pickup", shipment.pickup, shipment.id), deliveryStop];
+  if (!shared) return [...stops, stop(newId(), "pickup", place, shipmentId)];
+  return stops.map((existing) =>
+    existing === shared
+      ? {
+          ...existing,
+          tasks: [
+            ...existing.tasks,
+            { shipmentId, kind: "pickup" as const, status: "pending" as const },
+          ],
+        }
+      : existing,
+  );
+}
+
+/**
+ * A package someone holds joins a route (feature 003, FR-029, FR-031, FR-041). Held by a
+ * courier, it needs no pickup: only its delivery stop, or a return stop where it was picked up
+ * (the recipient, for a reverse pickup). Held by the office, it is picked up there first, at
+ * the office's pending pickup stop if the route has one.
+ */
+export function addHeldShipmentToStops(
+  stops: RouteStopPlan[],
+  shipment: RoutePlanShipment,
+  newId: () => string,
+  held:
+    | { holder: "courier"; purpose: "delivery" | "return" }
+    | {
+        holder: "office";
+        office: Place;
+        purpose: "delivery" | "return";
+      },
+): RouteStopPlan[] {
+  const picked =
+    held.holder === "office" ? withPickup(stops, held.office, shipment.id, newId) : stops;
+  const last =
+    held.purpose === "return" || !shipment.delivery
+      ? stop(newId(), "return", shipment.pickup, shipment.id)
+      : stop(newId(), "delivery", shipment.delivery, shipment.id);
+  return [...picked, last];
 }
 
 /** A shipment leaving a route (FR-012): its pending tasks go, and so does a stop left empty. */
@@ -204,8 +236,10 @@ export function relocateShipment(
     );
   const finalPlace = shipment.delivery ?? shipment.pickup;
   let changed = false;
+  // A return stop stays where the package was picked up; edits end at pickup anyway.
   let next = stops.map((stop) => {
-    if (!owns(stop, (kind) => kind !== "pickup") || samePlace(stop, finalPlace)) return stop;
+    if (!owns(stop, (kind) => kind === "delivery" || kind === "errand")) return stop;
+    if (samePlace(stop, finalPlace)) return stop;
     changed = true;
     return { ...stop, address: finalPlace.address, neighborhoodId: finalPlace.neighborhoodId };
   });
@@ -282,7 +316,8 @@ export function validateStopOrder(before: RouteStopPlan[], after: RouteStopPlan[
   for (const [index, existing] of after.entries()) {
     for (const task of existing.tasks) {
       if (task.kind === "pickup") pickupIndex.set(task.shipmentId, index);
-      if (task.kind === "delivery") {
+      // A return stop, like a delivery, comes after the pickup that brings its package.
+      if (task.kind === "delivery" || task.kind === "return") {
         const pickedAt = pickupIndex.get(task.shipmentId);
         const hasPickup = after.some((other) =>
           other.tasks.some((t) => t.kind === "pickup" && t.shipmentId === task.shipmentId),

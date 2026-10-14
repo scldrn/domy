@@ -51,20 +51,20 @@ stores, which every user story needs
 
 ### Tests first
 
-- [ ] T004 [P] Extend `packages/domain/src/shipment-lifecycle.test.ts` with the transitions owned by this feature (data-model.md §Shipment lifecycle), including `dispatched → delivered` only for errands and the refusal of every transition not listed
-- [ ] T005 [P] Write failing unit tests in `packages/domain/src/courier-records.test.ts` for `resolveCourierRecord`: one case per row of data-model.md §What each record does (each kind applied, `duplicate`, `not_applied`), including the office pickup, the pickup of a shipment not on the author's route, and the delivery of a shipment whose pending task is on another route (FR-024–FR-026)
-- [ ] T006 [P] Write failing unit tests in `packages/domain/src/day-summary.test.ts`: collected total, the three totals by payment method, disbursements, cash to hand over = cash − disbursements, reverted and not-applied records excluded, grouping by Bogotá date, pending stops counted from the route and not from records (FR-037)
-- [ ] T007 [P] Extend `packages/domain/src/routes.test.ts`: a shipment held by a courier gets only a delivery stop, or only a return stop at the place it was picked up (the recipient's address for a reverse pickup); a shipment held by the office gets a pickup stop at the office address first; `validateStopOrder` keeps a return stop after its office pickup (FR-029, FR-031, FR-041)
-- [ ] T008 [P] Extend `packages/domain/src/shipment-flags.test.ts` with "Sin foto", "Foto pendiente" (only during the 24 hours after the record), "Recaudo diferente", "Problema de recogida", and "Por revisar" (FR-033, FR-023)
+- [X] T004 [P] Extend `packages/domain/src/shipment-lifecycle.test.ts` with the transitions owned by this feature (data-model.md §Shipment lifecycle), including `dispatched → delivered` only for errands and the refusal of every transition not listed
+- [X] T005 [P] Write failing unit tests in `packages/domain/src/courier-records.test.ts` for `resolveCourierRecord`: one case per row of data-model.md §What each record does (each kind applied, `duplicate`, `not_applied`), including the office pickup, the pickup of a shipment not on the author's route, and the delivery of a shipment whose pending task is on another route (FR-024–FR-026)
+- [X] T006 [P] Write failing unit tests in `packages/domain/src/day-summary.test.ts`: collected total, the three totals by payment method, disbursements, cash to hand over = cash − disbursements, reverted and not-applied records excluded, grouping by Bogotá date, pending stops counted from the route and not from records (FR-037)
+- [X] T007 [P] Extend `packages/domain/src/routes.test.ts`: a shipment held by a courier gets only a delivery stop, or only a return stop at the place it was picked up (the recipient's address for a reverse pickup); a shipment held by the office gets a pickup stop at the office address first; `validateStopOrder` keeps a return stop after its office pickup (FR-029, FR-031, FR-041)
+- [X] T008 [P] Extend `packages/domain/src/shipment-flags.test.ts` with "Sin foto", "Foto pendiente" (only during the 24 hours after the record), "Recaudo diferente", "Problema de recogida", and "Por revisar" (FR-033, FR-023)
 
 ### Domain
 
-- [ ] T009 Extend `packages/domain/src/shipment-lifecycle.ts` until T004 passes
-- [ ] T010 Implement `packages/domain/src/courier-records.ts` (`resolveCourierRecord`, Spanish labels for record kinds, exception reasons, and notice types) until T005 passes
-- [ ] T011 [P] Implement `packages/domain/src/day-summary.ts` until T006 passes
-- [ ] T012 Extend `packages/domain/src/routes.ts` (return stop kind, held shipments, office pickup) until T007 passes
-- [ ] T013 [P] Extend `packages/domain/src/shipment-flags.ts` until T008 passes
-- [ ] T014 [P] Create `packages/domain/src/schemas/courier.ts`: the `CourierRecordInput` union by `kind` (at most three `proof` photos; note required when the collected total differs from the COD amount; received-by name of 2–100 characters; reasons and notes of 5–200 characters), `CourierSnapshot`, `CourierRoute`, `HeldShipment`, `HandoverToGive`, `Notice`, `DaySummary`, `ExceptionDecisionInput`, `RecordCorrectionInput`, `CompanySettings`
+- [X] T009 Extend `packages/domain/src/shipment-lifecycle.ts` until T004 passes
+- [X] T010 Implement `packages/domain/src/courier-records.ts` (`resolveCourierRecord`, Spanish labels for record kinds, exception reasons, and notice types) until T005 passes
+- [X] T011 [P] Implement `packages/domain/src/day-summary.ts` until T006 passes
+- [X] T012 Extend `packages/domain/src/routes.ts` (return stop kind, held shipments, office pickup) until T007 passes
+- [X] T013 [P] Extend `packages/domain/src/shipment-flags.ts` until T008 passes
+- [X] T014 [P] Create `packages/domain/src/schemas/courier.ts`: the `CourierRecordInput` union by `kind` (at most three `proof` photos; note required when the collected total differs from the COD amount; received-by name of 2–100 characters; reasons and notes of 5–200 characters), `CourierSnapshot`, `CourierRoute`, `HeldShipment`, `HandoverToGive`, `Notice`, `DaySummary`, `ExceptionDecisionInput`, `RecordCorrectionInput`, `CompanySettings`
 
 ### Database
 
