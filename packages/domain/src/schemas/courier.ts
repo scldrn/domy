@@ -169,6 +169,19 @@ export function collectionProblem(
 }
 
 /**
+ * A delivery names who received it, except an errand, which has no recipient (FR-008); null
+ * when in order. The shipment's kind is known only with the shipment.
+ */
+export function receivedByNameProblem(
+  shipmentKind: ShipmentKind,
+  name: string | undefined,
+): string | null {
+  return shipmentKind === "errand" || receivedByName.safeParse(name).success
+    ? null
+    : "Escribe el nombre de quien recibe, de al menos 2 letras.";
+}
+
+/**
  * `POST /api/shipments/:id/records`: dispatch records on a courier's behalf (FR-034); the
  * shipment is in the address, the time it happened defaults to now, and a handover is
  * confirmed with feature 002's endpoint.

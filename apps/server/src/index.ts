@@ -8,6 +8,7 @@ import { createClock } from "./lib/clock.ts";
 import { createMailer } from "./lib/email.ts";
 import { setErrorReporter } from "./lib/errors.ts";
 import { createLogger } from "./lib/logger.ts";
+import { createStorage } from "./lib/storage.ts";
 
 const env = readEnv();
 const logger = createLogger(env.NODE_ENV === "production" ? "info" : "debug");
@@ -31,6 +32,15 @@ const auth = createAuth({
   sendResetPassword: mailer.sendResetPassword,
 });
 
+const storage = createStorage(env.storage);
+if (env.NODE_ENV !== "production") {
+  // Development and tests create the bucket; production provisions it with its 12-month
+  // lifecycle rule (research R6).
+  await storage.ensureBucket().catch((error: unknown) => {
+    logger.warn({ error: String(error) }, "photo storage unavailable; photos will fail");
+  });
+}
+
 let clock = createClock({
   nodeEnv: env.NODE_ENV,
   ...(env.DOMY_FAKE_NOW && { fakeNow: env.DOMY_FAKE_NOW }),
@@ -41,6 +51,7 @@ const app = createApp({
   auth,
   clock: () => clock(),
   logger,
+  storage,
   ...(env.NODE_ENV === "production" && { webDist: "../web/dist" }),
   ...(env.NODE_ENV === "test" && {
     setNow: (instant: string) => {

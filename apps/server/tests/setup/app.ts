@@ -3,11 +3,22 @@ import pino, { type Logger } from "pino";
 import { createApp } from "../../src/app.ts";
 import { createAuth } from "../../src/auth.ts";
 import type { Db } from "../../src/db/client.ts";
+import type { PhotoStorage } from "../../src/lib/storage.ts";
 
 export type SentEmail = { email: string; name: string; url: string };
 
+/** Storage for tests that use no photos; `startStorage` gives a real one (research R6). */
+const noStorage: PhotoStorage = {
+  putPhoto: () => Promise.reject(new Error("This test has no photo storage")),
+  getPhoto: () => Promise.reject(new Error("This test has no photo storage")),
+  ensureBucket: () => Promise.resolve(),
+};
+
 /** The real app wired to a test database, a controllable clock, and captured emails. */
-export function createTestApp(db: Db, options: { now?: string; logger?: Logger } = {}) {
+export function createTestApp(
+  db: Db,
+  options: { now?: string; logger?: Logger; storage?: PhotoStorage } = {},
+) {
   let now = new Date(options.now ?? "2026-10-01T15:00:00Z");
   const emails: SentEmail[] = [];
   const auth = createAuth({
@@ -24,6 +35,7 @@ export function createTestApp(db: Db, options: { now?: string; logger?: Logger }
     auth,
     clock: () => now,
     logger: options.logger ?? pino({ level: "silent" }),
+    storage: options.storage ?? noStorage,
   });
 
   /** Creates an active user with a role and returns it with the cookie of a new session. */

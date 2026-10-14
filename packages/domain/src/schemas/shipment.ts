@@ -174,7 +174,8 @@ export type FeeQuote = {
   needsManualFee: boolean;
 };
 
-export const shipmentEventType = z.enum([
+/** Kinds of shipment history entries; the database enum is built from this list. */
+export const shipmentEventTypes = [
   "created",
   "updated",
   "fee_confirmed",
@@ -183,7 +184,14 @@ export const shipmentEventType = z.enum([
   "reassigned",
   "handover_confirmed",
   "handover_cancelled",
-]);
+  // Feature 003: decisions after an exception, the office, corrections, and reviews.
+  "exception_decided",
+  "office_received",
+  "record_corrected",
+  "record_reverted",
+  "review_cleared",
+] as const;
+export const shipmentEventType = z.enum(shipmentEventTypes);
 
 /** A shipment as the API returns it. */
 export type Shipment = {

@@ -1,18 +1,17 @@
-import type { RouteDetail, Shipment, ShipmentStatus } from "@domy/domain";
-import { and, eq, sql } from "drizzle-orm";
-import type { Db, Executor } from "../../src/db/client.ts";
 import {
-  couriers,
-  routes,
-  routeTasks,
-  shipmentEvents,
-  shipments,
-} from "../../src/db/schema/index.ts";
-import { refreshRouteStatus } from "../../src/lib/route-status.ts";
+  courierRecordInput,
+  type RouteDetail,
+  type Shipment,
+  type ShipmentStatus,
+} from "@domy/domain";
+import { eq, sql } from "drizzle-orm";
+import type { Db } from "../../src/db/client.ts";
+import { couriers, routes, shipments } from "../../src/db/schema/index.ts";
+import { applyCourierRecord } from "../../src/lib/courier-records.ts";
 
 /**
- * Route helpers for integration tests. The database helpers stand in for feature 003 (the
- * courier app), which is the only one that completes tasks and picks up packages.
+ * Route helpers for integration tests. Pickups, deliveries, and exceptions go through the
+ * courier records of feature 003, the only way tasks are completed and packages picked up.
  */
 
 export async function createCourier(db: Db, name = "Carlos Pérez"): Promise<string> {
@@ -53,60 +52,56 @@ export async function placeOnRoute(
 }
 
 /** The route carrying a shipment, with its courier and its author. */
-async function routeOf(db: Executor, shipmentId: string) {
+async function routeOf(db: Db, shipmentId: string) {
   const [route] = await db
-    .select({ id: routes.id, courierId: routes.courierId, createdBy: routes.createdBy })
+    .select({
+      courierId: routes.courierId,
+      createdBy: routes.createdBy,
+      kind: shipments.kind,
+    })
     .from(shipments)
     .innerJoin(routes, eq(routes.id, shipments.routeId))
     .where(eq(shipments.id, shipmentId));
-  if (!route) throw new Error("The shipment is not on a route");
-  return route;
+  if (!route?.courierId) throw new Error("The shipment is not on a route with a courier");
+  return { ...route, courierId: route.courierId };
 }
 
 /**
- * Completes the pending pickup task of a shipment and marks it picked up by the route's
- * courier, who takes custody, as the courier app will (feature 003).
+ * A record of the route's courier through `applyCourierRecord`, as the courier app sends it
+ * (feature 003). Couriers of these tests have no account, so the route's author enters it.
  */
-export async function pickUp(db: Db, shipmentId: string, at = new Date()): Promise<void> {
-  await db.transaction(async (tx) => {
-    const route = await routeOf(tx, shipmentId);
-    await tx
-      .update(routeTasks)
-      .set({ status: "completed", completedAt: at, completedByCourierId: route.courierId })
-      .where(
-        and(
-          eq(routeTasks.shipmentId, shipmentId),
-          eq(routeTasks.kind, "pickup"),
-          eq(routeTasks.status, "pending"),
-        ),
-      );
-    const [before] = await tx
-      .select({ status: shipments.status })
-      .from(shipments)
-      .where(eq(shipments.id, shipmentId));
-    await tx
-      .update(shipments)
-      .set({ status: "picked_up", custodyCourierId: route.courierId })
-      .where(eq(shipments.id, shipmentId));
-    // The route's author stands in for the courier who will record it (feature 003).
-    await tx.insert(shipmentEvents).values({
+async function recordForRouteCourier(
+  db: Db,
+  shipmentId: string,
+  record: Record<string, unknown>,
+  at: Date,
+) {
+  const route = await routeOf(db, shipmentId);
+  const result = await applyCourierRecord(
+    db,
+    courierRecordInput.parse({
+      id: crypto.randomUUID(),
       shipmentId,
-      type: "status_changed",
-      fromStatus: before?.status ?? null,
-      toStatus: "picked_up",
-      actorUserId: route.createdBy,
-      occurredAt: at,
-      routeId: route.id,
-      changes: { custodyCourierId: [null, route.courierId] },
-    });
-    await refreshRouteStatus(tx, route.id, { actorUserId: route.createdBy, now: at });
-  });
+      occurredAt: at.toISOString(),
+      ...record,
+      ...(record["kind"] === "delivery" &&
+        route.kind !== "errand" && { receivedByName: "Laura Gómez" }),
+    }),
+    { courierId: route.courierId, authorUserId: route.createdBy, onBehalf: false, recordedAt: at },
+  );
+  if (result.outcome !== "applied") {
+    throw new Error(`The ${String(record["kind"])} record was ${result.outcome}`);
+  }
+}
+
+/** The route's courier picks up the shipment and takes custody (feature 003). */
+export async function pickUp(db: Db, shipmentId: string, at = new Date()): Promise<void> {
+  await recordForRouteCourier(db, shipmentId, { kind: "pickup" }, at);
 }
 
 /**
- * Completes or fails the pending delivery (or errand) task of a shipment directly, and
- * finishes the route when nothing is left (FR-012), as the courier app will (feature 003).
- * A delivery ends the custody of whoever held the package.
+ * The route's courier delivers the shipment (or completes the errand) or reports an exception,
+ * and the route finishes when nothing is left (FR-012).
  */
 export async function finishTask(
   db: Db,
@@ -114,46 +109,14 @@ export async function finishTask(
   outcome: "delivered" | "exception",
   at = new Date(),
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    const route = await routeOf(tx, shipmentId);
-    await tx
-      .update(routeTasks)
-      .set({
-        status: outcome === "delivered" ? "completed" : "failed",
-        completedAt: at,
-        completedByCourierId: route.courierId,
-      })
-      .where(
-        and(
-          eq(routeTasks.shipmentId, shipmentId),
-          eq(routeTasks.status, "pending"),
-          sql`${routeTasks.kind} in ('delivery', 'errand')`,
-        ),
-      );
-    const [before] = await tx
-      .select({ status: shipments.status, custodyCourierId: shipments.custodyCourierId })
-      .from(shipments)
-      .where(eq(shipments.id, shipmentId));
-    const delivered = outcome === "delivered";
-    await tx
-      .update(shipments)
-      .set({ status: outcome, ...(delivered && { custodyCourierId: null }) })
-      .where(eq(shipments.id, shipmentId));
-    await tx.insert(shipmentEvents).values({
-      shipmentId,
-      type: "status_changed",
-      fromStatus: before?.status ?? null,
-      toStatus: outcome,
-      actorUserId: route.createdBy,
-      occurredAt: at,
-      routeId: route.id,
-      ...(delivered &&
-        before?.custodyCourierId && {
-          changes: { custodyCourierId: [before.custodyCourierId, null] },
-        }),
-    });
-    await refreshRouteStatus(tx, route.id, { actorUserId: route.createdBy, now: at });
-  });
+  await recordForRouteCourier(
+    db,
+    shipmentId,
+    outcome === "delivered"
+      ? { kind: "delivery" }
+      : { kind: "exception", reason: "recipient_absent" },
+    at,
+  );
 }
 
 type TestApp = {

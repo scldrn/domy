@@ -5,6 +5,7 @@ import {
   courierRecordsBatch,
   exceptionDecisionInput,
   noticeAcknowledgeInput,
+  receivedByNameProblem,
   recordCorrectionInput,
   recordOnBehalfInput,
 } from "./courier.ts";
@@ -136,6 +137,17 @@ describe("collectionProblem (FR-010, FR-011)", () => {
       collectionProblem(85_000, { ...delivery, note: "Pagó 80.000, el resto mañana" }),
     ).toBeNull();
     expect(collectionProblem(80_000, delivery)).toBeNull();
+  });
+});
+
+describe("receivedByNameProblem (FR-008)", () => {
+  it("asks who received a delivery, except for an errand", () => {
+    expect(receivedByNameProblem("delivery", undefined)).toBe(
+      "Escribe el nombre de quien recibe, de al menos 2 letras.",
+    );
+    expect(receivedByNameProblem("carrier_handoff", undefined)).not.toBeNull();
+    expect(receivedByNameProblem("delivery", "Laura Gómez")).toBeNull();
+    expect(receivedByNameProblem("errand", undefined)).toBeNull();
   });
 });
 

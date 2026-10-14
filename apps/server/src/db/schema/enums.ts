@@ -4,6 +4,7 @@ import {
   paymentModes,
   rateEntryKinds,
   serviceLevels,
+  shipmentEventTypes,
   shipmentKinds,
   shipmentStatuses,
   userRoles,
@@ -18,16 +19,7 @@ export const serviceLevel = pgEnum("service_level", serviceLevels);
 export const packageSize = pgEnum("package_size", packageSizes);
 export const neighborhoodKind = pgEnum("neighborhood_kind", neighborhoodKinds);
 export const rateEntryKind = pgEnum("rate_entry_kind", rateEntryKinds);
-export const shipmentEventType = pgEnum("shipment_event_type", [
-  "created",
-  "updated",
-  "fee_confirmed",
-  "voided",
-  "status_changed",
-  "reassigned",
-  "handover_confirmed",
-  "handover_cancelled",
-]);
+export const shipmentEventType = pgEnum("shipment_event_type", shipmentEventTypes);
 export const auditAction = pgEnum("audit_action", [
   "created",
   "updated",

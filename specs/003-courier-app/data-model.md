@@ -12,6 +12,7 @@ Phase 1 of [plan.md](plan.md). Extends the data models of
 | --- | --- | --- |
 | `courier_record_kind` | `pickup`, `delivery`, `exception`, `problem`, `return`, `disbursement`, `handover_confirmation` | Recogida, Entrega, Novedad, Problema de recogida, Devolución, Pago por cuenta del cliente, Traspaso recibido |
 | `record_outcome` | `applied`, `duplicate`, `not_applied` | —, —, No aplicado |
+| `not_applied_reason` | `voided`, `delivered`, `returned`, `already_picked_up`, `not_picked_up`, `not_in_custody`, `no_task`, `no_handover` | Spanish text per reason in `packages/domain` |
 | `exception_reason` | `recipient_absent`, `wrong_address`, `rejected` | Destinatario ausente, Dirección errada, Rechazado |
 | `photo_kind` | `proof`, `transfer_receipt`, `disbursement_receipt`, `exception` | Prueba de entrega, Comprobante de transferencia, Comprobante de pago, Foto de la novedad |
 | `notice_type` | `route_dispatched`, `shipment_added`, `shipment_removed`, `shipment_voided`, `shipment_updated`, `stops_reordered`, `shipment_reassigned_in`, `shipment_reassigned_out`, `route_reassigned`, `dispatch_undone`, `handover_requested`, `handover_cancelled`, `exception_decided`, `office_received`, `record_corrected`, `record_reverted`, `record_not_applied` | Spanish text per type in `packages/domain` |
@@ -40,12 +41,13 @@ applied (FR-024). Never deleted.
 | `latitude`, `longitude` | numeric(9,6) | Optional (FR-015) |
 | `location_accuracy_m` | integer | Optional |
 | `outcome` | `record_outcome` | Not null |
-| `received_by_name` | text | Required for `delivery` and `return`; 2–100 characters |
+| `not_applied_reason` | `not_applied_reason` | Set exactly when `outcome` is `not_applied`: why it was kept without effect, for the courier's notice and the history (FR-026); values and Spanish texts are `notAppliedReasons` in `packages/domain` |
+| `received_by_name` | text | Required for `return`, and for a `delivery` except an errand's (FR-008); 2–100 characters |
 | `cash_amount`, `company_transfer_amount`, `merchant_transfer_amount` | integer | `≥ 0`, default 0; only for `delivery` (FR-010) |
 | `exception_reason` | `exception_reason` | Required for `exception` |
 | `note` | text | Up to 200 characters; required (5–200) for `problem`, and for a `delivery` whose collected total differs from the COD amount (FR-011, FR-014) |
 | `disbursement_amount` | integer | Required and `> 0` for `disbursement` |
-| `payee` | text | Required for `disbursement`: carrier or payee name |
+| `payee` | text | Required for `disbursement`: carrier or payee name, 2–100 characters |
 | `reverted_at`, `reverted_by`, `revert_reason` | timestamptz, uuid → users, text | Set together when the dispatcher reverts the record (FR-035) |
 
 - Checks enforce the kind-specific columns above.
@@ -86,8 +88,9 @@ Index `(courier_id) WHERE acknowledged_at is null`.
 `auth` text, `created_at`. Deleted when the push service reports the subscription gone or
 the user signs out.
 
-**`company_settings`** (single row, FR-041): `office_address` text, `office_neighborhood_id`
-uuid → neighborhoods. Changes are written to `audit_events` (feature 001). Feature 004 adds
+**`company_settings`** (single row, FR-041): `id` uuid fixed by a check (the row's entity id
+in `audit_events`), `office_address` text (5–200 characters), `office_neighborhood_id`
+uuid → neighborhoods, both set or both empty. Changes are written to `audit_events` (feature 001). Feature 004 adds
 `support_phone` and `company_name`.
 
 **Added to `shipments`**

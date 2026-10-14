@@ -1,0 +1,387 @@
+import {
+  receivedByNameProblem,
+  resolveCourierRecord,
+  type CourierRecordInput,
+  type RecordEffect,
+  type RecordOutcome,
+  type ShipmentForRecord,
+} from "@domy/domain";
+import { and, eq, isNull, sql } from "drizzle-orm";
+import type { Db, Executor } from "../db/client.ts";
+import {
+  courierRecords,
+  handovers,
+  recordPhotos,
+  routes,
+  routeStops,
+  routeTasks,
+  shipmentEvents,
+  shipments,
+} from "../db/schema/index.ts";
+import { AppError } from "./errors.ts";
+import { handoverEvent, lockRoutes } from "./reassignment.ts";
+import { refreshRouteStatus } from "./route-status.ts";
+import { recordRouteEvents, touchRoute } from "./route-store.ts";
+import { photoKey } from "./storage.ts";
+
+/**
+ * Applying a courier record (feature 003, research R5). The record is stored by its
+ * phone-generated `id`, which makes it exactly-once (FR-019), even when it cannot be applied
+ * (FR-024); `resolveCourierRecord` of `@domy/domain` decides what it does, and this executes
+ * that decision on the shipment, its task, custody, and history in one transaction.
+ */
+
+export type RecordAuthor = {
+  /** The courier who did it, or on whose behalf it is recorded. */
+  courierId: string;
+  /** Who entered it: the courier's user, or the owner or dispatcher (FR-034). */
+  authorUserId: string;
+  onBehalf: boolean;
+  /** The server's time on receipt. */
+  recordedAt: Date;
+};
+
+export type RecordResult = { id: string; outcome: RecordOutcome };
+
+type ShipmentRow = typeof shipments.$inferSelect;
+
+async function storedOutcome(tx: Executor, id: string): Promise<RecordResult | null> {
+  const [stored] = await tx
+    .select({ id: courierRecords.id, outcome: courierRecords.outcome })
+    .from(courierRecords)
+    .where(eq(courierRecords.id, id));
+  return stored ?? null;
+}
+
+/** The shipment as the record rules see it (`ShipmentForRecord`), with its row. */
+async function loadState(
+  tx: Executor,
+  shipmentId: string,
+): Promise<{ row: ShipmentRow; forRecord: ShipmentForRecord; routeIds: string[] }> {
+  const [row] = await tx.select().from(shipments).where(eq(shipments.id, shipmentId));
+  if (!row) throw new AppError("not_found", { message: "No encontramos ese envío." });
+  const [route] = row.routeId
+    ? await tx
+        .select({ id: routes.id, status: routes.status, courierId: routes.courierId })
+        .from(routes)
+        .where(eq(routes.id, row.routeId))
+    : [];
+  const pendingTasks = await tx
+    .select({
+      id: routeTasks.id,
+      kind: routeTasks.kind,
+      routeId: routes.id,
+      routeStatus: routes.status,
+      routeCourierId: routes.courierId,
+    })
+    .from(routeTasks)
+    .innerJoin(routeStops, eq(routeStops.id, routeTasks.stopId))
+    .innerJoin(routes, eq(routes.id, routeStops.routeId))
+    .where(and(eq(routeTasks.shipmentId, shipmentId), eq(routeTasks.status, "pending")));
+  const [pendingHandover] = await tx
+    .select({
+      id: handovers.id,
+      toCourierId: handovers.toCourierId,
+      toRouteId: handovers.toRouteId,
+      fromRouteId: handovers.fromRouteId,
+    })
+    .from(handovers)
+    .where(and(eq(handovers.shipmentId, shipmentId), eq(handovers.status, "pending")));
+  const appliedRecords = await tx
+    .select({ kind: courierRecords.kind, courierId: courierRecords.courierId })
+    .from(courierRecords)
+    .where(
+      and(
+        eq(courierRecords.shipmentId, shipmentId),
+        eq(courierRecords.outcome, "applied"),
+        isNull(courierRecords.revertedAt),
+      ),
+    );
+  return {
+    row,
+    // Every route the record may touch, to lock them before the shipment, as feature 002 does.
+    routeIds: [
+      ...(row.routeId ? [row.routeId] : []),
+      ...pendingTasks.map((task) => task.routeId),
+      ...(pendingHandover
+        ? [pendingHandover.toRouteId, pendingHandover.fromRouteId].filter(
+            (id): id is string => id !== null,
+          )
+        : []),
+    ],
+    forRecord: {
+      kind: row.kind,
+      status: row.status,
+      custodyCourierId: row.custodyCourierId,
+      heldAtOffice: row.heldAtOffice,
+      returnDecided: row.returnDecided,
+      route: route ?? null,
+      pendingTasks,
+      pendingHandover: pendingHandover
+        ? {
+            id: pendingHandover.id,
+            toCourierId: pendingHandover.toCourierId,
+            toRouteId: pendingHandover.toRouteId,
+          }
+        : null,
+      appliedRecords,
+    },
+  };
+}
+
+/** The input checks that need the shipment; a well-formed record is never refused for state. */
+function checkInput(input: CourierRecordInput, row: ShipmentRow): void {
+  if (input.kind !== "delivery") return;
+  const problem = receivedByNameProblem(row.kind, input.receivedByName);
+  if (problem) throw new AppError("invalid_request", { fields: { receivedByName: problem } });
+}
+
+/** The kind-specific columns of a record (data-model.md). */
+function recordColumns(input: CourierRecordInput) {
+  switch (input.kind) {
+    case "delivery":
+      return {
+        receivedByName: input.receivedByName ?? null,
+        cashAmount: input.cashAmount,
+        companyTransferAmount: input.companyTransferAmount,
+        merchantTransferAmount: input.merchantTransferAmount,
+        note: input.note ?? null,
+      };
+    case "exception":
+      return { exceptionReason: input.reason, note: input.note ?? null };
+    case "problem":
+      return { note: input.note };
+    case "return":
+      return { receivedByName: input.receivedByName };
+    case "disbursement":
+      return { disbursementAmount: input.amount, payee: input.payee, note: input.note ?? null };
+    case "pickup":
+    case "handover_confirmation":
+      return {};
+  }
+}
+
+export async function applyCourierRecord(
+  db: Db,
+  input: CourierRecordInput,
+  by: RecordAuthor,
+): Promise<RecordResult> {
+  return db.transaction(async (tx) => {
+    const stored = await storedOutcome(tx, input.id);
+    if (stored) return stored;
+
+    const [courierRoute] = await tx
+      .select({ id: routes.id })
+      .from(routes)
+      .where(and(eq(routes.courierId, by.courierId), eq(routes.status, "in_progress")));
+    const peek = await loadState(tx, input.shipmentId);
+    await lockRoutes(tx, [...peek.routeIds, courierRoute?.id ?? null]);
+    await tx
+      .select({ id: shipments.id })
+      .from(shipments)
+      .where(eq(shipments.id, input.shipmentId))
+      .for("update");
+    // The same record from a second request may have been applied while this one waited.
+    const raced = await storedOutcome(tx, input.id);
+    if (raced) return raced;
+    const { row, forRecord } = await loadState(tx, input.shipmentId);
+    checkInput(input, row);
+
+    // Phone time corrected by the caller, and never after the server received it (FR-019).
+    const claimed = new Date(input.occurredAt);
+    const occurredAt = claimed > by.recordedAt ? by.recordedAt : claimed;
+    const resolution = resolveCourierRecord(forRecord, {
+      kind: input.kind,
+      courierId: by.courierId,
+    });
+
+    await tx.insert(courierRecords).values({
+      id: input.id,
+      shipmentId: input.shipmentId,
+      kind: input.kind,
+      courierId: by.courierId,
+      authorUserId: by.authorUserId,
+      onBehalf: by.onBehalf,
+      routeId: courierRoute?.id ?? null,
+      occurredAt,
+      recordedAt: by.recordedAt,
+      latitude: input.location?.latitude ?? null,
+      longitude: input.location?.longitude ?? null,
+      locationAccuracyM: input.location?.accuracyM ?? null,
+      outcome: resolution.outcome,
+      notAppliedReason: resolution.outcome === "not_applied" ? resolution.reason : null,
+      ...recordColumns(input),
+    });
+    // Photos declared by the record are expected: "Foto pendiente" until they arrive (FR-023).
+    const photos = "photos" in input ? input.photos : [];
+    if (photos.length > 0) {
+      await tx
+        .insert(recordPhotos)
+        .values(
+          photos.map((photo) => ({
+            id: photo.id,
+            recordId: input.id,
+            kind: photo.kind,
+            storageKey: photoKey({ recordId: input.id, photoId: photo.id }),
+          })),
+        )
+        .onConflictDoNothing();
+    }
+
+    if (resolution.outcome === "not_applied") {
+      // "Por revisar" (FR-024, FR-026); the courier's notice arrives with US5 (T067).
+      await tx
+        .update(shipments)
+        .set({
+          needsReview: true,
+          version: sql`${shipments.version} + 1`,
+          updatedAt: by.recordedAt,
+        })
+        .where(eq(shipments.id, row.id));
+    } else if (resolution.outcome === "applied") {
+      await executeEffect(tx, { row, forRecord, input, effect: resolution.effect, occurredAt, by });
+    }
+    return { id: input.id, outcome: resolution.outcome };
+  });
+}
+
+/** Executes an applied record's effect, with its shipment event and the route status. */
+async function executeEffect(
+  tx: Executor,
+  context: {
+    row: ShipmentRow;
+    forRecord: ShipmentForRecord;
+    input: CourierRecordInput;
+    effect: RecordEffect;
+    occurredAt: Date;
+    by: RecordAuthor;
+  },
+): Promise<void> {
+  const { row, forRecord, input, effect, occurredAt, by } = context;
+  if (
+    effect.removeTaskIds ||
+    effect.leaveRoute ||
+    effect.requestHandover ||
+    effect.cancelHandoverId
+  ) {
+    // Records that arrive after the dispatcher changed the shipment (FR-025): US5, T067.
+    throw new Error("Effects across routes are not implemented yet (tasks.md T067)");
+  }
+  const author = { actorUserId: by.authorUserId, now: by.recordedAt };
+  const touchedRoutes = new Set<string>();
+  const taskRoute = (taskId: string | undefined) =>
+    forRecord.pendingTasks.find((task) => task.id === taskId)?.routeId;
+
+  const finished = effect.completeTaskId ?? effect.failTaskId;
+  if (finished) {
+    await tx
+      .update(routeTasks)
+      .set({
+        status: effect.completeTaskId ? "completed" : "failed",
+        completedAt: occurredAt,
+        completedByCourierId: by.courierId,
+        problemNote: null,
+      })
+      .where(eq(routeTasks.id, finished));
+    const routeId = taskRoute(finished);
+    if (routeId) touchedRoutes.add(routeId);
+  }
+  if (effect.problemNoteTaskId && input.kind === "problem") {
+    await tx
+      .update(routeTasks)
+      .set({ problemNote: input.note })
+      .where(eq(routeTasks.id, effect.problemNoteTaskId));
+  }
+
+  let handover: typeof handovers.$inferSelect | undefined;
+  if (effect.confirmHandoverId) {
+    [handover] = await tx
+      .update(handovers)
+      .set({
+        status: "confirmed",
+        resolvedBy: by.authorUserId,
+        resolvedAt: occurredAt,
+        resolvedOnBehalf: by.onBehalf,
+      })
+      .where(and(eq(handovers.id, effect.confirmHandoverId), eq(handovers.status, "pending")))
+      .returning();
+    await tx
+      .update(routeTasks)
+      .set({ blockedByHandoverId: null })
+      .where(eq(routeTasks.blockedByHandoverId, effect.confirmHandoverId));
+  }
+
+  const custody = effect.custody;
+  const custodyChanged = custody && custody.courierId !== row.custodyCourierId;
+  const officeChanged = custody && custody.heldAtOffice !== row.heldAtOffice;
+  const status = effect.status ?? row.status;
+  const changed =
+    status !== row.status ||
+    custodyChanged ||
+    officeChanged ||
+    effect.returnDecided === false ||
+    effect.needsReview;
+  if (changed) {
+    await tx
+      .update(shipments)
+      .set({
+        status,
+        ...(custody && {
+          custodyCourierId: custody.courierId,
+          heldAtOffice: custody.heldAtOffice,
+        }),
+        ...(effect.returnDecided === false && { returnDecided: false }),
+        ...(effect.needsReview && { needsReview: true }),
+        version: sql`${shipments.version} + 1`,
+        updatedAt: by.recordedAt,
+      })
+      .where(eq(shipments.id, row.id));
+  }
+
+  // The custody lines of the history: who held it before and after (research R17).
+  const changes = {
+    ...(custodyChanged && { custodyCourierId: [row.custodyCourierId, custody.courierId] }),
+    ...(officeChanged && { heldAtOffice: [row.heldAtOffice, custody.heldAtOffice] }),
+  };
+  const event = {
+    shipmentId: row.id,
+    actorUserId: by.authorUserId,
+    occurredAt,
+    recordedAt: by.recordedAt,
+    onBehalf: by.onBehalf,
+    changes: Object.keys(changes).length > 0 ? changes : null,
+  };
+  if (handover) {
+    await tx
+      .insert(shipmentEvents)
+      .values({ ...event, type: "handover_confirmed", routeId: handover.toRouteId });
+    const routeIds = [...new Set([handover.toRouteId, handover.fromRouteId])].filter(
+      (routeId): routeId is string => routeId !== null,
+    );
+    await recordRouteEvents(
+      tx,
+      routeIds.map((routeId) => ({
+        ...handoverEvent("handover_confirmed", routeId, handover, {
+          actorUserId: by.authorUserId,
+          now: occurredAt,
+        }),
+        onBehalf: by.onBehalf,
+      })),
+    );
+    for (const routeId of routeIds) {
+      await touchRoute(tx, routeId, by.recordedAt);
+      touchedRoutes.add(routeId);
+    }
+  } else if (status !== row.status || custodyChanged || officeChanged) {
+    await tx.insert(shipmentEvents).values({
+      ...event,
+      type: "status_changed",
+      fromStatus: row.status,
+      toStatus: status,
+      routeId: taskRoute(finished) ?? row.routeId,
+    });
+  }
+
+  // The automatic finish of every route the record touched (feature 002, FR-012).
+  for (const routeId of touchedRoutes) await refreshRouteStatus(tx, routeId, author);
+}

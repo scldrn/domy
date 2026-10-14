@@ -21,6 +21,8 @@ afterAll(async () => {
 const id = crypto.randomUUID();
 const office: UserRole[] = ["owner", "dispatcher"];
 const owner: UserRole[] = ["owner"];
+const courier: UserRole[] = ["courier"];
+const everyone: UserRole[] = ["owner", "dispatcher", "courier"];
 
 /** Every endpoint of the contracts with the roles of 001 FR-031 and 002 FR-023. */
 const endpoints: [method: string, path: string, allowed: UserRole[]][] = [
@@ -83,6 +85,21 @@ const endpoints: [method: string, path: string, allowed: UserRole[]][] = [
   ["POST", `/api/shipments/${id}/reassign`, office],
   ["POST", `/api/handovers/${id}/confirm`, office],
   ["POST", `/api/handovers/${id}/cancel`, office],
+  // Courier app (feature 003, FR-002): couriers only, and the office's actions on records.
+  ["GET", "/api/courier/route", courier],
+  ["POST", "/api/courier/records", courier],
+  ["PUT", `/api/courier/photos/${id}`, courier],
+  ["POST", "/api/courier/notices/acknowledge", courier],
+  ["POST", "/api/courier/push-subscriptions", courier],
+  ["POST", "/api/courier/push-subscriptions/remove", courier],
+  ["POST", `/api/shipments/${id}/records`, office],
+  ["POST", `/api/shipments/${id}/exception-decision`, office],
+  ["POST", `/api/shipments/${id}/office-receipt`, office],
+  ["POST", `/api/shipments/${id}/clear-review`, office],
+  ["POST", `/api/courier-records/${id}/correct`, office],
+  ["POST", `/api/courier-records/${id}/revert`, office],
+  ["GET", `/api/photos/${id}`, everyone],
+  ["GET", "/api/settings", office],
 ];
 
 describe("permissions by role (FR-031)", () => {
