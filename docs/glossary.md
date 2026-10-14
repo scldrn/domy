@@ -82,6 +82,13 @@ one Spanish name shown to users.
 | office | Oficina | Oficina | The company's single office, where the dispatcher can receive a package a courier could not deliver ("Recibido en oficina"); the package is then "En oficina". |
 | notice | Aviso | — | Change to a courier's route shown in the app until the courier acknowledges it ("Entendido"). |
 | day summary | Mi día | — | Courier's summary of the day: deliveries, collections by payment method, disbursements, cash to hand over. |
+| no photo | Sin foto | — | Flag on a delivery, return, or errand recorded without a proof-of-delivery photo. |
+| photo pending | Foto pendiente | — | Flag while a record's photo has not reached the system; after 24 hours the record counts as without photo. |
+| collection differs | Recaudo diferente | — | Flag on a delivery whose collected total differs from the COD amount; the courier adds a note. |
+| return in progress | Devolución en curso | — | Shipment in "Novedad" whose return to sender was decided and is not completed yet. |
+| handover received | Recibí el paquete | — | The receiving courier's confirmation of a handover in the app; custody passes to them. |
+| package to hand over | Entregar a {mensajero} | — | Package a courier still holds while its handover to another courier is pending. |
+| shipment updated | Envío actualizado | — | Notice to the courier when the dispatcher edits the address, phone, or instructions of a shipment on their route. |
 | transfer receipt | Comprobante de transferencia | — | Photo of the recipient's transfer confirmation. |
 | proof of delivery | Prueba de entrega | Evidencia, foto | Photo (requested, skippable), received-by name, time, and location captured at delivery. |
 | received-by name | Recibido por | Quien recibe | Name of the person who physically received the shipment. Defaults to the recipient. |
@@ -110,7 +117,8 @@ one Spanish name shown to users.
 | cash on delivery | Contraentrega | Contraentrega | Recipient pays the merchant's amount at the door. |
 | recipient pays fee | Flete al destinatario | Solo entrega, "me pagan el domicilio" | Recipient pays only the fee. |
 | merchant account | Crédito del cliente | Prepagado, "después me lo cancela" | Nothing collected at the door; fee billed to the merchant later. |
-| payment method | Medio de pago | Medio de pago | How the recipient paid the collection: cash, transfer to the company, transfer to the merchant. |
+| payment method | Medio de pago | Medio de pago | How the recipient paid the collection: cash ("Efectivo"), transfer to the company ("Transferencia a la empresa"), transfer to the merchant ("Transferencia al cliente"). |
+| cash to hand over | Efectivo por entregar | — | In "Mi día": cash collected minus disbursements; an estimate until the courier cash-up of Phase 2. |
 | disbursement | Pago por cuenta del cliente | "Se pagó" | Money a courier pays on the merchant's behalf (carrier freight, a package). Reimbursable. |
 | courier cash-up | Cierre de caja del mensajero | Liquidación diaria | End-of-day calculation of the cash a courier must hand over. |
 | reconciliation | Conciliación | Conciliación | Matching what the system recorded against what the courier handed over. |

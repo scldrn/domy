@@ -14,7 +14,7 @@ description: "Task list for Courier App"
 
 **Tests**: REQUIRED (Constitution VI). In every phase, test tasks come first and MUST fail
 before their implementation tasks start. Integration tests run against real PostgreSQL and
-MinIO.
+S3Proxy (research R6). Feature 002 as built (research R17) is the base every task extends.
 
 **Organization**: tasks are grouped by user story so each story can be implemented, tested,
 and demonstrated on its own.
@@ -36,9 +36,9 @@ English kebab-case file names; Spanish URLs mapped in `apps/web/src/routes.ts`.
 
 **Purpose**: dependencies, object storage, and the installable app shell
 
-- [ ] T001 Add `vite-plugin-pwa`, `workbox-precaching`, and `idb` (and `fake-indexeddb` as a dev dependency) to `apps/web/package.json`; add `@aws-sdk/client-s3` and `web-push` (with `@types/web-push` as a dev dependency) to `apps/server/package.json`; record them in the dependency list of `README.md`
-- [ ] T002 [P] Add a MinIO service with a private bucket to `compose.yaml`; add `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` to `.env.example` and to the Zod schema in `apps/server/src/env.ts`
-- [ ] T003 [P] Configure `vite-plugin-pwa` with `injectManifest` in `apps/web/vite.config.ts` (manifest: name "Domy", Spanish description, icons from the design system, standalone display), create the service worker `apps/web/src/sw.ts` that precaches the app shell, and register it in `apps/web/src/main.tsx` (FR-001)
+- [ ] T001 Add, with exact versions (plan.md, Technical Context), `vite-plugin-pwa` 1.3.0, `workbox-precaching` and `workbox-window` 7.4.1, and `idb` 8.0.4 (and `fake-indexeddb` 6.2.5 and `@vite-pwa/assets-generator` as dev dependencies) to `apps/web/package.json`; add `@aws-sdk/client-s3` 3 and `web-push` 3.6.7 (with `@types/web-push` as a dev dependency) to `apps/server/package.json`; record them in the dependency list of `README.md`
+- [ ] T002 [P] Add an S3Proxy 4.1.1 service (`andrewgaul/s3proxy:4.1.1`, filesystem backend on a volume, fixed keys, research R6) to `compose.yaml`; add `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` to `.env.example` and to the Zod schema in `apps/server/src/env.ts`; start an in-memory S3Proxy and pass those variables, with a test key pair, to the API in `apps/web/tests/e2e/global-setup.ts`, so CI needs nothing beyond Docker; update the services listed for `docker compose up -d` in `CLAUDE.md`
+- [ ] T003 [P] Configure `vite-plugin-pwa` with `injectManifest` in `apps/web/vite.config.ts` (manifest: name "Domy", Spanish description, standalone display, theme color from the tokens); create the provisional icon `apps/web/public/icon.svg` ("domy" in white on `#34495E`, design-system.md §11, owner decision 2026-10-14) and generate from it, with `@vite-pwa/assets-generator`, the 192, 512, maskable, Apple touch, and favicon sizes linked from the manifest and `apps/web/index.html`; create the service worker `apps/web/src/sw.ts` that precaches the app shell, and register it in `apps/web/src/main.tsx` (FR-001)
 
 ---
 
@@ -70,13 +70,13 @@ stores, which every user story needs
 
 - [ ] T015 [P] Define `courier_records`, `record_photos`, `courier_notices`, and `push_subscriptions` with their enums, kind-specific checks, and indexes in `apps/server/src/db/schema/courier-records.ts` per data-model.md
 - [ ] T016 [P] Define `company_settings` (single row) in `apps/server/src/db/schema/settings.ts`
-- [ ] T017 Extend `apps/server/src/db/schema/shipments.ts` (`held_at_office`, `return_decided`, `needs_review`, their checks, and the new `shipment_event_type` values), `apps/server/src/db/schema/routes.ts` (`stop_kind` value `return`, `route_tasks.problem_note`, `handovers.from_route_id` optional), and `apps/server/src/db/schema/directories.ts` (`couriers.last_synced_at`)
+- [ ] T017 Extend `apps/server/src/db/schema/shipments.ts` (`held_at_office`, `return_decided`, `needs_review`, their checks, and the new `shipment_event_type` values), `apps/server/src/db/schema/routes.ts` (`stop_kind` value `return`, `route_tasks.problem_note`; `handovers.from_route_id` is already optional), and `apps/server/src/db/schema/directories.ts` (`couriers.last_synced_at`)
 - [ ] T018 Generate and review the migration for T015–T017 in `apps/server/src/db/migrations/`, and set a sample office address in `apps/server/src/db/seed/index.ts`
 
 ### Applying a record
 
-- [ ] T019 [P] Create `apps/server/tests/setup/storage.ts` (MinIO through Testcontainers) and `apps/server/src/lib/storage.ts` (`putPhoto`, `getPhoto` over `@aws-sdk/client-s3`)
-- [ ] T020 Write failing integration tests in `apps/server/tests/courier-records-apply.test.ts` for `applyCourierRecord`: a pickup sets status, custody, and the task in one transaction with `occurred_at` and `recorded_at`; the same `id` sent twice has one effect and returns the stored outcome; a record that cannot be applied is stored with outcome `not_applied`; the route status is recalculated; shipment events carry author, time it happened, and time received (FR-019, FR-024, FR-039)
+- [ ] T019 [P] Create `apps/server/tests/setup/storage.ts` (in-memory S3Proxy 4.1.1 through Testcontainers' `GenericContainer`, research R6) and `apps/server/src/lib/storage.ts` (`putPhoto`, `getPhoto` over `@aws-sdk/client-s3`)
+- [ ] T020 Write failing integration tests in `apps/server/tests/courier-records-apply.test.ts` for `applyCourierRecord`: a pickup sets status, custody, and the task in one transaction with `occurred_at` and `recorded_at`; the same `id` sent twice has one effect and returns the stored outcome; a record that cannot be applied is stored with outcome `not_applied`; the route status is recalculated; shipment events carry author, time it happened, and time received (FR-019, FR-024, FR-039); every custody move writes `changes.custodyCourierId` (and `heldAtOffice` for the office) as the custody history of feature 002 reads it, and the courier's own records write `on_behalf = false` (research R17)
 - [ ] T021 Implement `apps/server/src/lib/courier-records.ts` (`applyCourierRecord`: insert the record by its `id`, execute the result of `resolveCourierRecord` on the shipment, task, custody, photos expected, and events, then `lib/route-status.ts`) until T020 passes
 - [ ] T022 Replace the test-only stand-in of feature 002 in `apps/server/tests/setup/routes.ts` with calls to `applyCourierRecord`, and confirm the tests of feature 002 still pass
 
@@ -84,7 +84,7 @@ stores, which every user story needs
 
 - [ ] T023 Create `apps/server/src/routes/courier.ts` (`requireRole('courier')`), `apps/server/src/routes/courier-records.ts`, `apps/server/src/routes/photos.ts`, and `apps/server/src/routes/settings.ts`, mounted in `apps/server/src/app.ts`, with the error codes of contracts/http-api.md added to `apps/server/src/lib/errors.ts`
 - [ ] T024 [P] Create `apps/web/src/lib/offline/db.ts`: the IndexedDB database with the stores `snapshot`, `outbox`, `photos`, and `meta` (data-model.md §Data on the phone)
-- [ ] T025 Register `/mensajero`, `/mensajero/parada/$stopId`, `/mensajero/mi-dia`, `/mensajero/pendientes`, and `/configuracion` in `apps/web/src/routes.ts`; create `apps/web/src/routes/courier-layout.tsx` (navigation bar, high-contrast option) and the empty pages `courier-route.tsx`, `courier-stop.tsx`, `courier-day.tsx`, `courier-pending.tsx`, and `settings.tsx` in `apps/web/src/routes/`; send a courier to `/mensajero` after sign-in in `apps/web/src/features/auth/sign-in-form.tsx`
+- [ ] T025 Register `/mensajero`, `/mensajero/parada/$stopId`, `/mensajero/mi-dia`, `/mensajero/pendientes`, and `/configuracion` in `apps/web/src/routes.ts`; create `apps/web/src/routes/courier-layout.tsx` (navigation bar, high-contrast option with the `[data-scheme="high-contrast"]` tokens that already exist) and the empty pages `courier-route.tsx`, `courier-stop.tsx`, `courier-day.tsx`, `courier-pending.tsx`, and `settings.tsx` in `apps/web/src/routes/`, replacing the waiting page `apps/web/src/routes/courier-home.tsx` (the panel already sends a courier to `/mensajero`)
 
 **Checkpoint**: `pnpm check` and `pnpm test` pass, including feature 002's suite; a courier
 signs in and lands on an empty "Mi ruta"
@@ -104,7 +104,7 @@ board and that the route is "Finalizada"
 
 - [ ] T026 [P] [US1] Integration tests in `apps/server/tests/courier-route.test.ts` (FR-002, FR-005): `GET /api/courier/route` returns only the caller's route in progress with every field of `CourierRoute`, `null` without one, `sessionExpiresAt`, and updates `couriers.last_synced_at`; owner and dispatcher get `403`
 - [ ] T027 [P] [US1] Integration tests in `apps/server/tests/courier-records.test.ts` covering spec US1 scenarios 2–9: pickups one by one; delivery with received-by name, location, and photos declared; collection split among the three payment methods; a total different from the COD amount requires a note; errand completed with an optional note; delivery of a shipment not picked up is `not_applied`; disbursement stored; stops completed out of order; the route becomes `finished` (FR-006–FR-012, FR-015)
-- [ ] T028 [P] [US1] Integration tests in `apps/server/tests/photos.test.ts` (FR-009, FR-023, FR-036): `PUT /api/courier/photos/:id` stores the object and sets `uploaded_at`; `404` before its record; `413` above 1 MB; repeating it is harmless; `GET /api/photos/:id` for owner and dispatcher, for the courier only on their own records, `404` when the object is gone
+- [ ] T028 [P] [US1] Integration tests in `apps/server/tests/photos.test.ts` (FR-009, FR-023, FR-036): `PUT /api/courier/photos/:id` stores the object and sets `uploaded_at`; `404` before its record; `413 payload_too_large` above 1 MB (the body limit of feature 002); repeating it is harmless; `GET /api/photos/:id` for owner and dispatcher, for the courier only on their own records, `404` when the object is gone
 - [ ] T029 [P] [US1] Extend `apps/server/tests/board.test.ts` with the flags `noPhoto`, `photoPending`, and `collectionDiffers` on `GET /api/shipments/board`, and the records, photos, and collection on `GET /api/shipments/:id` (FR-033, FR-036)
 - [ ] T030 [P] [US1] Unit tests in `apps/web/src/lib/offline/outbox.test.ts` with `fake-indexeddb`: a saved record survives reopening the database; replaying the outbox over the snapshot gives the state `resolveCourierRecord` produces; a record that cannot be saved rejects and nothing is shown as done (FR-018)
 - [ ] T031 [P] [US1] End-to-end test in `apps/web/tests/e2e/courier-route.spec.ts` with a phone viewport: quickstart scenarios 1–7, the photo through the file chooser
@@ -136,7 +136,7 @@ time it happened
 
 ### Tests for User Story 2 ⚠️ write first, must fail
 
-- [ ] T041 [P] [US2] Unit tests in `apps/web/src/lib/offline/sync.test.ts` with `fake-indexeddb` and a fake `fetch`: records sent in order, at most 50 per request; a record leaves the outbox only when acknowledged; a failed request keeps everything; a `401` keeps the outbox and asks to sign in; a `401` before the known `sessionExpiresAt` (access withdrawn) clears the snapshot and keeps the outbox, and one after it (session expired) keeps both; notice acknowledgments are sent after the records; a photo is uploaded only after its record; `deviceNow` is sent; a different user cannot take over a non-empty outbox (FR-004, FR-018–FR-023)
+- [ ] T041 [P] [US2] Unit tests in `apps/web/src/lib/offline/sync.test.ts` with `fake-indexeddb` and a fake `fetch`: records sent in order, at most 50 per request; a record leaves the outbox only when acknowledged; a failed request keeps everything; a `401` keeps the outbox and asks to sign in; a `401` before the known `sessionExpiresAt` (access withdrawn) clears the snapshot and keeps the outbox, and one after it (session expired) keeps both; notice acknowledgments are sent after the records; a photo is uploaded only after its record; `deviceNow` is sent; a different user cannot take over a non-empty outbox; a snapshot without a route that was finished removes its personal data and photos from the phone (FR-004, FR-018–FR-023)
 - [ ] T042 [P] [US2] Integration tests in `apps/server/tests/courier-records-sync.test.ts`: a batch answered twice has one effect per record; `occurred_at` is corrected by the offset to `deviceNow` and never later than `recorded_at`; one invalid record does not stop the others of the batch; records of one shipment apply in the order sent (FR-019)
 - [ ] T043 [P] [US2] End-to-end test in `apps/web/tests/e2e/courier-offline.spec.ts` with `context.setOffline`: quickstart scenarios 8–10 and 21, the app opening offline from the service worker in under 3 seconds (SC-003), and the first open without signal (spec US2 scenario 10)
 
@@ -190,7 +190,7 @@ return stop; verify two attempts in the first history and "Devuelto" on the seco
 
 - [ ] T056 [US4] Implement `POST /api/shipments/:id/exception-decision` in `apps/server/src/routes/shipments.ts`, add `attempts` to `GET /api/shipments/:id`, and extend `GET /api/shipments/unassigned`, `POST /api/routes/:id/shipments`, and `POST /api/shipments/:id/reassign` to held shipments (in `apps/server/src/routes/shipments.ts` and `apps/server/src/routes/routes.ts`), until T053 passes
 - [ ] T057 [US4] Implement `POST /api/shipments/:id/office-receipt` in `apps/server/src/routes/shipments.ts` and `GET`/`PATCH /api/settings` in `apps/server/src/routes/settings.ts` until T054 passes
-- [ ] T058 [P] [US4] Build `apps/web/src/features/shipments/exception-decision-dialog.tsx` ("Nuevo intento" with date and route, "Devolver al remitente", "Recibido en oficina") and the attempts list in `apps/web/src/features/shipments/shipment-records.tsx`
+- [ ] T058 [P] [US4] Build `apps/web/src/features/shipments/exception-decision-dialog.tsx` ("Nuevo intento" with date and route, "Devolver al remitente", "Recibido en oficina") and the attempts list in `apps/web/src/features/shipments/shipment-records.tsx`; extend `CustodyHistory` in `apps/web/src/features/routes/route-history.tsx` (and its unit test) with the office lines ("La recibe la oficina", "La recoge {courier} en la oficina")
 - [ ] T059 [P] [US4] Show held shipments ("En custodia de {courier}", "En oficina") in `apps/web/src/features/routes/unassigned-list.tsx`, and build the office address form in `apps/web/src/routes/settings.tsx` with its item in `apps/web/src/routes/panel-layout.tsx`
 - [ ] T060 [US4] In the courier app, complete a return stop with `apps/web/src/features/courier/delivery-form.tsx` (received-by name and photo, no collection) and list "En mi custodia" in `apps/web/src/routes/courier-route.tsx`, until T055 passes
 
@@ -209,16 +209,16 @@ offline with its pickup recorded, and verify the result
 
 ### Tests for User Story 5 ⚠️ write first, must fail
 
-- [ ] T061 [P] [US5] Integration tests in `apps/server/tests/courier-notices.test.ts` (FR-027, FR-033, FR-040): every action listed in FR-027 creates a notice for each affected courier in the same transaction; the snapshot returns the unacknowledged ones; the acknowledgment sets `acknowledged_at` once; `unacknowledgedNotices` and `courierLastSyncedAt` on `GET /api/routes/board`; a phone notification is sent after commit with only the type and the route number; a failing push service does not fail the action; a `410` deletes the subscription; subscribing and removing a subscription
-- [ ] T062 [P] [US5] Integration tests in `apps/server/tests/courier-late-records.test.ts` covering spec US5 scenarios 5–7 and FR-024–FR-026: pickup of a removed shipment (off route, custody, "Por revisar"); of a shipment on another courier's route in progress (pending handover); on a route in preparation (leaves it); delivery by the holder after a reassignment (handover cancelled, the other stop removed, notice to the other courier); a disbursement for a shipment off the route; `not_applied` for a voided, delivered, or returned shipment or without custody, with a `record_not_applied` notice; a repeated record from a second phone is `duplicate` without a flag; `POST /api/shipments/:id/clear-review` with a note
+- [ ] T061 [P] [US5] Integration tests in `apps/server/tests/courier-notices.test.ts` (FR-027, FR-033, FR-040): every action listed in FR-027 creates a notice for each affected courier in the same transaction, including joining a route to the courier's route in progress (`POST /api/routes/:id/join`) and editing a shipment on the route (`shipment_updated`), and cancelling a route in preparation creates none; the snapshot returns the unacknowledged ones; the acknowledgment sets `acknowledged_at` once; `unacknowledgedNotices` and `courierLastSyncedAt` on `GET /api/routes/board`; a phone notification is sent after commit with only the type and the route number; a failing push service does not fail the action; a `410` deletes the subscription; subscribing and removing a subscription
+- [ ] T062 [P] [US5] Integration tests in `apps/server/tests/courier-late-records.test.ts` covering spec US5 scenarios 5–7 and FR-024–FR-026: pickup of a removed shipment (off route, custody, "Por revisar"); of a shipment on another courier's route in progress (pending handover); on a route in preparation (leaves it); delivery by the holder after a reassignment (handover cancelled, the other stop removed, notice to the other courier); a disbursement for a shipment off the route; `not_applied` for a voided, delivered, or returned shipment or without custody, with a `record_not_applied` notice; a repeated record from a second phone is `duplicate` without a flag; `POST /api/shipments/:id/clear-review` with a note; cancelling a handover with no origin route leaves the shipment off route with its holder (research R17)
 - [ ] T063 [P] [US5] Extend `apps/server/tests/handovers.test.ts` and `apps/server/tests/custody-history.test.ts`: a `handover_confirmation` record gives custody and unblocks the task; `handoversToGive` stays in the giver's snapshot after the route left their app; custody history with the office and with late records leaves no interval without a holder (FR-028, SC-007)
 - [ ] T064 [P] [US5] End-to-end test in `apps/web/tests/e2e/courier-changes.spec.ts` with two phone contexts: quickstart scenarios 14–18 (the notification checked through the service worker's `push` event)
 
 ### Implementation for User Story 5
 
-- [ ] T065 [US5] Implement `apps/server/src/lib/push.ts` (`web-push` client) and `apps/server/src/lib/notices.ts` (`notifyCourier`: notice row in the transaction, phone notification after commit), and call it from every action of FR-027 in `apps/server/src/routes/routes.ts`, `apps/server/src/routes/shipments.ts`, `apps/server/src/routes/handovers.ts`, and `apps/server/src/routes/courier-records.ts`
+- [ ] T065 [US5] Implement `apps/server/src/lib/push.ts` (`web-push` client) and `apps/server/src/lib/notices.ts` (`notifyCourier`: notice row in the transaction, phone notification after commit), and call it from every action of FR-027 in `apps/server/src/routes/routes.ts` (including `join`), `apps/server/src/routes/shipments.ts` (including `PATCH` of a shipment on a route in progress), `apps/server/src/routes/handovers.ts`, `apps/server/src/lib/reassignment.ts`, and `apps/server/src/routes/courier-records.ts`
 - [ ] T066 [US5] Implement `POST /api/courier/notices/acknowledge` and the push subscription endpoints in `apps/server/src/routes/courier.ts`, and add `unacknowledgedNotices` and `courierLastSyncedAt` to `GET /api/routes/board` in `apps/server/src/routes/routes.ts`, until T061 passes
-- [ ] T067 [US5] Extend `apps/server/src/lib/courier-records.ts` with the effects across routes (handover created or cancelled, task removed from another route, shipment taken off a route in preparation, "Por revisar", `record_not_applied` notice) and implement `POST /api/shipments/:id/clear-review` in `apps/server/src/routes/shipments.ts`, until T062 and T063 pass
+- [ ] T067 [US5] Extend `apps/server/src/lib/courier-records.ts` with the effects across routes (handover created or cancelled, task removed from another route, shipment taken off a route in preparation, "Por revisar", `record_not_applied` notice), let `cancelHandover` in `apps/server/src/lib/reassignment.ts` cancel a handover with no origin route, and implement `POST /api/shipments/:id/clear-review` in `apps/server/src/routes/shipments.ts`, until T062 and T063 pass
 - [ ] T068 [P] [US5] Add the `push` and `notificationclick` handlers to `apps/web/src/sw.ts` (Spanish text per notice type, opens `/mensajero`) and implement `apps/web/src/lib/offline/push.ts` (ask for the permission once after sign-in, register the subscription)
 - [ ] T069 [P] [US5] Build `apps/web/src/features/courier/notice-list.tsx` (notices with one "Entendido" for all shown, acknowledged through the outbox) and the handover actions in `apps/web/src/routes/courier-stop.tsx` and `apps/web/src/routes/courier-route.tsx` ("Recibí el paquete", "Entregar a {courier}")
 - [ ] T070 [US5] Show the last synchronization and the unacknowledged changes in `apps/web/src/features/routes/route-summary-card.tsx`, and the "Por revisar" flag with its clearing dialog and the records "No aplicado" in `apps/web/src/features/board/board-table.tsx` and `apps/web/src/features/shipments/shipment-records.tsx`, until T064 passes
@@ -236,7 +236,7 @@ delivery; verify the marks and the history
 
 ### Tests for User Story 6 ⚠️ write first, must fail
 
-- [ ] T071 [P] [US6] Integration tests in `apps/server/tests/records-on-behalf.test.ts` covering spec US6 scenario 1 and FR-034: every kind except `handover_confirmation` recorded through `POST /api/shipments/:id/records` is stored with `on_behalf`, the dispatcher as author, and the courier who holds the package or whose route carries it; `occurredAt` defaults to now; `422 occurred_in_future`; a courier gets `403`
+- [ ] T071 [P] [US6] Integration tests in `apps/server/tests/records-on-behalf.test.ts` covering spec US6 scenario 1 and FR-034: every kind except `handover_confirmation` recorded through `POST /api/shipments/:id/records` is stored with `on_behalf`, the dispatcher as author, and the courier who holds the package or whose route carries it, and every event it writes carries `on_behalf = true`, shown as "Registrado por despacho" in the histories of feature 002; `occurredAt` defaults to now; `422 occurred_in_future`; a courier gets `403`
 - [ ] T072 [P] [US6] Integration tests in `apps/server/tests/records-correct-revert.test.ts` covering spec US6 scenarios 2–4 and FR-035: a correction of each correctable field requires a reason and writes `record_corrected` with old and new values; reverting a delivery or an exception returns the shipment to `picked_up` with its task pending on a route in progress, or off route otherwise; reverting a return goes back to `exception` with the return pending; `409 record_not_revertible` for a record that is not the latest; a reverted delivery's collection leaves the day summary and the attempts; the courier gets a notice
 - [ ] T073 [P] [US6] End-to-end test in `apps/web/tests/e2e/records-on-behalf.spec.ts`: quickstart scenario 19
 
@@ -276,11 +276,21 @@ disbursement; verify each total and "Efectivo por entregar"
 - [ ] T081 [P] Extend `apps/server/tests/role-permissions.test.ts` with every endpoint of contracts/http-api.md: couriers reach only `/api/courier/*` and their own photos; owner and dispatcher reach the panel endpoints and not `/api/courier/*`; `PATCH /api/settings` owner only (FR-002, Constitution IX)
 - [ ] T082 [P] Extend `apps/server/tests/routes-invariants.test.ts` with courier records in the random sequence, some sent twice and some late: a package has at most one holder (a courier or the office), a shipment delivered or returned has none, and every record sent has exactly one stored row (SC-001, SC-007)
 - [ ] T083 [P] Extend the accessibility checks in `apps/web/tests/e2e/fixtures.ts` to the courier screens at 360 px wide: WCAG 2.2 AA in the standard and high-contrast schemes, touch targets of at least 48 px, and confirming a pickup, confirming a delivery, and reporting an exception within 3 taps of "Mi ruta" (FR-038)
-- [ ] T084 [P] Document in `README.md` the deployment settings of this feature: the private bucket with its 12-month lifecycle rule, the storage and notification keys, and how to generate the VAPID key pair
+- [ ] T084 [P] Document in `README.md` the deployment settings of this feature: the private bucket with its 12-month lifecycle rule, the storage and notification keys, how to generate the VAPID key pair, and what the production content security policy must allow for the courier app (`worker-src 'self'`, `manifest-src 'self'`, `img-src 'self' blob:`; research R17)
 - [ ] T085 [P] Integration tests in `apps/server/tests/operations-export.test.ts` (FR-042, Constitution IX): owner only; `GET /api/shipments/export` includes the delivery columns of contracts/http-api.md; `GET /api/export/courier-records`, `/routes`, and `/handovers` return CSV with Spanish headers, money as integers, Bogotá dates
 - [ ] T086 Extend `apps/server/src/lib/export.ts`, `GET /api/shipments/export` in `apps/server/src/routes/shipments.ts`, and `GET /api/export/:dataset` in `apps/server/src/routes/export.ts` until T085 passes, and add the three exports for the owner to `apps/web/src/routes/history.tsx`
 - [ ] T087 Run every scenario of `specs/003-courier-app/quickstart.md` (1–21) on an Android phone and an iPhone and record the results, with the times of SC-002, in `specs/003-courier-app/quickstart-results.md`
 - [ ] T088 Confirm `pnpm check`, `pnpm test`, `pnpm test:e2e`, and `pnpm build` pass with zero warnings
+
+### Added on 2026-10-14: the quality bar feature 002 closed with (research R17)
+
+They run before T087 and T088, which close the phase.
+
+- [ ] T089 [P] Contract test `apps/server/tests/courier-contract.test.ts`: every endpoint of contracts/http-api.md is registered and every `/api/courier/*`, `/api/courier-records/*`, `/api/photos/*`, and `/api/settings` route is documented; every error code with its status; every body (`CourierSnapshot`, record results, `CourierRecord`, the additions to `Shipment`, `RouteSummary`, `RoutesBoard`, `UnassignedShipment`, and events) with exactly the documented shape
+- [ ] T090 [P] Security test `apps/server/tests/courier-security.test.ts`: a courier reads only their own route, held packages, notices, summary, and photos, and never another courier's; records stated for another courier are attributed to the signed-in one; a batch above 50 records, a record with malformed fields, and a body above 1 MB are refused without effect; an `occurredAt` in the future is clamped to the time received; a photo id not declared by one of the courier's records is refused; push payloads carry no personal data; a deactivated courier's session is refused at the next request (FR-002–FR-004, FR-019, FR-040, Constitution IX)
+- [ ] T091 [P] Performance test `apps/server/tests/courier-scale.test.ts` over the busy day of feature 002's `routes-scale.test.ts`: the snapshot of a route of 15 shipments answers in under 500 ms and a batch of 50 records is applied in under 2 seconds; record the timings in `specs/003-courier-app/quickstart-results.md` (SC-003, SC-004)
+- [ ] T092 [P] Web unit tests next to the code for the courier screens' pure logic and components rendered to HTML: the collection split and its note rule, the received-by name proposed per shipment kind, notice texts per type, the pending counter and its 2-hour warning, the session warning, and the stop actions shown per task state (FR-005–FR-017, FR-020, FR-027)
+- [ ] T093 Usability and interface review of the courier app on a phone (360 and 390 px, light, dark, and high contrast, one hand): walk a whole route offline and online, time SC-002's deliveries, count the taps of FR-038, check every screen against `docs/design-system.md` (courier app first: bottom navigation, connectivity banner, sync badge, primary actions in the bottom third), and the panel additions against feature 002's screens; fix what fails, test-first when it is behavior, and record the findings in `specs/003-courier-app/quickstart-results.md`
 
 ---
 
@@ -318,7 +328,7 @@ notices noted above.
 - Foundational: T004–T008 together; T011, T013, T014 together; T015 and T016 together
 - US1: T026–T031 together; T036 and T037 together
 - After US1: US2, US3, and US7 in parallel; after US3: US4, US5, and US6 in parallel
-- Polish: T081–T085 together
+- Polish: T081–T085 and T089–T092 together
 
 ---
 
@@ -357,7 +367,34 @@ Task: "Build apps/web/src/features/courier/photo-input.tsx and collection-fields
 6. Polish
 
 Implementation starts only after feature 004 has its own spec, plan, tasks, and analysis
-(decision #35 in the business master).
+(decision #35 in the business master); that condition holds since 2026-10-01.
+
+### Delivery under Trunk-Based Development (constitution 2.0.0)
+
+Each slice lands on `main` through its own short-lived branch and pull request, of at most
+two days:
+
+| Branch | Tasks |
+| --- | --- |
+| `003-setup` | Phase 1 (T001–T003) |
+| `003-foundation-domain` | Phase 2: T004–T014 |
+| `003-foundation-records` | Phase 2: T015–T025 |
+| `003-us1-route` | Phase 3 |
+| `003-us2-offline` | Phase 4 |
+| `003-us3-exceptions` | Phase 5 |
+| `003-us4-decisions` | Phase 6 |
+| `003-us5-changes` | Phase 7 |
+| `003-us6-on-behalf` | Phase 8 |
+| `003-us7-my-day` | Phase 9 |
+| `003-polish` | Phase 10 |
+
+A story that would take more than two days splits into a tests-and-server branch and a web
+branch. Each story's entry point lands with its last slice, so unfinished work stays
+unreachable: the courier screens of each story, the panel's exception decision dialog
+(T058), the office address item in the navigation (T059), and the "record on behalf" and
+correction dialogs (T076). The courier app replaces the waiting page at `/mensajero` in
+`003-foundation-records` (T025), before any user reaches the app: Domy is not live until
+the go-live checklist of feature 001 is done.
 
 ---
 

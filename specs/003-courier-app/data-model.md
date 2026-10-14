@@ -14,7 +14,7 @@ Phase 1 of [plan.md](plan.md). Extends the data models of
 | `record_outcome` | `applied`, `duplicate`, `not_applied` | —, —, No aplicado |
 | `exception_reason` | `recipient_absent`, `wrong_address`, `rejected` | Destinatario ausente, Dirección errada, Rechazado |
 | `photo_kind` | `proof`, `transfer_receipt`, `disbursement_receipt`, `exception` | Prueba de entrega, Comprobante de transferencia, Comprobante de pago, Foto de la novedad |
-| `notice_type` | `route_dispatched`, `shipment_added`, `shipment_removed`, `shipment_voided`, `stops_reordered`, `shipment_reassigned_in`, `shipment_reassigned_out`, `route_reassigned`, `dispatch_undone`, `handover_requested`, `handover_cancelled`, `exception_decided`, `office_received`, `record_corrected`, `record_reverted`, `record_not_applied` | Spanish text per type in `packages/domain` |
+| `notice_type` | `route_dispatched`, `shipment_added`, `shipment_removed`, `shipment_voided`, `shipment_updated`, `stops_reordered`, `shipment_reassigned_in`, `shipment_reassigned_out`, `route_reassigned`, `dispatch_undone`, `handover_requested`, `handover_cancelled`, `exception_decided`, `office_received`, `record_corrected`, `record_reverted`, `record_not_applied` | Spanish text per type in `packages/domain` |
 
 Added to feature 002's `stop_kind`: `return` ("Devolución").
 
@@ -64,7 +64,7 @@ applied (FR-024). Never deleted.
 | `kind` | `photo_kind` | Not null |
 | `storage_key` | text | Object key in the private bucket |
 | `uploaded_at` | timestamptz | Null until the image arrives: "Foto pendiente" during the 24 hours after the record, then treated as missing (FR-023) |
-| `byte_size` | integer | Set at upload; at most 1 MB |
+| `byte_size` | integer | Set at upload; at most 1 MB, the body limit of every request (feature 002, research R13: `413 payload_too_large`) |
 
 At most three `proof` photos per record, enforced by the request schema (FR-009). Objects are
 deleted by the bucket after 12 months; rows stay.
@@ -107,9 +107,12 @@ route_id is not null`" is unchanged: a shipment `picked_up`, or `exception` with
 record and cleared when the task is completed; the flag disappears with the task when the
 shipment leaves the route (FR-014).
 
-**Changed in `handovers`** (feature 002): `from_route_id` becomes optional, for a package
-held off route or picked up after the dispatcher changed the route (FR-025, FR-029); a
-handover may be requested for a shipment `picked_up`, or `exception` with `return_decided`.
+**Changed in `handovers`** (feature 002): `from_route_id` is optional (already so in feature
+002's schema), for a package held off route or picked up after the dispatcher changed the
+route (FR-025, FR-029); a handover may be requested for a shipment `picked_up`, or
+`exception` with `return_decided`. Cancelling a handover with no `from_route_id` leaves the
+shipment off route with its holder (FR-031); feature 002 refuses it today for lack of a
+route to return to.
 
 **Added to `couriers`**: `last_synced_at` timestamptz, updated on every snapshot request
 (FR-033).
@@ -169,7 +172,19 @@ office), never both; neither before pickup and after delivery or return.
 | Delivery or return record | Nobody |
 
 Custody history (SC-007): applied `pickup`, `delivery`, and `return` records, confirmed
-handovers, and `office_received` events, ordered by `occurred_at`.
+handovers, and `office_received` events, ordered by `occurred_at`. Each of them writes its
+shipment event with `changes.custodyCourierId: [from, to]`, which the panel's "Custodia del
+paquete" of feature 002 reads (research R17): a pickup `[null, courier]`, a delivery or a
+return `[courier, null]`, "Recibido en oficina" `[courier, null]` with
+`heldAtOffice: [false, true]`, and the pickup at the office `[null, courier]` with
+`heldAtOffice: [true, false]`. The custody history names the office in those two lines.
+
+## "Registrado por despacho"
+
+Feature 002 added `on_behalf` to `shipment_events` and `route_events`, and every history
+marks such events. A record entered on a courier's behalf (FR-034) stores
+`courier_records.on_behalf = true` and writes all its events with `on_behalf = true`; a
+courier's own records, including their handover confirmation, write `false`.
 
 ## Derived values
 

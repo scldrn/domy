@@ -5,7 +5,7 @@ authentication, testing strategy, and design system are fixed by
 [feature 001's research](../001-shipment-registration/research.md); routes, stops, tasks,
 custody, handovers, and exactly-once actions by
 [feature 002's research](../002-routes-dispatch/research.md). Versions verified against the
-npm registry on 2026-09-30.
+npm registry on 2026-09-30 and again on 2026-10-14, after feature 002 shipped (R17).
 
 ## R1. Where the courier app lives
 
@@ -20,10 +20,15 @@ npm registry on 2026-09-30.
 
 ## R2. Installable app and app shell
 
-- **Decision**: `vite-plugin-pwa` 1.3 (supports Vite 8) with the `injectManifest` strategy
+- **Decision**: `vite-plugin-pwa` 1.3.0 (supports Vite 8; 2.0.0 appeared on 2026-10-03 and
+  is not adopted until it settles) with its peer `workbox-window` 7.4.1 and the `injectManifest` strategy
   and a hand-written service worker `apps/web/src/sw.ts` that precaches the built app shell
-  (`workbox-precaching` 7.4) and handles push notifications (R8). The web manifest names the
-  app "Domy" with the icons of the design system. The service worker caches no API
+  (`workbox-precaching` 7.4.1) and handles push notifications (R8). The web manifest names
+  the app "Domy". Its icons are provisional until the logo artwork exists (design-system.md
+  §11; owner decision 2026-10-14): the name "domy" in white on the seed color `#34495E`, kept
+  as one SVG source (`apps/web/public/icon.svg`) from which `@vite-pwa/assets-generator`
+  produces the PNG sizes (192, 512, maskable 512, Apple touch 180, favicon); replacing the
+  SVG later replaces every icon without touching code. The service worker caches no API
   responses: all route data lives in IndexedDB (R3). After sign-in the app calls
   `navigator.storage.persist()` and, when not installed, shows how to install it.
 - **Rationale**: FR-001, FR-022, SC-003. One source of offline data avoids two caches
@@ -104,14 +109,23 @@ npm registry on 2026-09-30.
     private and has no public URLs.
   - **Retention**: a lifecycle rule on the bucket deletes objects after 12 months; the panel
     shows "Foto eliminada por antigüedad" when an object is gone.
-  - **Development and tests**: MinIO in `compose.yaml` and in Testcontainers.
+  - **Development and tests**: S3Proxy 4.1.1 (`andrewgaul/s3proxy:4.1.1`, Apache 2.0), an
+    S3 API in one small container: in memory (`JCLOUDS_PROVIDER=transient`) in
+    Testcontainers for integration and end-to-end tests, on a disk volume
+    (`JCLOUDS_PROVIDER=filesystem`) in `compose.yaml` for development, with fixed keys
+    (`S3PROXY_AUTHORIZATION=aws-v2-or-v4`, `S3PROXY_IDENTITY`, `S3PROXY_CREDENTIAL`). The
+    S3 client uses path-style addresses outside production (`S3_FORCE_PATH_STYLE`). Checked
+    on 2026-10-14: the bucket is created, an object stored and read back.
 - **Rationale**: FR-009, FR-023, FR-036, business master §4.4. Uploading through the server
   (about 20 photos a day of 200 KB) avoids presigned URLs and bucket CORS rules; the bucket
   lifecycle rule is retention without code.
 - **Alternatives considered**: `getUserMedia` with a custom camera screen (permissions and
   device quirks for no gain); `browser-image-compression` (the platform does it in 20
   lines); presigned direct uploads (two more moving parts); photos in PostgreSQL (bloats
-  backups).
+  backups). For development and tests: MinIO, the original choice, stopped publishing its
+  community images in October 2025 and `minio/minio` is gone from Docker Hub (2026); the
+  frozen `quay.io` mirror gets no fixes; SeaweedFS needs a separate credentials file;
+  Garage needs an initialization step and is AGPL.
 
 ## R7. Location and time
 
@@ -148,6 +162,12 @@ npm registry on 2026-09-30.
   unacknowledged notices; "Entendido" sends an acknowledgment that sets `acknowledged_at`
   only if it is empty. The dispatch board reads the count of unacknowledged notices per
   route and `couriers.last_synced_at`, updated on every snapshot request.
+  The actions of feature 002 that reach a courier with a route in progress are: dispatch,
+  add (including joining a route in preparation to the courier's route, `POST
+  /api/routes/:id/join`), remove, reorder, edit of a shipment on the route
+  (`shipment_updated`, clarification 2026-10-14), void, reassign a shipment in or out,
+  reassign the route, undo the dispatch, and request, confirm, or cancel a handover.
+  Cancelling a route in preparation reaches no courier.
 - **Rationale**: FR-027, FR-033. An explicit row per notice is simpler to query and to
   acknowledge than deriving notices from route and shipment events of several types.
 - **Alternatives considered**: deriving notices from `route_events` with an "acknowledged up
@@ -225,7 +245,7 @@ npm registry on 2026-09-30.
   - unit tests for `resolveCourierRecord`, the day summary, and the extended route and flag
     rules (domain, test-first);
   - unit tests for the outbox and sync loop with `fake-indexeddb` 6 and a fake fetch;
-  - integration tests on real PostgreSQL and MinIO for record application, the conflict
+  - integration tests on real PostgreSQL and S3Proxy (R6) for record application, the conflict
     matrix, exactly-once, photos, decisions, corrections, and notices;
   - Playwright with a phone viewport, `context.setOffline(true)`, and a file chooser for
     the photo: the constitution's critical flows "complete a delivery with photo and COD
@@ -238,3 +258,36 @@ npm registry on 2026-09-30.
 - **Decision**: object storage on DigitalOcean Spaces (about COP 20,000 a month), within
   the quoted infrastructure range; about 1.5 GB of photos a year.
 - **Rationale**: constitution constraint on monthly cost; decision #25.
+
+## R17. Alignment with feature 002 as built
+
+Feature 002 shipped on 2026-10-14 (#4–#11). What this feature reuses or must follow:
+
+- **Custody in the history**: the panel's "Custodia del paquete" reads
+  `shipment_events.changes.custodyCourierId: [from, to]`. Every event that moves custody
+  writes it: pickup (`[null, courier]`), confirmed handover, delivery and return
+  (`[courier, null]`), the pickup at the office (`[null, courier]` with
+  `heldAtOffice: [true, false]`), and "Recibido en oficina" (`[courier, null]` with
+  `heldAtOffice: [false, true]`). The custody history gains the office lines.
+- **"Registrado por despacho"**: `shipment_events.on_behalf` and `route_events.on_behalf`
+  exist and every history shows the mark. A record entered on a courier's behalf (FR-034)
+  writes its events with `on_behalf = true`; the courier's own records, including their own
+  handover confirmation, leave it false.
+- **Body limit**: every body under `/api` is limited to 1 MB and answers
+  `413 payload_too_large` (002 research R13). A photo above 1 MB is refused by that limit;
+  no photo-specific code is needed, and photos arrive at about 200 KB.
+- **Handovers without an origin route**: `handovers.from_route_id` already accepts null.
+  Cancelling such a handover (a package held off route) leaves the shipment off route with
+  its holder (FR-031), where feature 002 refuses for lack of a route to return to.
+- **Moving shipments**: `moveShipment` (`lib/reassignment.ts`) takes an optional
+  `actionId`, so one action can move several shipments; held shipments reuse it.
+- **Test stand-ins**: `pickUp` and `finishTask` in `apps/server/tests/setup/routes.ts`
+  already write the custody changes above; T022 replaces them with `applyCourierRecord`
+  and keeps every test of feature 002 passing.
+- **Quality bar**: feature 002 closed with contract, security, performance, invariant,
+  accessibility, and usability tests (002 quickstart-results); this feature does the same
+  for its endpoints and screens.
+- **Security headers**: framing is denied and MIME sniffing off; the content security policy
+  for scripts, planned for the production host, must allow the service worker, the
+  manifest, and photo previews (`worker-src 'self'`, `manifest-src 'self'`,
+  `img-src 'self' blob:`).
