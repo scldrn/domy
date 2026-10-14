@@ -37,7 +37,7 @@ Node 24 (`.nvmrc`), pnpm 12 (`corepack enable pnpm`), and Docker. Run from the r
 
 ```bash
 cp .env.example .env && pnpm install
-docker compose up -d             # PostgreSQL 18 on :5432, Adminer on :8080
+docker compose up -d             # PostgreSQL 18 on :5432, Adminer on :8080, S3Proxy (photos) on :9100
 pnpm db:migrate && pnpm db:seed  # the seed prints the password of propietario@example.com once
 pnpm dev                         # web on :5173 (proxies /api), API on :3000 with node --watch
 
@@ -178,7 +178,7 @@ and then needs a migration.
   `signIn(role)` returning a session cookie, `request(path, { method, cookie, body })`), and
   load fixtures with `createCatalog` (`setup/catalog.ts`). Requests go through `app.request`,
   without an HTTP server.
-- End to end (`apps/web/tests/e2e/`): `global-setup.ts` starts its own PostgreSQL, migrates,
+- End to end (`apps/web/tests/e2e/`): `global-setup.ts` starts its own PostgreSQL and photo storage (S3Proxy), migrates,
   seeds, adds test merchants, and runs the API on :3100 (`NODE_ENV=test`,
   `DOMY_FAKE_NOW=2026-10-01T15:00:00Z`) and Vite on :5174, saving one session per role. Tests
   use the `ownerPage`, `dispatcherPage`, `courierPage`, and `setServerNow` fixtures of

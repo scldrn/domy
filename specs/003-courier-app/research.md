@@ -26,9 +26,15 @@ npm registry on 2026-09-30 and again on 2026-10-14, after feature 002 shipped (R
   (`workbox-precaching` 7.4.1) and handles push notifications (R8). The web manifest names
   the app "Domy". Its icons are provisional until the logo artwork exists (design-system.md
   §11; owner decision 2026-10-14): the name "domy" in white on the seed color `#34495E`, kept
-  as one SVG source (`apps/web/public/icon.svg`) from which `@vite-pwa/assets-generator`
-  produces the PNG sizes (192, 512, maskable 512, Apple touch 180, favicon); replacing the
-  SVG later replaces every icon without touching code. The service worker caches no API
+  rendered by `apps/web/scripts/generate-app-icons.ts` (`pnpm icons`) with the Chromium the
+  end-to-end tests already use, exactly as the panel draws the wordmark (Archivo bold at
+  125 % width), into `apps/web/public/icons/`: 192, 512, maskable 512, Apple touch 180, and
+  favicons of 32 and 16 px with only the "d", as the collapsed rail shows it. The logo
+  replaces them by changing that script. A tool that rasterizes an SVG
+  (`@vite-pwa/assets-generator`) was dropped during setup: it cannot draw the wordmark
+  without the font. The service worker is built as a classic script (`rollupFormat: "iife"`),
+  which every supported phone runs, and serves the app shell for every navigation outside
+  `/api` (`workbox-routing`), so any page of the app opens without signal. The service worker caches no API
   responses: all route data lives in IndexedDB (R3). After sign-in the app calls
   `navigator.storage.persist()` and, when not installed, shows how to install it.
 - **Rationale**: FR-001, FR-022, SC-003. One source of offline data avoids two caches
