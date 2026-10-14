@@ -58,6 +58,8 @@ test("gives each role its own access (scenario 13)", async ({ ownerPage, browser
   await expect(courier).toHaveURL(/\/mensajero$/);
   // The courier app (feature 003), not the panel.
   await expect(courier.getByRole("heading", { name: "Mi ruta" })).toBeVisible();
+  // A new account is not linked to its courier yet: the app says so (FR-002).
+  await expect(courier.getByText("Tu cuenta no está vinculada a un mensajero.")).toBeVisible();
   const navigation = courier.getByRole("navigation", { name: "Navegación principal" });
   await expect(navigation.getByRole("link", { name: "Mi ruta" })).toHaveAttribute(
     "aria-current",

@@ -12,6 +12,12 @@ Nada. La 003 avanza con valores provisionales donde hace falta.
 
 ## Antes de terminar la 003 (app del mensajero)
 
+0. **¿Dónde se vincula la cuenta de un mensajero con su ficha?** La app necesita saber qué
+   mensajero de «Mensajeros» es cada cuenta con rol Mensajero, y hoy no hay dónde indicarlo.
+   Recomiendo un campo «Cuenta de acceso» en la ficha del mensajero (Mensajeros → Editar),
+   que liste las cuentas de mensajero aún sin vincular. La alternativa es elegir la ficha al
+   crear la cuenta en «Usuarios». Si no dices otra cosa, hago la primera (tarea T094).
+
 1. **Dirección real de la oficina** (FR-041). El seed usa una de ejemplo, «Calle 10 # 43-00»,
    El Poblado. La necesito para «Recibido en oficina» y la parada de recogida en oficina. Se
    registra en «Configuración» cuando exista esa pantalla (historia 4); basta con que me la

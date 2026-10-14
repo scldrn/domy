@@ -1,4 +1,6 @@
 import {
+  codConfirmationThreshold,
+  feeConfirmationThreshold,
   boardQuery,
   bogotaToday,
   calculateFee,
@@ -68,9 +70,7 @@ import {
 import { findShipmentAction } from "../lib/action-id.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import {
-  codConfirmationThreshold,
   deliveryWindow,
-  feeConfirmationThreshold,
   insertShipments,
   prepareShipment,
   pricingPlace,

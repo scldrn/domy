@@ -1,4 +1,6 @@
 import {
+  codConfirmationThreshold,
+  feeConfirmationThreshold,
   bogotaToday,
   bulkConfirmInput,
   bulkPreviewInput,
@@ -31,8 +33,6 @@ import {
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
 import {
-  codConfirmationThreshold,
-  feeConfirmationThreshold,
   insertShipments,
   prepareShipment,
   pricingPlace,

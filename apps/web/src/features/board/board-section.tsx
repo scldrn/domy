@@ -1,4 +1,4 @@
-import type { BoardShipment } from "@domy/domain";
+import type { BoardEntry } from "@domy/domain";
 import { useId } from "react";
 import { BoardTable } from "./board-table";
 
@@ -17,7 +17,7 @@ export function BoardSection({
 }: {
   title: string;
   hint: string;
-  shipments: BoardShipment[];
+  shipments: BoardEntry[];
   now: Date;
   today?: string;
   pointed: string | null;

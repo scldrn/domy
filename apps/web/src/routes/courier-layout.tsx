@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 import { Icon, type Symbol } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { sessionQuery, signOut } from "@/features/auth/session";
+import { useSynchronization } from "@/features/courier/courier-store";
 import { courierScheme, readHighContrast, saveHighContrast } from "@/features/courier/scheme";
 import { cn } from "@/lib/cn";
 
@@ -54,6 +55,9 @@ export const Route = createFileRoute("/_courier")({
 });
 
 function CourierLayout() {
+  const { user } = Route.useRouteContext();
+  // On open, when the connection returns, and every 30 seconds (FR-020, FR-022).
+  useSynchronization(user.id);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
