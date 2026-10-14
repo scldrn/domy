@@ -76,6 +76,9 @@ async function courierBusy(db: Executor, courierId: string): Promise<AppError> {
   });
 }
 
+/** Rolls back an action that changed nothing (setting the courier a route already has). */
+class Unchanged extends Error {}
+
 /**
  * Applies one action on an existing route exactly once (FR-020) and only on the version the
  * user saw (FR-021). `apply` changes the route and returns its events; the first one stores
@@ -96,12 +99,15 @@ async function applyRouteAction(
       await loadRouteRow(tx, routeId);
       await claimVersion(tx, routeId, input.version, now);
       const events = await apply(tx, await loadRouteRow(tx, routeId), now);
+      // An action that changes nothing keeps the version, so repeating it answers the same.
+      if (events.length === 0) throw new Unchanged();
       const [first, ...rest] = events;
       if (first)
         await recordRouteEvents(tx, [{ ...first, clientEventId: input.actionId }, ...rest]);
       await refreshRouteStatus(tx, routeId, { actorUserId: c.get("user").id, now });
     })
     .catch((error: unknown) => {
+      if (error instanceof Unchanged) return;
       if (isUniqueViolation(error, "route_events_client_event_id_key")) return;
       throw error;
     });

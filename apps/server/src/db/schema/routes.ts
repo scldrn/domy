@@ -190,6 +190,8 @@ export const routeEvents = pgTable(
     reason: text(),
     changes: jsonb(),
     clientEventId: uuid().unique("route_events_client_event_id_key"),
+    /** Recorded by dispatch for a courier, as confirming a handover (FR-025). */
+    onBehalf: boolean().notNull().default(false),
   },
   (table) => [index("route_events_route_idx").on(table.routeId, table.occurredAt)],
 );

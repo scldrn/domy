@@ -117,6 +117,18 @@ describe("PATCH /api/routes/:id (FR-008)", () => {
     ]);
   });
 
+  it("acts once when the courier it sets is already the route's (FR-020)", async () => {
+    const carlos = await createCourier(database.db, "Carlos Pérez");
+    const set = await routeAction(t, cookie, route, "", { courierId: carlos }, "PATCH");
+    const body = { actionId: crypto.randomUUID(), version: set.body.version, courierId: carlos };
+    const first = await send<RouteDetail>(t, cookie, `/api/routes/${route.id}`, body, "PATCH");
+    const replay = await send<RouteDetail>(t, cookie, `/api/routes/${route.id}`, body, "PATCH");
+    expect([first.status, replay.status]).toEqual([200, 200]);
+    // Nothing changed, so the version on screen stays good for the next action.
+    expect(replay.body.version).toBe(set.body.version);
+    expect(replay.body.events.filter((event) => event.type === "courier_set")).toHaveLength(1);
+  });
+
   it("offers only active couriers", async () => {
     const inactive = await createCourier(database.db, "Inactivo");
     await send(

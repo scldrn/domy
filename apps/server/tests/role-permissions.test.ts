@@ -22,7 +22,7 @@ const id = crypto.randomUUID();
 const office: UserRole[] = ["owner", "dispatcher"];
 const owner: UserRole[] = ["owner"];
 
-/** Every endpoint of contracts/http-api.md with the roles of spec FR-031. */
+/** Every endpoint of the contracts with the roles of 001 FR-031 and 002 FR-023. */
 const endpoints: [method: string, path: string, allowed: UserRole[]][] = [
   ["GET", "/api/shipments/board", office],
   ["GET", "/api/shipments/search", office],
@@ -65,6 +65,23 @@ const endpoints: [method: string, path: string, allowed: UserRole[]][] = [
   ["GET", "/api/audit-events", owner],
   ["GET", "/api/export/merchants?format=csv", owner],
   ["GET", "/api/auth/admin/list-users", owner],
+  // Routes and dispatch (feature 002, FR-023): the office only; couriers get their own
+  // routes through feature 003.
+  ["GET", "/api/shipments/unassigned?date=2026-10-01", office],
+  ["GET", "/api/routes/board?date=2026-10-01", office],
+  ["POST", "/api/routes", office],
+  ["GET", `/api/routes/${id}`, office],
+  ["PATCH", `/api/routes/${id}`, office],
+  ["PUT", `/api/routes/${id}/stop-order`, office],
+  ["POST", `/api/routes/${id}/shipments`, office],
+  ["POST", `/api/routes/${id}/shipments/${id}/remove`, office],
+  ["POST", `/api/routes/${id}/dispatch`, office],
+  ["POST", `/api/routes/${id}/undo-dispatch`, office],
+  ["POST", `/api/routes/${id}/cancel`, office],
+  ["POST", `/api/routes/${id}/reassign`, office],
+  ["POST", `/api/shipments/${id}/reassign`, office],
+  ["POST", `/api/handovers/${id}/confirm`, office],
+  ["POST", `/api/handovers/${id}/cancel`, office],
 ];
 
 describe("permissions by role (FR-031)", () => {

@@ -285,6 +285,7 @@ export async function confirmHandover(
     occurredAt: by.now,
     routeId: handover.toRouteId,
     changes: { custodyCourierId: [handover.fromCourierId, handover.toCourierId] },
+    onBehalf: true,
   });
   await recordHandoverOnRoutes(tx, "handover_confirmed", handover, by);
 }
@@ -361,6 +362,8 @@ async function recordHandoverOnRoutes(
     tx,
     routeIds.map((routeId, index) => ({
       ...handoverEvent(type, routeId, handover, by),
+      // Dispatch confirms for the receiving courier; feature 003 lets the courier do it.
+      onBehalf: type === "handover_confirmed",
       ...(index === 0 && { clientEventId: by.actionId }),
     })),
   );

@@ -253,6 +253,7 @@ async function loadDetail(db: Executor, id: string): Promise<ShipmentDetail> {
                   : [before, after],
               ]),
             ),
+      onBehalf: event.onBehalf,
     })),
   };
 }

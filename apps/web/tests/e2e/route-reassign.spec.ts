@@ -114,5 +114,11 @@ test("reassigns a whole route to a courier without a route in progress (scenario
     .getByRole("row", { name: new RegExp(dario) })
     .getByRole("button", { name: "Desactivar" })
     .click();
-  await expect(page.getByText(`${dario} tiene 1 ruta abierta`)).toBeVisible();
+  // One notice, so the warning is never hidden under a plain "desactivado".
+  await expect(
+    page.getByText(
+      `${dario} desactivado. Tiene 1 ruta abierta, que sigue a su nombre hasta que la reasignes.`,
+    ),
+  ).toBeVisible();
+  await expect(page.getByText(`${dario} desactivado`, { exact: true })).toBeHidden();
 });

@@ -4,7 +4,9 @@ import {
   type RouteEventType,
   type ShipmentEvent,
 } from "@domy/domain";
+import { Link } from "@tanstack/react-router";
 import { useId } from "react";
+import { OnBehalfMark } from "@/components/on-behalf-mark";
 import { formatDateTime } from "@/lib/format";
 
 const eventLabels: Record<RouteEventType, string> = {
@@ -37,9 +39,23 @@ export function RouteHistory({ events }: { events: RouteEvent[] }) {
             key={event.id}
             className="relative pb-5 pl-6 before:absolute before:top-1.5 before:-left-[7px] before:size-3 before:rounded-full before:bg-primary before:ring-4 before:ring-surface last:pb-0"
           >
-            <p className="text-body-l text-on-surface">
-              {eventLabels[event.type]}
-              {event.shipment && ` · ${formatTrackingNumber(event.shipment.trackingNumber)}`}
+            <p className="flex flex-wrap items-center gap-x-2 text-body-l text-on-surface">
+              <span>
+                {eventLabels[event.type]}
+                {event.shipment && (
+                  <>
+                    {" · "}
+                    <Link
+                      to="/envios/$trackingNumber"
+                      params={{ trackingNumber: event.shipment.trackingNumber }}
+                      className="guia rounded-xs underline-offset-4 hover:underline"
+                    >
+                      {formatTrackingNumber(event.shipment.trackingNumber)}
+                    </Link>
+                  </>
+                )}
+              </span>
+              {event.onBehalf && <OnBehalfMark />}
             </p>
             <p className="text-body-m text-on-surface-variant">
               {event.actor.name} · {formatDateTime(event.occurredAt)}
@@ -90,7 +106,10 @@ export function CustodyHistory({ events }: { events: ShipmentEvent[] }) {
             key={record.event.id}
             className="relative pb-5 pl-6 before:absolute before:top-1.5 before:-left-[7px] before:size-3 before:rounded-full before:bg-primary before:ring-4 before:ring-surface last:pb-0"
           >
-            <p className="text-body-l text-on-surface">{text(record)}</p>
+            <p className="flex flex-wrap items-center gap-x-2 text-body-l text-on-surface">
+              {text(record)}
+              {record.event.onBehalf && <OnBehalfMark />}
+            </p>
             <p className="text-body-m text-on-surface-variant">
               {formatDateTime(record.event.occurredAt)} · Registró {record.event.actor.name}
             </p>

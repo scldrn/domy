@@ -135,3 +135,24 @@ Versions verified against the npm registry on 2026-09-30.
   seconds with the shipment board (feature 001, R9). Flags per route are computed with the
   existing `shipment-flags` module.
 - **Rationale**: FR-018, SC-003, same freshness mechanism as feature 001.
+
+## R13. Performance budget and hardening
+
+- **Decision (performance)**: on a busy day over a long history (100,000 earlier shipments,
+  40 routes of 15 shipments, 200 shipments without a route), the routes board, "Sin
+  asignar", a route's detail, and a shipment's detail each answer in under 500 ms, and
+  creating, ordering, and dispatching a route of 15 shipments each take under 1 second,
+  measured against real PostgreSQL in `apps/server/tests/routes-scale.test.ts`.
+- **Rationale**: the board polls every 20 seconds (R12) and every open panel adds to that
+  load; a dispatcher's action must feel immediate to build a route in under 2 minutes
+  (SC-001). The limits leave room for slower CI machines.
+- **Decision (hardening)**: every answer carries Hono's secure headers, with framing denied
+  (`X-Frame-Options: DENY`, `Content-Security-Policy: frame-ancestors 'none'`), `nosniff`,
+  and `Referrer-Policy: strict-origin-when-cross-origin`. Request bodies under `/api` are
+  limited to 1 MB (`413 payload_too_large`), a body that cannot be parsed answers
+  `400 invalid_request` instead of a server error, and a request carries at most 200
+  shipment identifiers. Mutations take only `application/json`, so with the `SameSite=Lax`
+  session cookie no cross-site form can post them. A content security policy for scripts and
+  styles waits for the production deployment, where it can be tested against the built app.
+- **Rationale**: Constitution V and IX; the security test (T059) found a broken JSON body
+  answered with `500`, no limit on bodies or lists, and no protective headers.

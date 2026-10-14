@@ -1,12 +1,14 @@
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { requestId, type RequestIdVariables } from "hono/request-id";
+import { secureHeaders } from "hono/secure-headers";
 import type { Logger } from "pino";
 import type { UserRole } from "@domy/domain";
 import type { Auth } from "./auth.ts";
 import type { Db } from "./db/client.ts";
 import type { Clock } from "./lib/clock.ts";
-import { handleError } from "./lib/errors.ts";
+import { AppError, handleError } from "./lib/errors.ts";
 import { bulkRoutes } from "./routes/bulk.ts";
 import { carrierRoutes } from "./routes/carriers.ts";
 import { auditEventRoutes } from "./routes/audit-events.ts";
@@ -63,6 +65,24 @@ export function createApp(deps: AppDeps) {
         "request",
       );
     })
+    // Hardening of every answer (research R13): no framing, no MIME sniffing, no referrer to
+    // other sites, and request bodies of at most 1 MB.
+    .use(
+      secureHeaders({
+        xFrameOptions: "DENY",
+        referrerPolicy: "strict-origin-when-cross-origin",
+        contentSecurityPolicy: { frameAncestors: ["'none'"] },
+      }),
+    )
+    .use(
+      "/api/*",
+      bodyLimit({
+        maxSize: 1024 * 1024,
+        onError: () => {
+          throw new AppError("payload_too_large");
+        },
+      }),
+    )
     .onError(handleError)
     .route("/api/auth", authRoutes)
     .on(["GET", "POST"], "/api/auth/*", (c) => deps.auth.handler(c.req.raw))
