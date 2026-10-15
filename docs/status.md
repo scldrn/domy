@@ -19,10 +19,11 @@ a short-lived branch, so the specification and implementation of every feature l
 
 ## Next step
 
-1. Publish the owner's physical-phone feedback and verify GitHub CI at the new head of
-   PR #21 for the completed US3 T048–T052 and T099–T101 slice on `003-us3-exceptions`
-   from `93fdf09`. The owner authorized that commit/push, a squash merge with green CI,
-   and continuing US4. US4 starts
+1. Verify CI for corrective T102 on PR #21; the owner approved its commit and push. Physical-phone
+   feedback was published as `a0b046d`, but its CI `38679724748` failed the refusal retry
+   selector (69 e2e passed, one failed including retry); do not merge that head. The owner
+   authorized a squash merge with green CI and continuing US4. Verify all gates again at
+   the corrected head before merging. US4 starts
    at T053 on a fresh branch from updated `main`; do not repeat merged US2 work.
 2. Before the end of 003: complete the scenario-by-scenario physical validation T087/T093
    on Android and iPhone (iOS 16.4 or later for notifications), building on the owner's
@@ -179,6 +180,36 @@ a short-lived branch, so the specification and implementation of every feature l
   all quickstart scenarios and the measured interface review after the remaining stories.
 - In a subsequent explicit approval, Samuel authorized publishing this record, squash
   merging PR #21 with green CI, and continuing US4 from updated `main`.
+
+### Post-publication CI correction — T102
+
+- CI `38679724748` at `a0b046d` passed check and all 773 unit/integration tests, but T099
+  failed initially and on retry. Once the pending page has loaded, two legitimate buttons
+  are named "Reintentar sincronización": the refusal banner's and the pending page's.
+  The page-wide test selector was ambiguous. The earlier green run and code review did
+  not establish deterministic navigation; they did not catch this test defect.
+- Awaiting the pending page's heading reproduced the same strict-selector failure locally.
+  The correction scopes the retry to the unique refusal alert, clicks it, waits for the
+  actual refused synchronization response and rechecks that the refusal remains unique.
+  Ten focused repetitions passed. Application behavior, selectors' strictness, accessibility
+  checks, workers and timeout limits are unchanged.
+- After T102's test correction, `pnpm check`, `pnpm build` and the full 70-scenario
+  `pnpm test:e2e` run passed (all e2e first pass, 4.2 min). The full `pnpm test` gate did
+  not pass locally, as detailed next; T102 remains unchecked until the outstanding gates
+  and scoped convergence are completed. The owner approved publishing the correction in
+  PR #21; the PR's current head supplies its new CI state.
+- During local revalidation, the known `routes-invariants` timeout recurred for seed 2026
+  while other heavy checks ran concurrently, then for seed 31337 in a full-suite repeat
+  without concurrent gates. Each run had 393/394 server tests passing. The unchanged
+  invariant file then passed all three cases alone in 8.74 s. That suggests contention
+  inside the full run, but does not establish its exact cause or make either failed full
+  run a pass. Workers, scenarios and timeouts remain unchanged. CI's 394 server tests
+  passed; local full-suite stability still needs investigation.
+- US4 analysis found a missing explicit lifecycle row for FR-041: office receipt after a
+  new attempt was already rescheduled off route must change `picked_up` to `registered`.
+  Samuel approved aligning spec, model, plan and tasks, with a guarded regression and no
+  relaxation of route transitions. That alignment and T053–T060 remain for the new US4
+  branch after US3 merges; no US4 application code has been changed here.
 
 ## Open with the client
 

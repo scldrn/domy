@@ -478,3 +478,7 @@ and the full 70-scenario e2e suite at first pass. The four focused US3 cases als
 after online board checks were changed to await acknowledgment; two preceding attempts
 failed at Docker port allocation before running any case (details in docs/status.md).
 No timeout, worker or Docker configuration was changed.
+
+## Phase 16: Convergence — Refusal Retry Target
+
+- [ ] T102 CRITICAL Reproduce the settled-page ambiguity in T099 by awaiting the "Pendientes por sincronizar" heading in `apps/web/tests/e2e/access.spec.ts`; then target the retry button inside the unique refusal alert and verify that it actually retries. Preserve the one-refusal assertion across synchronization and navigation. Do not use `.first()`, sleeps, longer timeouts, skipped assertions or application changes to conceal the two legitimate retry controls (Constitution VI, FR-002, FR-004, FR-020; contradicts). Repeat the gates and scoped convergence before merging US3.

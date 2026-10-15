@@ -11,6 +11,10 @@ y la fecha. Responde aquí mismo o en la conversación.
 Autorizados el commit y push del registro de prueba móvil, la fusión squash de la PR #21
 con CI verde y la continuación de US4 desde `main` actualizado.
 
+Autorizados también el commit y push de T102 en la misma PR. Queda pendiente completar
+las compuertas y la convergencia, incluido investigar el timeout local de invariantes;
+la aprobación no permite fusionar con compuertas pendientes.
+
 ## Antes de terminar la 003 (app del mensajero)
 
 Nada pendiente por ahora.
@@ -49,3 +53,5 @@ Nada pendiente por ahora.
 | 2026-10-14 | ¿Explicitar `returnDecided` por fila del tablero y una regla compartida para lista y conteo de «Novedades por decidir»? | Sí; excluir devoluciones ya decididas, sin adelantar acciones de US4 |
 | 2026-10-14 | ¿Hacer commit, push y abrir la PR de US3 (T048–T052 y T099–T101)? | Sí. La fusión y continuar US4 requieren autorización aparte y CI verde |
 | 2026-10-14 | ¿Publicar el registro de la prueba móvil, fusionar la PR #21 mediante squash con CI verde y continuar US4? | Autorizado. Probado en iOS y Android con Chrome y Safari: funcionamiento esperado |
+| 2026-10-14 | ¿Alinear spec, modelo, plan y tareas de US4 para permitir «Recogido» → «Registrado» exclusivamente al recibir en oficina un paquete fuera de ruta, con prueba de regresión y sin relajar las rutas? | Sí. Aplicar en la rama de US4 tras fusionar US3; todavía no implementado |
+| 2026-10-14 | ¿Hacer commit y push de T102 en la PR #21 para repetir el CI? | Sí. No fusionar mientras queden compuertas pendientes |
