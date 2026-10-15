@@ -10,6 +10,7 @@ import {
   packageSizeLabels,
   shipmentFlag,
   stopKindLabels,
+  resolveCourierRecord,
   type CourierStop,
   type CourierTask,
 } from "@domy/domain";
@@ -29,6 +30,7 @@ import { now } from "@/lib/clock";
 import { cn } from "@/lib/cn";
 import { formatWindow } from "@/lib/format";
 import { currentLocation, watchLocation } from "@/lib/offline/location";
+import { shipmentOnRoute } from "@/lib/offline/outbox";
 
 /** A stop of the courier's route and its tasks (feature 003, US1, FR-005–FR-016). */
 export const Route = createFileRoute("/_courier/mensajero/parada/$stopId")({
@@ -141,6 +143,7 @@ function Shortcuts({ stop }: { stop: CourierStop }) {
 
 function TaskCard({ task }: { task: CourierTask }) {
   const { user } = Route.useRouteContext();
+  const { view } = useCourierState();
   const [form, setForm] = useState<"delivery" | "disbursement" | "exception" | "problem" | null>(
     null,
   );
@@ -153,6 +156,22 @@ function TaskCard({ task }: { task: CourierTask }) {
     now(),
   );
   const finishing = task.kind === "delivery" || task.kind === "errand";
+  const returning = task.kind === "return";
+  const shipmentState = view?.route
+    ? shipmentOnRoute(
+        view.route,
+        view.route.stops
+          .flatMap((stop) => stop.tasks)
+          .filter((candidate) => candidate.shipmentId === task.shipmentId),
+        [],
+      )
+    : null;
+  const canReturn =
+    shipmentState &&
+    resolveCourierRecord(shipmentState, {
+      kind: "return",
+      courierId: shipmentState.route?.courierId ?? "",
+    }).outcome === "applied";
   const pickedUp = task.shipmentKind === "errand" || task.shipmentStatus === "picked_up";
 
   /** A pickup, saved on the phone first and shown at once (FR-006, FR-018). */
@@ -254,8 +273,10 @@ function TaskCard({ task }: { task: CourierTask }) {
         )}
         {task.problemNote && (
           <div className="text-body-l text-error">
-            <dt className="sr-only">Problema de recogida</dt>
-            <dd>Problema de recogida: {task.problemNote}</dd>
+            <dt className="sr-only">
+              {returning ? "Problema de devolución" : "Problema de recogida"}
+            </dt>
+            <dd>{returning ? task.problemNote : `Problema de recogida: ${task.problemNote}`}</dd>
           </div>
         )}
       </dl>
@@ -265,10 +286,25 @@ function TaskCard({ task }: { task: CourierTask }) {
           Confirmar recogida
         </Button>
       )}
-      {pending && finishing && task.blockedByHandover && (
+      {pending && (finishing || returning) && task.blockedByHandover && (
         <p className="text-body-l text-on-surface-variant">
           Espera a que {task.blockedByHandover.fromCourier.name} te entregue el paquete.
         </p>
+      )}
+      {pending && returning && !task.blockedByHandover && !canReturn && (
+        <p className="text-body-l text-on-surface-variant">
+          Primero confirma la recogida en oficina.
+        </p>
+      )}
+      {pending && returning && canReturn && (
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setForm("delivery");
+          }}
+        >
+          Confirmar devolución
+        </Button>
       )}
       {pending && finishing && !task.blockedByHandover && !pickedUp && (
         <div className="flex flex-col gap-2">
@@ -312,7 +348,7 @@ function TaskCard({ task }: { task: CourierTask }) {
           Reportar novedad
         </Button>
       )}
-      {pending && (task.kind === "pickup" || task.kind === "errand") && (
+      {pending && (task.kind === "pickup" || task.kind === "errand" || returning) && (
         <Button
           variant="outline"
           onClick={() => {
@@ -362,9 +398,11 @@ function TaskCard({ task }: { task: CourierTask }) {
           onSaved={() => {
             setForm(null);
             toast.success(
-              task.kind === "errand"
-                ? `Guía ${formatTrackingNumber(task.trackingNumber)}: diligencia completada`
-                : `Guía ${formatTrackingNumber(task.trackingNumber)} entregada`,
+              returning
+                ? `Guía ${formatTrackingNumber(task.trackingNumber)} devuelta`
+                : task.kind === "errand"
+                  ? `Guía ${formatTrackingNumber(task.trackingNumber)}: diligencia completada`
+                  : `Guía ${formatTrackingNumber(task.trackingNumber)} entregada`,
             );
           }}
         />

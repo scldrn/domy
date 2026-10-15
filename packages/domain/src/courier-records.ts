@@ -184,6 +184,18 @@ export type RecordResolution =
   | { outcome: "duplicate" }
   | { outcome: "not_applied"; reason: NotAppliedReason };
 
+/** 003 FR-032: corrections keep their identity; reverts and unapplied facts are not attempts. */
+export function deliveryAttempts<
+  T extends { kind: CourierRecordKind; outcome: RecordOutcome; reverted: unknown },
+>(records: readonly T[]): T[] {
+  return records.filter(
+    (record) =>
+      (record.kind === "delivery" || record.kind === "exception") &&
+      record.outcome === "applied" &&
+      record.reverted === null,
+  );
+}
+
 const custodyTo = (courierId: string | null) => ({ courierId, heldAtOffice: false });
 
 /** A final shipment takes no record; the reason names its status. */

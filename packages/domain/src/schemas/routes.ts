@@ -210,6 +210,7 @@ export type RoutesBoard = {
 
 /** A shipment not on any route, with where it is picked up (FR-001). */
 export type UnassignedShipment = ShipmentSummary & {
+  heldBy: { courier: Named } | "office" | null;
   pickupPoint: { id: string; label: string } | null;
   pickupAddress: string;
   pickupNeighborhood: Named;

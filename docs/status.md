@@ -1,7 +1,7 @@
 # Project status
 
 Where Domy stands and what comes next, so any session can resume without the conversation
-that produced it. Updated 2026-10-14; update it whenever a slice is merged or the next step
+that produced it. Updated 2026-10-15; update it whenever a slice is merged or the next step
 changes.
 
 ## Features
@@ -14,17 +14,23 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup T001–T003 (#13), domain T004–T014 (#14), foundation T015–T025 (#15), US1 T026–T040 (#16–#17), account linking T094 (#18), idempotency corrections T095–T097 (#19, `5c8b107`), and US2 T041–T047/T098 (#20, `93fdf09`) are on `main`. PR #20 and post-merge CI passed. US3 T048–T052 and corrections T099–T101 are implemented and locally validated on `003-us3-exceptions`: exceptions and pickup problems, shared undecided-exception projection, the complete offline phone journey, and unobstructed modal controls. Publication and merge follow owner approval and the slice's GitHub CI. Effects of late records across routes remain US5 (T067) |
+| 003 Courier app | Setup T001–T003 (#13), domain T004–T014 (#14), foundation T015–T025 (#15), US1 T026–T040 (#16–#17), account linking T094 (#18), idempotency corrections T095–T097 (#19, `5c8b107`), US2 T041–T047/T098 (#20, `93fdf09`), and US3 T048–T052/T099–T102 (#21, `4910f76`) are on `main`. PR #21 passed all four gates at its final head before the authorized squash merge. US4 T053–T060/T103–T110 is implemented and scoped-converged locally on `003-us4-decisions`, with prior local gates passing; CI retry races T111/T112 are corrected and converged locally with all four gates passing; correction commit/push authorized; verify the new head's CI before seeking merge approval; published in [PR #22](https://github.com/scldrn/domy/pull/22); merge and US5 require separate approval and green CI. Effects of late records across routes remain US5 (T067) |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Publish T102's closure and verify CI at that new head of PR #21 before the authorized
-   squash merge. CI `38682492089` at `8f5066e` passed all gates (773 unit/integration tests
-   and 70 e2e without retries); scoped T102 convergence found no remaining finding.
-   The owner authorized publishing this closure, merging with green CI and continuing US4.
-   Do not substitute the earlier green run for the final head's checks. US4 starts
-   at T053 on a fresh branch from updated `main`; do not repeat merged US2 work.
+1. Review the latest-head CI of T111/T112 in US4
+   [PR #22](https://github.com/scldrn/domy/pull/22) before seeking merge/US5 authorization.
+   Samuel approved commit/push of the correction on 2026-10-15. Both test races are
+   reproduced and corrected
+   locally, with repeated scoped convergence and all four gates passing: check,
+   821 unit/integration tests, 76 e2e without retries, and build. Four targeted cases
+   also pass ten repetitions each (40/40). Only three e2e files and documentation
+   change; production code, timing limits, workers and retry policy are untouched.
+   Prior head `a169cbb` has green CI `38814337383` with one US4 retry, not a clean e2e
+   run. This revision publishes the approved correction; its CI result must be verified
+   at the PR's new head. Do not substitute the older run or infer approval to merge.
+   The branch is based on `4910f76`; US2/US3 are already merged. Do not repeat that work.
 2. Before the end of 003: complete the scenario-by-scenario physical validation T087/T093
    on Android and iPhone (iOS 16.4 or later for notifications), building on the owner's
    successful US1–US3 smoke test below. The owner's DigitalOcean Spaces bucket
@@ -200,8 +206,10 @@ a short-lived branch, so the specification and implementation of every feature l
   retries. All three invariant seeds passed in that CI run. Scoped T102 convergence on
   2026-10-15 found no remaining gap in its three requirements, refusal/retry scenario,
   session decision and nine constitution principles. T102 is now complete; this does not
-  claim that the separate local full-suite timeout is fixed. The closure commit must get
-  its own green CI before the authorized merge.
+  claim that the separate local full-suite timeout is fixed. Closure commit `64f9622`
+  passed its own CI `38684623497`: all four gates, 773 unit/integration tests and all 70
+  e2e without retries. PR #21 was then squash-merged as `4910f76` on 2026-10-15 with
+  the owner's approval, and its branch was deleted.
 - During local revalidation, the known `routes-invariants` timeout recurred for seed 2026
   while other heavy checks ran concurrently, then for seed 31337 in a full-suite repeat
   without concurrent gates. Each run had 393/394 server tests passing. The unchanged
@@ -212,8 +220,253 @@ a short-lived branch, so the specification and implementation of every feature l
 - US4 analysis found a missing explicit lifecycle row for FR-041: office receipt after a
   new attempt was already rescheduled off route must change `picked_up` to `registered`.
   Samuel approved aligning spec, model, plan and tasks, with a guarded regression and no
-  relaxation of route transitions. That alignment and T053–T060 remain for the new US4
-  branch after US3 merges; no US4 application code has been changed here.
+  relaxation of route transitions. That alignment is now applied locally on the new US4
+  branch as described below; its subsequent implementation is recorded in the backend
+  checkpoint, separately from this historical preparation finding.
+
+## US4 preparation and initial RED evidence — 2026-10-15
+
+- `003-us4-decisions` starts at the US3 squash `4910f76`. Spec, lifecycle model, plan and
+  tasks explicitly restrict `picked_up → registered` to office receipt of an off-route
+  courier-held package after a new attempt was already decided, preserving its service
+  date. Generic route removal, cancellation and undo-dispatch stay forbidden for a
+  picked-up package. T054 tests both the positive case and the forbidden transition
+  before T057 implements one domain guard.
+- T055/T060 explicitly cover the existing return-problem requirement (FR-030) and local
+  replay of office pickup followed by return (FR-018/FR-041); no collection on returns,
+  no new exception on a return stop. Notices and handover confirmation remain US5.
+- The initial preparation analysis claimed no remaining finding. Subsequent review
+  identified two medium gaps: T053 did not explicitly require decision-retry tests, and
+  the settings contract did not distinguish GET/PATCH responses. That review supersedes
+  the earlier blanket claim; no implementation was validated by either analysis.
+- Samuel approved both remediations on 2026-10-15. T053 now requires concurrent and late
+  retries of both decisions, one event/set of effects, and preservation of a later
+  change. Contract and plan specify current-state replay responses. GET/PATCH settings
+  now have separate 200 responses using the existing `CompanySettings` projection,
+  both fields null before configuration and a resolved neighborhood afterward. T054
+  requires those response and role checks before T057. No new domain rule, dependency,
+  migration or response type was introduced.
+- Repeated read-only `speckit-analyze` after remediation reviewed 7 functional
+  requirements (FR-018–FR-019, FR-029–FR-032, FR-041), 3 buildable criteria (SC-001,
+  SC-006–SC-007), 8 acceptance scenarios, T053–T060 and all 9 constitution principles.
+  Both reported gaps are resolved in the artifacts, with no additional finding in this
+  scope. All 10 requirements/criteria have planned task coverage; that is not passing
+  test evidence. Requirements checklist 16/16 and courier rules 48/48 remain
+  reviewer-owned and unchanged. This status record was updated after analysis.
+- T053's initial decision tests in `apps/server/tests/exception-decision.test.ts`
+  ran against PostgreSQL 18: 17 cases, 16 failures and 1 pass. Fifteen failures were
+  404s from the absent decision endpoint, one is the absent attempts projection, and
+  the existing courier-access guard passes. Fixtures first verify real registration,
+  dispatch, pickup and exception records. Tests cover both decisions, same/other routes,
+  rescheduling, normal/reverse returns, problem notes, completion without collection,
+  held-route boundaries, attempts and concurrent/late replay assertions. Assertions
+  beyond the missing-endpoint blocker still needed execution during T056; this initial
+  run was not exactly-once evidence. The ignored JSON report is
+  `apps/server/test-results/us4-t053-red.json`.
+- T054 initially had `apps/server/tests/office-receipt.test.ts`: all 12 cases failed at missing
+  endpoints on PostgreSQL 18. Receipt cases seed the office directly in the real database
+  to isolate them from the settings endpoint; registration/dispatch/courier records are
+  verified through the real API. Settings cases cover absent and empty singleton rows,
+  response projection, permissions, audit, malformed inputs, concurrent changed/unchanged
+  edits and late replays. Receipt cases cover both decision/receipt orders, preserved
+  service date, office pickup, custody events, route restrictions and concurrent/late retries.
+- T054's initial lifecycle tests had 8 baseline passes and 2 RED cases for the missing
+  `officeReceiptStatus` export, loaded from the actual module with a test-only signature
+  (not a mock). T057 subsequently replaced this declaration with a direct import. The original
+  generic transition table remains unchanged and its prohibitions still pass.
+- T055 initially added three tests to `outbox.test.ts`, with 8 passes and 2 new failures:
+  the old projection let the courier return a package before office pickup and did not
+  replay that pickup. The return-problem case already passed using existing domain rules.
+  The positive pickup/return test also checks IndexedDB reopening, but that assertion
+  remained behind the failing pickup assertion until T060 fixed the projection.
+- T055's `exception-decision.spec.ts` has three phone scenarios: another attempt and a
+  return with a problem/no collection; rescheduling with an offline office pickup/return
+  and reopening; tomorrow's office pickup then delivery. Both phone runs failed at
+  missing "Decidir novedad" or "Dirección de la oficina", before the later assertions.
+  They use the built app, actual PostgreSQL and the real service worker; no completed
+  offline UI behavior is claimed. The future-date case restores the shared clock.
+- Ignored reports: `apps/server/test-results/us4-t054-red.json`,
+  `packages/domain/test-results/us4-t054-domain-red.json`,
+  `apps/web/test-results/us4-t055-outbox-red.json`, and Playwright traces/error contexts
+  under `apps/web/test-results/exception-decision-*`.
+- `pnpm check` passed at this initial RED checkpoint, before application implementation.
+  The backend implementation and newer evidence follow; the pending web tests above
+  must not be mistaken for completed functionality.
+
+### US4 backend implementation checkpoint — 2026-10-15
+
+- T056 implements decisions, current-state idempotent replay, attempts and held routing.
+  Five added pure-rule tests failed before implementation. Domain rules remain in
+  `packages/domain`; the full domain suite passes 216/216. T057 implements transactional
+  office receipt and GET/PATCH settings with the shared audit receipt, including no-op
+  retries. The generic `picked_up → registered` prohibition remains unchanged.
+- T103 first reproduced missing custody handover for a decided return during whole-route
+  reassignment. T104 first reproduced four route-release/undo failures: office-held
+  returns must preserve their decision and custody when removed or cancelled, whereas
+  courier-held returns prevent undo-dispatch. Those regressions now pass.
+- T105 reproduced two wrong return addresses after an office-held new attempt was edited
+  (delivery and reverse pickup). Return planning now hydrates the first actual pickup
+  from completed stop history, not mutable shipment addresses or a later office pickup.
+  Editable shipment fields remain untouched. Both cases and all 73 tests in the latest
+  seven-file decision/office/route regression run pass; the earlier expanded regression
+  passed 141/141 before T105. Decision and office files now have 19 and 18 passing cases.
+- `pnpm check` passes after T105. All three unchanged invariant seeds pass alone after
+  T105 (8.29 seconds for the file). The earlier full server run after T057 had 422/425
+  passing tests and all three invariant seeds timed out at 30 seconds. No other quality
+  gate was run concurrently with that failing full run. The isolated pass does not
+  establish a cause or turn that run green; workers and timeout limits are unchanged.
+- The subsequent **complete server suite after T105 passed 431/431** in 118.37 seconds,
+  including all three unchanged invariant seeds. It ran without other quality gates in
+  parallel, using the original workers and timeout limits. This is a passing backend
+  gate at this checkpoint, not proof that the earlier intermittent timeout is fixed and
+  not a passing full workspace/offline/e2e gate.
+- The domain suite was rerun after this full server pass: 216/216 pass. `pnpm build`
+  also passes, including the production web bundle and service worker.
+- Scoped backend convergence repeated after T105: FR-029–FR-032/FR-041, the server
+  obligations of all eight US4 scenarios, SC-006/SC-007, six plan decisions and all nine
+  constitution principles. No additional backend finding remained. The assessment
+  itself left tasks byte-for-byte unchanged; completion tracking then marked
+  T054/T057/T104/T105 done. T055/T058–T060 still cover the missing interface/offline work.
+- Twenty-four existing route/courier e2e passed without retries at the earlier T056/T103
+  checkpoint, before office implementation. They are not final US4 e2e evidence. The new
+  T055 phone cases and two outbox assertions still need T058–T060, then all four gates
+  and repeated convergence. No migration, dependency, commit or push was added.
+- Generated reports (ignored): `packages/domain/test-results/us4-domain-green.json`,
+  `apps/server/test-results/us4-t057-t104-regressions.json`,
+  `apps/server/test-results/us4-t105-regressions.json`,
+  `apps/server/test-results/us4-backend-invariants.json`, and the failed full-run report
+  `apps/server/test-results/us4-server-full.json`. The later passing full-run report is
+  `apps/server/test-results/us4-backend-full.json`.
+
+### US4 interface/offline implementation — 2026-10-15
+
+- T058 adds the decision dialog, guarded office-receipt confirmation, applied attempt
+  list and office custody history. A new history test first reproduced office receipt
+  incorrectly described as a delivery, then passed after correction. The shared domain
+  guard controls receipt eligibility; the API remains authoritative for mutations.
+- T059 adds owner-only settings/navigation and the held labels in unassigned rows.
+  Neighborhood selection and address validation reuse existing components/domain input.
+  Newly exposed history/audit fields use Spanish labels. Pickup grouping also includes
+  the merchant so one group's heading cannot misidentify another merchant's shipments.
+- T060 shares the snapshot-to-domain projection with the return action's eligibility.
+  Pending office pickup means office custody; its replay transfers custody and permits
+  the return. Both previously failing outbox cases now pass, including IndexedDB reopening.
+  Returns reuse the delivery sheet with received-by name/photo and zero collection;
+  problems keep the return pending, without an exception action. The existing off-route
+  custody list is reused. The full web unit suite passes 174/174.
+- T106 first reproduced a confirmed no-op settings save swallowing a later edit. Its
+  e2e drops the first answer after PostgreSQL commits, verifies the retry keeps its
+  identifier, then checks that an acknowledged save gives the next edit a fresh key
+  and persists the new address. Two initial test-fixture/message assumptions were
+  corrected before the actual stale-address failure was reproduced. The fix renews
+  the key only after acknowledgment; the four focused US4 e2e then passed without retries.
+- Focused phone journeys cover two attempts, a return problem and completion without
+  collection, held labels in the panel, office history, offline pickup/return with
+  reopening and exactly-once synchronization, and tomorrow's office pickup/delivery.
+  They use actual PostgreSQL/private photo storage, the built app and real service
+  worker. This is automated Chromium phone-viewport evidence, not physical iOS/Android
+  validation. A Spanish invalid-date message is also asserted before saving a decision.
+- `pnpm check` passes after lint/format corrections; production build passed before the
+  final wording correction. Full workspace tests, full e2e and final build/convergence
+  are in progress. No timeout/worker settings, dependencies or migrations changed.
+  No US4 commit or push yet.
+
+### US4 final-gate corrections — 2026-10-15
+
+- Before T107's policy change, three complete server runs failed: 430/431 with an
+  invariant deadline; 430/431 with route creation at 1,243 ms against its unchanged
+  1,000 ms limit; and 429/431 with two invariant deadlines. The last report is
+  `apps/server/test-results/us4-t107-full.json`. Bounded phase timings showed latency
+  spread over actions and invariant checks, not a single 30-second wait. Isolated seeds
+  completed in about two seconds; that alone did not establish the physical bottleneck.
+- Samuel approved separating capacity measurements from unrelated test workloads.
+  Plan, tasks and quickstart were aligned before configuring two native Vitest projects.
+  The 43 ordinary files retain their usual parallelism; the three capacity/invariant
+  files run afterward, one at a time. No deadline, assertion, seed, step, performance
+  threshold or internal concurrency case changed. No dependency or custom runner was added.
+- Before/after collection is identical: 323 declarations across 46 files. Runtime
+  reports also contain the same 431 cases, including multiplicity, after normalizing
+  random fixture UUIDs in parameterized permission-test names. `pnpm check` and the
+  complete `pnpm test` pass (216 domain, 431 server, 174 web; 821 total). An additional
+  complete server run passes 431/431 in 87.89 seconds; its timestamps verify disjoint
+  execution groups and serial capacity files. All three invariant seeds complete 90
+  steps, in 2.14/1.91/1.86 seconds of measured workload. Report:
+  `apps/server/test-results/us4-t107-partition-green.json`.
+- The earlier full e2e run passed 73/74; T108's trace showed a premature old-zero
+  acknowledgment assertion before local pickup persistence. The test now awaits visible
+  pickup completion and settled synchronization, preserving the zero assertion, all
+  downstream checks and timeouts. T109 reproduced decision controls overflowing at
+  390 px with long courier labels; constrained grid/picker sizing fixes it. All four
+  focused journeys pass with accessibility checks, and actual captures were reviewed.
+- A final return-review inspection found T110: a return with original COD above
+  COP 2,000,000 inherited the delivery collection proposal and falsely said money was
+  collected. A new e2e first failed on that exact alert. Return collection initialization
+  now proposes zero without changing delivery thresholds or domain rules. All five
+  focused journeys pass, including unchanged original COD and zero persisted return
+  amounts; the ordinary-COD return remains covered. The preceding complete run passed
+  74/74 without retries. After the correction, the expanded complete gate passes 75/75
+  without retries in 4.5 minutes.
+- Final gates after T110 all pass: `pnpm check` (format/lint/types), `pnpm test`
+  (216 domain, 431 server, 174 web; 821 total), `pnpm test:e2e` (75), and `pnpm build`
+  (including the production service worker). The final complete server phase takes
+  94.47 seconds. Two root workspace runs and the additional detailed full server run
+  pass under T107's approved policy; these local results do not replace US4's future CI.
+- Repeated scoped US4 convergence checks 7 functional requirements (FR-018–FR-019,
+  FR-029–FR-032, FR-041), 3 buildable success criteria (SC-001/SC-006/SC-007), all 8
+  US4 acceptance scenarios, 7 plan decisions, T053–T060/T103–T110 (16 tasks) and all 9
+  constitution principles. No remaining gap was found; assessment left `tasks.md`
+  byte-for-byte unchanged. Completion tracking then closed the 9 remaining verified
+  tasks. The second assessment after completion tracking also found no gap and preserved
+  the file's SHA-256 (`5c355e40fd13a671006a5edb44dba5e2f160c86fcb82220f9f2e868ded435944`).
+  US5–US7 and feature-wide polish/physical validation remain incomplete.
+- GitHub was checked read-only: remote `main` is still `4910f76`, CI `38686516078`
+  succeeded, and no US4 PR is open. No dependency, migration, commit or push was added.
+  The existing LAN review API was not restarted; do not treat that US3-era server as
+  US4 physical-device validation.
+
+## US4 CI retry investigation — T111/T112 (2026-10-15)
+
+- Latest published head `a169cbb` has green CI `38814337383`, but not a clean e2e run:
+  check, 216 domain/431 server/174 web tests and build pass; 74 e2e pass first time,
+  while the US4 new-attempt/return journey exceeds its 30-second limit waiting for
+  "Registrar entrega" and passes on retry. All invariant seeds reach step 89, with
+  measured workload 5.61/5.37/5.19 seconds under T107's unchanged limits.
+- Implementation-head CI `38814284341` is separately green with 74 first-pass e2e and
+  one retry in account recovery: `accessibilityViolations` requires a notification that
+  has already disappeared to expand. These are different failures, not proof of one
+  machine-load cause. The workflow uploads no trace artifacts, so the exact original
+  browser frames cannot be reconstructed from GitHub. Both paths have controlled local
+  reproductions; do not claim a CI trace established their exact interleaving.
+- T111 withholds the real courier-route request, leaving the actual IndexedDB snapshot
+  visible. The old last-address selector deterministically matches the completed visit
+  instead of a pending delivery. It now matches the delivery label and pending state
+  uniquely, waits for that refreshed stop, and preserves every subsequent attempt,
+  problem, return, collection and server-history assertion. The regression first fails
+  on the incorrectly matched cached visit. An initial selector refinement also failed
+  because adjacent label text has no word boundary; matching the exact delivery label
+  corrects that test selector. No application synchronization behavior changes.
+- T112 advances Sonner's native clock through expiry between notification discovery and
+  the pause shortcut. The old helper then times out waiting for the vanished toaster
+  (teardown closes the page); after correction, atomic checks require every notification
+  still present to expand or accept their completed disappearance. The full axe rules,
+  animation settling and focus restoration remain; no toast or contrast rule is excluded.
+  A new pre-pause test hook complements the existing pre-scan hook.
+- The controlled US4 journey passes, as do the visible-toast, expired-toast and recovery
+  cases. Ten repetitions of all four pass (40/40, one worker, no retries, 2.2 minutes).
+  Final full gates pass after the generic promise type was aligned with the existing
+  lint rule: `pnpm check`, `pnpm test` (216 domain, 431 server, 174 web; 821 total),
+  `pnpm test:e2e` (76/76, all first pass, 4.4 minutes), and `pnpm build`. The complete
+  server phase passes in 83.51 seconds. No lint configuration changed.
+- Scoped convergence checks FR-022/FR-029/FR-038/SC-006, US4/AC1/AC6, two plan decisions,
+  T055/T100/T111/T112 and all nine constitution principles. No remaining gap was found;
+  the assessment preserved tasks byte-for-byte, then implementation tracking marked the
+  two corrections complete. The second read-only assessment also found no gap and
+  preserved tasks SHA-256 `13f903e868b1240cdef18c4a7daa0f9816e09c112b96bf5ec894ebe2387213db`.
+  T112's original FR-034 citation is explicitly clarified as FR-038 without rewriting
+  the convergence task or introducing US6 work. Samuel subsequently authorized commit/push
+  to publish these corrections in PR #22 and obtain new CI evidence. That head's CI must
+  still be checked; the prior retry is not a clean result. Merge and US5 require
+  separate approval.
 
 ## Open with the client
 

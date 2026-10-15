@@ -25,6 +25,7 @@ import { ReassignShipmentDialog } from "@/features/routes/reassign-dialog";
 import { CustodyHistory } from "@/features/routes/route-history";
 import { formatCop, formatDate, formatDateTime, formatWindow } from "@/lib/format";
 import { ConfirmFeeDialog } from "./confirm-fee-dialog";
+import { ExceptionActions } from "./exception-decision-dialog";
 import { ShipmentRecords } from "./shipment-records";
 import { VoidDialog } from "./void-dialog";
 
@@ -76,6 +77,8 @@ const fieldLabels: Record<string, string> = {
   routeId: "Ruta",
   courierId: "Mensajero",
   custodyCourierId: "Tiene el paquete",
+  heldAtOffice: "En oficina",
+  returnDecided: "Devolución decidida",
 };
 const moneyFields = new Set(["fee", "calculatedFee", "codAmount"]);
 const enumLabels: Record<string, Record<string, string>> = {
@@ -141,6 +144,7 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         description={`${shipment.merchant.name} · ${formatDate(shipment.serviceDate)}`}
         actions={
           <>
+            <ExceptionActions shipment={shipment} />
             {shipment.feeNeedsReview && user.role === "owner" && (
               <ConfirmFeeDialog shipment={shipment} />
             )}
@@ -168,6 +172,10 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         }
       >
         <ShipmentStatusMark status={shipment.status} />
+        {shipment.returnDecided && shipment.status === "exception" && (
+          <Badge variant="warning">Devolución en curso</Badge>
+        )}
+        {shipment.heldAtOffice && <Badge variant="outline">En oficina</Badge>}
         {shipment.feeNeedsReview && <Badge variant="warning">Tarifa por revisar</Badge>}
       </PageHeader>
 
@@ -211,7 +219,7 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
           <Row label="Nivel de servicio">{serviceLevelLabels[shipment.serviceLevel]}</Row>
         </Section>
 
-        {(shipment.route ?? shipment.custodyCourier) && (
+        {(shipment.route ?? shipment.custodyCourier ?? shipment.heldAtOffice) && (
           <Section title="Ruta y custodia">
             {shipment.route && (
               <Row label="Ruta">
@@ -232,7 +240,9 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
                 {shipment.route.courier?.name ?? "Sin mensajero"}
               </Row>
             )}
-            <Row label="Tiene el paquete">{shipment.custodyCourier?.name}</Row>
+            <Row label="Tiene el paquete">
+              {shipment.heldAtOffice ? "Oficina" : shipment.custodyCourier?.name}
+            </Row>
             {shipment.handover && (
               <div className="py-2">
                 <HandoverBadge handover={shipment.handover} onResolved={refresh} />
@@ -255,7 +265,7 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         </Section>
       </div>
 
-      <ShipmentRecords records={shipment.records} />
+      <ShipmentRecords records={shipment.records} attempts={shipment.attempts} />
 
       <CustodyHistory events={shipment.events} />
 

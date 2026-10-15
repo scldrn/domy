@@ -3,6 +3,7 @@ import type { Executor } from "../db/client.ts";
 
 export type AuditEntity =
   | "user"
+  | "company_settings"
   | "merchant"
   | "pickup_point"
   | "courier"

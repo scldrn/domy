@@ -1,5 +1,10 @@
 import {
   codConfirmationThreshold,
+  deliveryAttempts,
+  exceptionDecisionInput,
+  exceptionDecisionState,
+  officeReceiptInput,
+  officeReceiptStatus,
   feeConfirmationThreshold,
   boardQuery,
   bogotaToday,
@@ -77,16 +82,19 @@ import {
   rateEntriesFor,
   resolvePickup,
 } from "../lib/registration.ts";
-import { lockRoutes, moveShipment } from "../lib/reassignment.ts";
+import { lockRoutes, moveShipment, routeHeldShipment } from "../lib/reassignment.ts";
 import { refreshRouteStatus } from "../lib/route-status.ts";
 import {
   loadHandovers,
   loadPlan,
+  loadOfficePlace,
+  loadRouteRow,
   planShipments,
   recordRouteEvents,
   removeFromPlan,
   savePlan,
   touchRoute,
+  transitionShipments,
   unassignedUpTo,
 } from "../lib/route-store.ts";
 import { AppError } from "../lib/errors.ts";
@@ -199,6 +207,9 @@ async function loadRouteState(db: Executor, id: string) {
       },
       routeCourier: { id: routeCouriers.id, name: routeCouriers.name },
       custodyCourier: { id: custodyCouriers.id, name: custodyCouriers.name },
+      heldAtOffice: shipments.heldAtOffice,
+      returnDecided: shipments.returnDecided,
+      needsReview: shipments.needsReview,
     })
     .from(shipments)
     .leftJoin(routes, eq(routes.id, shipments.routeId))
@@ -211,6 +222,9 @@ async function loadRouteState(db: Executor, id: string) {
   );
   const route = present(row?.route ?? null);
   return {
+    heldAtOffice: row?.heldAtOffice ?? false,
+    returnDecided: row?.returnDecided ?? false,
+    needsReview: row?.needsReview ?? false,
     route: route && { ...route, courier: present(row?.routeCourier ?? null) },
     custodyCourier: present(row?.custodyCourier ?? null),
     handover: handover ?? null,
@@ -219,6 +233,7 @@ async function loadRouteState(db: Executor, id: string) {
 
 async function loadDetail(db: Executor, id: string, now: Date): Promise<ShipmentDetail> {
   const shipment = await loadShipment(db, id);
+  const records = await loadShipmentRecords(db, id);
   const events = await db
     .select({ event: shipmentEvents, actor: { id: users.id, name: users.name } })
     .from(shipmentEvents)
@@ -257,7 +272,8 @@ async function loadDetail(db: Executor, id: string, now: Date): Promise<Shipment
       onBehalf: event.onBehalf,
     })),
     // The courier's records and their flags (feature 003, FR-036).
-    records: await loadShipmentRecords(db, id),
+    records,
+    attempts: deliveryAttempts(records),
     recordFlags: (await loadRecordFlags(db, [id], now)).get(id) ?? [],
   };
 }
@@ -688,9 +704,12 @@ export const shipmentRoutes = new Hono<AppEnv>()
               pickupAddress: shipments.pickupAddress,
               pickupPoint: { id: pickupPoints.id, label: pickupPoints.label },
               pickupNeighborhood: { id: pickupNeighborhoods.id, name: pickupNeighborhoods.name },
+              heldAtOffice: shipments.heldAtOffice,
+              holder: { id: custodyCouriers.id, name: custodyCouriers.name },
             })
             .from(shipments)
             .leftJoin(pickupPoints, eq(pickupPoints.id, shipments.pickupPointId))
+            .leftJoin(custodyCouriers, eq(custodyCouriers.id, shipments.custodyCourierId))
             .innerJoin(
               pickupNeighborhoods,
               eq(pickupNeighborhoods.id, shipments.pickupNeighborhoodId),
@@ -705,10 +724,12 @@ export const shipmentRoutes = new Hono<AppEnv>()
     return c.json({
       shipments: items.flatMap((item): UnassignedShipment[] => {
         const pickup = byId.get(item.id);
+        const holder = present(pickup?.holder ?? null);
         return pickup
           ? [
               {
                 ...item,
+                heldBy: pickup.heldAtOffice ? "office" : holder ? { courier: holder } : null,
                 pickupAddress: pickup.pickupAddress,
                 pickupPoint: present(pickup.pickupPoint),
                 pickupNeighborhood: pickup.pickupNeighborhood,
@@ -779,6 +800,187 @@ export const shipmentRoutes = new Hono<AppEnv>()
   .get("/:id", validate("param", idParam), async (c) => {
     return c.json(await loadDetail(c.get("db"), c.req.valid("param").id, c.get("clock")()));
   })
+  // 003 T056, FR-029–FR-032: a decision and all route effects share one receipt/transaction.
+  .post(
+    "/:id/exception-decision",
+    validate("param", idParam),
+    validate("json", exceptionDecisionInput),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const db = c.get("db");
+      const now = c.get("clock")();
+      const by = {
+        actorUserId: c.get("user").id,
+        now,
+        reason: input.decision === "return" ? "Devolver al remitente" : "Nuevo intento",
+      };
+      if (!(await findShipmentAction(db, input.actionId))) {
+        await db
+          .transaction(async (tx) => {
+            const [before] = await tx.select().from(shipments).where(eq(shipments.id, id));
+            if (!before) throw new AppError("not_found");
+            const waiting = await tx
+              .select()
+              .from(handovers)
+              .where(and(eq(handovers.shipmentId, id), eq(handovers.status, "pending")));
+            await lockRoutes(tx, [
+              before.routeId,
+              input.routeId ?? null,
+              ...waiting.flatMap((h) => [h.fromRouteId, h.toRouteId]),
+            ]);
+            const [current] = await tx
+              .select()
+              .from(shipments)
+              .where(eq(shipments.id, id))
+              .for("update");
+            // Another copy may have committed while this request waited on the shared locks.
+            if (await findShipmentAction(tx, input.actionId)) return;
+            if (!current || current.version !== before.version)
+              throw new AppError("version_conflict");
+            const state = exceptionDecisionState(current, input, bogotaToday(now));
+            if (!state) throw new AppError("no_exception_to_decide");
+            await routeHeldShipment(
+              tx,
+              { ...current, ...state, routeId: current.routeId },
+              state.routeId,
+              by,
+            );
+            await tx
+              .update(shipments)
+              .set({
+                ...state,
+                routeId: state.status === "registered" ? null : state.routeId,
+                version: sql`${shipments.version} + 1`,
+                updatedAt: now,
+              })
+              .where(eq(shipments.id, id));
+            await tx.insert(shipmentEvents).values({
+              shipmentId: id,
+              type: "exception_decided",
+              actorUserId: by.actorUserId,
+              occurredAt: now,
+              recordedAt: now,
+              fromStatus: current.status,
+              toStatus: state.status,
+              routeId: state.routeId,
+              reason: by.reason,
+              clientEventId: input.actionId,
+              changes: {
+                returnDecided: [current.returnDecided, state.returnDecided],
+                routeId: [current.routeId, state.routeId],
+                serviceDate: [current.serviceDate, state.serviceDate],
+              },
+            });
+            // FR-041: office-held new attempts re-enter the ordinary assignment flow.
+            if (state.status === "registered" && state.routeId) {
+              const target = await loadRouteRow(tx, state.routeId);
+              await transitionShipments(tx, {
+                ids: [id],
+                from: ["registered"],
+                to: target.status === "draft" ? "assigned" : "dispatched",
+                routeId: target.id,
+                eventRouteId: target.id,
+                actorUserId: by.actorUserId,
+                occurredAt: now,
+              });
+            }
+          })
+          .catch((error: unknown) => {
+            if (isUniqueViolation(error, "shipment_events_client_event_id_key")) return;
+            throw error;
+          });
+      }
+      return c.json(await loadShipment(db, id));
+    },
+  )
+  // 003 T057, FR-041: receipt ends courier custody without relaxing route transitions.
+  .post(
+    "/:id/office-receipt",
+    validate("param", idParam),
+    validate("json", officeReceiptInput),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { actionId } = c.req.valid("json");
+      const db = c.get("db");
+      const now = c.get("clock")();
+      const by = { actorUserId: c.get("user").id, now, reason: "Recibido en oficina" };
+      if (!(await findShipmentAction(db, actionId)))
+        await db
+          .transaction(async (tx) => {
+            const [before] = await tx.select().from(shipments).where(eq(shipments.id, id));
+            if (!before) throw new AppError("not_found");
+            const waiting = await tx
+              .select()
+              .from(handovers)
+              .where(and(eq(handovers.shipmentId, id), eq(handovers.status, "pending")));
+            await lockRoutes(tx, [
+              before.routeId,
+              ...waiting.flatMap((h) => [h.fromRouteId, h.toRouteId]),
+            ]);
+            const [current] = await tx
+              .select()
+              .from(shipments)
+              .where(eq(shipments.id, id))
+              .for("update");
+            if (await findShipmentAction(tx, actionId)) return;
+            if (!current || current.version !== before.version)
+              throw new AppError("version_conflict");
+            await loadOfficePlace(tx);
+            const status = officeReceiptStatus(current);
+            if (!status)
+              throw new AppError("not_held_by_courier", {
+                ...(current.status === "picked_up" &&
+                  current.routeId && {
+                    message:
+                      "Este envío sigue en una ruta. Reporta una novedad antes de recibirlo en oficina.",
+                  }),
+              });
+            if (current.returnDecided && current.routeId)
+              await routeHeldShipment(
+                tx,
+                { ...current, status, custodyCourierId: null, heldAtOffice: true },
+                current.routeId,
+                by,
+              );
+            await tx
+              .update(shipments)
+              .set({
+                status,
+                custodyCourierId: null,
+                heldAtOffice: true,
+                version: sql`${shipments.version} + 1`,
+                updatedAt: now,
+              })
+              .where(eq(shipments.id, id));
+            await tx.insert(shipmentEvents).values({
+              shipmentId: id,
+              type: "office_received",
+              actorUserId: by.actorUserId,
+              occurredAt: now,
+              recordedAt: now,
+              fromStatus: current.status,
+              toStatus: status,
+              routeId: current.routeId,
+              clientEventId: actionId,
+              changes: {
+                custodyCourierId: [current.custodyCourierId, null],
+                heldAtOffice: [false, true],
+              },
+            });
+          })
+          .catch((error: unknown) => {
+            if (isUniqueViolation(error, "shipment_events_client_event_id_key")) return;
+            throw error;
+          });
+      const shipment = await loadShipment(db, id);
+      const [state] = await db
+        .select({ heldAtOffice: shipments.heldAtOffice })
+        .from(shipments)
+        .where(eq(shipments.id, id));
+      return c.json({ ...shipment, heldAtOffice: state?.heldAtOffice ?? false });
+    },
+  )
   // Corrections while the shipment is not picked up (FR-015, FR-016, FR-018, FR-042).
   .patch("/:id", validate("param", idParam), validate("json", shipmentUpdateInput), async (c) => {
     const { id } = c.req.valid("param");
@@ -962,7 +1164,16 @@ export const shipmentRoutes = new Hono<AppEnv>()
               .where(eq(shipments.id, id));
             if (!found) throw new AppError("not_found", { message: "No encontramos ese envío." });
             // Routes first, in the order every route action locks them.
-            await lockRoutes(tx, [found.routeId, toRouteId]);
+            const pending = await tx
+              .select()
+              .from(handovers)
+              .where(and(eq(handovers.shipmentId, id), eq(handovers.status, "pending")));
+            await lockRoutes(tx, [
+              found.routeId,
+              toRouteId,
+              ...pending.flatMap((h) => [h.fromRouteId, h.toRouteId]),
+            ]);
+            if (await findShipmentAction(tx, actionId)) return;
             const [shipment] = await tx
               .select()
               .from(shipments)

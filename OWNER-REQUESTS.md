@@ -4,17 +4,14 @@ Preguntas y pendientes para Samuel (propietario de Domy) y, a través de él, pa
 lo mantiene al día: agrega cada pregunta cuando surge y la mueve a «Resueltas» con tu respuesta
 y la fecha. Responde aquí mismo o en la conversación.
 
-Última actualización: 2026-10-14.
+Última actualización: 2026-10-15.
 
 ## Bloquean algo ahora
 
-Autorizados el commit y push del registro de prueba móvil, la fusión squash de la PR #21
-con CI verde y la continuación de US4 desde `main` actualizado.
-
-Autorizados también el commit y push de T102 en la misma PR. Queda pendiente completar
-el CI del commit de cierre antes de fusionar. T102 pasó sus pruebas y convergencia; el
-timeout local de invariantes sigue documentado sin una causa confirmada. La aprobación
-no permite fusionar con compuertas pendientes.
+Nada requiere una respuesta ahora. Autorizaste commit y push de T111/T112 a la PR #22
+para validar la corrección en un CI nuevo. Pasan las cuatro compuertas locales y las
+40 ejecuciones focalizadas; se debe revisar el CI del nuevo head, no el resultado con
+reintento de `a169cbb`. Fusionar y continuar US5 requieren autorización aparte y CI verde.
 
 ## Antes de terminar la 003 (app del mensajero)
 
@@ -42,6 +39,9 @@ Nada pendiente por ahora.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-15 | ¿Publicar T111/T112 mediante commit y push en la PR #22 para validar un CI nuevo? | «Autorizo». Solo publicar la corrección y revisar CI; no fusionar ni continuar US5 |
+| 2026-10-15 | Investigar y corregir la inestabilidad encontrada al revisar la PR #22 | «Investiga y Arreglalo». T111/T112 reproducidas y corregidas localmente; cuatro compuertas y convergencia puntual aprobadas. Publicar la corrección requiere aprobación; sin autorización de fusión ni continuación a US5 |
+| 2026-10-15 | ¿Hacer commit, push y abrir la PR de US4 después de las cuatro compuertas y la convergencia? | «Sí». Autorizada la publicación de T053–T060/T103–T110. La fusión y continuar US5 requieren autorización aparte y CI verde |
 | 2026-10-14 | Íconos de la app instalable mientras no hay logo | Provisional «domy» |
 | 2026-10-14 | ¿Avisar al mensajero cuando se edita un envío de su ruta? | Sí, con aviso |
 | 2026-10-14 | ¿Dónde se vincula la cuenta de un mensajero con su ficha? | En «Usuarios», solo el propietario, al crear o editar una cuenta con rol Mensajero (T094) |
@@ -54,6 +54,8 @@ Nada pendiente por ahora.
 | 2026-10-14 | ¿Explicitar `returnDecided` por fila del tablero y una regla compartida para lista y conteo de «Novedades por decidir»? | Sí; excluir devoluciones ya decididas, sin adelantar acciones de US4 |
 | 2026-10-14 | ¿Hacer commit, push y abrir la PR de US3 (T048–T052 y T099–T101)? | Sí. La fusión y continuar US4 requieren autorización aparte y CI verde |
 | 2026-10-14 | ¿Publicar el registro de la prueba móvil, fusionar la PR #21 mediante squash con CI verde y continuar US4? | Autorizado. Probado en iOS y Android con Chrome y Safari: funcionamiento esperado |
-| 2026-10-14 | ¿Alinear spec, modelo, plan y tareas de US4 para permitir «Recogido» → «Registrado» exclusivamente al recibir en oficina un paquete fuera de ruta, con prueba de regresión y sin relajar las rutas? | Sí. Aplicar en la rama de US4 tras fusionar US3; todavía no implementado |
+| 2026-10-14 | ¿Alinear spec, modelo, plan y tareas de US4 para permitir «Recogido» → «Registrado» exclusivamente al recibir en oficina un paquete fuera de ruta, con prueba de regresión y sin relajar las rutas? | Sí. Alineación e implementación locales en `003-us4-decisions`, con pruebas de dominio y PostgreSQL pasando. La prohibición de la transición genérica sigue intacta. La interfaz y las compuertas finales de US4 siguen pendientes |
 | 2026-10-14 | ¿Hacer commit y push de T102 en la PR #21 para repetir el CI? | Sí. No fusionar mientras queden compuertas pendientes |
-| 2026-10-15 | ¿Cerrar la convergencia de T102, registrar el CI verde, publicar el cierre y fusionar la PR #21 con el nuevo CI verde para continuar US4? | «ok, hazlo». Mantener documentado el timeout local, sin declararlo resuelto |
+| 2026-10-15 | ¿Cerrar la convergencia de T102, registrar el CI verde, publicar el cierre y fusionar la PR #21 con el nuevo CI verde para continuar US4? | «ok, hazlo». Cierre publicado como `64f9622`; CI `38684623497` verde; PR #21 fusionada como `4910f76`. US4 inicia desde ese `main`. Se mantiene documentado el timeout local, sin declararlo resuelto |
+| 2026-10-15 | ¿Precisar las pruebas de reintentos de decisiones y las respuestas GET/PATCH de configuración antes de T053? | «Ok continuemos con tu recomendacion». Tareas, contrato y plan ajustados antes de implementar. Las pruebas de decisiones, configuración y reintentos pasan localmente; US4 aún no está terminada ni publicada |
+| 2026-10-15 | ¿Aislar rendimiento e invariantes del resto de la suite manteniendo todos los casos, semillas, pasos, aserciones y límites? | «Sí, aislar esas pruebas conservando cobertura y límites». Plan, tareas y quickstart alineados antes de configurar los proyectos nativos de Vitest. El resto mantiene su paralelismo; no se añaden archivos de capacidad aún no implementados |

@@ -32,6 +32,10 @@ stops, reassignment, custody, handovers). UI terms appear in Spanish between quo
 - Q: Where is a courier account linked to the courier it works as? → A: In "Usuarios", by the owner only, when creating or editing an account with the courier role ("Mensajero vinculado"); "Mensajeros" shows each courier's account, read only. One account per courier and one courier per account; only an active courier account is linked; a linked account keeps its role until unlinked (FR-002).
 - Q: Where is the office? → A: Carrera 90 # 65C-10, Urbanización Mirador de Barcelona, barrio Robledo, Medellín (FR-041).
 
+### Session 2026-10-15
+
+- Q: When a new attempt was already decided and rescheduled off route, what happens when the office receives the picked-up package? → A: "Recibido en oficina" changes "Recogido" to "Registrado" and transfers custody to the office, keeping its service date. This transition is exclusive to that action on an off-route package held by a courier; route actions still cannot change "Recogido" to "Registrado" (owner-approved alignment of FR-041).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Carry out a route (Priority: P1)
@@ -554,6 +558,11 @@ over equal to cash collected minus disbursements.
 
   The office has one address, set by the owner; "Recibido en oficina" cannot be recorded
   until it is set.
+
+  When the new attempt was decided before receipt and the shipment is "Recogido" off
+  route, receipt explicitly changes it to "Registrado", keeping its service date and
+  transferring custody from the courier to the office. A picked-up shipment still on a
+  route is not eligible; no route action gains this transition.
 - **FR-030**: Completing a return stop MUST capture the received-by name and ask for a photo;
   the shipment becomes "Devuelto" and custody ends. A return stop cannot end in an
   exception: if the merchant is not there, the courier reports a problem with a note
@@ -652,7 +661,8 @@ over equal to cash collected minus disbursements.
   (errand completed); "Recogido" → "Novedad" (exception); "Novedad" → "Recogido" (new
   attempt, or exception reverted, while a courier holds the package); "Novedad" →
   "Registrado" (new attempt while the office holds the package); "Novedad" → "Devuelto"
-  (return stop completed);
+  (return stop completed); "Recogido" off route → "Registrado" only through receipt at
+  the office after a new attempt was already decided;
   "Entregado" → "Recogido" and "Devuelto" → "Novedad" (reverted by the dispatcher);
   "Registrado" or "Asignado" → "Recogido" (pickup record that arrives after the dispatcher
   changed the route).

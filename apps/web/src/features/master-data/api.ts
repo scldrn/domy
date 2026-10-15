@@ -1,5 +1,7 @@
 import type {
   AuditEvent,
+  CompanySettings,
+  CompanySettingsInput,
   Carrier,
   CarrierCreateInput,
   CarrierUpdateInput,
@@ -25,6 +27,11 @@ import type { NeighborhoodOption } from "@/features/shipments/api";
 /** Calls of the master data screens (User Story 6). */
 
 type Active = "true" | "false" | undefined;
+
+/** US4 FR-041: the office is read by dispatch and configured by its owner. */
+export const getCompanySettings = () => unwrap<CompanySettings>(api.api.settings.$get());
+export const updateCompanySettings = (input: CompanySettingsInput) =>
+  unwrap<CompanySettings>(api.api.settings.$patch({ json: input }));
 
 export async function listMerchants(q: string, active?: Active): Promise<Merchant[]> {
   const { items } = await unwrap<{ items: Merchant[] }>(

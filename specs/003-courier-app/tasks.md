@@ -185,17 +185,53 @@ return stop; verify two attempts in the first history and "Devuelto" on the seco
 
 ### Tests for User Story 4 ⚠️ write first, must fail
 
-- [ ] T053 [P] [US4] Integration tests in `apps/server/tests/exception-decision.test.ts` covering spec US4 scenarios 1–6 and FR-029–FR-032: new attempt on the same route; on another courier's route with a pending handover; rescheduled (off route, new service date, listed by `GET /api/shipments/unassigned` with `heldBy`); return stop at the place the shipment was picked up, including a reverse pickup; a return changed to a new attempt removes the pending return stop; `409 no_exception_to_decide`; a return record sets `returned` and ends custody; a problem on a return stop keeps it pending; attempts listed without reverted records; a held shipment is refused on a route in preparation with `409 route_not_in_progress`
-- [ ] T054 [P] [US4] Integration tests in `apps/server/tests/office-receipt.test.ts` covering spec US4 scenarios 7–8 and FR-041: receipt for a shipment in "Novedad" and for one "Recogido" off route; custody passes to the office; `409 not_held_by_courier`; `409 office_not_configured`; with a new attempt the shipment is `registered` and a route gets a pickup stop at the office; with a return the route gets the office pickup before the return stop; the pickup record at the office gives custody to the courier; `GET` and `PATCH /api/settings` (owner only for `PATCH`, change audited)
-- [ ] T055 [P] [US4] End-to-end test in `apps/web/tests/e2e/exception-decision.spec.ts`: quickstart scenarios 12–13
+- [X] T053 [P] [US4] Integration tests in `apps/server/tests/exception-decision.test.ts` covering spec US4 scenarios 1–6 and FR-029–FR-032: new attempt on the same route; on another courier's route with a pending handover; rescheduled (off route, new service date, listed by `GET /api/shipments/unassigned` with `heldBy`); return stop at the place the shipment was picked up, including a reverse pickup; a return changed to a new attempt removes the pending return stop; `409 no_exception_to_decide`; a return record sets `returned` and ends custody; a problem on a return stop keeps it pending; attempts listed without reverted records; a held shipment is refused on a route in preparation with `409 route_not_in_progress`
+  Include concurrent requests with the same `actionId` for both decisions, and late
+  replays of each after a subsequent change (including a return changed to a new attempt).
+  Assert one decision event and one set of tasks/handovers for the original action,
+  no repeated custody or fee effect, and no reversal of the intervening change. A replay
+  returns the current shipment rather than failing the current-state guard or applying
+  the old decision again (Constitution II, IV, VI); these tests precede T056.
+- [X] T054 [P] [US4] Integration tests in `apps/server/tests/office-receipt.test.ts` covering spec US4 scenarios 7–8 and FR-041: receipt for a shipment in "Novedad" and for one "Recogido" off route; custody passes to the office; `409 not_held_by_courier`; `409 office_not_configured`; with a new attempt the shipment is `registered` and a route gets a pickup stop at the office; with a return the route gets the office pickup before the return stop; the pickup record at the office gives custody to the courier; `GET` and `PATCH /api/settings` (owner only for `PATCH`, change audited). Before T057, add unit regressions in `packages/domain/src/shipment-lifecycle.test.ts` for the contextual off-route `picked_up → registered` office receipt with its service date preserved, rejection while on a route, and the unchanged generic transition prohibition; cover concurrent and late retries of receipt and unchanged settings (Constitution II–IV)
+  Assert settings responses against `CompanySettings` as documented in the contract:
+  GET without a body returns 200 and both fields null before configuration (including
+  when the singleton row does not yet exist); PATCH returns 200 with the saved address
+  and resolved neighborhood; a late replay returns the current configuration without
+  restoring an older value. Owner and dispatcher can GET; only the owner can PATCH;
+  couriers cannot use either endpoint.
+- [X] T055 [P] [US4] End-to-end test in `apps/web/tests/e2e/exception-decision.spec.ts`: quickstart scenarios 12–13, including reporting a problem on a pending return without closing it, and office pickup followed by return while offline, reopening and synchronization. Before T060, extend `apps/web/src/lib/offline/outbox.test.ts` for office custody before that pickup, courier custody afterward and the return's local completion (FR-018, FR-030, FR-041)
 
 ### Implementation for User Story 4
 
-- [ ] T056 [US4] Implement `POST /api/shipments/:id/exception-decision` in `apps/server/src/routes/shipments.ts`, add `attempts` to `GET /api/shipments/:id`, and extend `GET /api/shipments/unassigned`, `POST /api/routes/:id/shipments`, and `POST /api/shipments/:id/reassign` to held shipments (in `apps/server/src/routes/shipments.ts` and `apps/server/src/routes/routes.ts`), until T053 passes
-- [ ] T057 [US4] Implement `POST /api/shipments/:id/office-receipt` in `apps/server/src/routes/shipments.ts` and `GET`/`PATCH /api/settings` in `apps/server/src/routes/settings.ts` until T054 passes
-- [ ] T058 [P] [US4] Build `apps/web/src/features/shipments/exception-decision-dialog.tsx` ("Nuevo intento" with date and route, "Devolver al remitente", "Recibido en oficina") and the attempts list in `apps/web/src/features/shipments/shipment-records.tsx`; extend `CustodyHistory` in `apps/web/src/features/routes/route-history.tsx` (and its unit test) with the office lines ("La recibe la oficina", "La recoge {courier} en la oficina")
-- [ ] T059 [P] [US4] Show held shipments ("En custodia de {courier}", "En oficina") in `apps/web/src/features/routes/unassigned-list.tsx`, and build the office address form in `apps/web/src/routes/settings.tsx` with its item in `apps/web/src/routes/panel-layout.tsx`
-- [ ] T060 [US4] In the courier app, complete a return stop with `apps/web/src/features/courier/delivery-form.tsx` (received-by name and photo, no collection) and list "En mi custodia" in `apps/web/src/routes/courier-route.tsx`, until T055 passes
+T056 domain checkpoint: before server implementation, extend `shipment-lifecycle.test.ts`
+for exception-decision state/date/route selection and held-routing eligibility, and
+`courier-records.test.ts` for applied, non-reverted delivery-attempt selection. Implement
+those pure rules in their corresponding domain modules, then consume them from T056.
+
+T053 red evidence (2026-10-15): `exception-decision.test.ts` has 17 cases against a
+fresh PostgreSQL 18 container. The run has 16 failures and 1 pass: 15 cases stop at the
+absent decision endpoint (404), one at the missing `attempts` projection, and the existing
+courier role guard passes. Fixture registration, dispatch, pickup and exception records
+succeed first. Assertions after those blockers, including replay effects, must still be
+verified during T056; they are not passing behavior yet. T053 remains unchecked until
+green. Continue with T054/T055 before production implementation.
+
+T054/T055 red evidence (2026-10-15): office/settings integration tests have 12 failures
+against real PostgreSQL, at the absent settings, decision or receipt endpoints. The
+lifecycle suite has 8 passing baseline cases and 2 failing receipt cases because the
+expected domain export does not exist yet; its test-only signature loads the real module,
+not a mock or production stub, and is replaced by a direct import in T057. The outbox
+suite has 8 passes and 2 new failures: it incorrectly permits return before office pickup
+and fails to replay the office pickup. Three phone scenarios cover quickstart 12–13,
+return problems, reopening and offline pickup/return; both phone runs stop at the absent
+decision button or office form. `pnpm check` passes. Downstream assertions are not yet validated. These tasks
+remain unchecked until green, and convergence follows implementation, not this RED stage.
+
+- [X] T056 [US4] Implement `POST /api/shipments/:id/exception-decision` in `apps/server/src/routes/shipments.ts`, add `attempts` to `GET /api/shipments/:id`, and extend `GET /api/shipments/unassigned`, `POST /api/routes/:id/shipments`, and `POST /api/shipments/:id/reassign` to held shipments (in `apps/server/src/routes/shipments.ts` and `apps/server/src/routes/routes.ts`), until T053 passes
+- [X] T057 [US4] Implement `POST /api/shipments/:id/office-receipt` in `apps/server/src/routes/shipments.ts` and `GET`/`PATCH /api/settings` in `apps/server/src/routes/settings.ts` until T054 passes. Declare the guarded office-receipt transition once in `packages/domain/src/shipment-lifecycle.ts`; never relax generic route transitions. Preserve the service date and write custody and its event in one transaction; reuse `auditedChange` for settings, including unchanged receipts
+- [X] T058 [P] [US4] Build `apps/web/src/features/shipments/exception-decision-dialog.tsx` ("Nuevo intento" with date and route, "Devolver al remitente", "Recibido en oficina") and the attempts list in `apps/web/src/features/shipments/shipment-records.tsx`; extend `CustodyHistory` in `apps/web/src/features/routes/route-history.tsx` (and its unit test) with the office lines ("La recibe la oficina", "La recoge {courier} en la oficina")
+- [X] T059 [P] [US4] Show held shipments ("En custodia de {courier}", "En oficina") in `apps/web/src/features/routes/unassigned-list.tsx`, and build the office address form in `apps/web/src/routes/settings.tsx` with its item in `apps/web/src/routes/panel-layout.tsx`
+- [X] T060 [US4] In the courier app, complete a return stop with `apps/web/src/features/courier/delivery-form.tsx` (received-by name and photo, no collection), reuse `problem-form.tsx` for a pending return without an exception action, and list "En mi custodia" in `apps/web/src/routes/courier-route.tsx`, until T055 passes. Extend the projection in `apps/web/src/lib/offline/outbox.ts` so an office pickup and the subsequent return replay correctly without signal, using the shared domain rules
 
 **Checkpoint**: no shipment stays in "Novedad" without a way forward
 
@@ -492,3 +528,125 @@ remaining finding or new phase. Its assessment left tasks byte-for-byte unchange
 this checkbox and closure are subsequent completion tracking. The separate local
 full-suite invariant timeout remains documented in docs/status.md; no local full-suite
 pass or resolved contention cause is claimed.
+
+## Phase 17: Convergence — Return Custody on Route Reassignment
+
+- [X] T103 HIGH Write a failing PostgreSQL regression in `apps/server/tests/exception-decision.test.ts` for reassigning an entire route with a courier-held, decided return: custody remains with its holder, exactly one pending handover goes to the new courier, and the return task waits for it. Then extend `POST /api/routes/:id/reassign` in `apps/server/src/routes/routes.ts` to use shared held-routing eligibility for decided returns, preserving ordinary shipments and completed history (003 FR-029/FR-031, feature 002 FR-025; partial). Repeat T053 and the route/reassignment/contract regressions and scoped convergence; T057–T060 retain their existing scope.
+
+T053/T056/T103 checkpoint (2026-10-15): five new domain cases failed before their rules
+were implemented; T103 reproduced a missing handover before correction. All 18 decision
+cases and 93 existing PostgreSQL regression cases pass (111 total), as do all three
+invariant seeds, 24 selected existing route/courier e2e without retries, and `pnpm check`.
+An additional failing regression verified the rejection of courier-held packages at
+draft-route creation before correcting it. Strict contract assertions retain `.strict()`
+and explicitly cover the approved `heldBy` addition and null for ordinary shipments.
+Repeated scoped convergence checked the server obligations of FR-029–FR-032, six US4
+scenarios, SC-006/SC-007, six plan decisions and all nine principles: no additional finding.
+Its final assessment left tasks unchanged; these checkboxes and this note are subsequent
+tracking. T054/T055 and T057–T060 remain incomplete, with office integration and the
+new phone journey still to verify. This is not a full-feature gate or convergence claim.
+
+## Phase 18: Convergence — Held Returns and Route Release
+
+- [X] T104 HIGH Add failing PostgreSQL regressions in `apps/server/tests/office-receipt.test.ts` for removing an office-held decided return, cancelling its draft route, and undoing dispatch before office pickup: the shipment keeps its exception/return decision and office custody and is listed unassigned after release. Add a failing case in `apps/server/tests/exception-decision.test.ts` refusing undo-dispatch when a decided return is held by a courier, even if that route's stops are still pending. Then extend the corresponding route actions in `apps/server/src/routes/routes.ts` without permitting generic `picked_up → registered`, using shared held-routing eligibility and transactional history (003 FR-029/FR-031/FR-041; feature 002 FR-017/FR-026; partial). Repeat the affected suites and scoped convergence before closing T057.
+
+## Phase 19: Convergence
+
+- [X] T105 HIGH Write failing PostgreSQL cases in `apps/server/tests/office-receipt.test.ts` for delivery and reverse-pickup shipments edited while registered at the office, then picked up again and returned: the return stop must retain the first actual pickup place, not the edited shipment address or the office. Hydrate that place from existing completed pickup history in `apps/server/src/lib/route-store.ts` for the held-return planner in `apps/server/src/lib/reassignment.ts`, without overwriting editable shipment fields or adding a migration. Repeat office, decision and route regressions and scoped convergence (FR-029/FR-041, US4/AC4; partial).
+
+Backend checkpoint (2026-10-15): T104's four regressions and T105's two edited-address
+regressions failed before correction and now pass. The latest decision/office/route
+selection passes 73/73, following the wider 141/141 pre-T105 regression; domain passes
+216/216 and all three invariant seeds pass alone after T105. `pnpm check` passes.
+Repeated scoped convergence reviewed FR-029–FR-032/FR-041, server obligations of all
+eight US4 scenarios, SC-006/SC-007, six plan decisions and nine constitution principles.
+No additional backend finding remained; the final assessment left tasks byte-for-byte
+unchanged (SHA-256 `b76a31382cc6438074e1c0372418f8914ad0b8de46035fdbe30da82dfa9f0fd7`).
+These checkbox updates and this note are subsequent implementation tracking. The earlier
+full server run failed three unchanged invariant seeds by timeout (422/425 passed);
+isolated passing seeds do not establish full-suite stability. T055/T058–T060 retain
+their pending UI/offline scope. This is not full-US4 convergence or a merge-ready claim.
+
+Subsequent full backend gate: all 431 server tests passed, including the three invariant
+seeds, in 118.37 seconds without other quality gates running concurrently. Original
+workers and timeout limits were retained. This passing run does not establish the cause
+or resolution of the prior intermittent timeout, and does not complete the pending web
+scope or the full-story workspace/e2e gates.
+
+## Phase 20: Convergence
+
+- [X] T106 CRITICAL Reproduce in `apps/web/tests/e2e/exception-decision.spec.ts` an unchanged office-settings save followed by a different address on the same mounted form: each acknowledged save must end its action lifecycle, while a retry after a lost response retains its identifier. Correct `apps/web/src/routes/settings.tsx` so the second intentional change is persisted instead of silently replaying the first no-op receipt. Verify distinct action identifiers and the actual saved response, then repeat US4 journeys and convergence (FR-019/FR-041, Constitution II/VI; contradicts).
+
+## Phase 21: Convergence
+
+- [X] T107 HIGH Diagnose the intermittent full-suite deadline in `apps/server/tests/routes-invariants.test.ts` before declaring US4 merge-ready. The full `pnpm test` gate after the UI implementation passed 430/431 server cases but timed out seed 31337 at 30 seconds; the preceding full backend run passed all 431. Capture bounded, non-sensitive per-step/query or resource timing evidence to distinguish application waiting from test-host contention; do not infer a cause from a passing isolated repeat or the connection closing after timeout. Preserve all three seeds, 90 steps, assertions, original timeouts and worker settings. Implement only an evidence-backed correction within the approved rules, or request the owner's direction if resolution requires changing shared test-resource policy. Repeat all four gates and scoped convergence, retaining the failed-run record (Constitution VI, Development Workflow & Quality Gates; partial).
+
+Owner-approved resolution (2026-10-15, after the above diagnostic constraint): Samuel
+authorized isolating capacity/invariant execution from the rest without lowering coverage
+or limits. The aligned plan names `apps/server/vitest.config.ts`: native projects retain
+ordinary parallelism and run `tests/*-scale.test.ts` plus `routes-invariants.test.ts` in a
+later, file-serial group. Confirm the complete test inventory is unchanged, preserve all
+assertions and thresholds, and rerun the four gates; no production rule is changed.
+
+## Phase 22: Convergence
+
+- [X] T108 HIGH Correct the premature acknowledgment check in `apps/web/tests/e2e/exception-decision.spec.ts`: the full 74-case run reproduced one pending pickup after the test observed the old zero before local persistence completed. Await each pickup's visible local completion before the zero-pending assertion, and await the in-flight synchronization finishing before starting the next pickup. Keep the exact zero assertion, all downstream server/history/offline checks, original timeouts and workers; do not add sleeps or application changes for this test precondition. Repeat focused journeys and the full e2e gate (FR-018/FR-019, T055; partial).
+
+## Phase 23: Convergence
+
+- [X] T109 HIGH Reproduce the long-courier-name route picker overflowing its exception-decision dialog in `apps/web/tests/e2e/exception-decision.spec.ts`, including a 390 px viewport. Constrain the dialog grid and picker in `apps/web/src/features/shipments/exception-decision-dialog.tsx` so controls remain within the visible sheet, retain their complete accessible names and 48 px targets, and the decision can be saved without horizontal scrolling. Review actual captures and repeat the focused/full e2e and static gates (US4/AC1–AC4, Constitution VII, design-system.md §5/§10; partial).
+
+## Phase 24: Convergence
+
+- [X] T110 HIGH Reproduce in `apps/web/tests/e2e/exception-decision.spec.ts` a return whose original COD exceeds COP 2,000,000: its review must not claim money was collected or ask to confirm a collection, and the stored return must still have zero amounts. Correct the return initialization in `apps/web/src/features/courier/delivery-form.tsx` without changing the delivery confirmation threshold or domain collection rules. Preserve the ordinary-COD return coverage, then repeat focused/full e2e, all gates and scoped convergence (FR-030, plan: returns without collection, Constitution VII; contradicts).
+
+US4 closure checkpoint (2026-10-15): T055/T058–T060 and T106–T110 are verified.
+T106 reproduced stale settings after a no-op receipt; T108 reproduced a premature test
+acknowledgment; T109 reproduced dialog overflow at 390 px; T110's added high-COD return
+case failed on the false collection alert before initialization was corrected. The five
+focused UI journeys and all 75 e2e now pass without retries; ordinary-COD returns remain
+covered. No scenario, assertion, limit or timeout was weakened.
+
+T107 retained the three failed complete-run records and bounded diagnostic evidence.
+The owner-approved native project partition preserves all 323 collected declarations
+across 46 files and all 431 runtime cases (fixture UUIDs normalized only for report-name
+comparison). Detailed report timestamps prove 43 ordinary files finish before the three
+serial capacity files. Two complete workspace runs and an additional complete server
+run pass after isolation. Final gates after T110: `pnpm check`, `pnpm test` (216 domain,
+431 server, 174 web; 821 total), `pnpm test:e2e` (75), and `pnpm build` all pass.
+
+Scoped convergence checks 10 requirements/buildable criteria, 8 US4 acceptance scenarios,
+7 plan decisions, all 16 US4/corrective tasks and all 9 constitution principles, with no
+remaining gap. The assessment itself left this file unchanged; the checkboxes and this
+checkpoint are subsequent implementation tracking. US5–US7 and feature-wide polish remain
+pending. At this local checkpoint no US4 commit, push or PR existed. Samuel subsequently
+approved commit, push and PR creation on 2026-10-15; merge and continuing US5 require
+separate approval and green CI.
+
+## Phase 25: Convergence
+
+- [X] T111 HIGH Reproduce the US4 new-attempt navigation race in `apps/web/tests/e2e/exception-decision.spec.ts` by withholding the real courier snapshot after the dispatcher decides: the cached completed visit must not be mistaken for the new pending delivery at the same address. First demonstrate the current last-link selector choosing that completed visit, then select the uniquely pending delivery and await its visible refreshed state. Preserve all existing journey assertions, PostgreSQL/service-worker coverage, original timeouts, workers and retry policy; do not change application synchronization to accommodate a test precondition. Repeat the controlled regression, focused repetitions, all four gates and scoped convergence. Retain CI `38814337383`'s first-attempt failure (30 seconds waiting for “Registrar entrega”, retry passed), separately from the earlier run's unrelated recovery-test flake (US4/AC1/AC6, FR-022/FR-029, T055, Constitution VI; partial).
+
+## Phase 26: Convergence
+
+- [X] T112 HIGH Reproduce the accessibility-helper race from CI `38814284341` in `apps/web/tests/e2e/access.spec.ts`: a real notification can expire after discovery but before its native pause shortcut, so `fixtures.ts` must not require an already-removed notification to expand. Add a clock-controlled pre-pause test hook alongside the existing pre-scan hook, advance the real notification through expiry, and first reproduce the absent-toast assertion failure. Then stabilize either all remaining visible notifications or their completed disappearance, retaining the full axe scan, focus restoration, the existing visible-notification regression, and every accessibility rule. Do not change production notification lifetime, add sleeps, widen limits, remove assertions or exclude notifications. Repeat both notification cases, account recovery, focused/full e2e, all gates and convergence (003 FR-034, T100, Constitution VI/VII; partial).
+
+T112 traceability clarification (implementation review): accessibility is 003 **FR-038**,
+as in T100. The FR-034 reference above is a transcription error, not US6 scope or a change
+to the intended notification/axe regression. The original convergence task is preserved.
+
+T111/T112 local completion (2026-10-15): the controlled snapshot test first reproduced
+the old selector matching a cached completed visit; the native expiry test first timed
+out waiting for the vanished toaster. Both now pass with the actual app and PostgreSQL.
+The four targeted cases pass ten repetitions each (40/40, one worker, no retries).
+Final gates pass: `pnpm check`, `pnpm test` (216 domain, 431 server, 174 web; 821 total),
+`pnpm test:e2e` (76/76, all first pass, 4.4 minutes), and `pnpm build`.
+No production code, dependency, timeout, worker/retry policy or accessibility rule changed.
+
+Scoped convergence checks FR-022/FR-029/FR-038/SC-006, US4/AC1/AC6, two plan decisions,
+T055/T100/T111/T112 and all nine principles; no remaining gap. Assessment preserved the
+file byte-for-byte; these completion markers/notes are subsequent implementation tracking.
+The published CI's retry remains historical evidence, not validation of this local fix.
+At this local checkpoint commit/push and new CI were still required. Samuel subsequently
+authorized publishing T111/T112 on 2026-10-15; review that new head's CI before merge review.
+Merge and continuing US5 require separate authorization.

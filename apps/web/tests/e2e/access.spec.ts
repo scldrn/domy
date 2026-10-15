@@ -176,6 +176,40 @@ test("keeps visible notifications stable and restores focus during accessibility
   await expect(button).toBeFocused();
 });
 
+test("scans and restores focus when a notification expires before it can be paused", async ({
+  ownerPage: page,
+}) => {
+  const run = unique();
+  await page.clock.install();
+  await createAccount(page, `Caduca ${run}`, `caduca${run}@example.com`, "Coordinador de despacho");
+  const notification = page.getByText(`Cuenta de Caduca ${run} creada`, { exact: true });
+  await expect(notification).toBeVisible();
+  const button = page.getByRole("button", { name: "Nueva cuenta" });
+  await button.focus();
+  let scanned = false;
+  let expired = false;
+  expect(
+    await accessibilityViolations(
+      page,
+      async () => {
+        scanned = true;
+        await expect(notification).toHaveCount(0);
+      },
+      async () => {
+        // No wall-clock wait: expire Sonner's real timer before its native pause shortcut.
+        await page.clock.pauseAt(new Date(Date.now() + 100));
+        await page.clock.runFor(5_000);
+        await expect(notification).toHaveCount(0);
+        expired = true;
+        await page.clock.resume();
+      },
+    ),
+  ).toEqual([]);
+  expect(expired).toBe(true);
+  expect(scanned).toBe(true);
+  await expect(button).toBeFocused();
+});
+
 test("locks sign-in after five failures and says when to retry (scenario 14)", async ({
   ownerPage,
   browser,

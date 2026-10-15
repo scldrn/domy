@@ -4,11 +4,29 @@ import {
   noticeText,
   noticeTypes,
   resolveCourierRecord,
+  deliveryAttempts,
   type CourierRecordKind,
   type ShipmentForRecord,
 } from "./courier-records.ts";
 
 const ana = "courier-ana";
+
+it("selects applied non-reverted delivery and exception attempts, preserving their order and identity (T056, FR-032)", () => {
+  const records = [
+    { kind: "pickup" as const, outcome: "applied", reverted: null },
+    { kind: "exception" as const, outcome: "applied", reverted: null },
+    { kind: "delivery" as const, outcome: "not_applied", reverted: null },
+    { kind: "exception" as const, outcome: "duplicate", reverted: null },
+    { kind: "delivery" as const, outcome: "applied", reverted: { reason: "Incorrect" } },
+    { kind: "return" as const, outcome: "applied", reverted: null },
+    { kind: "delivery" as const, outcome: "applied", reverted: null },
+  ] as const;
+  const before = structuredClone(records);
+  const selected = deliveryAttempts(records);
+  expect(selected).toEqual([records[1], records[6]]);
+  expect(selected[0]).toBe(records[1]);
+  expect(records).toEqual(before);
+});
 const beto = "courier-beto";
 const anaRoute = { id: "route-ana", status: "in_progress" as const, courierId: ana };
 const betoRoute = { id: "route-beto", status: "in_progress" as const, courierId: beto };
