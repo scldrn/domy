@@ -19,11 +19,11 @@ a short-lived branch, so the specification and implementation of every feature l
 
 ## Next step
 
-1. Verify CI for corrective T102 on PR #21; the owner approved its commit and push. Physical-phone
-   feedback was published as `a0b046d`, but its CI `38679724748` failed the refusal retry
-   selector (69 e2e passed, one failed including retry); do not merge that head. The owner
-   authorized a squash merge with green CI and continuing US4. Verify all gates again at
-   the corrected head before merging. US4 starts
+1. Publish T102's closure and verify CI at that new head of PR #21 before the authorized
+   squash merge. CI `38682492089` at `8f5066e` passed all gates (773 unit/integration tests
+   and 70 e2e without retries); scoped T102 convergence found no remaining finding.
+   The owner authorized publishing this closure, merging with green CI and continuing US4.
+   Do not substitute the earlier green run for the final head's checks. US4 starts
    at T053 on a fresh branch from updated `main`; do not repeat merged US2 work.
 2. Before the end of 003: complete the scenario-by-scenario physical validation T087/T093
    on Android and iPhone (iOS 16.4 or later for notifications), building on the owner's
@@ -195,9 +195,13 @@ a short-lived branch, so the specification and implementation of every feature l
   checks, workers and timeout limits are unchanged.
 - After T102's test correction, `pnpm check`, `pnpm build` and the full 70-scenario
   `pnpm test:e2e` run passed (all e2e first pass, 4.2 min). The full `pnpm test` gate did
-  not pass locally, as detailed next; T102 remains unchecked until the outstanding gates
-  and scoped convergence are completed. The owner approved publishing the correction in
-  PR #21; the PR's current head supplies its new CI state.
+  not pass locally, as detailed next. CI `38682492089` at `8f5066e` subsequently passed
+  all four gates: 209 domain, 394 server and 170 web tests (773 total), and 70 e2e without
+  retries. All three invariant seeds passed in that CI run. Scoped T102 convergence on
+  2026-10-15 found no remaining gap in its three requirements, refusal/retry scenario,
+  session decision and nine constitution principles. T102 is now complete; this does not
+  claim that the separate local full-suite timeout is fixed. The closure commit must get
+  its own green CI before the authorized merge.
 - During local revalidation, the known `routes-invariants` timeout recurred for seed 2026
   while other heavy checks ran concurrently, then for seed 31337 in a full-suite repeat
   without concurrent gates. Each run had 393/394 server tests passing. The unchanged

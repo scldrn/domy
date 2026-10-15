@@ -481,4 +481,14 @@ No timeout, worker or Docker configuration was changed.
 
 ## Phase 16: Convergence — Refusal Retry Target
 
-- [ ] T102 CRITICAL Reproduce the settled-page ambiguity in T099 by awaiting the "Pendientes por sincronizar" heading in `apps/web/tests/e2e/access.spec.ts`; then target the retry button inside the unique refusal alert and verify that it actually retries. Preserve the one-refusal assertion across synchronization and navigation. Do not use `.first()`, sleeps, longer timeouts, skipped assertions or application changes to conceal the two legitimate retry controls (Constitution VI, FR-002, FR-004, FR-020; contradicts). Repeat the gates and scoped convergence before merging US3.
+- [X] T102 CRITICAL Reproduce the settled-page ambiguity in T099 by awaiting the "Pendientes por sincronizar" heading in `apps/web/tests/e2e/access.spec.ts`; then target the retry button inside the unique refusal alert and verify that it actually retries. Preserve the one-refusal assertion across synchronization and navigation. Do not use `.first()`, sleeps, longer timeouts, skipped assertions or application changes to conceal the two legitimate retry controls (Constitution VI, FR-002, FR-004, FR-020; contradicts). Repeat the gates and scoped convergence before merging US3.
+
+Closure on 2026-10-15: the settled-page assertion reproduced the strict-selector failure
+before the correction; ten focused repetitions and all 70 local e2e then passed. CI
+`38682492089` at `8f5066e` passed check, all 773 unit/integration tests, all 70 e2e without
+retries, and build. Scoped convergence checked FR-002/FR-004/FR-020, the refusal/retry
+scenario, the shared session decision and all nine constitution principles, with no
+remaining finding or new phase. Its assessment left tasks byte-for-byte unchanged;
+this checkbox and closure are subsequent completion tracking. The separate local
+full-suite invariant timeout remains documented in docs/status.md; no local full-suite
+pass or resolved contention cause is claimed.
