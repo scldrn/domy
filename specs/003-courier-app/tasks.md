@@ -163,14 +163,14 @@ verify "Novedad" with its reason and the "Problema de recogida" flag
 
 ### Tests for User Story 3 ⚠️ write first, must fail
 
-- [ ] T048 [P] [US3] Integration tests in `apps/server/tests/courier-exceptions.test.ts` covering spec US3 scenarios 1–5: an exception sets `exception`, keeps custody, fails the delivery task, and may finish the route; reason required, note and photos optional; a problem sets `problem_note` without changing the status, a second report replaces it, and it clears when the task is completed; `exceptionsToDecide` and `pickupProblem` on the board (FR-013, FR-014, FR-033)
-- [ ] T049 [P] [US3] End-to-end test in `apps/web/tests/e2e/courier-exceptions.spec.ts`: quickstart scenario 11 and the exception step of offline scenario 8 after T051; reopen, reconnect, and verify one exception record
+- [X] T048 [P] [US3] Integration tests in `apps/server/tests/courier-exceptions.test.ts` covering spec US3 scenarios 1–5: an exception sets `exception`, keeps custody, fails the delivery task, and may finish the route; reason required, note and photos optional; a problem sets `problem_note` without changing the status, a second report replaces it, and it clears when the task is completed; per-entry `returnDecided`, `exceptionsToDecide`, and `pickup_problem` on the board. Unit tests in `packages/domain/src/dispatch-board.test.ts` for one shared selection rule excluding decided returns and preserving board filter/count semantics (FR-013, FR-014, FR-033).
+- [X] T049 [P] [US3] Write the end-to-end tests in `apps/web/tests/e2e/courier-exceptions.spec.ts` before T051: quickstart scenario 11 and the complete offline scenario 8 including its exception step; reopen, reconnect, and verify one exception record. They pass after T051–T052, not before the form exists.
 
 ### Implementation for User Story 3
 
-- [ ] T050 [US3] Add `exceptionsToDecide` and the `pickupProblem` flag to `GET /api/shipments/board` in `apps/server/src/routes/shipments.ts` until T048 passes
-- [ ] T051 [P] [US3] Build `apps/web/src/features/courier/exception-form.tsx` (three reasons, optional note and photos, summary to confirm) and `apps/web/src/features/courier/problem-form.tsx` (note of 5–200 characters), wired into `apps/web/src/routes/courier-stop.tsx`
-- [ ] T052 [US3] Show "Novedades por decidir" and the "Problema de recogida" flag in `apps/web/src/routes/dispatch-board.tsx` and `apps/web/src/features/board/board-table.tsx`, until T049 passes
+- [X] T050 [US3] Add per-entry `returnDecided` to `BoardEntry` in `packages/domain/src/schemas/board.ts`, implement the shared undecided-exception selection rule in `packages/domain/src/dispatch-board.ts`, and use it for `exceptionsToDecide` in `GET /api/shipments/board` in `apps/server/src/routes/shipments.ts`; reuse the existing `pickup_problem` flag, until T048 passes. Do not implement US4 decision actions.
+- [X] T051 [P] [US3] Build `apps/web/src/features/courier/exception-form.tsx` (three reasons, optional note and photos, summary to confirm) and `apps/web/src/features/courier/problem-form.tsx` (note of 5–200 characters), wired into `apps/web/src/routes/courier-stop.tsx`
+- [X] T052 [US3] Show "Novedades por decidir" using the shared domain selection rule for its list and count, exclude those entries from the ordinary date sections, and preserve the "Problema de recogida" flag in `apps/web/src/routes/dispatch-board.tsx` and `apps/web/src/features/board/board-table.tsx`, until T049 passes; decided returns remain in ordinary sections.
 
 **Checkpoint**: every failed visit leaves a record
 
@@ -445,3 +445,36 @@ couriers' audit histories, and replay after an intervening unlink. All four gate
 ## Phase 13: Convergence — US2 Session Storage Boundary
 
 - [X] T098 Write a failing regression in `apps/web/src/lib/offline/sync.test.ts` proving that a malformed stored snapshot cannot supply a trusted expiry when session access is refused, while pending records remain intact. Validate the snapshot and the transaction's current metadata in `refuseCourierSession` in `apps/web/src/lib/offline/sync.ts`, using only validated expiry data and preserving the existing unknown-expiry refusal behavior, until it passes (Constitution V, FR-004, T044; CRITICAL, contradicts). Repeat the quality gates and scoped US2 convergence; do not duplicate US3–US7 or polish tasks.
+
+## Phase 14: Convergence — US2 CI Reliability
+
+- [X] T099 Write a failing regression for the unlinked-account refusal during synchronization and after access withdrawal, then present its actionable reason once in `apps/web/src/routes/courier-layout.tsx` and `courier-route.tsx`, preserving retry and pending records (FR-002, FR-004, Constitution VII; partial).
+- [X] T100 Write a regression for an automatically dismissing notification during an accessibility scan, then stabilize its visible state through Sonner's supported keyboard interaction in `apps/web/tests/e2e/fixtures.ts`, without excluding notifications or contrast rules, increasing timeouts, or adding sleeps (FR-038, Constitution VI; partial). Run the existing access scenarios and all quality gates.
+
+Complete these baseline corrections before US3 T048–T052. The PR #20 CI passed, but its
+access-role and recovery scenarios required retries; a green retry is not evidence of a
+deterministic first pass. No future story or polish task is duplicated here.
+
+Validation on 2026-10-14: T099 reproduced two refusal paragraphs before the UI correction;
+T100 reproduced a disappearing notification before the accessibility helper correction.
+The access suite then passed all seven cases. US3 tests first reproduced eight domain,
+four API and three phone failures; the existing record effects were reused. All eight
+domain and fourteen PostgreSQL cases now pass, including note replacement/late replay,
+custody, private photo declarations, decided-return projection and flag cleanup after
+pickup, errand completion, removal and voiding. The offline journey also exposed and
+verified the correction for an action covered by fixed navigation/snackbars.
+All four full gates passed: `pnpm check`, `pnpm test` (209 domain, 394 server, 170 web;
+773 total), `pnpm test:e2e` (69 scenarios, all first pass), and `pnpm build`. No timeout or
+worker settings changed. US4–US7 and polish retain their unchecked tasks.
+
+## Phase 15: Convergence — Courier Modal Foreground
+
+- [X] T101 CRITICAL Write a failing phone regression in `apps/web/tests/e2e/courier-exceptions.spec.ts` proving that visible synchronization notifications cannot cover the exception form's photo or confirmation controls. Keep notifications open through Sonner's native shortcut, check actual hit targets, then place the courier toaster below modal sheets but above navigation in `apps/web/src/routes/root.tsx`, preserving the panel's notification behavior. Repeat all gates and scoped convergence (FR-038, Constitution VII; contradicts).
+
+Validation on 2026-10-14: the new hit-target regression failed on the covered photo button,
+then passed with the courier toaster between navigation and sheets. Phone trace captures
+were reviewed visually. All gates passed again: check, build, 773 unit/integration tests,
+and the full 70-scenario e2e suite at first pass. The four focused US3 cases also passed
+after online board checks were changed to await acknowledgment; two preceding attempts
+failed at Docker port allocation before running any case (details in docs/status.md).
+No timeout, worker or Docker configuration was changed.

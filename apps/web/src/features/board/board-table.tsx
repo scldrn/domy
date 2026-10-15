@@ -86,7 +86,7 @@ export function BoardTable({
                 >
                   {formatTrackingNumber(shipment.trackingNumber)}
                 </Link>
-                {today && (
+                {today && shipment.serviceDate < today && (
                   <span className="block text-body-s text-on-surface-variant">
                     {formatDate(shipment.serviceDate)}, {daysPending(shipment.serviceDate, today)}
                   </span>

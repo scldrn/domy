@@ -194,6 +194,17 @@ screen.
 
 ## Cross-feature alignment
 
+US3 board projection (owner approval 2026-10-14): each `BoardEntry` in
+`packages/domain/src/schemas/board.ts` includes `returnDecided: boolean`, without extending
+the unrelated search or unassigned projections. One pure selection rule in
+`packages/domain/src/dispatch-board.ts` selects `exception` shipments whose return has not
+been decided; the server uses it for `exceptionsToDecide`, and the web for the "Novedades
+por decidir" section and its count. Preserve existing board filter/count semantics and
+show each shipment in exactly one section. Test the shared rule before implementation in
+`packages/domain/src/dispatch-board.test.ts` and the API projection in T048. Reuse the
+existing `pickup_problem` record flag and record application rules. US4 decision endpoints
+and actions remain outside this slice.
+
 US2 delivery scope (owner approval 2026-10-14): technical outbox and synchronization tests
 cover all record kinds; its phone journey covers pickups and deliveries. US3 adds the
 exception form (T051) and completes the exception step of offline quickstart scenario 8

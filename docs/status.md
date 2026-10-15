@@ -14,16 +14,15 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup T001–T003 (#13), domain T004–T014 (#14), foundation T015–T025 (#15), US1 T026–T040 (#16–#17), account linking T094 (#18), and idempotency corrections T095–T097 (#19, squash `5c8b107`) are on `main`. PR #19 and its post-merge CI passed all gates. US2 T041–T047 and corrective T098 are implemented, locally validated, and converged on `003-us2-offline`; the owner approved commit, push, and PR publication. Its PR supplies the current GitHub CI status; merging still needs approval. Its phone journey covers pickups and deliveries; US3 completes the exception step. Effects of late records across routes arrive with US5 (T067) |
+| 003 Courier app | Setup T001–T003 (#13), domain T004–T014 (#14), foundation T015–T025 (#15), US1 T026–T040 (#16–#17), account linking T094 (#18), idempotency corrections T095–T097 (#19, `5c8b107`), and US2 T041–T047/T098 (#20, `93fdf09`) are on `main`. PR #20 and post-merge CI passed. US3 T048–T052 and corrections T099–T101 are implemented and locally validated on `003-us3-exceptions`: exceptions and pickup problems, shared undecided-exception projection, the complete offline phone journey, and unobstructed modal controls. Publication and merge follow owner approval and the slice's GitHub CI. Effects of late records across routes remain US5 (T067) |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Verify GitHub CI for the US2 PR from `003-us2-offline`; publication is approved. Ask the
-   owner before merging, and merge only with green CI, then update `main`. Continue US3 (T048–T053) on a new
-   `003-us3-exceptions` branch only with approval. Write T049's offline exception regression
-   before T051's form; validate the complete exception phone journey after the form passes.
-   Do not repeat T094–T097 or merge the already merged PR #19 again.
+1. Verify GitHub CI for the completed US3 T048–T052 and T099–T101 slice on
+   `003-us3-exceptions` from `93fdf09`; the owner approved commit, push and PR publication.
+   The slice's PR supplies its current CI state. A squash merge with green CI and continuing US4 need their own approval. US4 starts
+   at T053 on a fresh branch from updated `main`; do not repeat merged US2 work.
 2. Before the end of 003: use the owner's Android phone and iPhone (iOS 16.4 or later for
    notifications) for the manual validation T087. The owner's DigitalOcean Spaces bucket
    (in the client's name) is needed only at deployment.
@@ -79,6 +78,12 @@ a short-lived branch, so the specification and implementation of every feature l
 
 ## US2 validation
 
+- GitHub PR #20 CI run `38655986569` passed all four gates (751 unit/integration tests;
+  64 e2e scenarios, with 62 passing initially and two passing on retry). The owner
+  authorized squash merge and US3 continuation; `93fdf09` landed on `main`. Post-merge CI
+  `38657920415` also passed. T099–T100 track the refusal-selector ambiguity and notification
+  contrast race observed in the PR run; they are not hidden by its final green status.
+
 - Tests first: the expanded sync suite initially reproduced 15 failures before T044;
   ownership on save also failed before its correction. Later consumer review reproduced
   four failures around temporary server failure, malformed successful sign-in, and `403`
@@ -111,6 +116,51 @@ a short-lived branch, so the specification and implementation of every feature l
 | FR-018–FR-019, SC-001: durable ordered records and exactly-once effects | IndexedDB/outbox regressions, server `courier-records-sync.test.ts` (7), lost-response-after-commit e2e |
 | FR-020, FR-022, SC-003–SC-004: automatic synchronization, pending view and warnings, cached route | Shared triggers, `sync-status.test.ts` (3), offline reload/reconnect and unavailable-server e2e |
 | FR-023: separate acknowledged photo upload and finished-route cleanup | Sync refusal/ordering regressions, actual stored proof and empty-store logout e2e |
+
+## US3 implementation and validation
+
+- Owner-approved contract refinement: every `BoardEntry` exposes `returnDecided`; one
+  domain selector forms both the undecided-exception list and its count. Decided returns
+  stay in ordinary date sections. Filters/counts keep the existing board semantics and
+  each shipment has one row. Search/unassigned projections and US4 actions are unchanged.
+- Tests first: eight domain failures and four PostgreSQL failures reproduced the missing
+  selection/projection; all three phone scenarios failed for the absent actions before
+  their forms were implemented. Existing record rules already handled custody, task
+  completion and problem notes, so they were reused without a migration or dependency.
+- Exceptions require one of three reasons, allow an optional note/photo, show a review,
+  and save through the existing atomic offline store. Problems require 5–200 characters;
+  a new note replaces the displayed one but both records remain. Pickup, errand completion,
+  removal and voiding clear the board flag without deleting the history.
+- T099 reproduced two copies of an unlinked-account refusal during synchronization. Its
+  actionable reason now appears once across courier screens, including withdrawn access.
+  T100 reproduced an automatically disappearing toast during a scan; the helper settles
+  closing dialogs before classifying the screen, pauses toasts with Sonner's native
+  shortcut and restores focus. No notification or contrast rule is excluded.
+- The phone regression also exposed an action covered by the fixed navigation/snackbars.
+  The layout now reserves scrolling room, and the long disbursement label wraps instead
+  of overflowing. No forced clicks, sleeps, timeout increases or worker changes were used.
+- Visual review then exposed notifications above modal controls, despite passing axe.
+  T101 reproduced the obstruction by checking nine actual hit points on the photo and
+  confirmation buttons while notices stay open. Courier notifications now sit below
+  sheets and above navigation; the panel is unchanged. Phone captures confirm that the
+  form is unobstructed. Online panel checks await the phone's acknowledged queue before
+  reading the other browser's board, so they cannot race local replay against sync.
+- Full gates passed on 2026-10-14: `pnpm check`, `pnpm test` (**209 domain, 394 server,
+  170 web; 773 total**), `pnpm test:e2e` (**70 scenarios, all first pass**), and `pnpm build`.
+  The route-invariants timeout did not recur. The three US3 phone scenarios include
+  pickups, an 85.000 COP cash delivery and an exception with photos offline, reopening,
+  a lost response after commit, and exactly-once synchronization with custody preserved.
+- After making online synchronization waits explicit, all four focused US3 scenarios
+  passed again. Two attempts at that additional check failed before any scenario ran:
+  Testcontainers could not obtain Docker host port bindings within its existing 10-second
+  limit (PostgreSQL, then Ryuk). Docker was inspected read-only; the subsequent attempt
+  passed without configuration changes, increased timeouts or service restarts.
+- Final scoped convergence found no remaining work in US3 and T099–T101: 15 requirements
+  and buildable success criteria, five acceptance scenarios, eight plan decisions, nine
+  constitution principles and eight tasks checked. `tasks.md` stayed byte-for-byte
+  unchanged during that pass; no empty convergence phase was appended.
+- US4–US7 and polish are not complete; physical Android/iPhone validation remains
+  T087/T093. Local browser evidence is not a claim of physical-device validation.
 
 ## Open with the client
 

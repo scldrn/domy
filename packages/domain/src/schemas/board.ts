@@ -40,13 +40,17 @@ export type BoardShipment = {
 };
 
 /** A shipment on the board, with the flags of its courier records (feature 003, FR-033). */
-export type BoardEntry = BoardShipment & { recordFlags: RecordFlagKind[] };
+export type BoardEntry = BoardShipment & {
+  recordFlags: RecordFlagKind[];
+  returnDecided: boolean;
+};
 
 /** The dispatch board of a date (FR-021); `serverTime` corrects the client's clock (R9). */
 export type DispatchBoard = {
   date: string;
   serverTime: string;
   counts: Record<ShipmentStatus, number>;
+  exceptionsToDecide: number;
   shipments: BoardEntry[];
   pendingFromPreviousDays: BoardEntry[];
 };

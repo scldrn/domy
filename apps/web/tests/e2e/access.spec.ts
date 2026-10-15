@@ -1,5 +1,5 @@
 import type { Browser, Page } from "@playwright/test";
-import { expect, test } from "./fixtures";
+import { accessibilityViolations, expect, test } from "./fixtures";
 import { apiPort } from "./ports";
 
 const password = "contrasena-de-prueba";
@@ -102,6 +102,64 @@ test("links a courier account to its courier (feature 003, FR-002)", async ({
   await expect(ownerPage.getByRole("row").filter({ hasText: name })).toContainText(
     `mensajera${run}@example.com`,
   );
+});
+
+// T099: observe the transient synchronization frame, not just its settled result (FR-002).
+test("presents an unlinked account's refusal once during and after synchronization", async ({
+  ownerPage,
+  browser,
+}) => {
+  const run = unique();
+  const email = `sinvinculo${run}@example.com`;
+  await createAccount(ownerPage, `Sin vínculo ${run}`, email, "Mensajero");
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.addInitScript(() => {
+    const refusal = "Tu cuenta no está vinculada a un mensajero.";
+    new MutationObserver(() => {
+      const count = Array.from(document.querySelectorAll("p")).filter((p) =>
+        p.textContent.includes(refusal),
+      ).length;
+      document.documentElement.dataset["maxRefusals"] = String(
+        Math.max(Number(document.documentElement.dataset["maxRefusals"] ?? 0), count),
+      );
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.goto("/ingresar");
+  await page.getByLabel("Correo").fill(email);
+  await page.getByLabel("Contraseña").fill(password);
+  await page.getByRole("button", { name: "Ingresar" }).click();
+  await expect(page.getByText(/Tu acceso fue retirado/)).toBeVisible();
+  await expect(page.getByText("Tu cuenta no está vinculada a un mensajero.")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-max-refusals", "1");
+  await page.getByRole("link", { name: "Pendientes", exact: true }).click();
+  await expect(page.getByText("Tu cuenta no está vinculada a un mensajero.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reintentar sincronización" })).toBeVisible();
+  expect(await accessibilityViolations(page)).toEqual([]);
+  await context.close();
+});
+
+// T100: advance beyond the real notification's lifetime while axe is about to scan it.
+test("keeps visible notifications stable and restores focus during accessibility scans", async ({
+  ownerPage: page,
+}) => {
+  const run = unique();
+  await page.clock.install();
+  await createAccount(page, `Aviso ${run}`, `aviso${run}@example.com`, "Coordinador de despacho");
+  const notification = page.getByText(`Cuenta de Aviso ${run} creada`, { exact: true });
+  await expect(notification).toBeVisible();
+  const button = page.getByRole("button", { name: "Nueva cuenta" });
+  await button.focus();
+  expect(
+    await accessibilityViolations(page, async () => {
+      // Freeze only after normal keyboard/animation handling, then advance past expiry.
+      await page.clock.pauseAt(new Date(Date.now() + 100));
+      await page.clock.runFor(5_000);
+      await expect(notification).toBeVisible();
+      await page.clock.resume();
+    }),
+  ).toEqual([]);
+  await expect(button).toBeFocused();
 });
 
 test("locks sign-in after five failures and says when to retry (scenario 14)", async ({

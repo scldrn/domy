@@ -23,6 +23,8 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { saveCourierRecord, useCourierState } from "@/features/courier/courier-store";
 import { DeliveryForm } from "@/features/courier/delivery-form";
 import { DisbursementForm } from "@/features/courier/disbursement-form";
+import { ExceptionForm } from "@/features/courier/exception-form";
+import { ProblemForm } from "@/features/courier/problem-form";
 import { now } from "@/lib/clock";
 import { cn } from "@/lib/cn";
 import { formatWindow } from "@/lib/format";
@@ -139,7 +141,9 @@ function Shortcuts({ stop }: { stop: CourierStop }) {
 
 function TaskCard({ task }: { task: CourierTask }) {
   const { user } = Route.useRouteContext();
-  const [form, setForm] = useState<"delivery" | "disbursement" | null>(null);
+  const [form, setForm] = useState<"delivery" | "disbursement" | "exception" | "problem" | null>(
+    null,
+  );
   const [saving, setSaving] = useState(false);
   if (!user) return null;
   const pending = task.status === "pending";
@@ -249,7 +253,7 @@ function TaskCard({ task }: { task: CourierTask }) {
           </div>
         )}
         {task.problemNote && (
-          <div className="text-body-m text-error">
+          <div className="text-body-l text-error">
             <dt className="sr-only">Problema de recogida</dt>
             <dd>Problema de recogida: {task.problemNote}</dd>
           </div>
@@ -289,13 +293,62 @@ function TaskCard({ task }: { task: CourierTask }) {
       {finishing && (
         <Button
           variant="ghost"
-          className="self-start"
+          className="max-w-full self-start text-left whitespace-normal"
           onClick={() => {
             setForm("disbursement");
           }}
         >
           Registrar pago por cuenta del cliente
         </Button>
+      )}
+
+      {pending && task.kind === "delivery" && !task.blockedByHandover && pickedUp && (
+        <Button
+          variant="outline"
+          onClick={() => {
+            setForm("exception");
+          }}
+        >
+          Reportar novedad
+        </Button>
+      )}
+      {pending && (task.kind === "pickup" || task.kind === "errand") && (
+        <Button
+          variant="outline"
+          onClick={() => {
+            setForm("problem");
+          }}
+        >
+          Reportar problema
+        </Button>
+      )}
+      {form === "exception" && (
+        <ExceptionForm
+          task={task}
+          userId={user.id}
+          open
+          onOpenChange={(open) => {
+            if (!open) setForm(null);
+          }}
+          onSaved={() => {
+            setForm(null);
+            toast.success("Novedad guardada");
+          }}
+        />
+      )}
+      {form === "problem" && (
+        <ProblemForm
+          task={task}
+          userId={user.id}
+          open
+          onOpenChange={(open) => {
+            if (!open) setForm(null);
+          }}
+          onSaved={() => {
+            setForm(null);
+            toast.success("Problema guardado");
+          }}
+        />
       )}
 
       {form === "delivery" && (

@@ -640,14 +640,20 @@ export const shipmentRoutes = new Hono<AppEnv>()
       ],
     );
     // The flags of the courier's records (feature 003, FR-033).
-    const flags = await loadRecordFlags(
-      c.get("db"),
-      all.map((shipment) => shipment.id),
-      now,
-    );
+    const db = c.get("db");
+    const ids = all.map((shipment) => shipment.id);
+    const [flags, decisions] = await Promise.all([
+      loadRecordFlags(db, ids, now),
+      db
+        .select({ id: shipments.id, returnDecided: shipments.returnDecided })
+        .from(shipments)
+        .where(inArray(shipments.id, ids)),
+    ]);
+    const returned = new Map(decisions.map((shipment) => [shipment.id, shipment.returnDecided]));
     const entries = all.map((shipment) => ({
       ...shipment,
       recordFlags: flags.get(shipment.id) ?? [],
+      returnDecided: returned.get(shipment.id) ?? false,
     }));
     return c.json({
       date,

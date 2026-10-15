@@ -24,7 +24,12 @@ function Root() {
       <HeadContent />
       <Outlet />
       <Toaster
-        {...(courierApp && { offset: aboveNavigationBar, mobileOffset: aboveNavigationBar })}
+        // T101 / FR-038: courier notices sit above navigation (z-20), below sheets (z-50).
+        {...(courierApp && {
+          offset: aboveNavigationBar,
+          mobileOffset: aboveNavigationBar,
+          className: "toaster group !z-40",
+        })}
       />
     </TooltipProvider>
   );

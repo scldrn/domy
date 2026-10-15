@@ -24,7 +24,11 @@ function CourierRoute() {
     return (
       <div className="flex flex-col gap-4">
         <h1 className="text-headline-s text-on-surface">Mi ruta</h1>
-        <EmptyState icon={RouteIcon} title="No podemos mostrar tu ruta" description={refusal} />
+        <EmptyState
+          icon={RouteIcon}
+          title="No podemos mostrar tu ruta"
+          description="Revisa el aviso de arriba para saber cómo continuar."
+        />
       </div>
     );
   }

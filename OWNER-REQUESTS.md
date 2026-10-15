@@ -8,7 +8,8 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-Nada. La 003 avanza con valores provisionales donde hace falta.
+Nada que bloquee la publicación de US3: commit, push y apertura de PR aprobados.
+Fusionar esa PR y continuar US4 requieren autorización aparte y CI verde.
 
 ## Antes de terminar la 003 (app del mensajero)
 
@@ -44,3 +45,6 @@ Nada pendiente por ahora.
 | 2026-10-14 | ¿Fusionar la PR #19 con CI verde y continuar US2 desde `main` actualizado? | Sí; fusionar mediante squash y continuar US2 |
 | 2026-10-14 | ¿Explicitar la dependencia de la validación offline de «Novedad»? | Sí; US2 valida recogidas y entregas en la interfaz y todos los registros técnicamente. US3 completa el escenario visual de «Novedad» |
 | 2026-10-14 | ¿Hacer commit, push y abrir la PR de US2? | Aprobado. La fusión de esta PR y continuar US3 requieren autorización aparte |
+| 2026-10-14 | ¿Fusionar la PR #20 mediante squash con CI verde y continuar US3 desde `main` actualizado? | Autorizado; fusionada como `93fdf09` y US3 continúa en `003-us3-exceptions` |
+| 2026-10-14 | ¿Explicitar `returnDecided` por fila del tablero y una regla compartida para lista y conteo de «Novedades por decidir»? | Sí; excluir devoluciones ya decididas, sin adelantar acciones de US4 |
+| 2026-10-14 | ¿Hacer commit, push y abrir la PR de US3 (T048–T052 y T099–T101)? | Sí. La fusión y continuar US4 requieren autorización aparte y CI verde |
