@@ -19,12 +19,14 @@ a short-lived branch, so the specification and implementation of every feature l
 
 ## Next step
 
-1. Verify GitHub CI for the completed US3 T048–T052 and T099–T101 slice on
-   `003-us3-exceptions` from `93fdf09`; the owner approved commit, push and PR publication.
-   The slice's PR supplies its current CI state. A squash merge with green CI and continuing US4 need their own approval. US4 starts
+1. Publish the owner's physical-phone feedback and verify GitHub CI at the new head of
+   PR #21 for the completed US3 T048–T052 and T099–T101 slice on `003-us3-exceptions`
+   from `93fdf09`. The owner authorized that commit/push, a squash merge with green CI,
+   and continuing US4. US4 starts
    at T053 on a fresh branch from updated `main`; do not repeat merged US2 work.
-2. Before the end of 003: use the owner's Android phone and iPhone (iOS 16.4 or later for
-   notifications) for the manual validation T087. The owner's DigitalOcean Spaces bucket
+2. Before the end of 003: complete the scenario-by-scenario physical validation T087/T093
+   on Android and iPhone (iOS 16.4 or later for notifications), building on the owner's
+   successful US1–US3 smoke test below. The owner's DigitalOcean Spaces bucket
    (in the client's name) is needed only at deployment.
 3. Then 004 the same way.
 4. Before go-live: time SC-001, SC-004, and SC-006 of 002 with the dispatcher, and add a
@@ -159,8 +161,24 @@ a short-lived branch, so the specification and implementation of every feature l
   and buildable success criteria, five acceptance scenarios, eight plan decisions, nine
   constitution principles and eight tasks checked. `tasks.md` stayed byte-for-byte
   unchanged during that pass; no empty convergence phase was appended.
-- US4–US7 and polish are not complete; physical Android/iPhone validation remains
-  T087/T093. Local browser evidence is not a claim of physical-device validation.
+- US4–US7 and polish are not complete. The owner has now reported successful physical
+  phone testing of the available slice, as recorded below; full T087/T093 validation is
+  still pending.
+
+### Owner's physical-phone feedback — 2026-10-14
+
+- Samuel reports testing on both iOS and Android, using Chrome and Safari, with the
+  expected behavior and no reported failures. This is owner-provided physical-device
+  evidence for the currently available US1–US3 slice (`46b1a84`, PR #21), not merely an
+  automated phone viewport check.
+- The local HTTPS review environment uses a separate database and photo bucket, with
+  independent iPhone and Android courier accounts and routes containing fictitious data.
+- Exact device models, OS/browser versions, the browser/OS combinations, individual
+  scenarios, offline/reopening steps, timings, tap counts and theme checks were not
+  itemized in the report. Do not infer them or mark T087/T093 complete: those tasks cover
+  all quickstart scenarios and the measured interface review after the remaining stories.
+- In a subsequent explicit approval, Samuel authorized publishing this record, squash
+  merging PR #21 with green CI, and continuing US4 from updated `main`.
 
 ## Open with the client
 
