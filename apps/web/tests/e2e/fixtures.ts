@@ -10,6 +10,7 @@ const authFile = (role: Role) => new URL(`.auth/${role}.json`, import.meta.url).
 export async function accessibilityViolations(
   page: Page,
   beforeAnalyze?: () => Promise<void>,
+  beforePause?: () => Promise<void>,
 ): Promise<string[]> {
   const settleAnimations = () =>
     page.waitForFunction(() =>
@@ -36,16 +37,28 @@ export async function accessibilityViolations(
     : false;
   try {
     if (hasNotifications) {
+      // T112: tests can advance native expiry between discovery and stabilization.
+      await beforePause?.();
       // The pointer may remain where the just-closed dialog's submit button was. Keep
       // stack expansion from moving a toast away from it and firing mouseleave mid-scan.
       await page.mouse.move(0, 0);
       await page.keyboard.press("Alt+t");
-      await page.waitForFunction(() =>
-        Boolean(document.activeElement?.closest("[data-sonner-toaster]")),
+      await page.waitForFunction(
+        () =>
+          Boolean(document.activeElement?.closest("[data-sonner-toaster]")) ||
+          document.querySelector("[data-sonner-toast]:not([data-removed=true])") === null,
       );
-      await expect(
-        page.locator("[data-sonner-toast]:not([data-removed=true])").first(),
-      ).toHaveAttribute("data-expanded", "true");
+      // Discovery and the shortcut are separate browser steps: expiry may win between them.
+      // Read absence/expansion atomically; every toast still present must be stabilized.
+      await expect
+        .poll(() =>
+          page.evaluate(() =>
+            [...document.querySelectorAll("[data-sonner-toast]:not([data-removed=true])")].every(
+              (toast) => toast.getAttribute("data-expanded") === "true",
+            ),
+          ),
+        )
+        .toBe(true);
     }
     await settleAnimations();
     await beforeAnalyze?.();

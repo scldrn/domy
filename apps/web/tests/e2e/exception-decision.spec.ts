@@ -71,6 +71,15 @@ async function confirmResult(page: Page, label: string, save: string) {
   await expect(sheet).not.toBeVisible();
 }
 
+function pendingDelivery(page: Page, address: string) {
+  return page
+    .getByRole("list", { name: "Paradas" })
+    .getByRole("link")
+    .filter({ hasText: address })
+    .filter({ has: page.getByText("Entrega", { exact: true }) })
+    .filter({ hasText: /\bPendiente\b/ });
+}
+
 async function configureOffice(owner: Page) {
   await owner.goto("/configuracion");
   await expect(owner.getByLabel("Dirección de la oficina")).toBeVisible();
@@ -165,15 +174,30 @@ test("decides another attempt and a return, preserving attempts and never collec
     await synchronized(phone);
   }
   await reportException(phone, "Calle 31 # 40-01");
-  await decide(office, first, "Nuevo intento");
-  await phone.reload();
-  await phone.getByRole("link", { name: "Mi ruta", exact: true }).first().click();
-  await phone
-    .getByRole("list", { name: "Paradas" })
-    .getByRole("link")
-    .filter({ hasText: "Calle 31 # 40-01" })
-    .last()
-    .click();
+  // T111: exercise the cached visit before allowing the actual server refresh through.
+  const refresh = Promise.withResolvers<undefined>();
+  await phone.route("**/api/courier/route", async (route) => {
+    await refresh.promise;
+    await route.continue();
+  });
+  try {
+    await decide(office, first, "Nuevo intento");
+    await phone.reload();
+    await phone.getByRole("link", { name: "Mi ruta", exact: true }).first().click();
+    const cachedVisit = phone
+      .getByRole("list", { name: "Paradas" })
+      .getByRole("link")
+      .filter({ hasText: "Calle 31 # 40-01" });
+    await expect(cachedVisit).toHaveCount(1);
+    await expect(cachedVisit).toContainText("Completada");
+    await expect(pendingDelivery(phone, "Calle 31 # 40-01")).toHaveCount(0);
+  } finally {
+    refresh.resolve(undefined);
+  }
+  const newVisit = pendingDelivery(phone, "Calle 31 # 40-01");
+  await expect(newVisit).toHaveCount(1);
+  await newVisit.click();
+  await phone.unroute("**/api/courier/route");
   await confirmResult(phone, "Registrar entrega", "Guardar entrega");
   await synchronized(phone);
   await office.reload();

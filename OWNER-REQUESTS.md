@@ -8,10 +8,10 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-Nada requiere una respuesta ahora. Autorizaste commit, push y apertura de la PR de US4;
-publicada como [PR #22](https://github.com/scldrn/domy/pull/22) con las cuatro compuertas
-locales aprobadas. Se revisa su CI. Fusionarla y continuar US5
-requieren autorización aparte y CI verde.
+Nada requiere una respuesta ahora. Autorizaste commit y push de T111/T112 a la PR #22
+para validar la corrección en un CI nuevo. Pasan las cuatro compuertas locales y las
+40 ejecuciones focalizadas; se debe revisar el CI del nuevo head, no el resultado con
+reintento de `a169cbb`. Fusionar y continuar US5 requieren autorización aparte y CI verde.
 
 ## Antes de terminar la 003 (app del mensajero)
 
@@ -39,6 +39,8 @@ Nada pendiente por ahora.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-15 | ¿Publicar T111/T112 mediante commit y push en la PR #22 para validar un CI nuevo? | «Autorizo». Solo publicar la corrección y revisar CI; no fusionar ni continuar US5 |
+| 2026-10-15 | Investigar y corregir la inestabilidad encontrada al revisar la PR #22 | «Investiga y Arreglalo». T111/T112 reproducidas y corregidas localmente; cuatro compuertas y convergencia puntual aprobadas. Publicar la corrección requiere aprobación; sin autorización de fusión ni continuación a US5 |
 | 2026-10-15 | ¿Hacer commit, push y abrir la PR de US4 después de las cuatro compuertas y la convergencia? | «Sí». Autorizada la publicación de T053–T060/T103–T110. La fusión y continuar US5 requieren autorización aparte y CI verde |
 | 2026-10-14 | Íconos de la app instalable mientras no hay logo | Provisional «domy» |
 | 2026-10-14 | ¿Avisar al mensajero cuando se edita un envío de su ruta? | Sí, con aviso |

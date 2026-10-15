@@ -14,25 +14,23 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup T001–T003 (#13), domain T004–T014 (#14), foundation T015–T025 (#15), US1 T026–T040 (#16–#17), account linking T094 (#18), idempotency corrections T095–T097 (#19, `5c8b107`), US2 T041–T047/T098 (#20, `93fdf09`), and US3 T048–T052/T099–T102 (#21, `4910f76`) are on `main`. PR #21 passed all four gates at its final head before the authorized squash merge. US4 T053–T060/T103–T110 is implemented and scoped-converged locally on `003-us4-decisions`, with all four gates passing; published in [PR #22](https://github.com/scldrn/domy/pull/22); merge and US5 require separate approval and green CI. Effects of late records across routes remain US5 (T067) |
+| 003 Courier app | Setup T001–T003 (#13), domain T004–T014 (#14), foundation T015–T025 (#15), US1 T026–T040 (#16–#17), account linking T094 (#18), idempotency corrections T095–T097 (#19, `5c8b107`), US2 T041–T047/T098 (#20, `93fdf09`), and US3 T048–T052/T099–T102 (#21, `4910f76`) are on `main`. PR #21 passed all four gates at its final head before the authorized squash merge. US4 T053–T060/T103–T110 is implemented and scoped-converged locally on `003-us4-decisions`, with prior local gates passing; CI retry races T111/T112 are corrected and converged locally with all four gates passing; correction commit/push authorized; verify the new head's CI before seeking merge approval; published in [PR #22](https://github.com/scldrn/domy/pull/22); merge and US5 require separate approval and green CI. Effects of late records across routes remain US5 (T067) |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Review the latest-head CI of US4 [PR #22](https://github.com/scldrn/domy/pull/22),
-   published from `003-us4-decisions` with implementation commit `95695c3`, based on
-   `main` at `4910f76`. Decisions, attempts, held routing, office receipt,
-   settings and offline returns are implemented and scoped-converged. Final gates pass:
-   `pnpm check`, `pnpm test` (821), `pnpm test:e2e` (75, no retries), and `pnpm build`.
-   T107 applies the owner-approved capacity isolation without reducing coverage or
-   limits; T110's high-COD return regression is also green. Generic route transitions
-   were not relaxed. Samuel approved commit, push and PR creation on 2026-10-15;
-   that publication is complete. The PR remains open, not merged.
-   Merge and continuation to US5 require separate approval and green CI; local gates
-   are not a substitute for the PR's CI result.
-   Post-merge CI `38686516078` passed all four gates
-   (773 unit/integration tests and 70 e2e without retries). Do not repeat merged US2/US3
-   work.
+1. Review the latest-head CI of T111/T112 in US4
+   [PR #22](https://github.com/scldrn/domy/pull/22) before seeking merge/US5 authorization.
+   Samuel approved commit/push of the correction on 2026-10-15. Both test races are
+   reproduced and corrected
+   locally, with repeated scoped convergence and all four gates passing: check,
+   821 unit/integration tests, 76 e2e without retries, and build. Four targeted cases
+   also pass ten repetitions each (40/40). Only three e2e files and documentation
+   change; production code, timing limits, workers and retry policy are untouched.
+   Prior head `a169cbb` has green CI `38814337383` with one US4 retry, not a clean e2e
+   run. This revision publishes the approved correction; its CI result must be verified
+   at the PR's new head. Do not substitute the older run or infer approval to merge.
+   The branch is based on `4910f76`; US2/US3 are already merged. Do not repeat that work.
 2. Before the end of 003: complete the scenario-by-scenario physical validation T087/T093
    on Android and iPhone (iOS 16.4 or later for notifications), building on the owner's
    successful US1–US3 smoke test below. The owner's DigitalOcean Spaces bucket
@@ -425,6 +423,50 @@ a short-lived branch, so the specification and implementation of every feature l
   succeeded, and no US4 PR is open. No dependency, migration, commit or push was added.
   The existing LAN review API was not restarted; do not treat that US3-era server as
   US4 physical-device validation.
+
+## US4 CI retry investigation — T111/T112 (2026-10-15)
+
+- Latest published head `a169cbb` has green CI `38814337383`, but not a clean e2e run:
+  check, 216 domain/431 server/174 web tests and build pass; 74 e2e pass first time,
+  while the US4 new-attempt/return journey exceeds its 30-second limit waiting for
+  "Registrar entrega" and passes on retry. All invariant seeds reach step 89, with
+  measured workload 5.61/5.37/5.19 seconds under T107's unchanged limits.
+- Implementation-head CI `38814284341` is separately green with 74 first-pass e2e and
+  one retry in account recovery: `accessibilityViolations` requires a notification that
+  has already disappeared to expand. These are different failures, not proof of one
+  machine-load cause. The workflow uploads no trace artifacts, so the exact original
+  browser frames cannot be reconstructed from GitHub. Both paths have controlled local
+  reproductions; do not claim a CI trace established their exact interleaving.
+- T111 withholds the real courier-route request, leaving the actual IndexedDB snapshot
+  visible. The old last-address selector deterministically matches the completed visit
+  instead of a pending delivery. It now matches the delivery label and pending state
+  uniquely, waits for that refreshed stop, and preserves every subsequent attempt,
+  problem, return, collection and server-history assertion. The regression first fails
+  on the incorrectly matched cached visit. An initial selector refinement also failed
+  because adjacent label text has no word boundary; matching the exact delivery label
+  corrects that test selector. No application synchronization behavior changes.
+- T112 advances Sonner's native clock through expiry between notification discovery and
+  the pause shortcut. The old helper then times out waiting for the vanished toaster
+  (teardown closes the page); after correction, atomic checks require every notification
+  still present to expand or accept their completed disappearance. The full axe rules,
+  animation settling and focus restoration remain; no toast or contrast rule is excluded.
+  A new pre-pause test hook complements the existing pre-scan hook.
+- The controlled US4 journey passes, as do the visible-toast, expired-toast and recovery
+  cases. Ten repetitions of all four pass (40/40, one worker, no retries, 2.2 minutes).
+  Final full gates pass after the generic promise type was aligned with the existing
+  lint rule: `pnpm check`, `pnpm test` (216 domain, 431 server, 174 web; 821 total),
+  `pnpm test:e2e` (76/76, all first pass, 4.4 minutes), and `pnpm build`. The complete
+  server phase passes in 83.51 seconds. No lint configuration changed.
+- Scoped convergence checks FR-022/FR-029/FR-038/SC-006, US4/AC1/AC6, two plan decisions,
+  T055/T100/T111/T112 and all nine constitution principles. No remaining gap was found;
+  the assessment preserved tasks byte-for-byte, then implementation tracking marked the
+  two corrections complete. The second read-only assessment also found no gap and
+  preserved tasks SHA-256 `13f903e868b1240cdef18c4a7daa0f9816e09c112b96bf5ec894ebe2387213db`.
+  T112's original FR-034 citation is explicitly clarified as FR-038 without rewriting
+  the convergence task or introducing US6 work. Samuel subsequently authorized commit/push
+  to publish these corrections in PR #22 and obtain new CI evidence. That head's CI must
+  still be checked; the prior retry is not a clean result. Merge and US5 require
+  separate approval.
 
 ## Open with the client
 

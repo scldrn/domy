@@ -622,3 +622,31 @@ checkpoint are subsequent implementation tracking. US5–US7 and feature-wide po
 pending. At this local checkpoint no US4 commit, push or PR existed. Samuel subsequently
 approved commit, push and PR creation on 2026-10-15; merge and continuing US5 require
 separate approval and green CI.
+
+## Phase 25: Convergence
+
+- [X] T111 HIGH Reproduce the US4 new-attempt navigation race in `apps/web/tests/e2e/exception-decision.spec.ts` by withholding the real courier snapshot after the dispatcher decides: the cached completed visit must not be mistaken for the new pending delivery at the same address. First demonstrate the current last-link selector choosing that completed visit, then select the uniquely pending delivery and await its visible refreshed state. Preserve all existing journey assertions, PostgreSQL/service-worker coverage, original timeouts, workers and retry policy; do not change application synchronization to accommodate a test precondition. Repeat the controlled regression, focused repetitions, all four gates and scoped convergence. Retain CI `38814337383`'s first-attempt failure (30 seconds waiting for “Registrar entrega”, retry passed), separately from the earlier run's unrelated recovery-test flake (US4/AC1/AC6, FR-022/FR-029, T055, Constitution VI; partial).
+
+## Phase 26: Convergence
+
+- [X] T112 HIGH Reproduce the accessibility-helper race from CI `38814284341` in `apps/web/tests/e2e/access.spec.ts`: a real notification can expire after discovery but before its native pause shortcut, so `fixtures.ts` must not require an already-removed notification to expand. Add a clock-controlled pre-pause test hook alongside the existing pre-scan hook, advance the real notification through expiry, and first reproduce the absent-toast assertion failure. Then stabilize either all remaining visible notifications or their completed disappearance, retaining the full axe scan, focus restoration, the existing visible-notification regression, and every accessibility rule. Do not change production notification lifetime, add sleeps, widen limits, remove assertions or exclude notifications. Repeat both notification cases, account recovery, focused/full e2e, all gates and convergence (003 FR-034, T100, Constitution VI/VII; partial).
+
+T112 traceability clarification (implementation review): accessibility is 003 **FR-038**,
+as in T100. The FR-034 reference above is a transcription error, not US6 scope or a change
+to the intended notification/axe regression. The original convergence task is preserved.
+
+T111/T112 local completion (2026-10-15): the controlled snapshot test first reproduced
+the old selector matching a cached completed visit; the native expiry test first timed
+out waiting for the vanished toaster. Both now pass with the actual app and PostgreSQL.
+The four targeted cases pass ten repetitions each (40/40, one worker, no retries).
+Final gates pass: `pnpm check`, `pnpm test` (216 domain, 431 server, 174 web; 821 total),
+`pnpm test:e2e` (76/76, all first pass, 4.4 minutes), and `pnpm build`.
+No production code, dependency, timeout, worker/retry policy or accessibility rule changed.
+
+Scoped convergence checks FR-022/FR-029/FR-038/SC-006, US4/AC1/AC6, two plan decisions,
+T055/T100/T111/T112 and all nine principles; no remaining gap. Assessment preserved the
+file byte-for-byte; these completion markers/notes are subsequent implementation tracking.
+The published CI's retry remains historical evidence, not validation of this local fix.
+At this local checkpoint commit/push and new CI were still required. Samuel subsequently
+authorized publishing T111/T112 on 2026-10-15; review that new head's CI before merge review.
+Merge and continuing US5 require separate authorization.
