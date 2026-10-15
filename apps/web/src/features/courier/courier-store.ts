@@ -1,8 +1,20 @@
-import type { CourierRecordInput, CourierSnapshot } from "@domy/domain";
+import { courierSnapshot, type CourierRecordInput, type CourierSnapshot } from "@domy/domain";
 import { useEffect, useSyncExternalStore } from "react";
 import { setClockOffset } from "@/lib/clock";
-import { openCourierDb, type CourierDb, type StoredPhoto } from "@/lib/offline/db";
-import { pendingRecords, replayRecords, saveRecord } from "@/lib/offline/outbox";
+import {
+  claimCourierDb,
+  courierMeta,
+  courierStores,
+  CourierDataError,
+  openCourierDb,
+  outboxItem,
+  storedPhoto,
+  type CourierDb,
+  type Meta,
+  type OutboxItem,
+  type StoredPhoto,
+} from "@/lib/offline/db";
+import { replayRecords, saveRecord } from "@/lib/offline/outbox";
 import { synchronize, SyncError } from "@/lib/offline/sync";
 
 /**
@@ -11,12 +23,17 @@ import { synchronize, SyncError } from "@/lib/offline/sync";
  */
 
 export type CourierState = {
+  userId: string | null;
   /** False until the phone's database has been read once. */
   loaded: boolean;
   /** The snapshot with the records not yet sent applied, as the server will apply them. */
   view: CourierSnapshot | null;
   pendingRecords: number;
   pendingPhotos: number;
+  pending: OutboxItem[];
+  photos: StoredPhoto[];
+  meta: Meta | null;
+  sessionStatus: "active" | "expired" | "withdrawn";
   syncing: boolean;
   /** The last synchronization failed for lack of signal. */
   offline: boolean;
@@ -24,15 +41,21 @@ export type CourierState = {
   refusal: string | null;
 };
 
-let state: CourierState = {
+const emptyState: CourierState = {
+  userId: null,
   loaded: false,
   view: null,
   pendingRecords: 0,
   pendingPhotos: 0,
+  pending: [],
+  photos: [],
+  meta: null,
+  sessionStatus: "active",
   syncing: false,
   offline: false,
   refusal: null,
 };
+let state = emptyState;
 const listeners = new Set<() => void>();
 let database: Promise<CourierDb> | null = null;
 
@@ -41,44 +64,90 @@ function update(next: Partial<CourierState>) {
   for (const listener of listeners) listener();
 }
 
-function db(): Promise<CourierDb> {
+export function courierDatabase(): Promise<CourierDb> {
   database ??= openCourierDb();
   return database;
 }
 
+/** Identity changes and sign-out must not leave the previous person's view in memory. */
+export function resetCourierState(): void {
+  update(emptyState);
+}
+
 /** Reads the phone's database again and recomputes what the courier sees. */
-async function reload(): Promise<void> {
-  const store = await db();
-  const [snapshot, records, photos, meta] = await Promise.all([
-    store.get("snapshot", "current"),
-    pendingRecords(store),
-    store.count("photos"),
-    store.get("meta", "current"),
+async function reload(userId: string): Promise<void> {
+  const store = await courierDatabase();
+  const tx = store.transaction(courierStores);
+  const [savedSnapshot, savedItems, savedPhotos, savedMeta] = await Promise.all([
+    tx.objectStore("snapshot").get("current"),
+    tx.objectStore("outbox").getAll(),
+    tx.objectStore("photos").getAll(),
+    tx.objectStore("meta").get("current"),
   ]);
+  await tx.done;
+  const meta = courierMeta.parse(savedMeta);
+  if (meta.userId !== userId)
+    throw new CourierDataError(
+      "Los datos guardados pertenecen a otra cuenta. Ingresa con esa cuenta para sincronizarlos.",
+    );
+  const pending = savedItems.map((item) => outboxItem.parse(item));
+  const records = pending.flatMap((item) => (item.type === "record" ? [item.record] : []));
+  const photos = savedPhotos.map((photo) => storedPhoto.parse(photo));
+  const snapshot = savedSnapshot ? courierSnapshot.parse(savedSnapshot) : null;
   // Flags follow the server's clock, also without signal (research R9).
-  if (meta) setClockOffset(meta.clockOffsetMs);
+  setClockOffset(meta.clockOffsetMs);
   update({
+    userId,
     loaded: true,
     view: snapshot ? replayRecords(snapshot, records) : null,
     pendingRecords: records.length,
-    pendingPhotos: photos,
+    pendingPhotos: photos.length,
+    pending,
+    photos,
+    meta,
+    sessionStatus: meta.sessionStatus ?? "active",
   });
 }
 
 let running: Promise<void> | null = null;
+let paused = false;
+
+/** Finish the old account's in-flight work before its cookie can change (FR-021). */
+export async function pauseCourierSynchronization(): Promise<void> {
+  paused = true;
+  await running;
+}
+export function resumeCourierSynchronization(): void {
+  paused = false;
+}
 
 /** Synchronizes now, once at a time; a failure leaves everything on the phone (FR-020). */
 export function synchronizeNow(userId: string): Promise<void> {
+  if (paused) return Promise.resolve();
   running ??= (async () => {
     update({ syncing: true });
     try {
-      await synchronize(await db(), { userId });
+      await synchronize(await courierDatabase(), { userId });
       update({ offline: false, refusal: null });
     } catch (error) {
-      const offline = !(error instanceof SyncError) || error.status === 0;
-      update({ offline, refusal: offline ? null : error.message });
+      const offline = error instanceof SyncError && error.status === 0;
+      update({
+        offline,
+        refusal: offline
+          ? null
+          : error instanceof SyncError || error instanceof CourierDataError
+            ? error.message
+            : "No pudimos sincronizar. Tus registros siguen guardados; reintentaremos cuando haya conexión.",
+      });
     } finally {
-      await reload();
+      await reload(userId).catch(() => {
+        update({
+          loaded: true,
+          view: null,
+          refusal:
+            "No pudimos leer los datos guardados. No los borres; comunícate con el coordinador.",
+        });
+      });
       update({ syncing: false });
       running = null;
     }
@@ -95,8 +164,16 @@ export async function saveCourierRecord(
   record: CourierRecordInput,
   photos: StoredPhoto[] = [],
 ): Promise<void> {
-  await saveRecord(await db(), record, photos);
-  await reload();
+  if (paused)
+    throw new CourierDataError("Espera a que termine el cambio de sesión antes de guardar.");
+  const trackingNumber = state.view?.route?.stops
+    .flatMap((stop) => stop.tasks)
+    .find((task) => task.shipmentId === record.shipmentId)?.trackingNumber;
+  await saveRecord(await courierDatabase(), record, photos, {
+    userId,
+    ...(trackingNumber && { trackingNumber }),
+  });
+  await reload(userId);
   void synchronizeNow(userId);
 }
 
@@ -118,17 +195,38 @@ const syncEveryMs = 30_000;
  * Keeps the phone in sync while the courier app is open: at once, when the connection
  * returns, when the app becomes visible again, and every 30 seconds.
  */
-export function useSynchronization(userId: string): void {
+export function useSynchronization(userId: string | null): void {
   useEffect(() => {
-    void reload();
+    let disposed = false;
+    if (!userId) {
+      update({ ...emptyState, loaded: true, offline: !navigator.onLine });
+      return;
+    }
     const run = () => {
-      if (document.visibilityState === "visible") void synchronizeNow(userId);
+      if (!disposed && document.visibilityState === "visible") void synchronizeNow(userId);
     };
-    run();
+    void courierDatabase()
+      .then(async (store) => {
+        await claimCourierDb(store, userId);
+        await reload(userId);
+        run();
+      })
+      .catch((error: unknown) => {
+        if (!disposed)
+          update({
+            loaded: true,
+            view: null,
+            refusal:
+              error instanceof CourierDataError
+                ? error.message
+                : "No pudimos abrir los datos del teléfono. Comunícate con el coordinador.",
+          });
+      });
     const timer = window.setInterval(run, syncEveryMs);
     window.addEventListener("online", run);
     document.addEventListener("visibilitychange", run);
     return () => {
+      disposed = true;
       window.clearInterval(timer);
       window.removeEventListener("online", run);
       document.removeEventListener("visibilitychange", run);

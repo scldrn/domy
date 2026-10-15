@@ -41,3 +41,6 @@ Nada pendiente por ahora.
 | 2026-10-14 | ¿Dónde se vincula la cuenta de un mensajero con su ficha? | En «Usuarios», solo el propietario, al crear o editar una cuenta con rol Mensajero (T094) |
 | 2026-10-14 | Dirección real de la oficina | Carrera 90 # 65C-10, Urbanización Mirador de Barcelona, barrio Robledo, Medellín |
 | 2026-10-14 | Teléfonos para la validación manual (T087) | Samuel tiene un Android y un iPhone |
+| 2026-10-14 | ¿Fusionar la PR #19 con CI verde y continuar US2 desde `main` actualizado? | Sí; fusionar mediante squash y continuar US2 |
+| 2026-10-14 | ¿Explicitar la dependencia de la validación offline de «Novedad»? | Sí; US2 valida recogidas y entregas en la interfaz y todos los registros técnicamente. US3 completa el escenario visual de «Novedad» |
+| 2026-10-14 | ¿Hacer commit, push y abrir la PR de US2? | Aprobado. La fusión de esta PR y continuar US3 requieren autorización aparte |

@@ -141,6 +141,7 @@ function TaskCard({ task }: { task: CourierTask }) {
   const { user } = Route.useRouteContext();
   const [form, setForm] = useState<"delivery" | "disbursement" | null>(null);
   const [saving, setSaving] = useState(false);
+  if (!user) return null;
   const pending = task.status === "pending";
   const window = formatWindow(task.windowStart, task.windowEnd);
   const flag = shipmentFlag(

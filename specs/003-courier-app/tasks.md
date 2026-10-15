@@ -131,21 +131,24 @@ board and that the route is "Finalizada"
 pending
 
 **Independent Test**: load a route, go offline, record a pickup, a delivery with photo and
-collection, and an exception; restart; go online; every record arrives exactly once with the
+collection; restart; go online; every record arrives exactly once with the
 time it happened
+
+All record kinds are covered by the technical persistence and sync tests. The phone
+journey's exception step depends on US3's T051 and is completed by T049, not claimed by US2.
 
 ### Tests for User Story 2 ⚠️ write first, must fail
 
-- [ ] T041 [P] [US2] Unit tests in `apps/web/src/lib/offline/sync.test.ts` with `fake-indexeddb` and a fake `fetch`: records sent in order, at most 50 per request; a record leaves the outbox only when acknowledged; a failed request keeps everything; a `401` keeps the outbox and asks to sign in; a `401` before the known `sessionExpiresAt` (access withdrawn) clears the snapshot and keeps the outbox, and one after it (session expired) keeps both; notice acknowledgments are sent after the records; a photo is uploaded only after its record; `deviceNow` is sent; a different user cannot take over a non-empty outbox; a snapshot without a route that was finished removes its personal data and photos from the phone (FR-004, FR-018–FR-023)
-- [ ] T042 [P] [US2] Integration tests in `apps/server/tests/courier-records-sync.test.ts`: a batch answered twice has one effect per record; `occurred_at` is corrected by the offset to `deviceNow` and never later than `recorded_at`; one invalid record does not stop the others of the batch; records of one shipment apply in the order sent (FR-019)
-- [ ] T043 [P] [US2] End-to-end test in `apps/web/tests/e2e/courier-offline.spec.ts` with `context.setOffline`: quickstart scenarios 8–10 and 21, the app opening offline from the service worker in under 3 seconds (SC-003), and the first open without signal (spec US2 scenario 10)
+- [X] T041 [P] [US2] Unit tests in `apps/web/src/lib/offline/sync.test.ts` with `fake-indexeddb` and a fake `fetch`: records sent in order, at most 50 per request; a record leaves the outbox only when acknowledged and the refreshed snapshot is committed; a failed request keeps unacknowledged work (successful photo uploads may already be removed); a `401` keeps the outbox and asks to sign in; a `401` before the known `sessionExpiresAt` (access withdrawn) clears the snapshot and keeps the outbox, and one after it (session expired) keeps both; notice acknowledgments are sent after the records; a photo is uploaded only after its record; `deviceNow` is sent; a different user cannot take over a non-empty outbox; a snapshot without a route that was finished removes its personal data and photos from the phone (FR-004, FR-018–FR-023)
+- [X] T042 [P] [US2] Integration tests in `apps/server/tests/courier-records-sync.test.ts`: a batch answered twice has one effect per record; `occurred_at` is corrected by the offset to `deviceNow` and never later than `recorded_at`; a well-formed record whose state prevents application is stored as `not_applied` without stopping the other records; malformed request fields are refused at the boundary without effects; records of one shipment apply in the order sent (FR-019, FR-024, Constitution V)
+- [X] T043 [P] [US2] End-to-end test in `apps/web/tests/e2e/courier-offline.spec.ts` with `context.setOffline`: quickstart scenarios 8–10 (US2's pickups and deliveries; the exception step is T049 after T051) and 21, the app opening offline from the service worker in under 3 seconds (SC-003), and the first open without signal (spec US2 scenario 10). Use the built app and its real service worker through `apps/web/tests/e2e/global-setup.ts`, keeping the existing suite working
 
 ### Implementation for User Story 2
 
-- [ ] T044 [US2] Complete `apps/web/src/lib/offline/sync.ts`: triggers on open, on the `online` event, on becoming visible, and every 30 seconds while visible; clock offset stored in `meta`; `401` handling; outbox tied to the signed-in user; until T041 passes
-- [ ] T045 [US2] Apply the clock offset and the per-record transaction isolation in `apps/server/src/routes/courier.ts` until T042 passes
-- [ ] T046 [US2] Add to `apps/web/src/routes/courier-layout.tsx` the connectivity banner, the pending count on the navigation bar, the warning when records are pending for more than 2 hours, and the warning when the session ends in 2 days or fewer (FR-003, FR-020)
-- [ ] T047 [US2] Build `apps/web/src/routes/courier-pending.tsx` (list of pending records and photos, sign-out refused while any is pending, sign-out clearing the database) and `apps/web/src/features/courier/install-hint.tsx` (how to install, `navigator.storage.persist()` after sign-in), until T043 passes
+- [X] T044 [US2] Complete `apps/web/src/lib/offline/sync.ts`, the identity and atomic persistence in `db.ts` and `outbox.ts`, and `apps/web/src/features/courier/courier-store.ts`: triggers on open, on the `online` event, on becoming visible, and every 30 seconds while visible; clock offset stored in `meta`; `401` handling; outbox tied to the signed-in user; acknowledged records and the refreshed snapshot committed together so a failed refresh cannot undo their visible results. Validate stored items and transport responses at the boundary, with shared response schemas in `packages/domain/src/schemas/courier.ts` (Constitution V). Integrate identity and expired/offline session handling in `apps/web/src/routes/courier-layout.tsx` and `apps/web/src/features/auth/session.ts`; until T041 passes
+- [X] T045 [US2] Apply the clock offset and the per-record transaction isolation in `apps/server/src/routes/courier.ts` until T042 passes
+- [X] T046 [US2] Write tests for the warning boundaries and count wording in `apps/web/src/features/courier/sync-status.test.ts`, then implement that pure logic in `sync-status.ts` and add to `apps/web/src/routes/courier-layout.tsx` the connectivity banner, separate pending action and photo counts on the navigation bar, synchronization feedback with retry (design-system.md §8), the warning when records are pending for more than 2 hours, and the warning when the session ends in 2 days or fewer (FR-003, FR-020)
+- [X] T047 [US2] Build `apps/web/src/routes/courier-pending.tsx` (list of pending records and photos, sign-out refused while any is pending, sign-out clearing the database) and `apps/web/src/features/courier/install-hint.tsx` (how to install, `navigator.storage.persist()` after sign-in), until T043 passes
 
 **Checkpoint**: User Stories 1 and 2 make the app reliable on the street
 
@@ -161,7 +164,7 @@ verify "Novedad" with its reason and the "Problema de recogida" flag
 ### Tests for User Story 3 ⚠️ write first, must fail
 
 - [ ] T048 [P] [US3] Integration tests in `apps/server/tests/courier-exceptions.test.ts` covering spec US3 scenarios 1–5: an exception sets `exception`, keeps custody, fails the delivery task, and may finish the route; reason required, note and photos optional; a problem sets `problem_note` without changing the status, a second report replaces it, and it clears when the task is completed; `exceptionsToDecide` and `pickupProblem` on the board (FR-013, FR-014, FR-033)
-- [ ] T049 [P] [US3] End-to-end test in `apps/web/tests/e2e/courier-exceptions.spec.ts`: quickstart scenario 11
+- [ ] T049 [P] [US3] End-to-end test in `apps/web/tests/e2e/courier-exceptions.spec.ts`: quickstart scenario 11 and the exception step of offline scenario 8 after T051; reopen, reconnect, and verify one exception record
 
 ### Implementation for User Story 3
 
@@ -438,3 +441,7 @@ passed. The existing multi-courier transfer test also verifies one keyed event, 
 couriers' audit histories, and replay after an intervening unlink. All four gates passed:
 `pnpm check`, `pnpm build`, default-worker `pnpm test` (domain 201, server 373, web 135;
 709 total), and `pnpm test:e2e` (60 scenarios). The route-invariants timeout did not recur.
+
+## Phase 13: Convergence — US2 Session Storage Boundary
+
+- [X] T098 Write a failing regression in `apps/web/src/lib/offline/sync.test.ts` proving that a malformed stored snapshot cannot supply a trusted expiry when session access is refused, while pending records remain intact. Validate the snapshot and the transaction's current metadata in `refuseCourierSession` in `apps/web/src/lib/offline/sync.ts`, using only validated expiry data and preserving the existing unknown-expiry refusal behavior, until it passes (Constitution V, FR-004, T044; CRITICAL, contradicts). Repeat the quality gates and scoped US2 convergence; do not duplicate US3–US7 or polish tasks.

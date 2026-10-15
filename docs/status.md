@@ -14,15 +14,16 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Specified, planned, tasked, and analyzed against 002 as built on 2026-10-14 (research R17). Setup T001–T003 (#13), domain T004–T014 (#14), foundation T015–T025 (#15), US1 server and web T026–T040 (#16–#17), and courier account linking T094 (#18, squash `6af7c60`) are on `main`. PR #18 and its post-merge CI passed all gates. The seed sets the real office address (Robledo). T095–T097 correct accepted unchanged account links and master data edits, sharing transactional receipts and hiding them from Audit history; integration through `003-fix-account-idempotency` is next. US2 T041–T047 follows; effects of late records across routes arrive with US5 (T067) |
+| 003 Courier app | Setup T001–T003 (#13), domain T004–T014 (#14), foundation T015–T025 (#15), US1 T026–T040 (#16–#17), account linking T094 (#18), and idempotency corrections T095–T097 (#19, squash `5c8b107`) are on `main`. PR #19 and its post-merge CI passed all gates. US2 T041–T047 and corrective T098 are implemented, locally validated, and converged on `003-us2-offline`; the owner approved commit, push, and PR publication. Its PR supplies the current GitHub CI status; merging still needs approval. Its phone journey covers pickups and deliveries; US3 completes the exception step. Effects of late records across routes arrive with US5 (T067) |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Deliver `003-fix-account-idempotency` (T095–T097) with the owner's approval through a pull
-   request and green CI. Then create `003-us2-offline` from the updated `main`, following
-   Phase 4 (T041–T047) of `specs/003-courier-app/tasks.md` with `/speckit-implement`, tests
-   first. Do not repeat T094 or merge the already merged PR #18 again.
+1. Verify GitHub CI for the US2 PR from `003-us2-offline`; publication is approved. Ask the
+   owner before merging, and merge only with green CI, then update `main`. Continue US3 (T048–T053) on a new
+   `003-us3-exceptions` branch only with approval. Write T049's offline exception regression
+   before T051's form; validate the complete exception phone journey after the form passes.
+   Do not repeat T094–T097 or merge the already merged PR #19 again.
 2. Before the end of 003: use the owner's Android phone and iPhone (iOS 16.4 or later for
    notifications) for the manual validation T087. The owner's DigitalOcean Spaces bucket
    (in the client's name) is needed only at deployment.
@@ -44,10 +45,15 @@ a short-lived branch, so the specification and implementation of every feature l
   durable, and are excluded from Audit history before pagination. No migration is needed.
 - After T096–T097, all four gates passed again: `pnpm check`, `pnpm build`, default-worker
   `pnpm test` (201 domain, 373 server, 135 web; 709 total), and `pnpm test:e2e` (60 scenarios).
-  The route-invariants timeout did not recur. T095–T097 are ready for review and delivery;
-  US2 remains the next implementation slice.
+  The route-invariants timeout did not recur. T095–T097 landed on `main` through PR #19
+  (squash `5c8b107`) after all GitHub CI gates passed, with the owner's approval.
 
 ## US2 implementation context
+
+- Started from `5c8b107` on `003-us2-offline`. The owner approved clarifying the offline
+  scenario's dependency: US2 validates pickups and deliveries on the phone and every
+  record kind technically; US3 adds the exception form and completes its offline phone
+  journey. Tests first, T041–T043, before T044–T047; no US3 interface is built early.
 
 - Checklists pass: requirements 16/16, courier rules 48/48. Feature context remains
   `specs/003-courier-app` in the local `.specify/feature.json`.
@@ -55,19 +61,56 @@ a short-lived branch, so the specification and implementation of every feature l
   photos are saved in one IndexedDB transaction, and pending records replay over the
   snapshot using the shared domain rules. Open, reconnect, visibility, and 30-second
   synchronization triggers already exist in the store.
-- T041–T045 must finish identity isolation, distinguish expired sessions from withdrawn
-  access, keep unacknowledged items, handle batches without losing later records, and
-  verify device-clock correction and exactly-once application. The server already applies
-  one transaction per record and clamps its time to the receipt time.
-- T046–T047 add the connectivity banner, pending counts and list, 2-hour and session
-  warnings, guarded sign-out and cleanup, install guidance, and persistent-storage request.
-  The layout's current session guard still needs network on a fresh page load: keeping a
-  loaded route usable offline or after session expiry must be tested through that guard.
-- T043 must exercise the built app and its active service worker. The current end-to-end
-  setup starts Vite development, where the worker is disabled. Test reopening offline,
-  lost responses and replay, reconnecting, and signing in again as the same courier.
+- Identity is checked atomically before saving or sending. Sign-in and sign-out share the
+  same pending-data guard, including photo-only queues and unreadable ownership. Expired
+  sessions keep the route; withdrawn access clears only the snapshot. A temporary server
+  error does not withdraw access. Acknowledged records leave the outbox together with the
+  refreshed snapshot, preserving the visible local result if refresh fails.
+- The banner and pending page show actions and photos, warn after 2 hours and within 2 days
+  of expiry, and offer retry, installation guidance, and persistent-storage request.
+- The server already applied one transaction per record and clamped occurrence time to
+  receipt time; T042 verifies this behavior rather than introducing another implementation.
+- T043 serves the built app with Vite preview and its real active service worker. Each
+  case owns an independent courier account and route. Coverage includes offline reopening
+  within 3 seconds, photos, response loss after commit, reconnecting, expiry and same-user
+  reauthentication, unavailable server, guarded logout, cleanup, and accessibility.
 - Notice acknowledgment transport is covered by T041; the actual notices, acknowledgment
   endpoint, handovers, and push notifications remain US5 (T061–T070).
+
+## US2 validation
+
+- Tests first: the expanded sync suite initially reproduced 15 failures before T044;
+  ownership on save also failed before its correction. Later consumer review reproduced
+  four failures around temporary server failure, malformed successful sign-in, and `403`
+  withdrawal before correcting those paths. T098 then reproduced one more failure: a
+  malformed stored snapshot supplied an untrusted expiry during session refusal.
+- T042's seven PostgreSQL tests passed against the existing server behavior, including
+  actual Better Auth expiry under a controlled process clock. No duplicate server
+  implementation or migration was necessary.
+- Final gates on 2026-10-14: `pnpm check`, `pnpm build`, default-worker `pnpm test`
+  (201 domain, 380 server, 170 web; **751 total**), and `pnpm test:e2e` (**64 scenarios**)
+  passed. The built shell and real service worker reopen the loaded route in under 3 seconds
+  in the automated Chromium phone viewport; this is not a physical-phone timing claim.
+- The initial full unit run, concurrent with static checks, hit the existing 30-second
+  route-invariants timeout once. Both subsequent complete default-worker runs, without
+  concurrent gates, passed; no timeout or worker setting was changed. Monitor it in CI.
+- The retry-target check initially measured a scaled notification hidden in Sonner's
+  collapsed stack. It now opens the stack via its accessible shortcut and waits for finite
+  animations before checking the visible button's minimum 48 × 48 px area. The final full
+  end-to-end suite passed, with no reduced thresholds or disabled accessibility checks.
+- Scoped convergence completed with no remaining findings for US2 and T098: 13
+  requirements/success criteria, 10 acceptance scenarios, 8 plan decisions, all 9
+  constitution principles, and the 8 completed tasks. The final convergence pass left
+  `tasks.md` byte-for-byte unchanged and appended no empty phase. This does not declare
+  the whole feature complete: US3–US7 and polish retain their existing tasks. Physical
+  Android/iPhone validation remains T087/T093.
+
+| Completed scope | Evidence |
+| --- | --- |
+| FR-001–FR-004, FR-021: authentication, identity, expiry, withdrawal, logout | Existing auth and courier-access suites; `session.test.ts` (8), `sync.test.ts` (23), offline expiry/logout e2e |
+| FR-018–FR-019, SC-001: durable ordered records and exactly-once effects | IndexedDB/outbox regressions, server `courier-records-sync.test.ts` (7), lost-response-after-commit e2e |
+| FR-020, FR-022, SC-003–SC-004: automatic synchronization, pending view and warnings, cached route | Shared triggers, `sync-status.test.ts` (3), offline reload/reconnect and unavailable-server e2e |
+| FR-023: separate acknowledged photo upload and finished-route cleanup | Sync refusal/ordering regressions, actual stored proof and empty-store logout e2e |
 
 ## Open with the client
 

@@ -1,15 +1,16 @@
 import { z } from "zod";
 import {
   exceptionReasons,
+  noticeTypes,
+  recordOutcomes,
   type CourierRecordKind,
   type ExceptionReason,
-  type NoticeType,
   type RecordOutcome,
 } from "../courier-records.ts";
 import { collectedTotal, type DaySummary } from "../day-summary.ts";
-import type { RouteStatus, StopKind, TaskStatus } from "../routes.ts";
-import type { ShipmentStatus } from "../shipment-lifecycle.ts";
-import type { PackageSize, ShipmentKind } from "./enums.ts";
+import { routeStatuses, stopKinds, taskStatuses } from "../routes.ts";
+import { shipmentStatuses } from "../shipment-lifecycle.ts";
+import { packageSizes, shipmentKinds, type ShipmentKind } from "./enums.ts";
 import { calendarDate, money, reason } from "./shipment.ts";
 
 /**
@@ -273,96 +274,122 @@ export type PushSubscriptionInput = z.input<typeof pushSubscriptionInput>;
 export const pushSubscriptionRemoveInput = z.object({ actionId, endpoint: z.url() });
 export type PushSubscriptionRemoveInput = z.input<typeof pushSubscriptionRemoveInput>;
 
-type Named = { id: string; name: string };
+const named = z.object({ id: z.uuid(), name: z.string() });
+type Named = z.output<typeof named>;
 
 /** One shipment at one stop of the courier's route (FR-005). */
-export type CourierTask = {
-  id: string;
-  shipmentId: string;
-  kind: StopKind;
-  status: TaskStatus;
-  trackingNumber: string;
-  shipmentKind: ShipmentKind;
-  shipmentStatus: ShipmentStatus;
-  merchant: Named;
-  recipientName: string | null;
-  recipientPhone: string | null;
+export const courierTask = z.object({
+  id: z.uuid(),
+  shipmentId: z.uuid(),
+  kind: z.enum(stopKinds),
+  status: z.enum(taskStatuses),
+  trackingNumber: z.string(),
+  shipmentKind: z.enum(shipmentKinds),
+  shipmentStatus: z.enum(shipmentStatuses),
+  merchant: named,
+  recipientName: z.string().nullable(),
+  recipientPhone: z.string().nullable(),
   /** A carrier handoff's carrier, proposed as who received it (FR-008). */
-  carrier: Named | null;
-  destinationTown: string | null;
+  carrier: named.nullable(),
+  destinationTown: z.string().nullable(),
   /** What an errand is about. */
-  errandDescription: string | null;
-  instructions: string | null;
-  packageCount: number | null;
-  packageSize: PackageSize | null;
-  windowStart: string | null;
-  windowEnd: string | null;
-  codAmount: number;
+  errandDescription: z.string().nullable(),
+  instructions: z.string().nullable(),
+  packageCount: z.number().int().positive().nullable(),
+  packageSize: z.enum(packageSizes).nullable(),
+  windowStart: instant.nullable(),
+  windowEnd: instant.nullable(),
+  codAmount: money,
   /**
    * The handover this delivery waits for (feature 002, FR-025). The at-risk or late flag is
    * computed on the phone with `shipmentFlag` and its corrected clock, so it stays right
    * without signal (FR-005, FR-022).
    */
-  blockedByHandover: { id: string; fromCourier: Named } | null;
-  problemNote: string | null;
-};
+  blockedByHandover: z.object({ id: z.uuid(), fromCourier: named }).nullable(),
+  problemNote: z.string().nullable(),
+});
+export type CourierTask = z.output<typeof courierTask>;
 
-export type CourierStop = {
-  id: string;
-  position: number;
-  kind: StopKind;
-  address: string;
-  neighborhood: Named | null;
+export const courierStop = z.object({
+  id: z.uuid(),
+  position: z.number().int().nonnegative(),
+  kind: z.enum(stopKinds),
+  address: z.string(),
+  neighborhood: named.nullable(),
   /** The recipient's on a delivery, the merchant's WhatsApp on a pickup or return (FR-016). */
-  contactPhone: string | null;
-  tasks: CourierTask[];
-};
+  contactPhone: z.string().nullable(),
+  tasks: z.array(courierTask),
+});
+export type CourierStop = z.output<typeof courierStop>;
 
-export type CourierRoute = {
-  id: string;
-  number: number;
-  serviceDate: string;
-  status: RouteStatus;
-  stops: CourierStop[];
-};
+export const courierRoute = z.object({
+  id: z.uuid(),
+  number: z.number().int().positive(),
+  serviceDate: calendarDate,
+  status: z.enum(routeStatuses),
+  stops: z.array(courierStop),
+});
+export type CourierRoute = z.output<typeof courierRoute>;
 
 /** A package the courier holds that is on no route ("En mi custodia", FR-005, FR-031). */
-export type HeldShipment = {
-  shipmentId: string;
-  trackingNumber: string;
-  status: ShipmentStatus;
-  serviceDate: string;
-  merchant: Named;
-  recipientName: string | null;
-  returnDecided: boolean;
-};
+export const heldShipment = z.object({
+  shipmentId: z.uuid(),
+  trackingNumber: z.string(),
+  status: z.enum(shipmentStatuses),
+  serviceDate: calendarDate,
+  merchant: named,
+  recipientName: z.string().nullable(),
+  returnDecided: z.boolean(),
+});
+export type HeldShipment = z.output<typeof heldShipment>;
 
 /** A package the courier must hand to another ("Entregar a {mensajero}", FR-028). */
-export type HandoverToGive = {
-  handoverId: string;
-  shipmentId: string;
-  trackingNumber: string;
-  toCourier: Named;
-};
+export const handoverToGive = z.object({
+  handoverId: z.uuid(),
+  shipmentId: z.uuid(),
+  trackingNumber: z.string(),
+  toCourier: named,
+});
+export type HandoverToGive = z.output<typeof handoverToGive>;
 
-export type Notice = {
-  id: string;
-  type: NoticeType;
-  routeNumber: number | null;
-  trackingNumber: string | null;
-  createdAt: string;
-};
+export const courierNotice = z.object({
+  id: z.uuid(),
+  type: z.enum(noticeTypes),
+  routeNumber: z.number().int().positive().nullable(),
+  trackingNumber: z.string().nullable(),
+  createdAt: instant,
+});
+export type Notice = z.output<typeof courierNotice>;
+
+const courierDaySummary = z.object({
+  date: calendarDate,
+  deliveries: z.number().int().nonnegative(),
+  exceptions: z.number().int().nonnegative(),
+  returns: z.number().int().nonnegative(),
+  pendingStops: z.number().int().nonnegative(),
+  cash: money,
+  companyTransfer: money,
+  merchantTransfer: money,
+  disbursements: money,
+  cashToHandOver: z.number().int(),
+}) satisfies z.ZodType<DaySummary>;
 
 /** `GET /api/courier/route`: everything the courier app needs, also without signal (FR-022). */
-export type CourierSnapshot = {
-  serverTime: string;
-  sessionExpiresAt: string;
-  route: CourierRoute | null;
-  handoversToGive: HandoverToGive[];
-  heldOffRoute: HeldShipment[];
-  notices: Notice[];
-  summary: DaySummary;
-};
+export const courierSnapshot = z.object({
+  serverTime: instant,
+  sessionExpiresAt: instant,
+  route: courierRoute.nullable(),
+  handoversToGive: z.array(handoverToGive),
+  heldOffRoute: z.array(heldShipment),
+  notices: z.array(courierNotice),
+  summary: courierDaySummary,
+});
+export type CourierSnapshot = z.output<typeof courierSnapshot>;
+
+/** Only a valid, known outcome acknowledges a record (FR-019, Constitution V). */
+export const courierRecordResults = z.object({
+  results: z.array(z.object({ id: z.uuid(), outcome: z.enum(recordOutcomes) })),
+});
 
 /** A courier record as the panel shows it (FR-036). */
 export type CourierRecord = {

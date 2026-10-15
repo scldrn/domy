@@ -34,7 +34,7 @@ pnpm test:e2e
 | 5 | US1 | Deliver a shipment with COD amount 85.000: split 50.000 cash and 35.000 transfer to the company with a receipt photo | Collection stored by payment method; the board shows no "Recaudo diferente" |
 | 6 | US1 | Deliver collecting 80.000 of 85.000 | A note is required; flagged "Recaudo diferente" |
 | 7 | US1 | Try to deliver a shipment not yet picked up; use the call, WhatsApp, and map shortcuts | The app asks to confirm the pickup first; each shortcut opens its app |
-| 8 | US2 | Go offline; reopen the app; record a pickup, a delivery with photo and collection, and an exception; restart the phone | The route opens; each result shows at once; "3 pendientes por sincronizar" survives the restart |
+| 8 | US2, then US3 | Go offline; reopen the app; record a pickup and a delivery with photo and collection; restart the phone. After US3 adds its form, repeat with an exception too | The route opens; each result shows at once; "2 pendientes por sincronizar" survives the restart in US2; with the exception too, "3 pendientes por sincronizar" in US3 |
 | 9 | US2 | Go back online without touching the app | Within a minute the counter is zero; the board shows each record once, with the time it happened and the time it was received |
 | 10 | US2 | With pending records, try to sign out | Refused with an explanation |
 | 11 | US3 | Report "Destinatario ausente" on a delivery; report a problem on a pickup | The first is "Novedad" under "Novedades por decidir"; the second keeps its status, flagged "Problema de recogida" |
@@ -47,4 +47,4 @@ pnpm test:e2e
 | 18 | US5 | Sign in as A on two phones; record the same delivery on both while one is offline; bring it online | The second record is ignored without a flag; one delivery in the history |
 | 19 | US6 | From the panel, record a delivery on a courier's behalf with an earlier time; correct a collected amount; revert a delivery | "Registrado por despacho"; the history keeps the previous amount; the shipment is "Recogido" again with its stop pending |
 | 20 | US7 | Record deliveries with 100.000 cash, 50.000 to the company, 30.000 to the merchant, and a disbursement of 12.000; open "Mi día" | The four amounts and "Efectivo por entregar: $ 88.000", including records still pending |
-| 21 | All | Let the session expire (`DOMY_FAKE_NOW` + 31 days) with a route loaded and a pending record | The route stays usable; after signing in again the record is sent |
+| 21 | All | Let the actual authentication session expire with a route loaded and a pending record. Automated tests control Better Auth's process clock separately, and exercise the phone with an expired-session `401` carrying the server time | The route stays usable; after signing in again as the same courier the record is sent. `DOMY_FAKE_NOW` alone changes business time, not Better Auth's clock |

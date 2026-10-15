@@ -146,13 +146,15 @@ export default async function globalSetup() {
   // Request logs are discarded (an unread pipe fills up and stalls the servers mid-run). Each
   // server leads its own process group so teardown also stops what `pnpm exec` started.
   const options = { stdio: ["ignore", "ignore", "inherit"], detached: true } satisfies SpawnOptions;
+  // US2 T043: all scenarios use the built shell and real service worker, as phones do.
+  await run("pnpm", ["exec", "vite", "build"], webDir, { API_PORT: String(apiPort) });
   const processes: ChildProcess[] = [
     spawn("node", ["src/index.ts"], {
       ...options,
       cwd: serverDir,
       env: { ...process.env, ...env },
     }),
-    spawn("pnpm", ["exec", "vite", "--port", String(webPort), "--strictPort"], {
+    spawn("pnpm", ["exec", "vite", "preview", "--port", String(webPort), "--strictPort"], {
       ...options,
       cwd: webDir,
       env: { ...process.env, API_PORT: String(apiPort) },
