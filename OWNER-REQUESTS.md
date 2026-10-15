@@ -9,7 +9,8 @@ y la fecha. Responde aquí mismo o en la conversación.
 ## Bloquean algo ahora
 
 Nada requiere una respuesta ahora. Autorizaste commit, push y apertura de la PR de US4;
-se publica con las cuatro compuertas locales aprobadas. Fusionarla y continuar US5
+publicada como [PR #22](https://github.com/scldrn/domy/pull/22) con las cuatro compuertas
+locales aprobadas. Se revisa su CI. Fusionarla y continuar US5
 requieren autorización aparte y CI verde.
 
 ## Antes de terminar la 003 (app del mensajero)

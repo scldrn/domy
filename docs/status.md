@@ -14,18 +14,20 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup T001–T003 (#13), domain T004–T014 (#14), foundation T015–T025 (#15), US1 T026–T040 (#16–#17), account linking T094 (#18), idempotency corrections T095–T097 (#19, `5c8b107`), US2 T041–T047/T098 (#20, `93fdf09`), and US3 T048–T052/T099–T102 (#21, `4910f76`) are on `main`. PR #21 passed all four gates at its final head before the authorized squash merge. US4 T053–T060/T103–T110 is implemented and scoped-converged locally on `003-us4-decisions`, with all four gates passing; owner approved commit/push/PR; merge and US5 require separate approval and green CI. Effects of late records across routes remain US5 (T067) |
+| 003 Courier app | Setup T001–T003 (#13), domain T004–T014 (#14), foundation T015–T025 (#15), US1 T026–T040 (#16–#17), account linking T094 (#18), idempotency corrections T095–T097 (#19, `5c8b107`), US2 T041–T047/T098 (#20, `93fdf09`), and US3 T048–T052/T099–T102 (#21, `4910f76`) are on `main`. PR #21 passed all four gates at its final head before the authorized squash merge. US4 T053–T060/T103–T110 is implemented and scoped-converged locally on `003-us4-decisions`, with all four gates passing; published in [PR #22](https://github.com/scldrn/domy/pull/22); merge and US5 require separate approval and green CI. Effects of late records across routes remain US5 (T067) |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Publish the owner-approved US4 PR from `003-us4-decisions` and review its CI,
-   based on `main` at `4910f76`. Decisions, attempts, held routing, office receipt,
+1. Review the latest-head CI of US4 [PR #22](https://github.com/scldrn/domy/pull/22),
+   published from `003-us4-decisions` with implementation commit `95695c3`, based on
+   `main` at `4910f76`. Decisions, attempts, held routing, office receipt,
    settings and offline returns are implemented and scoped-converged. Final gates pass:
    `pnpm check`, `pnpm test` (821), `pnpm test:e2e` (75, no retries), and `pnpm build`.
    T107 applies the owner-approved capacity isolation without reducing coverage or
    limits; T110's high-COD return regression is also green. Generic route transitions
-   were not relaxed. Samuel approved commit, push and PR creation on 2026-10-15.
+   were not relaxed. Samuel approved commit, push and PR creation on 2026-10-15;
+   that publication is complete. The PR remains open, not merged.
    Merge and continuation to US5 require separate approval and green CI; local gates
    are not a substitute for the PR's CI result.
    Post-merge CI `38686516078` passed all four gates
