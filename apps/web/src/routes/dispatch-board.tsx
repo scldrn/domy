@@ -2,6 +2,7 @@ import {
   boardQuery,
   bogotaToday,
   filterBoard,
+  exceptionsToDecide,
   type BoardQuery,
   type BoardEntry,
   type BoardShipment,
@@ -82,6 +83,15 @@ function DispatchBoardPage() {
   const today = bogotaToday(currentTime);
   const all: BoardEntry[] = data ? [...data.shipments, ...data.pendingFromPreviousDays] : [];
   const view = data ? filterBoard(data.date, all, search, currentTime) : null;
+  const exceptions = view
+    ? exceptionsToDecide([...view.pendingFromPreviousDays, ...view.shipments])
+    : [];
+  const exceptionIds = new Set(exceptions.map((shipment) => shipment.id));
+  const ordinary = {
+    shipments: view?.shipments.filter((shipment) => !exceptionIds.has(shipment.id)) ?? [],
+    pending:
+      view?.pendingFromPreviousDays.filter((shipment) => !exceptionIds.has(shipment.id)) ?? [],
+  };
   const date = data?.date ?? search.date ?? today;
   const isToday = date === today;
   const filtered = Boolean(search.merchantId ?? search.rateZoneId ?? search.flag ?? search.status);
@@ -176,27 +186,38 @@ function DispatchBoardPage() {
               onChange={setFilters}
             />
 
-            {isToday && view.pendingFromPreviousDays.length > 0 && (
+            {exceptions.length > 0 && (
               <BoardSection
-                title="Pendientes de días anteriores"
-                hint="Siguen abiertos desde otros días; resuélvelos antes que los de hoy."
-                shipments={view.pendingFromPreviousDays}
+                title="Novedades por decidir"
+                hint="El mensajero conserva el paquete; falta decidir el siguiente paso."
+                shipments={exceptions}
                 now={currentTime}
                 today={today}
                 pointed={pointed}
                 onPoint={setPointed}
               />
             )}
-            {view.shipments.length > 0 ? (
+            {isToday && ordinary.pending.length > 0 && (
+              <BoardSection
+                title="Pendientes de días anteriores"
+                hint="Siguen abiertos desde otros días; resuélvelos antes que los de hoy."
+                shipments={ordinary.pending}
+                now={currentTime}
+                today={today}
+                pointed={pointed}
+                onPoint={setPointed}
+              />
+            )}
+            {ordinary.shipments.length > 0 ? (
               <BoardSection
                 title={isToday ? "Para hoy" : `Para el ${formatDate(date)}`}
                 hint="Ordenados por la hora en que cierra su franja; los que no tienen franja van al final."
-                shipments={[...view.shipments].sort(byWindowEnd)}
+                shipments={[...ordinary.shipments].sort(byWindowEnd)}
                 now={currentTime}
                 pointed={pointed}
                 onPoint={setPointed}
               />
-            ) : (
+            ) : view.shipments.length === 0 ? (
               <EmptyState
                 icon={filtered ? FilterOffIcon : InboxIcon}
                 {...(filtered
@@ -230,7 +251,7 @@ function DispatchBoardPage() {
                       ),
                     })}
               />
-            )}
+            ) : null}
           </div>
         </>
       ) : null}

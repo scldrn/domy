@@ -3,7 +3,7 @@ import { useId } from "react";
 import { BoardTable } from "./board-table";
 
 /**
- * One table of the board under its heading, count, and what to do with it. Both sections
+ * One table of the board under its heading, count, and what to do with it. All sections
  * share the same columns so they line up (FR-021).
  */
 export function BoardSection({

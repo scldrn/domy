@@ -7,24 +7,76 @@ type Role = "owner" | "dispatcher" | "courier";
 const authFile = (role: Role) => new URL(`.auth/${role}.json`, import.meta.url).pathname;
 
 /** WCAG 2.2 AA violations of the page as it is now (FR-034). */
-export async function accessibilityViolations(page: Page): Promise<string[]> {
-  // Dialogs and snackbars fade in and out: measure contrast once their animations end.
-  await page.waitForFunction(() =>
-    document
-      .getAnimations()
-      .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
-      .every((animation) => animation.playState !== "running"),
-  );
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-    // Base UI's invisible focus guards around popups take role="button" only in Safari, so
-    // VoiceOver can move past them; they are never shown or named, by design.
-    .exclude("[data-base-ui-focus-guard]")
-    .analyze();
-  return results.violations.map(
-    (violation) =>
-      `${violation.id}: ${violation.help} (${violation.nodes.map((node) => `${node.target.join(" ")} ${node.failureSummary ?? ""} ${node.html.slice(0, 160)}`).join("; ")})`,
-  );
+export async function accessibilityViolations(
+  page: Page,
+  beforeAnalyze?: () => Promise<void>,
+): Promise<string[]> {
+  const settleAnimations = () =>
+    page.waitForFunction(() =>
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .every((animation) => animation.playState !== "running"),
+    );
+  // A closing dialog still has its role until its exit animation ends. Classify the
+  // visible screen only afterward, or its background toast would escape stabilization.
+  await settleAnimations();
+  // T100: waiting for entrance animations alone cannot stop a dismissal during axe.
+  // Sonner's native shortcut expands the stack and pauses its timer. A modal already
+  // hides background notifications from the accessibility tree; never move its focus.
+  const hasNotifications =
+    (await page.getByRole("dialog").count()) === 0 &&
+    (await page.getByRole("alertdialog").count()) === 0 &&
+    (await page.locator("[data-sonner-toast]:not([data-removed=true])").count()) > 0;
+  const previousFocus = hasNotifications
+    ? await page.evaluateHandle(() => document.activeElement)
+    : null;
+  const wasInNotifications = previousFocus
+    ? await previousFocus.evaluate((element) => Boolean(element?.closest("[data-sonner-toaster]")))
+    : false;
+  try {
+    if (hasNotifications) {
+      // The pointer may remain where the just-closed dialog's submit button was. Keep
+      // stack expansion from moving a toast away from it and firing mouseleave mid-scan.
+      await page.mouse.move(0, 0);
+      await page.keyboard.press("Alt+t");
+      await page.waitForFunction(() =>
+        Boolean(document.activeElement?.closest("[data-sonner-toaster]")),
+      );
+      await expect(
+        page.locator("[data-sonner-toast]:not([data-removed=true])").first(),
+      ).toHaveAttribute("data-expanded", "true");
+    }
+    await settleAnimations();
+    await beforeAnalyze?.();
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      // Base UI's invisible focus guards around popups take role="button" only in Safari,
+      // so VoiceOver can move past them; they are never shown or named, by design.
+      .exclude("[data-base-ui-focus-guard]")
+      .analyze();
+    return results.violations.map(
+      (violation) =>
+        `${violation.id}: ${violation.help} (${violation.nodes.map((node) => `${node.target.join(" ")} ${node.failureSummary ?? ""} ${node.html.slice(0, 160)}`).join("; ")})`,
+    );
+  } finally {
+    if (previousFocus) {
+      if (!wasInNotifications) {
+        await page.mouse.move(0, 0);
+        if (
+          await page.evaluate(() =>
+            Boolean(document.activeElement?.closest("[data-sonner-toaster]")),
+          )
+        )
+          await page.keyboard.press("Escape");
+        await previousFocus.evaluate((element) => {
+          if (element instanceof HTMLElement && element.isConnected)
+            element.focus({ preventScroll: true });
+        });
+      }
+      await previousFocus.dispose();
+    }
+  }
 }
 
 /**

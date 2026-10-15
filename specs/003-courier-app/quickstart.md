@@ -19,7 +19,14 @@ endpoints in [contracts/http-api.md](contracts/http-api.md). Setup and gates are
 pnpm check
 pnpm test
 pnpm test:e2e
+pnpm build
 ```
+
+US3's automated slice covers scenario 11 and completes scenario 8's exception journey in
+`apps/web/tests/e2e/courier-exceptions.spec.ts`, using the built service worker, actual
+PostgreSQL and private photo storage. The board projects `returnDecided` and uses one
+domain rule for the undecided-exception list/count; no US4 decision action is built here.
+This does not replace the physical Android/iPhone validation in T087/T093.
 
 ## Manual validation scenarios
 

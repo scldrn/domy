@@ -249,10 +249,11 @@ function CourierLayout() {
           </div>
         </div>
       )}
+      {/* Keep actions scrollable above the fixed navigation and sync snackbars (FR-038). */}
       <main
         id="contenido"
         tabIndex={-1}
-        className="mx-auto w-full max-w-xl flex-1 px-4 pt-4 pb-28 outline-none"
+        className="mx-auto w-full max-w-xl flex-1 px-4 pt-4 pb-48 outline-none"
       >
         <div className="mb-4 flex flex-col gap-3">
           {status.sessionStatus === "withdrawn" ? (
@@ -297,7 +298,8 @@ function CourierLayout() {
               llegan, comunícate con el coordinador.
             </p>
           )}
-          {status.refusal && status.sessionStatus === "active" && (
+          {/* One actionable refusal across courier screens, including withdrawn access (T099). */}
+          {status.refusal && status.sessionStatus !== "expired" && (
             <div
               role="alert"
               className="rounded-sm bg-error-container p-3 text-body-l text-on-error-container"

@@ -87,7 +87,12 @@ Reasons and notes are 5–200 characters.
   `heldAtOffice`, `returnDecided`, `needsReview` (FR-036).
 - **`GET /api/shipments/board`**: each shipment gains `recordFlags`, a list of
   `no_photo`, `photo_pending`, `collection_differs`, `pickup_problem`, and `needs_review`
-  (`recordFlags` of `packages/domain`); the board gains `exceptionsToDecide: number` (FR-033).
+  (`recordFlags` of `packages/domain`), and `returnDecided: boolean`; the board gains
+  `exceptionsToDecide: number` (FR-033). A shared domain rule selects shipments with
+  `status === 'exception' && !returnDecided` for both the list and count of "Novedades por
+  decidir". Counts follow the existing board's non-status filters; the displayed list also
+  follows the selected status. Decided returns stay in their ordinary date section. This
+  US3 projection does not add the decision actions of US4.
 - **`GET /api/routes/board`**: each `RouteSummary` gains `courierLastSyncedAt` and
   `unacknowledgedNotices: number` (FR-033).
 - **`GET /api/shipments/unassigned`**: also returns held shipments that are on no route, each
