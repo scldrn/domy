@@ -1,5 +1,7 @@
 import type {
   FeeConfirmInput,
+  ExceptionDecisionInput,
+  OfficeReceiptInput,
   FeeQuote,
   FeeQuoteInput,
   NeighborhoodKind,
@@ -133,3 +135,13 @@ export async function confirmFee(id: string, input: FeeConfirmInput): Promise<Sh
     api.api.shipments[":id"]["confirm-fee"].$post({ param: { id }, json: input }),
   );
 }
+
+export const decideException = (id: string, input: ExceptionDecisionInput) =>
+  unwrap<Shipment>(
+    api.api.shipments[":id"]["exception-decision"].$post({ param: { id }, json: input }),
+  );
+
+export const receiveAtOffice = (id: string, input: OfficeReceiptInput) =>
+  unwrap<Shipment>(
+    api.api.shipments[":id"]["office-receipt"].$post({ param: { id }, json: input }),
+  );

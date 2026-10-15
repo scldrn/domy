@@ -1,4 +1,10 @@
-import { addShipmentToStops, removeShipmentFromStops, shipmentStatusLabels } from "@domy/domain";
+import {
+  addShipmentToStops,
+  addHeldShipmentToStops,
+  isHeldForRouting,
+  removeShipmentFromStops,
+  shipmentStatusLabels,
+} from "@domy/domain";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import type { Executor } from "../db/client.ts";
 import { handovers, routes, routeTasks, shipmentEvents, shipments } from "../db/schema/index.ts";
@@ -7,7 +13,9 @@ import { refreshRouteStatus } from "./route-status.ts";
 import {
   loadPlan,
   loadRouteRow,
+  loadOfficePlace,
   planShipments,
+  removeFromPlan,
   recordRouteEvents,
   savePlan,
   touchRoute,
@@ -48,7 +56,7 @@ export async function blockDelivery(
     .where(
       and(
         eq(routeTasks.shipmentId, shipmentId),
-        eq(routeTasks.kind, "delivery"),
+        inArray(routeTasks.kind, ["delivery", "return"]),
         eq(routeTasks.status, "pending"),
       ),
     );
@@ -106,6 +114,128 @@ export const handoverEvent = (
   ...(type === "handover_requested" && { reason: handover.reason }),
 });
 
+/** 003 FR-029–FR-031: the same held-stop/custody orchestration for a decision, add or move.
+ * Caller locks all affected routes before the shipment and writes its state/event in this tx.
+ */
+export async function routeHeldShipment(
+  tx: Executor,
+  shipment: ShipmentRow,
+  toRouteId: string | null,
+  by: Author & { reason: string; routeEvent?: "reassigned" | false },
+): Promise<{ fromCourierId: string | null; toCourierId: string | null }> {
+  const target = toRouteId ? await loadRouteRow(tx, toRouteId) : null;
+  const from = shipment.routeId ? await loadRouteRow(tx, shipment.routeId) : null;
+  if (
+    target &&
+    target.status !== "in_progress" &&
+    !(shipment.heldAtOffice && target.status === "draft")
+  ) {
+    throw new AppError("route_not_in_progress", {
+      message: "Un paquete en custodia del mensajero solo se agrega a una ruta en curso.",
+    });
+  }
+  const events: NewRouteEvent[] = [];
+  if (from) {
+    const removed = await removeFromPlan(tx, from.id, shipment.id, {
+      actorUserId: by.actorUserId,
+      occurredAt: by.now,
+      reason: by.reason,
+    });
+    events.push(
+      by.routeEvent === "reassigned"
+        ? {
+            ...removed,
+            type: "reassigned",
+            changes: { toRouteId },
+            fromCourierId: from.courierId,
+            toCourierId: target?.courierId ?? null,
+          }
+        : removed,
+    );
+  }
+  const cancelled = await cancelPendingHandover(tx, shipment.id, by);
+  if (cancelled) {
+    events.push(handoverEvent("handover_cancelled", cancelled.toRouteId, cancelled, by));
+    await tx.insert(shipmentEvents).values({
+      shipmentId: shipment.id,
+      type: "handover_cancelled",
+      actorUserId: by.actorUserId,
+      occurredAt: by.now,
+      routeId: cancelled.toRouteId,
+    });
+  }
+  if (target) {
+    const purpose = shipment.returnDecided ? "return" : "delivery";
+    const [planned] = await planShipments(tx, [shipment.id], { heldPurpose: purpose });
+    if (!planned) throw new AppError("not_found");
+    const before = await loadPlan(tx, target.id);
+    const office = shipment.heldAtOffice ? await loadOfficePlace(tx) : null;
+    const held: Parameters<typeof addHeldShipmentToStops>[3] = office
+      ? {
+          holder: "office" as const,
+          purpose,
+          office,
+        }
+      : { holder: "courier" as const, purpose };
+    await savePlan(
+      tx,
+      target.id,
+      before,
+      addHeldShipmentToStops(before, planned, () => crypto.randomUUID(), held),
+    );
+    // A route-add action owns its keyed addition event; decisions/moves record it here.
+    if (by.routeEvent !== false)
+      events.push({
+        routeId: target.id,
+        type: by.routeEvent ?? "shipment_added",
+        shipmentId: shipment.id,
+        actorUserId: by.actorUserId,
+        occurredAt: by.now,
+        ...(by.routeEvent === "reassigned" && {
+          fromCourierId: from?.courierId ?? shipment.custodyCourierId,
+          toCourierId: target.courierId,
+          reason: by.reason,
+          changes: { fromRouteId: shipment.routeId },
+        }),
+      });
+    if (
+      shipment.custodyCourierId &&
+      target.courierId &&
+      shipment.custodyCourierId !== target.courierId
+    ) {
+      const handover = await requestHandover(
+        tx,
+        {
+          shipmentId: shipment.id,
+          fromCourierId: shipment.custodyCourierId,
+          toCourierId: target.courierId,
+          fromRouteId: cancelled?.fromRouteId ?? shipment.routeId,
+          toRouteId: target.id,
+          reason: by.reason,
+        },
+        by,
+      );
+      events.push(handoverEvent("handover_requested", target.id, handover, by));
+    }
+  }
+  await recordRouteEvents(tx, events);
+  const affected = new Set([
+    shipment.routeId,
+    toRouteId,
+    cancelled?.fromRouteId ?? null,
+    cancelled?.toRouteId ?? null,
+  ]);
+  for (const id of affected)
+    if (id) {
+      await touchRoute(tx, id, by.now);
+      await refreshRouteStatus(tx, id, by);
+    }
+  return {
+    fromCourierId: from?.courierId ?? shipment.custodyCourierId,
+    toCourierId: target?.courierId ?? null,
+  };
+}
+
 /**
  * Moves a shipment to another route with a reason (FR-014). A shipment not picked up moves
  * with its pending stops and takes the target route's status; a picked-up one moves only to
@@ -119,10 +249,37 @@ export async function moveShipment(
   /** Without `actionId` when a route action moves several shipments and keeps it itself. */
   by: Author & { reason: string; actionId?: string },
 ): Promise<void> {
-  const pickedUp = shipment.status === "picked_up";
+  if (isHeldForRouting(shipment)) {
+    if (shipment.routeId === toRouteId)
+      throw new AppError("invalid_transition", { message: "El envío ya está en esa ruta." });
+    const moved = await routeHeldShipment(tx, shipment, toRouteId, {
+      ...by,
+      routeEvent: "reassigned",
+    });
+    await tx
+      .update(shipments)
+      .set({ routeId: toRouteId, version: sql`${shipments.version} + 1`, updatedAt: by.now })
+      .where(eq(shipments.id, shipment.id));
+    await tx.insert(shipmentEvents).values({
+      shipmentId: shipment.id,
+      type: "reassigned",
+      fromStatus: shipment.status,
+      toStatus: shipment.status,
+      reason: by.reason,
+      actorUserId: by.actorUserId,
+      occurredAt: by.now,
+      routeId: toRouteId,
+      changes: {
+        routeId: [shipment.routeId, toRouteId],
+        courierId: [moved.fromCourierId, moved.toCourierId],
+      },
+      clientEventId: by.actionId ?? null,
+    });
+    return;
+  }
   if (
     !shipment.routeId ||
-    !(["assigned", "dispatched", "picked_up"] as const).some((status) => status === shipment.status)
+    !(["assigned", "dispatched"] as const).some((status) => status === shipment.status)
   ) {
     throw new AppError("shipment_not_movable", {
       message:
@@ -136,11 +293,9 @@ export async function moveShipment(
   if (target.id === from.id) {
     throw new AppError("invalid_transition", { message: "El envío ya está en esa ruta." });
   }
-  if (target.status !== "in_progress" && (pickedUp || target.status !== "draft")) {
+  if (target.status !== "in_progress" && target.status !== "draft") {
     throw new AppError("route_not_in_progress", {
-      message: pickedUp
-        ? "Un envío recogido solo se reasigna a una ruta en curso."
-        : "Solo se reasigna a una ruta en preparación o en curso.",
+      message: "Solo se reasigna a una ruta en preparación o en curso.",
     });
   }
 
@@ -153,9 +308,9 @@ export async function moveShipment(
     tx,
     target.id,
     toStops,
-    addShipmentToStops(toStops, planned, () => crypto.randomUUID(), { deliveryOnly: pickedUp }),
+    addShipmentToStops(toStops, planned, () => crypto.randomUUID()),
   );
-  const status = pickedUp ? "picked_up" : target.status === "draft" ? "assigned" : "dispatched";
+  const status = target.status === "draft" ? "assigned" : "dispatched";
   await tx
     .update(shipments)
     .set({
@@ -165,24 +320,6 @@ export async function moveShipment(
       updatedAt: by.now,
     })
     .where(eq(shipments.id, shipment.id));
-
-  const cancelled = pickedUp ? await cancelPendingHandover(tx, shipment.id, by) : null;
-  const holder = shipment.custodyCourierId;
-  const handover =
-    pickedUp && holder && target.courierId && holder !== target.courierId
-      ? await requestHandover(
-          tx,
-          {
-            shipmentId: shipment.id,
-            fromCourierId: holder,
-            toCourierId: target.courierId,
-            fromRouteId: cancelled?.fromRouteId ?? from.id,
-            toRouteId: target.id,
-            reason: by.reason,
-          },
-          by,
-        )
-      : null;
 
   await tx.insert(shipmentEvents).values([
     {
@@ -200,17 +337,6 @@ export async function moveShipment(
       },
       clientEventId: by.actionId ?? null,
     },
-    ...(cancelled
-      ? [
-          {
-            shipmentId: shipment.id,
-            type: "handover_cancelled" as const,
-            actorUserId: by.actorUserId,
-            occurredAt: by.now,
-            routeId: cancelled.toRouteId,
-          },
-        ]
-      : []),
   ]);
   const moved = {
     actorUserId: by.actorUserId,
@@ -222,9 +348,7 @@ export async function moveShipment(
   };
   await recordRouteEvents(tx, [
     { ...moved, routeId: from.id, type: "reassigned", changes: { toRouteId: target.id } },
-    ...(cancelled ? [handoverEvent("handover_cancelled", cancelled.toRouteId, cancelled, by)] : []),
     { ...moved, routeId: target.id, type: "reassigned", changes: { fromRouteId: from.id } },
-    ...(handover ? [handoverEvent("handover_requested", target.id, handover, by)] : []),
   ]);
   for (const routeId of [from.id, target.id]) {
     await touchRoute(tx, routeId, by.now);

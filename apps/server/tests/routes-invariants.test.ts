@@ -1,6 +1,7 @@
 import type { RouteDetail, RoutesBoard, ShipmentDetail, UnassignedShipment } from "@domy/domain";
+import { monitorEventLoopDelay, performance } from "node:perf_hooks";
 import { sql } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, onTestFinished } from "vitest";
 import { createTestApp } from "./setup/app.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
 import { startDatabase, type TestDatabase } from "./setup/database.ts";
@@ -287,26 +288,74 @@ async function nextStep(random: ReturnType<typeof generator>): Promise<Request |
 
 describe("route integrity under random actions (SC-002, FR-020, FR-021)", () => {
   it.each([7, 2026, 31337])("holds for seed %i", async (seed) => {
+    // T107: timings contain no payload, query parameters, credentials or personal data.
+    // They observe the existing workload; seeds, steps, assertions and deadline stay intact.
+    const delay = monitorEventLoopDelay({ resolution: 20 });
+    delay.enable();
+    const started = performance.now();
+    let currentStep = -1;
+    let phase = "registration";
+    let phaseStarted = started;
+    const timings: Record<string, { calls: number; totalMs: number; maxMs: number }> = {};
+    const enter = (next: string) => {
+      const elapsed = performance.now() - phaseStarted;
+      const timing = timings[phase] ?? { calls: 0, totalMs: 0, maxMs: 0 };
+      timing.calls++;
+      timing.totalMs += elapsed;
+      timing.maxMs = Math.max(timing.maxMs, elapsed);
+      timings[phase] = timing;
+      phase = next;
+      phaseStarted = performance.now();
+    };
+    onTestFinished(() => {
+      const lastPhase = phase;
+      enter("finished");
+      delay.disable();
+      console.info("route invariant timings (T107)", {
+        seed,
+        step: currentStep,
+        lastPhase,
+        elapsedMs: Math.round(performance.now() - started),
+        eventLoopMaxMs: Math.round(delay.max / 1e6),
+        eventLoopMeanMs: Math.round(delay.mean / 1e6),
+        phases: Object.fromEntries(
+          Object.entries(timings).map(([name, timing]) => [
+            name,
+            {
+              calls: timing.calls,
+              totalMs: Math.round(timing.totalMs),
+              maxMs: Math.round(timing.maxMs),
+            },
+          ]),
+        ),
+      });
+    });
     const random = generator(seed);
     for (let index = 0; index < 8; index++) await registerShipment(t, users[0] ?? "", catalog);
     let applied = 0;
     for (let step = 0; step < 90; step++) {
+      currentStep = step;
+      enter("next_action");
       const request = await nextStep(random);
       if (request === null) continue;
       const label = `seed ${String(seed)}, step ${String(step)}: ${typeof request === "string" ? request : `${request.method ?? "POST"} ${request.path}`}`;
       if (typeof request !== "string") {
         const cookie = random.pick(users) ?? "";
+        enter("first_action");
         const first = await send(t, cookie, request.path, request.body, request.method ?? "POST");
         // A refusal is an answer, never a server error or a malformed request.
         expect([200, 201, 409, 422], `${label} → ${JSON.stringify(first.body)}`).toContain(
           first.status,
         );
+        enter("fingerprint");
         const before = await fingerprint();
+        enter("replay");
         const replay = await send(t, cookie, request.path, request.body, request.method ?? "POST");
         if (first.status < 300) {
           applied++;
           expect(replay.status, `${label} replayed`).toBe(200);
         }
+        enter("fingerprint");
         expect(await fingerprint(), `${label} replayed`).toBe(before);
 
         // A version the action moved past is stale; one it kept (no change) is not.
@@ -319,6 +368,7 @@ describe("route integrity under random actions (SC-002, FR-020, FR-021)", () => 
           moved > version &&
           request.path.startsWith("/api/routes/")
         ) {
+          enter("stale_action");
           const stale = await send(
             t,
             cookie,
@@ -330,9 +380,11 @@ describe("route integrity under random actions (SC-002, FR-020, FR-021)", () => 
           expect(stale.body, `${label} with a stale version`).toMatchObject({
             error: { code: expect.stringMatching(/^version_conflict$/) },
           });
+          enter("fingerprint");
           expect(await fingerprint(), `${label} with a stale version`).toBe(before);
         }
       }
+      enter("invariants");
       await expectInvariants(label);
     }
     // The sequence really exercised the routes, not only refusals.

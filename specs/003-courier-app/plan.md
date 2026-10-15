@@ -61,6 +61,33 @@ in under 30 s of user time (SC-002)
 **Scale/Scope**: 4–6 couriers, about 20–40 shipments and 20–40 photos a day; 7 user stories,
 42 functional requirements; 4 courier screens and about 6 panel additions
 
+### Test resource policy — owner-approved T107 alignment (2026-10-15)
+
+Keep the same `pnpm test` gate and real PostgreSQL fixtures. In
+`apps/server/vitest.config.ts`, partition the existing test inventory into two native
+Vitest projects: ordinary unit/integration files with their existing parallelism, followed
+by capacity files (`tests/*-scale.test.ts` and `tests/routes-invariants.test.ts`) without
+file-level parallelism and with an explicit later sequence group. Capacity files must not
+compete with integration files or each other. Currently this selects three existing
+files (route scale, search scale and route invariants); the courier-scale task has not
+landed yet. Do not add a placeholder test file.
+
+Rationale: the unchanged full suite reproduced distributed per-step latency and deadlines
+under concurrent database workloads, whereas isolated invariants complete all 90 steps in
+about two seconds. A full run also exceeded the existing one-second route-creation budget.
+Vitest's failure/duration cache changes file ordering, so an isolated pass is not stability
+evidence. The exact physical bottleneck is not proven; isolate capacity measurements from
+unrelated test workload instead of relaxing production targets. Samuel explicitly approved
+this execution-policy change after reviewing the diagnostics.
+
+Compare collected tests before/after partitioning: no missing or duplicate file/case.
+Keep the existing 120-second default hook limit, 30-second default test limit and explicit
+per-file overrides, three seeds, 90 steps, performance thresholds, real authentication,
+database constraints, internal concurrent
+request tests and all assertions. No retries, skips or weaker timing budgets are added.
+Retain bounded, non-sensitive invariant phase timings for future failures, then repeat
+all four gates and scoped convergence; CI continues to invoke the same scripts.
+
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
@@ -193,6 +220,38 @@ apps/web/tests/e2e/global-setup.ts    # + S3Proxy container, storage and test no
 screen.
 
 ## Cross-feature alignment
+
+US4 review remediation (owner approval 2026-10-15): T053 explicitly reproduces concurrent
+and late replays of both exception decisions before T056. Persist the accepted action
+and its event/tasks/handovers transactionally; recognize it before current-state guards
+and return the current shipment without undoing a later change. T054/T057 use the
+existing `CompanySettings` projection for separate GET/PATCH contracts (200 responses,
+both fields null before configuration, a resolved neighborhood after PATCH). Settings
+replays return current values through the shared audit-receipt mechanism; do not add a
+duplicate response type, dependency or migration.
+
+T056's decision state and held-shipment routing eligibility live in
+`packages/domain/src/shipment-lifecycle.ts`, with unit tests before implementation.
+The attempts projection uses one pure `deliveryAttempts` selection in
+`packages/domain/src/courier-records.ts`, tested there before the shipment detail consumes
+it. Preserve already-built held-stop planning in `routes.ts`; no notices or US5 record
+conflict behavior is added in this slice.
+
+US4 office receipt (owner-approved remediation of FR-041): when a new attempt has
+already put a courier-held package off route as `picked_up`, receipt changes it to
+`registered` with office custody and the same service date. Declare this contextual
+transition in `packages/domain/src/shipment-lifecycle.ts`; do not add a generic route
+transition or allow route actions to remove a picked-up shipment. Extend that module's
+unit tests before implementation, and T054's real-PostgreSQL tests before T057. Receipt
+must reject a picked-up shipment still on a route, remember concurrent/late retries, and
+write custody and its event transactionally. No migration or new dependency is needed.
+
+US4 return actions (FR-030) reuse `problem-form.tsx` for a pending return and never show
+the exception action or a collection form there. T055 covers office pickup and return
+while offline; extend `apps/web/src/lib/offline/outbox.test.ts` before changing the
+projection in `outbox.ts`, so office custody is replayed until the pickup and courier
+custody afterward. These are existing FR-018/FR-030/FR-041 requirements, not US5 notices
+or handover confirmation, which remain in their own story.
 
 US3 board projection (owner approval 2026-10-14): each `BoardEntry` in
 `packages/domain/src/schemas/board.ts` includes `returnDecided: boolean`, without extending

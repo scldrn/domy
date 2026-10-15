@@ -148,7 +148,113 @@ describe("saveRecord", () => {
   });
 });
 
+function officeReturnSnapshot() {
+  const office = structuredClone(snapshot);
+  if (!office.route) throw new Error("The fixture route is missing");
+  office.route.stops[0] = {
+    ...office.route.stops[0],
+    id: id(30),
+    position: 0,
+    kind: "pickup",
+    address: "Carrera 90 # 65C-10",
+    neighborhood: null,
+    contactPhone: null,
+    tasks: [task({ id: id(100), shipmentStatus: "exception", kind: "pickup" })],
+  };
+  office.route.stops[1] = {
+    ...office.route.stops[1],
+    id: id(31),
+    position: 1,
+    kind: "return",
+    address: "Cra 70 # 45-10",
+    neighborhood: null,
+    contactPhone: null,
+    tasks: [task({ id: id(101), shipmentStatus: "exception", kind: "return" })],
+  };
+  return office;
+}
+
 describe("replayRecords", () => {
+  it("refuses a return while the office pickup is still pending (T055, FR-041)", () => {
+    const office = officeReturnSnapshot();
+    const returned: CourierRecordInput = {
+      ...pickup,
+      kind: "return",
+      receivedByName: "Persona del comercio",
+      photos: [],
+    };
+    expect(replayRecords(office, [returned])).toEqual(office);
+  });
+  /** T055, FR-018/FR-030/FR-041: office custody lasts until the actual pickup. */
+  it("replays an office pickup before a return and preserves both after reopening", async () => {
+    const office = officeReturnSnapshot();
+    const returned: CourierRecordInput = {
+      id: id(204),
+      shipmentId: id(1),
+      kind: "return",
+      occurredAt: "2026-10-01T15:20:00.000Z",
+      receivedByName: "Persona del comercio",
+      photos: [],
+    };
+    const pickedUp = replayRecords(office, [pickup]);
+    expect(tasksOf(pickedUp).map((each) => [each.kind, each.status, each.shipmentStatus])).toEqual([
+      ["pickup", "completed", "exception"],
+      ["return", "pending", "exception"],
+    ]);
+    const { name, db } = await freshDb();
+    await saveRecord(db, pickup);
+    await saveRecord(db, returned);
+    db.close();
+    const again = await openCourierDb(name);
+    try {
+      const records = await pendingRecords(again);
+      expect(records.map((record) => record.id)).toEqual([pickup.id, returned.id]);
+      const completed = replayRecords(office, records);
+      expect(tasksOf(completed).map((each) => [each.status, each.shipmentStatus])).toEqual([
+        ["completed", "returned"],
+        ["completed", "returned"],
+      ]);
+      expect(tasksOf(office)[0]?.status).toBe("pending");
+    } finally {
+      again.close();
+    }
+  });
+
+  it("keeps a return pending after a problem and completes it without collection fields", () => {
+    const held = structuredClone(snapshot);
+    if (!held.route) throw new Error("The fixture route is missing");
+    held.route.stops = [
+      {
+        id: id(31),
+        position: 0,
+        kind: "return",
+        address: "Cra 70 # 45-10",
+        neighborhood: null,
+        contactPhone: null,
+        tasks: [task({ kind: "return", shipmentStatus: "exception" })],
+      },
+    ];
+    const problem: CourierRecordInput = {
+      ...pickup,
+      kind: "problem",
+      note: "El comercio está cerrado",
+    };
+    const noted = replayRecords(held, [problem]);
+    expect(tasksOf(noted)).toMatchObject([
+      { status: "pending", shipmentStatus: "exception", problemNote: problem.note },
+    ]);
+    const returned: CourierRecordInput = {
+      ...pickup,
+      id: id(205),
+      kind: "return",
+      receivedByName: "Persona del comercio",
+      photos: [],
+    };
+    expect(tasksOf(replayRecords(held, [problem, returned]))).toMatchObject([
+      { status: "completed", shipmentStatus: "returned", problemNote: null },
+    ]);
+  });
+
   it("shows a pickup and then a delivery as the server will apply them", () => {
     const afterPickup = replayRecords(snapshot, [pickup]);
     expect(

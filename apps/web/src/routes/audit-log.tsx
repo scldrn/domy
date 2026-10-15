@@ -23,6 +23,7 @@ export const Route = createFileRoute("/_panel/auditoria")({
 });
 
 const entityLabels: Record<string, string> = {
+  company_settings: "Configuración",
   user: "Usuario",
   merchant: "Cliente",
   pickup_point: "Punto de recogida",
@@ -37,6 +38,10 @@ const actionLabels: Record<AuditEvent["action"], string> = {
   updated: "Editado",
   deactivated: "Desactivado",
   reactivated: "Reactivado",
+};
+const fieldLabels: Record<string, string> = {
+  officeAddress: "Dirección de la oficina",
+  officeNeighborhoodId: "Barrio de la oficina",
 };
 
 function value(item: unknown): string {
@@ -83,7 +88,7 @@ function AuditLogPage() {
                 <ul className="text-body-m">
                   {Object.entries(event.changes ?? {}).map(([field, [before, after]]) => (
                     <li key={field}>
-                      {field}:{" "}
+                      {fieldLabels[field] ?? field}:{" "}
                       {event.action === "created"
                         ? value(after)
                         : `${value(before)} → ${value(after)}`}

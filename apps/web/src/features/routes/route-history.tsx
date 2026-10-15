@@ -86,6 +86,10 @@ export function CustodyHistory({ events }: { events: ShipmentEvent[] }) {
   });
   if (records.length === 0) return null;
   const text = ({ event, from, to }: (typeof records)[number]) => {
+    // US4 FR-041: a change to office custody is not a delivery.
+    if (event.type === "office_received") return "La recibe la oficina";
+    if (typeof to === "string" && event.changes?.["heldAtOffice"]?.[0] === true)
+      return `La recoge ${to} en la oficina`;
     if (typeof to === "string") {
       return event.type === "handover_confirmed"
         ? `Lo recibe ${to} de ${String(from)}`

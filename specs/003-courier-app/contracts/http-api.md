@@ -54,13 +54,28 @@ and optional `location: { latitude, longitude, accuracyM }`:
 | Method and path | Request → Response |
 | --- | --- |
 | `POST /api/shipments/:id/records` | A `CourierRecordInput` without `shipmentId` (any kind except `handover_confirmation`, which feature 002 provides), plus optional `occurredAt` (default now). Stored with `on_behalf = true` for the courier who holds the shipment or whose route carries it → `{ id, outcome }` (FR-034) |
-| `POST /api/shipments/:id/exception-decision` | `{ actionId, decision: 'new_attempt', serviceDate?, routeId? }` or `{ actionId, decision: 'return', routeId? }` → `Shipment`; with `routeId`, the stop is added under the rules of feature 002 (`409 route_not_in_progress`, handover when another courier's) (FR-029) |
-| `POST /api/shipments/:id/office-receipt` | `{ actionId }` → `Shipment` with `heldAtOffice: true` (FR-041) |
+| `POST /api/shipments/:id/exception-decision` | `{ actionId, decision: 'new_attempt', serviceDate?, routeId? }` or `{ actionId, decision: 'return', routeId? }` → `200 Shipment`; with `routeId`, the stop is added under the rules of feature 002 (`409 route_not_in_progress`, handover when another courier's) (FR-029). A replay of an accepted `actionId` returns the current shipment without reapplying the decision, even after a subsequent change |
+| `POST /api/shipments/:id/office-receipt` | `{ actionId }` → `200 Shipment` with `heldAtOffice: true` on first receipt (FR-041). A replay of an accepted `actionId` returns the current shipment without receiving custody again, including after the courier has picked it up from the office |
 | `POST /api/shipments/:id/clear-review` | `{ actionId, note }` → `Shipment` (FR-026) |
 | `POST /api/courier-records/:id/correct` | `{ actionId, reason, receivedByName?, cashAmount?, companyTransferAmount?, merchantTransferAmount?, exceptionReason?, note?, amount?, payee? }` → `CourierRecord` (FR-035) |
 | `POST /api/courier-records/:id/revert` | `{ actionId, reason }` → `Shipment` (FR-035) |
 | `GET /api/photos/:id` | → the image. Owner and dispatcher: any photo; courier: photos of their own records. `404` when the object was deleted by retention (FR-036) |
-| `GET /api/settings`, `PATCH /api/settings` | `{ actionId, officeAddress, officeNeighborhoodId }`; owner only for `PATCH` (FR-041) |
+| `GET /api/settings` | No request body → `200 CompanySettings`; owner and dispatcher (FR-041) |
+| `PATCH /api/settings` | `{ actionId, officeAddress, officeNeighborhoodId }` → `200 CompanySettings`; owner only, change audited (FR-041). Replaying an accepted `actionId` returns the current configuration without restoring an intervening change |
+
+`CompanySettings` reuses `packages/domain/src/schemas/courier.ts`:
+`{ officeAddress: string | null, officeNeighborhood: { id: string, name: string } | null }`.
+Both fields are null before the office is configured, even when the singleton row has
+not yet been created. After PATCH, both are populated; `officeNeighborhood` resolves
+the submitted neighborhood id to its name. Neither response includes `actionId` or
+uses the input field `officeNeighborhoodId`. A dispatcher PATCH or a courier GET/PATCH
+returns `403 forbidden`, under the existing authentication conventions.
+
+Concurrent or late repeats of an accepted exception decision produce no additional
+decision event, route task, handover, custody change or fee change. Remember the action
+and all its effects in the same transaction, and recognize a replay before applying
+current-state guards (Constitution II, IV). Settings use the shared `auditedChange`
+receipts, including unchanged edits, so those replays cannot overwrite a newer value.
 
 Reasons and notes are 5–200 characters.
 
@@ -96,7 +111,8 @@ Reasons and notes are 5–200 characters.
 - **`GET /api/routes/board`**: each `RouteSummary` gains `courierLastSyncedAt` and
   `unacknowledgedNotices: number` (FR-033).
 - **`GET /api/shipments/unassigned`**: also returns held shipments that are on no route, each
-  with `heldBy: { courier } | 'office'` (FR-031).
+  with `heldBy: { courier } | 'office'`; an ordinary uncollected shipment has `heldBy: null`
+  (FR-031).
 - **`POST /api/routes/:id/shipments`** and **`POST /api/shipments/:id/reassign`**: accept held
   shipments; a shipment held by a courier gets only a delivery or return stop and requires a
   route in progress; one held by the office gets a pickup stop at the office first (FR-031,

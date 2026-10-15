@@ -1,5 +1,6 @@
 import {
   addShipmentToStops,
+  isHeldForRouting,
   bogotaToday,
   buildStops,
   canUndoDispatch,
@@ -18,7 +19,7 @@ import {
   type RoutesBoard,
   type RouteStopPlan,
 } from "@domy/domain";
-import { and, eq, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../app.ts";
@@ -48,12 +49,39 @@ import {
   handoverEvent,
   lockRoutes,
   moveShipment,
+  routeHeldShipment,
   requestHandover,
 } from "../lib/reassignment.ts";
 import { refreshRouteStatus } from "../lib/route-status.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
 
 const idParam = z.object({ id: z.uuid() });
+
+/** T104: a route release changes assignment, never office custody or the return decision. */
+async function releaseOfficeShipments(
+  tx: Executor,
+  ids: string[],
+  routeId: string,
+  by: { actorUserId: string; now: Date; reason?: string },
+) {
+  if (ids.length === 0) return;
+  await tx
+    .update(shipments)
+    .set({ routeId: null, version: sql`${shipments.version} + 1`, updatedAt: by.now })
+    .where(inArray(shipments.id, ids));
+  await tx.insert(shipmentEvents).values(
+    ids.map((shipmentId) => ({
+      shipmentId,
+      type: "updated" as const,
+      actorUserId: by.actorUserId,
+      occurredAt: by.now,
+      routeId,
+      reason: by.reason ?? null,
+      changes: { routeId: [routeId, null] },
+    })),
+  );
+}
+
 async function requireActiveCourier(db: Executor, courierId: string) {
   const [courier] = await db
     .select({ id: couriers.id, isActive: couriers.isActive })
@@ -166,6 +194,30 @@ export const routeRoutes = new Hono<AppEnv>()
     for (let attempt = 0; ; attempt++) {
       try {
         await db.transaction(async (tx) => {
+          // 003 FR-031: a new route starts in preparation, so it cannot take courier custody.
+          const selected = await tx
+            .select()
+            .from(shipments)
+            .where(inArray(shipments.id, shipmentIds))
+            .orderBy(asc(shipments.id))
+            .for("update");
+          if (selected.some((shipment) => isHeldForRouting(shipment) && !shipment.heldAtOffice)) {
+            throw new AppError("route_not_in_progress", {
+              message: "Un paquete en custodia del mensajero solo se agrega a una ruta en curso.",
+            });
+          }
+          const held = selected.filter(
+            (shipment) => isHeldForRouting(shipment) && shipment.heldAtOffice,
+          );
+          if (
+            held.some(
+              (shipment) =>
+                shipment.routeId || shipment.serviceDate > latestDate(input.serviceDate, today),
+            )
+          )
+            throw new AppError("shipment_not_registered", { message: notRegisteredMessage });
+          const heldIds = new Set(held.map((shipment) => shipment.id));
+          const registeredIds = shipmentIds.filter((id) => !heldIds.has(id));
           await tx.insert(routes).values({
             id: input.id,
             serviceDate: input.serviceDate,
@@ -174,7 +226,7 @@ export const routeRoutes = new Hono<AppEnv>()
             createdBy: user.id,
           });
           const moved = await transitionShipments(tx, {
-            ids: shipmentIds,
+            ids: registeredIds,
             from: ["registered"],
             to: "assigned",
             routeId: input.id,
@@ -186,15 +238,37 @@ export const routeRoutes = new Hono<AppEnv>()
               lte(shipments.serviceDate, latestDate(input.serviceDate, today)),
             ),
           });
-          if (moved.length !== shipmentIds.length) {
+          if (moved.length !== registeredIds.length) {
             throw new AppError("shipment_not_registered", { message: notRegisteredMessage });
           }
           await savePlan(
             tx,
             input.id,
             [],
-            buildStops(await planShipments(tx, shipmentIds), () => crypto.randomUUID()),
+            buildStops(await planShipments(tx, registeredIds), () => crypto.randomUUID()),
           );
+          for (const shipment of held) {
+            await routeHeldShipment(tx, shipment, input.id, {
+              actorUserId: user.id,
+              now,
+              reason: "Ruta creada con devolución desde oficina",
+              routeEvent: false,
+            });
+            await tx
+              .update(shipments)
+              .set({ routeId: input.id, version: sql`${shipments.version} + 1`, updatedAt: now })
+              .where(eq(shipments.id, shipment.id));
+            await tx.insert(shipmentEvents).values({
+              shipmentId: shipment.id,
+              type: "status_changed",
+              fromStatus: shipment.status,
+              toStatus: shipment.status,
+              routeId: input.id,
+              actorUserId: user.id,
+              occurredAt: now,
+              changes: { routeId: [null, input.id] },
+            });
+          }
           await recordRouteEvents(tx, [
             {
               routeId: input.id,
@@ -341,8 +415,32 @@ export const routeRoutes = new Hono<AppEnv>()
         }
         const today = bogotaToday(now);
         const user = c.get("user");
+        const held = (
+          await tx
+            .select()
+            .from(shipments)
+            .where(inArray(shipments.id, shipmentIds))
+            .orderBy(asc(shipments.id))
+            .for("update")
+        ).filter(isHeldForRouting);
+        for (const shipment of held) {
+          if (shipment.routeId || shipment.serviceDate > latestDate(route.serviceDate, today))
+            throw new AppError("shipment_not_registered", { message: notRegisteredMessage });
+          await routeHeldShipment(tx, shipment, id, {
+            actorUserId: user.id,
+            now,
+            reason: "Agregado desde Sin asignar",
+            routeEvent: false,
+          });
+          await tx
+            .update(shipments)
+            .set({ routeId: id, version: sql`${shipments.version} + 1`, updatedAt: now })
+            .where(eq(shipments.id, shipment.id));
+        }
+        const heldIds = new Set(held.map((shipment) => shipment.id));
+        const registeredIds = shipmentIds.filter((shipmentId) => !heldIds.has(shipmentId));
         const moved = await transitionShipments(tx, {
-          ids: shipmentIds,
+          ids: registeredIds,
           from: ["registered"],
           to: route.status === "draft" ? "assigned" : "dispatched",
           routeId: id,
@@ -354,11 +452,11 @@ export const routeRoutes = new Hono<AppEnv>()
             lte(shipments.serviceDate, latestDate(route.serviceDate, today)),
           ),
         });
-        if (moved.length !== shipmentIds.length) {
+        if (moved.length !== registeredIds.length) {
           throw new AppError("shipment_not_registered", { message: notRegisteredMessage });
         }
         const before = await loadPlan(tx, id);
-        const after = (await planShipments(tx, shipmentIds)).reduce<RouteStopPlan[]>(
+        const after = (await planShipments(tx, registeredIds)).reduce<RouteStopPlan[]>(
           (stops, shipment) => addShipmentToStops(stops, shipment, () => crypto.randomUUID()),
           before,
         );
@@ -388,20 +486,28 @@ export const routeRoutes = new Hono<AppEnv>()
           "Solo se quitan envíos de rutas en preparación o en curso.",
         );
         const [shipment] = await tx
-          .select({ status: shipments.status, routeId: shipments.routeId })
+          .select({
+            status: shipments.status,
+            routeId: shipments.routeId,
+            heldAtOffice: shipments.heldAtOffice,
+            returnDecided: shipments.returnDecided,
+          })
           .from(shipments)
           .where(eq(shipments.id, shipmentId))
           .for("update");
         if (shipment?.routeId !== id) {
           throw new AppError("not_found", { message: "Ese envío no está en esta ruta." });
         }
-        if (shipment.status === "picked_up") throw new AppError("shipment_picked_up");
-        if (shipment.status !== "assigned" && shipment.status !== "dispatched") {
+        const inOffice = shipment.heldAtOffice && isHeldForRouting(shipment);
+        if (!inOffice && isHeldForRouting(shipment)) throw new AppError("shipment_picked_up");
+        if (!inOffice && shipment.status !== "assigned" && shipment.status !== "dispatched") {
           throw new AppError("shipment_not_movable", {
             message: `Un envío «${shipmentStatusLabels[shipment.status]}» no se quita de la ruta.`,
           });
         }
         const user = c.get("user");
+        if (inOffice)
+          await releaseOfficeShipments(tx, [shipmentId], id, { actorUserId: user.id, now });
         await transitionShipments(tx, {
           ids: [shipmentId],
           from: ["assigned", "dispatched"],
@@ -453,20 +559,25 @@ export const routeRoutes = new Hono<AppEnv>()
           ];
           // Pending stops pass with the route; completed ones keep who did them. A package
           // someone else holds waits for its handover, replacing a pending one (FR-025).
-          const carried = await tx
+          const selected = await tx
             .select({
               id: shipments.id,
               status: shipments.status,
+              returnDecided: shipments.returnDecided,
               custodyCourierId: shipments.custodyCourierId,
             })
             .from(shipments)
             .where(
               and(
                 eq(shipments.routeId, id),
-                inArray(shipments.status, ["dispatched", "picked_up"]),
+                inArray(shipments.status, ["dispatched", "picked_up", "exception"]),
               ),
             );
-          for (const shipment of carried.filter((each) => each.status === "picked_up")) {
+          // T103, 003 FR-029/FR-031: a pending return has the same custody protection.
+          const carried = selected.filter(
+            (each) => each.status !== "exception" || isHeldForRouting(each),
+          );
+          for (const shipment of carried.filter(isHeldForRouting)) {
             const cancelled = await cancelPendingHandover(tx, shipment.id, by);
             if (cancelled) events.push(handoverEvent("handover_cancelled", id, cancelled, by));
             const holder = shipment.custodyCourierId;
@@ -576,12 +687,19 @@ export const routeRoutes = new Hono<AppEnv>()
       return applyRouteAction(c, id, input, async (tx, route, now) => {
         requireStatus(route, ["in_progress"], "Solo se deshace el despacho de una ruta en curso.");
         const carried = await tx
-          .select({ id: shipments.id, status: shipments.status })
+          .select({
+            id: shipments.id,
+            status: shipments.status,
+            heldAtOffice: shipments.heldAtOffice,
+            returnDecided: shipments.returnDecided,
+          })
           .from(shipments)
           .where(eq(shipments.routeId, id))
           .for("update");
         // A package received through a handover counts as picked up on this route.
-        const anyPickedUp = carried.some((shipment) => shipment.status === "picked_up");
+        const anyPickedUp = carried.some(
+          (shipment) => isHeldForRouting(shipment) && !shipment.heldAtOffice,
+        );
         if (!canUndoDispatch(await loadPlan(tx, id), anyPickedUp)) {
           throw new AppError("route_has_completed_stops");
         }
@@ -627,10 +745,21 @@ export const routeRoutes = new Hono<AppEnv>()
         if (route.status === "in_progress") throw new AppError("route_in_progress");
         requireStatus(route, ["draft"], "Solo se cancela una ruta en preparación.");
         const user = c.get("user");
+        const carried = await tx
+          .select()
+          .from(shipments)
+          .where(eq(shipments.routeId, id))
+          .for("update");
+        const officeIds = carried
+          .filter((shipment) => shipment.heldAtOffice && isHeldForRouting(shipment))
+          .map((shipment) => shipment.id);
+        await releaseOfficeShipments(tx, officeIds, id, {
+          actorUserId: user.id,
+          now,
+          reason: input.reason,
+        });
         const released = await transitionShipments(tx, {
-          ids: (
-            await tx.select({ id: shipments.id }).from(shipments).where(eq(shipments.routeId, id))
-          ).map((row) => row.id),
+          ids: carried.map((row) => row.id),
           from: ["assigned"],
           to: "registered",
           routeId: null,
@@ -651,7 +780,7 @@ export const routeRoutes = new Hono<AppEnv>()
             actorUserId: user.id,
             occurredAt: now,
             reason: input.reason,
-            changes: { shipmentIds: released.map((shipment) => shipment.id) },
+            changes: { shipmentIds: [...released.map((shipment) => shipment.id), ...officeIds] },
           },
         ];
       });

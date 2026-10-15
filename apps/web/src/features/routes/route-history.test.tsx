@@ -109,6 +109,25 @@ describe("RouteHistory (FR-019, FR-022)", () => {
 });
 
 describe("CustodyHistory (SC-005)", () => {
+  it("distinguishes office receipt and pickup from delivery and ordinary pickup (US4 T058)", () => {
+    const html = renderToStaticMarkup(
+      <CustodyHistory
+        events={[
+          shipmentEvent({
+            type: "office_received",
+            changes: { custodyCourierId: ["Ana Ruiz", null], heldAtOffice: [false, true] },
+          }),
+          shipmentEvent({
+            toStatus: "picked_up",
+            changes: { custodyCourierId: [null, "Beto Gómez"], heldAtOffice: [true, false] },
+          }),
+        ]}
+      />,
+    );
+    expect(text(html)).toContain("La recibe la oficina");
+    expect(text(html)).toContain("La recoge Beto Gómez en la oficina");
+    expect(text(html)).not.toContain("Lo entrega Ana Ruiz");
+  });
   it("tells who held the package, from pickup to delivery, and who recorded it", () => {
     const html = renderToStaticMarkup(
       <CustodyHistory

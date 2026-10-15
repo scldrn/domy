@@ -61,7 +61,7 @@ export async function pendingRecords(db: CourierDb): Promise<CourierRecordInput[
 const me = "courier";
 
 /** A shipment of the route as the record rules see it, from what the phone knows. */
-function shipmentOnRoute(
+export function shipmentOnRoute(
   route: NonNullable<CourierSnapshot["route"]>,
   tasks: CourierTask[],
   applied: ShipmentForRecord["appliedRecords"],
@@ -70,13 +70,17 @@ function shipmentOnRoute(
   if (!first) throw new Error("A shipment of the route has tasks");
   const blocked = tasks.find((task) => task.blockedByHandover)?.blockedByHandover ?? null;
   const pending = tasks.filter((task) => task.status === "pending");
+  // T060/FR-041: a decided return stays in exception even before its office pickup.
+  const heldAtOffice =
+    pending.some((task) => task.kind === "pickup") &&
+    pending.some((task) => task.kind === "return");
   const held = ["picked_up", "exception"].includes(first.shipmentStatus);
   return {
     kind: first.shipmentKind,
     status: first.shipmentStatus,
     // Until the handover is confirmed, another courier holds the package (FR-025).
-    custodyCourierId: held && !blocked ? me : null,
-    heldAtOffice: false,
+    custodyCourierId: held && !blocked && !heldAtOffice ? me : null,
+    heldAtOffice,
     returnDecided: pending.some((task) => task.kind === "return"),
     route: { id: route.id, status: route.status, courierId: me },
     pendingTasks: pending.map((task) => ({

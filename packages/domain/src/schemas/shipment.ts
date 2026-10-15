@@ -253,6 +253,9 @@ export type ShipmentEvent = {
  * that route's courier, who holds the package, and the handover waiting for confirmation.
  */
 export type ShipmentDetail = Shipment & {
+  heldAtOffice: boolean;
+  returnDecided: boolean;
+  needsReview: boolean;
   route: {
     id: string;
     number: number;
@@ -265,5 +268,7 @@ export type ShipmentDetail = Shipment & {
   events: ShipmentEvent[];
   /** The courier's records, oldest first, including those not applied (feature 003, FR-036). */
   records: CourierRecord[];
+  /** Applied delivery visits, excluding reverted records (003 FR-032). */
+  attempts: CourierRecord[];
   recordFlags: RecordFlagKind[];
 };

@@ -156,12 +156,20 @@ These rows replace the rows marked "003" in feature 001's lifecycle table
 | `picked_up` | `exception` | Exception record |
 | `exception` | `picked_up` | New attempt decided while a courier holds the package; or exception reverted |
 | `exception` | `registered` | New attempt decided while the office holds the package |
+| `picked_up`, off route and held by a courier | `registered` | Office receipt after a new attempt was already decided (FR-041); contextual action only, never a generic route transition |
 | `exception` | `returned` | Return record |
 | `exception` (return decided) | `picked_up` | Return changed to a new attempt before the return stop is completed (FR-029) |
 | `delivered` | `picked_up` | Delivery reverted by the owner or dispatcher |
 | `returned` | `exception` | Return reverted (with `return_decided` true again) |
 
 ## Custody
+
+The office-receipt row above is guarded in the shared domain lifecycle. Generic
+`picked_up → registered` remains forbidden, including removal, cancellation and undoing
+dispatch. Receipt transfers custody to the office in the same transaction as its event,
+preserves the service date and requires the configured office. Tests cover both the
+eligible off-route package and rejection while it remains on a route (owner approval
+2026-10-15).
 
 The holder of a package is `custody_courier_id` (a courier) or `held_at_office` (the
 office), never both; neither before pickup and after delivery or return.

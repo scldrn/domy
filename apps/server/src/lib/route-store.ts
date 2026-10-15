@@ -11,12 +11,14 @@ import {
   type RouteSummary,
   type RouteTaskPlan,
   type ShipmentStatus,
+  type Place,
 } from "@domy/domain";
-import { and, asc, eq, inArray, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Executor } from "../db/client.ts";
 import {
   couriers,
+  companySettings,
   handovers,
   merchants,
   neighborhoods,
@@ -201,13 +203,26 @@ export async function touchRoute(tx: Executor, routeId: string, now: Date): Prom
     .where(eq(routes.id, routeId));
 }
 
+/** The configured office pickup shared by all FR-041 consumers. */
+export async function loadOfficePlace(db: Executor): Promise<Place> {
+  const [row] = await db.select().from(companySettings);
+  if (!row?.officeAddress || !row.officeNeighborhoodId) throw new AppError("office_not_configured");
+  return { address: row.officeAddress, neighborhoodId: row.officeNeighborhoodId };
+}
+
 /** The shipments in the order given, as the route rules see them (FR-005). */
-export async function planShipments(db: Executor, ids: string[]): Promise<RoutePlanShipment[]> {
+export async function planShipments(
+  db: Executor,
+  ids: string[],
+  options: { heldPurpose?: "delivery" | "return" } = {},
+): Promise<RoutePlanShipment[]> {
   if (ids.length === 0) return [];
   const rows = await db
     .select({
       id: shipments.id,
       kind: shipments.kind,
+      heldAtOffice: shipments.heldAtOffice,
+      returnDecided: shipments.returnDecided,
       pickupAddress: shipments.pickupAddress,
       pickupNeighborhoodId: shipments.pickupNeighborhoodId,
       recipientAddress: shipments.recipientAddress,
@@ -217,9 +232,47 @@ export async function planShipments(db: Executor, ids: string[]): Promise<RouteP
     .from(shipments)
     .leftJoin(neighborhoods, eq(neighborhoods.id, shipments.recipientNeighborhoodId))
     .where(inArray(shipments.id, ids));
+  // FR-029/T105: immutable completed stops retain the actual first pickup even after
+  // an office-held new attempt becomes editable. Later office pickups are not its sender.
+  const pickups =
+    options.heldPurpose === "return"
+      ? await db
+          .select({
+            shipmentId: routeTasks.shipmentId,
+            address: routeStops.address,
+            neighborhoodId: routeStops.neighborhoodId,
+          })
+          .from(routeTasks)
+          .innerJoin(routeStops, eq(routeStops.id, routeTasks.stopId))
+          .where(
+            and(
+              inArray(routeTasks.shipmentId, ids),
+              eq(routeTasks.kind, "pickup"),
+              eq(routeTasks.status, "completed"),
+            ),
+          )
+          .orderBy(asc(routeTasks.completedAt), asc(routeTasks.id))
+      : [];
+  // FR-041: ordinary routing picks up at the office; held routing supplies it separately.
+  const office =
+    !options.heldPurpose && rows.some((row) => row.heldAtOffice && !row.returnDecided)
+      ? await loadOfficePlace(db)
+      : null;
   return ids.flatMap((id) => {
     const row = rows.find((candidate) => candidate.id === id);
-    return row ? [{ id: row.id, kind: row.kind, ...shipmentPlaces(row) }] : [];
+    if (!row) return [];
+    const firstPickup = pickups.find((pickup) => pickup.shipmentId === id);
+    return [
+      {
+        id: row.id,
+        kind: row.kind,
+        ...shipmentPlaces(row),
+        ...(firstPickup && {
+          pickup: { address: firstPickup.address, neighborhoodId: firstPickup.neighborhoodId },
+        }),
+        ...(row.heldAtOffice && !row.returnDecided && office && { pickup: office }),
+      },
+    ];
   });
 }
 
@@ -330,7 +383,14 @@ export async function loadHandovers(db: Executor, where: SQL | undefined): Promi
 
 /** Shipments on no route up to a date: "Sin asignar" (FR-001, data model §Derived values). */
 export function unassignedUpTo(date: string): SQL | undefined {
-  return and(eq(shipments.status, "registered"), lte(shipments.serviceDate, date));
+  return and(
+    isNull(shipments.routeId),
+    or(
+      inArray(shipments.status, ["registered", "picked_up"]),
+      and(eq(shipments.status, "exception"), eq(shipments.returnDecided, true)),
+    ),
+    lte(shipments.serviceDate, date),
+  );
 }
 
 /** COD to collect per route: the sum over the shipments currently on it (FR-018). */

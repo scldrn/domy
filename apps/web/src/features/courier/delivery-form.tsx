@@ -41,11 +41,15 @@ export function DeliveryForm({
   onSaved: () => void;
 }) {
   const id = useId();
+  const returning = task.kind === "return";
   const errand = task.shipmentKind === "errand";
-  const [receivedByName, setReceivedByName] = useState(() => proposedReceivedBy(task));
+  const [receivedByName, setReceivedByName] = useState(() =>
+    returning ? "" : proposedReceivedBy(task),
+  );
   const [photos, setPhotos] = useState<TakenPhoto[]>([]);
   const [collection, setCollection] = useState<Collection>(() =>
-    proposedCollection(task.codAmount),
+    // T110/FR-030: a return has no collection, regardless of the original COD.
+    proposedCollection(returning ? 0 : task.codAmount),
   );
   const [receipts, setReceipts] = useState<TakenPhoto[]>([]);
   const [note, setNote] = useState("");
@@ -53,7 +57,7 @@ export function DeliveryForm({
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
 
-  const collects = task.codAmount > 0;
+  const collects = !returning && task.codAmount > 0;
   const total = collectedTotal(collection);
   const transferred = collection.companyTransferAmount + collection.merchantTransferAmount > 0;
   const differs = collects && total !== task.codAmount;
@@ -61,7 +65,7 @@ export function DeliveryForm({
   const record = () => ({
     id: crypto.randomUUID(),
     shipmentId: task.shipmentId,
-    kind: "delivery" as const,
+    kind: returning ? ("return" as const) : ("delivery" as const),
     occurredAt: new Date().toISOString(),
     location: currentLocation(),
     ...(errand ? {} : { receivedByName: receivedByName.trim() }),
@@ -121,7 +125,11 @@ export function DeliveryForm({
     }
   };
 
-  const title = errand ? "Completar diligencia" : "Registrar entrega";
+  const title = returning
+    ? "Confirmar devolución"
+    : errand
+      ? "Completar diligencia"
+      : "Registrar entrega";
   return (
     <CourierSheet
       open={open}
@@ -133,7 +141,7 @@ export function DeliveryForm({
         <>
           <dl className="divide-y divide-outline-variant">
             <SummaryLine label="Resultado">
-              {errand ? "Diligencia completada" : "Entregado"}
+              {returning ? "Devuelto" : errand ? "Diligencia completada" : "Entregado"}
             </SummaryLine>
             {!errand && <SummaryLine label="Recibió">{receivedByName.trim()}</SummaryLine>}
             {collects && (
@@ -176,7 +184,7 @@ export function DeliveryForm({
           )}
           <div className="flex flex-col gap-2">
             <Button size="lg" disabled={saving} onClick={() => void save()}>
-              {errand ? "Guardar diligencia" : "Guardar entrega"}
+              {returning ? "Guardar devolución" : errand ? "Guardar diligencia" : "Guardar entrega"}
             </Button>
             <Button
               variant="ghost"
@@ -206,7 +214,13 @@ export function DeliveryForm({
             </Field>
           )}
           <PhotoInput
-            label={errand ? "Foto de la diligencia (opcional)" : "Foto de la entrega"}
+            label={
+              returning
+                ? "Foto de la devolución"
+                : errand
+                  ? "Foto de la diligencia (opcional)"
+                  : "Foto de la entrega"
+            }
             photos={photos}
             onChange={setPhotos}
           />

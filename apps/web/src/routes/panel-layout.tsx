@@ -25,6 +25,8 @@ import SellIcon from "@material-symbols/svg-400/rounded/sell.svg?react";
 import StorefrontIcon from "@material-symbols/svg-400/rounded/storefront.svg?react";
 import TruckIcon from "@material-symbols/svg-400/rounded/local_shipping.svg?react";
 import TwoWheelerIcon from "@material-symbols/svg-400/rounded/two_wheeler.svg?react";
+import SettingsIcon from "@material-symbols/svg-400/rounded/settings.svg?react";
+import SettingsFillIcon from "@material-symbols/svg-400/rounded/settings-fill.svg?react";
 import { userRoleLabels, type UserRole } from "@domy/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -71,7 +73,8 @@ type NavigationItem = {
     | "/barrios"
     | "/tarifario"
     | "/auditoria"
-    | "/usuarios";
+    | "/usuarios"
+    | "/configuracion";
   label: string;
   icon: Symbol;
   /** Filled variant for the current page (design-system.md §7.1). */
@@ -160,6 +163,13 @@ const navigation: { label: string | null; items: NavigationItem[] }[] = [
   {
     label: "Administración",
     items: [
+      {
+        to: "/configuracion",
+        label: "Configuración",
+        icon: SettingsIcon,
+        activeIcon: SettingsFillIcon,
+        roles: ["owner"],
+      },
       {
         to: "/usuarios",
         label: "Usuarios",

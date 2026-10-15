@@ -19,20 +19,54 @@ const lateMs = 60_000;
  * its photos, the collection by payment method, disbursements, exceptions, and the records
  * that could not be applied.
  */
-export function ShipmentRecords({ records }: { records: CourierRecord[] }) {
+export function ShipmentRecords({
+  records,
+  attempts = [],
+}: {
+  records: CourierRecord[];
+  attempts?: CourierRecord[];
+}) {
   const headingId = useId();
+  const attemptsId = useId();
   if (records.length === 0) return null;
   return (
-    <section aria-labelledby={headingId}>
-      <h2 id={headingId} className="mb-2 text-title-m text-on-surface">
-        Registros del mensajero
-      </h2>
-      <ol className="flex flex-col gap-3">
-        {records.map((record) => (
-          <RecordItem key={record.id} record={record} />
-        ))}
-      </ol>
-    </section>
+    <>
+      {attempts.length > 0 && (
+        <section aria-labelledby={attemptsId}>
+          <h2 id={attemptsId} className="mb-2 text-title-m text-on-surface">
+            Intentos de entrega
+          </h2>
+          <ol className="flex flex-col gap-2">
+            {attempts.map((attempt, index) => (
+              <li
+                key={attempt.id}
+                className="rounded-sm border border-outline-variant bg-sheet p-4 text-body-l text-on-surface"
+              >
+                Intento {index + 1}:{" "}
+                {attempt.kind === "delivery"
+                  ? "Entregado"
+                  : attempt.exceptionReason
+                    ? exceptionReasonLabels[attempt.exceptionReason]
+                    : "Novedad"}
+                <span className="block text-body-m text-on-surface-variant">
+                  {attempt.courier.name} · {formatDateTime(attempt.occurredAt)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+      <section aria-labelledby={headingId}>
+        <h2 id={headingId} className="mb-2 text-title-m text-on-surface">
+          Registros del mensajero
+        </h2>
+        <ol className="flex flex-col gap-3">
+          {records.map((record) => (
+            <RecordItem key={record.id} record={record} />
+          ))}
+        </ol>
+      </section>
+    </>
   );
 }
 

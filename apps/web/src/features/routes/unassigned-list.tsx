@@ -116,6 +116,13 @@ function PickupGroup({
                       Del {formatDate(shipment.serviceDate)}
                     </span>
                   )}
+                  {shipment.heldBy && (
+                    <span className="block text-body-s text-on-surface-variant">
+                      {shipment.heldBy === "office"
+                        ? "En oficina"
+                        : `En custodia de ${shipment.heldBy.courier.name}`}
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell className="truncate">
                   {shipment.recipientName ?? shipmentKindLabels[shipment.kind]}
@@ -182,7 +189,7 @@ export function UnassignedList({
   );
   const groups = new Map<string, [UnassignedShipment, ...UnassignedShipment[]]>();
   for (const shipment of visible) {
-    const key = `${shipment.pickupAddress}|${shipment.pickupNeighborhood.id}`;
+    const key = `${shipment.merchant.id}|${shipment.pickupAddress}|${shipment.pickupNeighborhood.id}`;
     const group = groups.get(key);
     if (group) group.push(shipment);
     else groups.set(key, [shipment]);

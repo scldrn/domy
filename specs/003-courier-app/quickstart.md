@@ -22,11 +22,26 @@ pnpm test:e2e
 pnpm build
 ```
 
+T107's owner-approved server runner policy executes ordinary integration tests with their
+usual parallelism, then capacity files and route invariants separately without file-level
+competition. `pnpm test` and CI still collect every case; deadlines, performance thresholds,
+all three invariant seeds and their 90 steps are unchanged. Do not use an isolated pass
+or cached ordering as a substitute for the complete gate.
+
 US3's automated slice covers scenario 11 and completes scenario 8's exception journey in
 `apps/web/tests/e2e/courier-exceptions.spec.ts`, using the built service worker, actual
 PostgreSQL and private photo storage. The board projects `returnDecided` and uses one
 domain rule for the undecided-exception list/count; no US4 decision action is built here.
 This does not replace the physical Android/iPhone validation in T087/T093.
+
+US4's automated slice in `apps/web/tests/e2e/exception-decision.spec.ts` exercises
+scenarios 12–13, including return problems, office custody, offline office pickup/return,
+reopening, exactly-once synchronization, and the next day's office pickup/delivery.
+It also checks settings acknowledgment/retry identifiers and the decision dialog at
+390 px. Keep a return's original COD distinct from collection: a return collects zero,
+including when the original COD exceeds the delivery-confirmation threshold. Final gate
+results and remaining convergence work are recorded in `docs/status.md`; automated
+viewport checks do not replace physical-device validation.
 
 ## Manual validation scenarios
 

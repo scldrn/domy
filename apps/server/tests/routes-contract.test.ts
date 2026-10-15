@@ -193,7 +193,9 @@ const unassignedShipment = z
     id: z.uuid(),
     trackingNumber,
     kind: z.enum(shipmentKinds),
-    status: z.literal("registered"),
+    status: z.enum(["registered", "picked_up", "exception"]),
+    // Feature 003 FR-031 extends this projection without allowing arbitrary extra fields.
+    heldBy: z.union([z.object({ courier: named }).strict(), z.literal("office")]).nullable(),
     serviceDate: calendarDay,
     merchant: named,
     recipientName: z.string().nullable(),
@@ -304,9 +306,17 @@ describe("bodies (contracts/http-api.md)", () => {
       "/api/shipments/unassigned?date=2026-10-01",
     );
     expect(unassigned.status).toBe(200);
-    z.object({ shipments: z.array(unassignedShipment).length(3) })
+    const initial = z
+      .object({ shipments: z.array(unassignedShipment).length(3) })
       .strict()
       .parse(unassigned.body);
+    expect(initial.shipments.map((item) => ({ status: item.status, heldBy: item.heldBy }))).toEqual(
+      [
+        { status: "registered", heldBy: null },
+        { status: "registered", heldBy: null },
+        { status: "registered", heldBy: null },
+      ],
+    );
 
     // Every route action answers the route's detail.
     let route = await createRoute(t, cookie, {
