@@ -4,18 +4,25 @@ Preguntas y pendientes para Samuel (propietario de Domy) y, a través de él, pa
 lo mantiene al día: agrega cada pregunta cuando surge y la mueve a «Resueltas» con tu respuesta
 y la fecha. Responde aquí mismo o en la conversación.
 
-Última actualización: 2026-10-15.
+Última actualización: 2026-10-16.
 
 ## Bloquean algo ahora
 
-Nada requiere una respuesta ahora. Autorizaste commit y push de T111/T112 a la PR #22
-para validar la corrección en un CI nuevo. Pasan las cuatro compuertas locales y las
-40 ejecuciones focalizadas; se debe revisar el CI del nuevo head, no el resultado con
-reintento de `a169cbb`. Fusionar y continuar US5 requieren autorización aparte y CI verde.
+Nada requiere respuesta ahora. Autorizaste investigar/corregir T121 y después realizar
+la fusión ya autorizada, conservando pruebas, límites, compuertas y convergencia.
+La ejecución `38860188300` sigue registrada como inestable, no como corrida limpia.
+Se reprodujo y corrigió la pérdida de disparadores de sincronización con pruebas
+deterministas de almacén y navegador; no se afirma conocer la intercalación histórica
+sin su traza. El CI `38919233855` de `5bd2b5d` pasa 883 pruebas, 82 e2e sin reintentos,
+check y build; convergencia final sin hallazgos. T121 está cerrada. El commit documental
+final también debe pasar CI antes del squash autorizado. El recibo de fusión y su CI
+posterior queda en la PR #23. No se iniciará US6.
 
 ## Antes de terminar la 003 (app del mensajero)
 
-Nada pendiente por ahora.
+Completar la validación física por escenarios T087/T093 en Android y iPhone, incluidas
+las notificaciones con la app instalada. Las pruebas automatizadas de US5 no sustituyen
+esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 ## Antes de salir a producción
 
@@ -39,6 +46,13 @@ Nada pendiente por ahora.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-16 | ¿Investigar/corregir T121, repetir compuertas/convergencia y después realizar la fusión autorizada? | «Si». Sin ampliar tiempos, relajar pruebas ni iniciar US6 |
+| 2026-10-16 | ¿Investigar/corregir los avisos de GitHub y fusionar US5 respetando la metodología? | Corregir si es sencillo; si no afecta al sistema y requiere un cambio desproporcionado, documentar y dejarlo. Después fusionar con último CI verde. No incluye comenzar US6 |
+| 2026-10-15 | ¿Hacer commit, push y abrir la PR de US5 (T061–T070 y T113–T119)? | «Si». Autorizada la publicación y revisión de CI; no la fusión ni comenzar US6 |
+| 2026-10-15 | ¿Completar la implementación local y corregir todos los hallazgos de US5 siguiendo la metodología estricta? | «Arregla todo, con la mayor calidad y sin deuda tecnica». T061–T070 y T113–T119 completas y verificadas; publicación, fusión y US6 pendientes de autorización |
+| 2026-10-15 | ¿Explicitar `GET /api/courier/push-config` y alinear contrato, plan y T061/T066/T068 antes de implementar US5? | «autorizo». Solo mensajeros vinculados; `{ publicKey: string \| null }`, sin clave privada, migración ni variable de compilación web |
+| 2026-10-15 | ¿Continuar con US5 desde `main` actualizado? | «ok, continuemos». Implementación local siguiendo la metodología obligatoria; sin autorización de publicación o fusión |
+| 2026-10-15 | ¿Fusionar la PR #22 mediante squash con el último CI limpio? | «Autorizo». Fusionada como `34875ba`; CI del head `d3e3830` y CI posterior de `main` aprobados |
 | 2026-10-15 | ¿Publicar T111/T112 mediante commit y push en la PR #22 para validar un CI nuevo? | «Autorizo». Solo publicar la corrección y revisar CI; no fusionar ni continuar US5 |
 | 2026-10-15 | Investigar y corregir la inestabilidad encontrada al revisar la PR #22 | «Investiga y Arreglalo». T111/T112 reproducidas y corregidas localmente; cuatro compuertas y convergencia puntual aprobadas. Publicar la corrección requiere aprobación; sin autorización de fusión ni continuación a US5 |
 | 2026-10-15 | ¿Hacer commit, push y abrir la PR de US4 después de las cuatro compuertas y la convergencia? | «Sí». Autorizada la publicación de T053–T060/T103–T110. La fusión y continuar US5 requieren autorización aparte y CI verde |

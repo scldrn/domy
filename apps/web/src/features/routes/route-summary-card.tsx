@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useId } from "react";
 import { RouteStatusMark } from "@/components/route-status-mark";
 import { cn } from "@/lib/cn";
-import { formatCop } from "@/lib/format";
+import { formatCop, formatDateTime } from "@/lib/format";
 
 const plural = (count: number, one: string, many: string) =>
   `${String(count)} ${count === 1 ? one : many}`;
@@ -64,6 +64,23 @@ export function RouteSummaryCard({ route }: { route: RouteSummary }) {
           </dd>
         </div>
       </dl>
+      {route.courier && (
+        <p className="text-body-m text-on-surface-variant">
+          Última sincronización:{" "}
+          {route.courierLastSyncedAt
+            ? formatDateTime(route.courierLastSyncedAt)
+            : "Aún no se ha conectado"}
+          <span className="block">
+            {route.unacknowledgedNotices === 0
+              ? "Todos los cambios entendidos"
+              : plural(
+                  route.unacknowledgedNotices,
+                  "cambio sin confirmar",
+                  "cambios sin confirmar",
+                )}
+          </span>
+        </p>
+      )}
       {alerts.length > 0 && (
         <p className="flex flex-wrap gap-x-3 text-label-m">
           {alerts.map((alert) => (

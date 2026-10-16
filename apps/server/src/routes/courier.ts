@@ -1,6 +1,10 @@
 import {
   bogotaToday,
   courierRecordsBatch,
+  courierPushConfig,
+  noticeAcknowledgeInput,
+  pushSubscriptionInput,
+  pushSubscriptionRemoveInput,
   daySummary,
   type CourierRoute,
   type CourierSnapshot,
@@ -10,7 +14,7 @@ import {
   type HeldShipment,
   type Notice,
 } from "@domy/domain";
-import { and, asc, eq, gte, isNull, notInArray } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, notInArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
@@ -29,16 +33,18 @@ import {
   routeStops,
   routeTasks,
   shipments,
+  pushSubscriptions,
 } from "../db/schema/index.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { applyCourierRecord } from "../lib/courier-records.ts";
 import { AppError } from "../lib/errors.ts";
 import { validate } from "../lib/validate.ts";
+import { auditedChange } from "../lib/master-data.ts";
 
 /**
  * The courier app's API (feature 003, contracts/http-api.md): the route snapshot, records,
- * and photos, for the signed-in courier only (FR-002). Notices and push subscriptions arrive
- * with user story 5 (tasks.md T066).
+ * photos, notice acknowledgments and push subscriptions for the linked courier only
+ * (FR-002, FR-027, FR-040).
  */
 
 const idParam = z.object({ id: z.uuid() });
@@ -246,6 +252,65 @@ const photoType = "image/jpeg";
 
 export const courierAppRoutes = new Hono<AppEnv>()
   .use(requireRole("courier"))
+  .get("/push-config", async (c) => {
+    await signedInCourier(c);
+    return c.json(courierPushConfig.parse({ publicKey: c.get("push")?.publicKey ?? null }));
+  })
+  .post("/notices/acknowledge", validate("json", noticeAcknowledgeInput), async (c) => {
+    const courier = await signedInCourier(c);
+    const { actionId, noticeIds, occurredAt } = c.req.valid("json");
+    const acknowledgedAt = new Date(
+      Math.min(new Date(occurredAt).getTime(), c.get("clock")().getTime()),
+    );
+    await auditedChange(c, { type: "user", id: c.get("user").id, actionId }, async (tx) => {
+      await tx
+        .update(courierNotices)
+        .set({ acknowledgedAt })
+        .where(
+          and(
+            eq(courierNotices.courierId, courier.id),
+            inArray(courierNotices.id, noticeIds),
+            isNull(courierNotices.acknowledgedAt),
+          ),
+        );
+      return null;
+    });
+    return c.body(null, 204);
+  })
+  .post("/push-subscriptions", validate("json", pushSubscriptionInput), async (c) => {
+    await signedInCourier(c);
+    const { actionId, endpoint, keys } = c.req.valid("json");
+    const userId = c.get("user").id;
+    await auditedChange(c, { type: "user", id: userId, actionId }, async (tx) => {
+      const [existing] = await tx
+        .select()
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.endpoint, endpoint));
+      if (existing && existing.userId !== userId) throw new AppError("forbidden");
+      await tx
+        .insert(pushSubscriptions)
+        .values({ userId, endpoint, ...keys, createdAt: c.get("clock")() })
+        .onConflictDoUpdate({
+          target: pushSubscriptions.endpoint,
+          set: keys,
+          setWhere: eq(pushSubscriptions.userId, userId),
+        });
+      return null;
+    });
+    return c.body(null, 204);
+  })
+  .post("/push-subscriptions/remove", validate("json", pushSubscriptionRemoveInput), async (c) => {
+    await signedInCourier(c);
+    const { actionId, endpoint } = c.req.valid("json");
+    const userId = c.get("user").id;
+    await auditedChange(c, { type: "user", id: userId, actionId }, async (tx) => {
+      await tx
+        .delete(pushSubscriptions)
+        .where(and(eq(pushSubscriptions.userId, userId), eq(pushSubscriptions.endpoint, endpoint)));
+      return null;
+    });
+    return c.body(null, 204);
+  })
   // The snapshot the phone keeps to work without signal (FR-005, FR-022, FR-033).
   .get("/route", async (c) => {
     const db = c.get("db");
@@ -285,7 +350,13 @@ export const courierAppRoutes = new Hono<AppEnv>()
         await applyCourierRecord(
           db,
           { ...record, occurredAt },
-          { courierId: courier.id, authorUserId: user.id, onBehalf: false, recordedAt: now },
+          {
+            courierId: courier.id,
+            authorUserId: user.id,
+            onBehalf: false,
+            recordedAt: now,
+            noticeIds: c.get("noticeIds"),
+          },
         ),
       );
     }

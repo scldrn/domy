@@ -14,7 +14,7 @@ import {
   type OutboxItem,
   type StoredPhoto,
 } from "@/lib/offline/db";
-import { replayRecords, saveRecord } from "@/lib/offline/outbox";
+import { replayRecords, saveRecord, saveAcknowledgment } from "@/lib/offline/outbox";
 import { synchronize, SyncError } from "@/lib/offline/sync";
 
 /**
@@ -99,7 +99,13 @@ async function reload(userId: string): Promise<void> {
   update({
     userId,
     loaded: true,
-    view: snapshot ? replayRecords(snapshot, records) : null,
+    view: snapshot
+      ? replayRecords(
+          snapshot,
+          records,
+          pending.flatMap((item) => (item.type === "acknowledgment" ? item.noticeIds : [])),
+        )
+      : null,
     pendingRecords: records.length,
     pendingPhotos: photos.length,
     pending,
@@ -111,6 +117,12 @@ async function reload(userId: string): Promise<void> {
 
 let running: Promise<void> | null = null;
 let paused = false;
+let rerunRequested = false;
+
+/** These flags can change in other event handlers while a pass awaits storage/network. */
+function hasQueuedSynchronization(): boolean {
+  return rerunRequested && !paused;
+}
 
 /** Finish the old account's in-flight work before its cookie can change (FR-021). */
 export async function pauseCourierSynchronization(): Promise<void> {
@@ -124,33 +136,42 @@ export function resumeCourierSynchronization(): void {
 /** Synchronizes now, once at a time; a failure leaves everything on the phone (FR-020). */
 export function synchronizeNow(userId: string): Promise<void> {
   if (paused) return Promise.resolve();
-  running ??= (async () => {
+  if (running) {
+    // T121/FR-020: an online/save trigger must survive an in-flight offline failure.
+    rerunRequested = true;
+    return running;
+  }
+  running = (async () => {
     update({ syncing: true });
-    try {
-      await synchronize(await courierDatabase(), { userId });
-      update({ offline: false, refusal: null });
-    } catch (error) {
-      const offline = error instanceof SyncError && error.status === 0;
-      update({
-        offline,
-        refusal: offline
-          ? null
-          : error instanceof SyncError || error instanceof CourierDataError
-            ? error.message
-            : "No pudimos sincronizar. Tus registros siguen guardados; reintentaremos cuando haya conexión.",
-      });
-    } finally {
-      await reload(userId).catch(() => {
+    do {
+      rerunRequested = false;
+      try {
+        await synchronize(await courierDatabase(), { userId });
+        update({ offline: false, refusal: null });
+      } catch (error) {
+        const offline = error instanceof SyncError && error.status === 0;
         update({
-          loaded: true,
-          view: null,
-          refusal:
-            "No pudimos leer los datos guardados. No los borres; comunícate con el coordinador.",
+          offline,
+          refusal: offline
+            ? null
+            : error instanceof SyncError || error instanceof CourierDataError
+              ? error.message
+              : "No pudimos sincronizar. Tus registros siguen guardados; reintentaremos cuando haya conexión.",
         });
-      });
-      update({ syncing: false });
-      running = null;
-    }
+      } finally {
+        await reload(userId).catch(() => {
+          update({
+            loaded: true,
+            view: null,
+            refusal:
+              "No pudimos leer los datos guardados. No los borres; comunícate con el coordinador.",
+          });
+        });
+      }
+      // One coalesced pass per new trigger; pause cancels it before a cookie can change.
+    } while (hasQueuedSynchronization());
+    update({ syncing: false });
+    running = null;
   })();
   return running;
 }
@@ -173,6 +194,21 @@ export async function saveCourierRecord(
     userId,
     ...(trackingNumber && { trackingNumber }),
   });
+  await reload(userId);
+  void synchronizeNow(userId);
+}
+
+export async function acknowledgeCourierNotices(
+  userId: string,
+  noticeIds: string[],
+): Promise<void> {
+  if (paused)
+    throw new CourierDataError("Espera a que termine el cambio de sesión antes de guardar.");
+  await saveAcknowledgment(
+    await courierDatabase(),
+    { actionId: crypto.randomUUID(), noticeIds, occurredAt: new Date().toISOString() },
+    userId,
+  );
   await reload(userId);
   void synchronizeNow(userId);
 }

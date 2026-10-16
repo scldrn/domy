@@ -17,7 +17,13 @@ const noStorage: PhotoStorage = {
 /** The real app wired to a test database, a controllable clock, and captured emails. */
 export function createTestApp(
   db: Db,
-  options: { now?: string; logger?: Logger; storage?: PhotoStorage } = {},
+  options: {
+    now?: string;
+    logger?: Logger;
+    storage?: PhotoStorage;
+    /** US5/T061 uses real VAPID configuration; only the external push transport is spied. */
+    push?: { publicKey: string; privateKey: string; subject: string };
+  } = {},
 ) {
   let now = new Date(options.now ?? "2026-10-01T15:00:00Z");
   const emails: SentEmail[] = [];
@@ -36,6 +42,7 @@ export function createTestApp(
     clock: () => now,
     logger: options.logger ?? pino({ level: "silent" }),
     storage: options.storage ?? noStorage,
+    ...(options.push && { push: options.push }),
   });
 
   /** Creates an active user with a role and returns it with the cookie of a new session. */

@@ -2,6 +2,7 @@ import type { Handover, RouteDetail, Shipment, ShipmentDetail } from "@domy/doma
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createTestApp } from "./setup/app.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
+import { courierWithAccount, sendRecords, snapshot } from "./setup/courier.ts";
 import { startDatabase, type TestDatabase } from "./setup/database.ts";
 import {
   createCourier,
@@ -60,6 +61,91 @@ async function handOver(shipment: Shipment, toRouteId: string, minute: number) {
 }
 
 describe("Custody history (SC-005)", () => {
+  it("keeps a continuous holder through a late off-route pickup, office receipt and the next courier (003 SC-007/T063)", async () => {
+    const ana = await courierWithAccount(t, database.db, "Ana Ruiz");
+    const beto = await courierWithAccount(t, database.db, "Beto Gómez");
+    const shipment = await registerShipment(t, cookie, catalog);
+    const draft = await createRoute(t, cookie, {
+      shipmentIds: [shipment.id, (await registerShipment(t, cookie, catalog)).id],
+      courierId: ana.id,
+    });
+    const route = (await routeAction(t, cookie, draft, "/dispatch")).body;
+    t.setNow(at(9));
+    expect((await routeAction(t, cookie, route, `/shipments/${shipment.id}/remove`)).status).toBe(
+      200,
+    );
+    t.setNow(at(10));
+    expect(
+      (await sendRecords(t, ana, [{ kind: "pickup", shipmentId: shipment.id, occurredAt: at(5) }]))
+        .status,
+    ).toBe(200);
+    const owner = await t.signIn("owner");
+    expect(
+      (
+        await send(
+          t,
+          owner.cookie,
+          "/api/settings",
+          {
+            actionId: crypto.randomUUID(),
+            officeAddress: "Carrera 90 # 65C-10",
+            officeNeighborhoodId: catalog.place.laureles,
+          },
+          "PATCH",
+        )
+      ).status,
+    ).toBe(200);
+    t.setNow(at(15));
+    expect(
+      (
+        await send(t, cookie, `/api/shipments/${shipment.id}/office-receipt`, {
+          actionId: crypto.randomUUID(),
+        })
+      ).status,
+    ).toBe(200);
+    const officeDraft = await createRoute(t, cookie, {
+      shipmentIds: [shipment.id],
+      courierId: beto.id,
+    });
+    expect((await routeAction(t, cookie, officeDraft, "/dispatch")).status).toBe(200);
+    t.setNow(at(25));
+    expect(
+      (await sendRecords(t, beto, [{ kind: "pickup", shipmentId: shipment.id }])).body.results[0]
+        ?.outcome,
+    ).toBe("applied");
+    t.setNow(at(30));
+    expect(
+      (
+        await sendRecords(t, beto, [
+          {
+            kind: "delivery",
+            shipmentId: shipment.id,
+            receivedByName: "Laura Gómez",
+            cashAmount: 50_000,
+          },
+        ])
+      ).body.results[0]?.outcome,
+    ).toBe("applied");
+    const { body } = await send<ShipmentDetail>(t, cookie, `/api/shipments/${shipment.id}`);
+    const custody = body.events
+      .filter((event) => event.changes?.["custodyCourierId"])
+      .map((event) => ({
+        at: event.occurredAt,
+        receivedAt: event.recordedAt,
+        courier: event.changes?.["custodyCourierId"],
+        office: event.changes?.["heldAtOffice"],
+      }));
+    expect(custody).toEqual([
+      { at: at(5), receivedAt: at(10), courier: [null, "Ana Ruiz"], office: undefined },
+      { at: at(15), receivedAt: at(15), courier: ["Ana Ruiz", null], office: [false, true] },
+      { at: at(25), receivedAt: at(25), courier: [null, "Beto Gómez"], office: [true, false] },
+      { at: at(30), receivedAt: at(30), courier: ["Beto Gómez", null], office: undefined },
+    ]);
+    expect(body.custodyCourier).toBeNull();
+    expect(body.heldAtOffice).toBe(false);
+    expect((await snapshot(t, ana)).body.heldOffRoute).toEqual([]);
+  });
+
   it("leaves no interval between pickup and delivery without a responsible courier", async () => {
     const shipment = await registerShipment(t, cookie, catalog);
     await dispatched([shipment], "Ana Ruiz");

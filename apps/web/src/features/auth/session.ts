@@ -10,6 +10,7 @@ import {
 import { claimCourierDb, clearCourierDb, courierMeta, CourierDataError } from "@/lib/offline/db";
 import { ApiError } from "@/lib/api-client";
 import { syncClock } from "@/lib/clock";
+import { removePush } from "@/lib/offline/push";
 
 const sessionUser = z.object({ id: z.uuid(), name: z.string(), email: z.email(), role: userRole });
 export type SessionUser = z.output<typeof sessionUser>;
@@ -143,6 +144,7 @@ export async function signOut(): Promise<void> {
         message:
           "Tienes registros o fotos pendientes por sincronizar. Espera a que lleguen antes de cerrar sesión.",
       });
+    await removePush().catch(() => undefined);
     const response = await authRequest("sign-out", {});
     if (!response.ok)
       throw new ApiError(response.status, {

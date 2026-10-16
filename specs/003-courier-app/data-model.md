@@ -15,7 +15,7 @@ Phase 1 of [plan.md](plan.md). Extends the data models of
 | `not_applied_reason` | `voided`, `delivered`, `returned`, `already_picked_up`, `not_picked_up`, `not_in_custody`, `no_task`, `no_handover` | Spanish text per reason in `packages/domain` |
 | `exception_reason` | `recipient_absent`, `wrong_address`, `rejected` | Destinatario ausente, Dirección errada, Rechazado |
 | `photo_kind` | `proof`, `transfer_receipt`, `disbursement_receipt`, `exception` | Prueba de entrega, Comprobante de transferencia, Comprobante de pago, Foto de la novedad |
-| `notice_type` | `route_dispatched`, `shipment_added`, `shipment_removed`, `shipment_voided`, `shipment_updated`, `stops_reordered`, `shipment_reassigned_in`, `shipment_reassigned_out`, `route_reassigned`, `dispatch_undone`, `handover_requested`, `handover_cancelled`, `exception_decided`, `office_received`, `record_corrected`, `record_reverted`, `record_not_applied` | Spanish text per type in `packages/domain` |
+| `notice_type` | `route_dispatched`, `shipment_added`, `shipment_removed`, `shipment_voided`, `shipment_updated`, `stops_reordered`, `shipment_reassigned_in`, `shipment_reassigned_out`, `route_reassigned`, `dispatch_undone`, `handover_requested`, `handover_confirmed`, `handover_cancelled`, `exception_decided`, `office_received`, `record_corrected`, `record_reverted`, `record_not_applied` | Spanish text per type in `packages/domain` |
 
 Added to feature 002's `stop_kind`: `return` ("Devolución").
 
@@ -72,6 +72,10 @@ At most three `proof` photos per record, enforced by the request schema (FR-009)
 deleted by the bucket after 12 months; rows stay.
 
 **`courier_notices`** (FR-027)
+
+US5/T117 adds `handover_confirmed` to `notice_type` through a generated additive migration.
+It is shown as "Traspaso confirmado", for both courier and dispatcher confirmations;
+`shipment_updated` continues to mean a shipment edit, not a custody transfer.
 
 | Column | Type | Rules |
 | --- | --- | --- |

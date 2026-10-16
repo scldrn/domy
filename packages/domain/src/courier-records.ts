@@ -78,6 +78,7 @@ export const noticeTypes = [
   "route_reassigned",
   "dispatch_undone",
   "handover_requested",
+  "handover_confirmed",
   "handover_cancelled",
   "exception_decided",
   "office_received",
@@ -118,6 +119,7 @@ export function noticeText(
     route_reassigned: `${about.routeNumber === undefined ? "Tu ruta" : `La Ruta ${String(about.routeNumber)}`} pasó a otro mensajero.`,
     dispatch_undone: `Se deshizo el despacho de ${route}.`,
     handover_requested: `${on("Traspaso pendiente")}.`,
+    handover_confirmed: `${on("Traspaso confirmado")}.`,
     handover_cancelled: guide ? `Se canceló el traspaso de ${guide}.` : "Se canceló un traspaso.",
     exception_decided: guide
       ? `Hay una decisión sobre la novedad de ${guide}.`

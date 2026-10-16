@@ -12,12 +12,14 @@ import {
   type RouteTaskPlan,
   type ShipmentStatus,
   type Place,
+  type NoticeType,
 } from "@domy/domain";
 import { and, asc, eq, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Executor } from "../db/client.ts";
 import {
   couriers,
+  courierNotices,
   companySettings,
   handovers,
   merchants,
@@ -31,6 +33,7 @@ import {
   users,
 } from "../db/schema/index.ts";
 import { AppError } from "./errors.ts";
+import { notifyCourier } from "./notices.ts";
 
 /**
  * Loading and saving routes (feature 002, research R1–R5). Every change runs in the caller's
@@ -337,8 +340,58 @@ export async function transitionShipments(
 
 export type NewRouteEvent = Omit<typeof routeEvents.$inferInsert, "id" | "recordedAt">;
 
-export async function recordRouteEvents(tx: Executor, events: NewRouteEvent[]): Promise<void> {
+export async function recordRouteEvents(
+  tx: Executor,
+  events: NewRouteEvent[],
+  noticeIds?: string[],
+  noticeOverride?: NoticeType | false,
+): Promise<void> {
   if (events.length > 0) await tx.insert(routeEvents).values(events);
+  const emitted = new Set<string>();
+  for (const event of events) {
+    const [route] = await tx.select().from(routes).where(eq(routes.id, event.routeId));
+    if (!route) continue;
+    const handover = event.type.startsWith("handover_");
+    const wholeReassignment = event.type === "reassigned" && !event.shipmentId;
+    const direct: Partial<Record<NewRouteEvent["type"], NoticeType>> = {
+      dispatched: "route_dispatched",
+      dispatch_undone: "dispatch_undone",
+      handover_requested: "handover_requested",
+      handover_cancelled: "handover_cancelled",
+      handover_confirmed: "handover_confirmed",
+      shipment_added: "shipment_added",
+      shipment_removed: "shipment_removed",
+      reordered: "stops_reordered",
+    };
+    let inferred = direct[event.type];
+    if (wholeReassignment) inferred = "route_reassigned";
+    else if (event.type === "reassigned")
+      inferred =
+        event.changes && typeof event.changes === "object" && "toRouteId" in event.changes
+          ? "shipment_reassigned_out"
+          : "shipment_reassigned_in";
+    const type = noticeOverride === false ? null : (noticeOverride ?? inferred);
+    if (!type) continue;
+    // Draft routes are never on a phone. Undo and whole reassignment name their old courier explicitly.
+    if (!handover && !wholeReassignment && event.type !== "dispatch_undone" && !route.dispatchedAt)
+      continue;
+    const recipients =
+      handover || wholeReassignment ? [event.fromCourierId, event.toCourierId] : [route.courierId];
+    for (const courierId of recipients) {
+      if (!courierId) continue;
+      const key = `${courierId}:${type}:${event.shipmentId ?? event.routeId}`;
+      if (emitted.has(key)) continue;
+      emitted.add(key);
+      await notifyCourier(
+        tx,
+        courierId,
+        type,
+        { routeId: event.routeId, shipmentId: event.shipmentId ?? null },
+        event.occurredAt,
+        noticeIds,
+      );
+    }
+  }
 }
 
 const completedBy = alias(couriers, "completed_by");
@@ -416,7 +469,11 @@ export async function loadRouteSummaries(
   now: Date,
 ): Promise<RouteSummary[]> {
   const rows = await db
-    .select({ route: routes, courier: { id: couriers.id, name: couriers.name } })
+    .select({
+      route: routes,
+      courier: { id: couriers.id, name: couriers.name },
+      lastSyncedAt: couriers.lastSyncedAt,
+    })
     .from(routes)
     .leftJoin(couriers, eq(couriers.id, routes.courierId))
     .where(where)
@@ -453,7 +510,12 @@ export async function loadRouteSummaries(
     .where(and(eq(handovers.status, "pending"), inArray(handovers.toRouteId, ids)))
     .groupBy(handovers.toRouteId);
   const cod = await codToCollect(db, ids);
-  return rows.map(({ route, courier }) => {
+  const unseen = await db
+    .select({ courierId: courierNotices.courierId, count: sql<number>`count(*)::int` })
+    .from(courierNotices)
+    .where(isNull(courierNotices.acknowledgedAt))
+    .groupBy(courierNotices.courierId);
+  return rows.map(({ route, courier, lastSyncedAt }) => {
     const progress = routeProgress(
       stops
         .filter((stop) => stop.routeId === route.id)
@@ -474,6 +536,8 @@ export async function loadRouteSummaries(
       atRiskCount: flags.filter((kind) => kind === "at_risk").length,
       lateCount: flags.filter((kind) => kind === "late").length,
       pendingHandovers: waiting.find((row) => row.routeId === route.id)?.count ?? 0,
+      courierLastSyncedAt: lastSyncedAt?.toISOString() ?? null,
+      unacknowledgedNotices: unseen.find((row) => row.courierId === route.courierId)?.count ?? 0,
     };
   });
 }

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."notice_type" ADD VALUE 'handover_confirmed' BEFORE 'handover_cancelled';

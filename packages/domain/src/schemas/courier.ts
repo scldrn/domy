@@ -257,9 +257,10 @@ export const companySettingsInput = z.object({
 export type CompanySettingsInput = z.input<typeof companySettingsInput>;
 
 /** `POST /api/courier/notices/acknowledge`: "Entendido" for the notices shown (FR-027). */
+export const maxNoticesPerAcknowledgment = 200;
 export const noticeAcknowledgeInput = z.object({
   actionId,
-  noticeIds: z.array(z.uuid()).min(1).max(200),
+  noticeIds: z.array(z.uuid()).min(1).max(maxNoticesPerAcknowledgment),
   occurredAt: instant,
 });
 export type NoticeAcknowledgeInput = z.input<typeof noticeAcknowledgeInput>;
@@ -267,12 +268,30 @@ export type NoticeAcknowledgeInput = z.input<typeof noticeAcknowledgeInput>;
 /** `POST /api/courier/push-subscriptions` and its removal (FR-040). */
 export const pushSubscriptionInput = z.object({
   actionId,
-  endpoint: z.url(),
+  endpoint: z.url().refine((value) => {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      (url.hostname === "fcm.googleapis.com" ||
+        url.hostname.endsWith(".push.apple.com") ||
+        url.hostname === "updates.push.services.mozilla.com")
+    );
+  }, "La dirección de notificaciones no corresponde a un navegador compatible."),
   keys: z.object({ p256dh: z.string().min(1), auth: z.string().min(1) }),
 });
 export type PushSubscriptionInput = z.input<typeof pushSubscriptionInput>;
 export const pushSubscriptionRemoveInput = z.object({ actionId, endpoint: z.url() });
 export type PushSubscriptionRemoveInput = z.input<typeof pushSubscriptionRemoveInput>;
+
+/** FR-040: runtime public configuration, never private VAPID material. */
+export const courierPushConfig = z.object({ publicKey: z.string().min(1).nullable() });
+export const courierPushMessage = z.object({
+  type: z.enum(noticeTypes),
+  routeNumber: z.number().int().positive().optional(),
+});
 
 const named = z.object({ id: z.uuid(), name: z.string() });
 type Named = z.output<typeof named>;

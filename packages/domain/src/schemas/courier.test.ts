@@ -8,10 +8,43 @@ import {
   receivedByNameProblem,
   recordCorrectionInput,
   recordOnBehalfInput,
+  pushSubscriptionInput,
 } from "./courier.ts";
 
 const id = (n: number) => `0194d9f0-0000-7000-8000-${String(n).padStart(12, "0")}`;
 const base = { id: id(1), shipmentId: id(2), occurredAt: "2026-10-01T15:00:00.000Z" };
+
+describe("push endpoint boundary (T113, Constitution IX)", () => {
+  it.each([
+    "https://127.0.0.1/private",
+    "http://fcm.googleapis.com/push",
+    "https://fcm.googleapis.com.evil.test/push",
+    "https://user:secret@fcm.googleapis.com/push",
+    "https://fcm.googleapis.com:444/push",
+    "https://arbitrary.example.test/push",
+  ])("refuses untrusted destination %s", (endpoint) => {
+    expect(
+      pushSubscriptionInput.safeParse({
+        actionId: id(9),
+        endpoint,
+        keys: { p256dh: "key", auth: "auth" },
+      }).success,
+    ).toBe(false);
+  });
+  it.each([
+    "https://fcm.googleapis.com/fcm/send/device",
+    "https://web.push.apple.com/device",
+    "https://updates.push.services.mozilla.com/wpush/v2/device",
+  ])("accepts browser push service %s", (endpoint) => {
+    expect(
+      pushSubscriptionInput.safeParse({
+        actionId: id(9),
+        endpoint,
+        keys: { p256dh: "key", auth: "auth" },
+      }).success,
+    ).toBe(true);
+  });
+});
 const messages = (result: { success: boolean; error?: { issues: { message: string }[] } }) =>
   result.error?.issues.map((issue) => issue.message) ?? [];
 

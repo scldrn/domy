@@ -120,7 +120,8 @@ and then needs a migration.
 
 - `src/index.ts` wires the real dependencies from the environment (`env.ts` validates it with
   Zod and exits on error). `createApp(deps)` in `src/app.ts` receives `db`, `auth`, `clock`,
-  `logger`, and `storage` (the private photo bucket, `lib/storage.ts`, S3 API), so tests build
+  `logger`, `storage` (the private photo bucket, `lib/storage.ts`, S3 API), and optional
+  `push` (validated server-side VAPID configuration), so tests build
   the same app around a test database and a controlled clock.
   With `NODE_ENV=production` the same process also serves `apps/web/dist`.
 - Each resource is a Hono sub-app in `src/routes/`, mounted in `app.ts`. Routes must stay
@@ -160,6 +161,10 @@ and then needs a migration.
   owner (`PUT /api/couriers/accounts/:userId`); an account not linked gets `403`. Photos go
   through the server (`PUT /api/courier/photos/:id`, `GET /api/photos/:id`), never through
   public URLs. `lib/record-views.ts` gives the panel the records and their flags.
+  `GET /api/courier/push-config` exposes only the public key or null. `lib/notices.ts`
+  inserts notices in the action's transaction; request-local ids reach `lib/push.ts` after
+  handlers finish, which reads committed rows and sends notifications without delaying the
+  response. Acknowledgments and push subscriptions reuse audited idempotency receipts.
 - Database: Drizzle with `casing: "snake_case"` (camelCase in TypeScript, snake_case in
   PostgreSQL), schema by area in `src/db/schema/`. Invariants are also CHECK constraints there
   (payment mode against COD amount, required fields per shipment kind, void and fee-override

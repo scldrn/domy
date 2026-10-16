@@ -19,9 +19,15 @@ import {
   shipments,
 } from "../db/schema/index.ts";
 import { AppError } from "./errors.ts";
-import { handoverEvent, lockRoutes } from "./reassignment.ts";
+import {
+  handoverEvent,
+  lockRoutes,
+  requestHandover,
+  cancelPendingHandover,
+} from "./reassignment.ts";
+import { notifyCourier } from "./notices.ts";
 import { refreshRouteStatus } from "./route-status.ts";
-import { recordRouteEvents, touchRoute } from "./route-store.ts";
+import { recordRouteEvents, touchRoute, removeFromPlan } from "./route-store.ts";
 import { photoKey } from "./storage.ts";
 
 /**
@@ -39,6 +45,7 @@ export type RecordAuthor = {
   onBehalf: boolean;
   /** The server's time on receipt. */
   recordedAt: Date;
+  noticeIds?: string[];
 };
 
 export type RecordResult = { id: string; outcome: RecordOutcome };
@@ -229,7 +236,7 @@ export async function applyCourierRecord(
     }
 
     if (resolution.outcome === "not_applied") {
-      // "Por revisar" (FR-024, FR-026); the courier's notice arrives with US5 (T067).
+      // FR-026: the failed fact and its notice share this transaction.
       await tx
         .update(shipments)
         .set({
@@ -238,8 +245,24 @@ export async function applyCourierRecord(
           updatedAt: by.recordedAt,
         })
         .where(eq(shipments.id, row.id));
+      await notifyCourier(
+        tx,
+        by.courierId,
+        "record_not_applied",
+        { routeId: courierRoute?.id ?? null, shipmentId: row.id },
+        by.recordedAt,
+        by.noticeIds,
+      );
     } else if (resolution.outcome === "applied") {
-      await executeEffect(tx, { row, forRecord, input, effect: resolution.effect, occurredAt, by });
+      await executeEffect(tx, {
+        row,
+        forRecord,
+        input,
+        effect: resolution.effect,
+        occurredAt,
+        by,
+        authorRouteId: courierRoute?.id ?? null,
+      });
     }
     return { id: input.id, outcome: resolution.outcome };
   });
@@ -255,20 +278,50 @@ async function executeEffect(
     effect: RecordEffect;
     occurredAt: Date;
     by: RecordAuthor;
+    authorRouteId: string | null;
   },
 ): Promise<void> {
   const { row, forRecord, input, effect, occurredAt, by } = context;
-  if (
-    effect.removeTaskIds ||
-    effect.leaveRoute ||
-    effect.requestHandover ||
-    effect.cancelHandoverId
-  ) {
-    // Records that arrive after the dispatcher changed the shipment (FR-025): US5, T067.
-    throw new Error("Effects across routes are not implemented yet (tasks.md T067)");
-  }
   const author = { actorUserId: by.authorUserId, now: by.recordedAt };
   const touchedRoutes = new Set<string>();
+  // FR-025: execute only the shared domain's cross-route decision, retaining completed history.
+  if (effect.cancelHandoverId) {
+    const cancelled = await cancelPendingHandover(tx, row.id, author);
+    if (cancelled) {
+      const ids = [...new Set([cancelled.fromRouteId, cancelled.toRouteId])].filter(
+        (id): id is string => id !== null,
+      );
+      await recordRouteEvents(
+        tx,
+        ids.map((id) => handoverEvent("handover_cancelled", id, cancelled, author)),
+        by.noticeIds,
+      );
+      await tx.insert(shipmentEvents).values({
+        shipmentId: row.id,
+        type: "handover_cancelled",
+        actorUserId: by.authorUserId,
+        occurredAt,
+        recordedAt: by.recordedAt,
+        routeId: cancelled.toRouteId,
+      });
+      for (const id of ids) touchedRoutes.add(id);
+    }
+  }
+  const removedFrom = new Set(
+    forRecord.pendingTasks
+      .filter((task) => effect.removeTaskIds?.includes(task.id))
+      .map((task) => task.routeId),
+  );
+  for (const routeId of removedFrom) {
+    const removed = await removeFromPlan(tx, routeId, row.id, {
+      actorUserId: by.authorUserId,
+      occurredAt: by.recordedAt,
+      reason: "Registro recibido después de cambiar la ruta",
+    });
+    await recordRouteEvents(tx, [removed], by.noticeIds);
+    await touchRoute(tx, routeId, by.recordedAt);
+    touchedRoutes.add(routeId);
+  }
   const taskRoute = (taskId: string | undefined) =>
     forRecord.pendingTasks.find((task) => task.id === taskId)?.routeId;
 
@@ -291,6 +344,28 @@ async function executeEffect(
       .update(routeTasks)
       .set({ problemNote: input.note })
       .where(eq(routeTasks.id, effect.problemNoteTaskId));
+  }
+
+  if (effect.requestHandover) {
+    const handover = await requestHandover(
+      tx,
+      {
+        shipmentId: row.id,
+        fromCourierId: by.courierId,
+        toCourierId: effect.requestHandover.toCourierId,
+        toRouteId: effect.requestHandover.toRouteId,
+        fromRouteId: context.authorRouteId,
+        reason: "Recogida recibida después de cambiar la ruta",
+      },
+      author,
+    );
+    await recordRouteEvents(
+      tx,
+      [handoverEvent("handover_requested", handover.toRouteId, handover, author)],
+      by.noticeIds,
+    );
+    touchedRoutes.add(handover.toRouteId);
+    if (handover.fromRouteId) touchedRoutes.add(handover.fromRouteId);
   }
 
   let handover: typeof handovers.$inferSelect | undefined;
@@ -332,6 +407,7 @@ async function executeEffect(
         }),
         ...(effect.returnDecided === false && { returnDecided: false }),
         ...(effect.needsReview && { needsReview: true }),
+        ...((effect.leaveRoute || removedFrom.has(row.routeId ?? "")) && { routeId: null }),
         version: sql`${shipments.version} + 1`,
         updatedAt: by.recordedAt,
       })
@@ -367,6 +443,7 @@ async function executeEffect(
         }),
         onBehalf: by.onBehalf,
       })),
+      by.noticeIds,
     );
     for (const routeId of routeIds) {
       await touchRoute(tx, routeId, by.recordedAt);

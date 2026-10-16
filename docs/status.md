@@ -1,7 +1,7 @@
 # Project status
 
 Where Domy stands and what comes next, so any session can resume without the conversation
-that produced it. Updated 2026-10-15; update it whenever a slice is merged or the next step
+that produced it. Updated 2026-10-16; update it whenever a slice is merged or the next step
 changes.
 
 ## Features
@@ -14,23 +14,75 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup T001–T003 (#13), domain T004–T014 (#14), foundation T015–T025 (#15), US1 T026–T040 (#16–#17), account linking T094 (#18), idempotency corrections T095–T097 (#19, `5c8b107`), US2 T041–T047/T098 (#20, `93fdf09`), and US3 T048–T052/T099–T102 (#21, `4910f76`) are on `main`. PR #21 passed all four gates at its final head before the authorized squash merge. US4 T053–T060/T103–T110 is implemented and scoped-converged locally on `003-us4-decisions`, with prior local gates passing; CI retry races T111/T112 are corrected and converged locally with all four gates passing; correction commit/push authorized; verify the new head's CI before seeking merge approval; published in [PR #22](https://github.com/scldrn/domy/pull/22); merge and US5 require separate approval and green CI. Effects of late records across routes remain US5 (T067) |
+| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`). US5 T061–T070/T113–T121 implementation and convergence are complete: 883 tests, 82 e2e without retries, check/build pass on CI `38919233855`. [PR #23](https://github.com/scldrn/domy/pull/23) is the authoritative squash-merge/latest-head/post-merge CI receipt. Final tracking-only head must also pass CI before the authorized squash. US6–US7 and feature-wide polish remain pending; starting US6 is not authorized |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Review the latest-head CI of T111/T112 in US4
-   [PR #22](https://github.com/scldrn/domy/pull/22) before seeking merge/US5 authorization.
-   Samuel approved commit/push of the correction on 2026-10-15. Both test races are
-   reproduced and corrected
-   locally, with repeated scoped convergence and all four gates passing: check,
-   821 unit/integration tests, 76 e2e without retries, and build. Four targeted cases
-   also pass ten repetitions each (40/40). Only three e2e files and documentation
-   change; production code, timing limits, workers and retry policy are untouched.
-   Prior head `a169cbb` has green CI `38814337383` with one US4 retry, not a clean e2e
-   run. This revision publishes the approved correction; its CI result must be verified
-   at the PR's new head. Do not substitute the older run or infer approval to merge.
-   The branch is based on `4910f76`; US2/US3 are already merged. Do not repeat that work.
+1. Inspect every gate on the latest head of [US5 PR #23](https://github.com/scldrn/domy/pull/23)
+   T121 correction `5bd2b5d` now has clean CI
+   [38919233855](https://github.com/scldrn/domy/actions/runs/38919233855): check,
+   883 tests, 82 e2e without retries (12.8 minutes), build. Remote logs and final scoped
+   convergence are clean; T121 is checked only after this verification. The tracking-only
+   closure must also pass latest-head CI, then perform the owner-authorized squash if
+   PR #23 is still open. If already merged, verify its merge commit against `main` and
+   inspect post-merge CI there; use the PR as the authoritative receipt. Samuel authorized
+   T121 and subsequent squash with “Si”; stop before US6 until separately authorized.
+
+   Historical blocker: closure CI [38860188300](https://github.com/scldrn/domy/actions/runs/38860188300)
+   at `8ec27b5` reports SUCCESS but contains one flaky e2e: handover confirmation and
+   delivery offline, `courier-changes.spec.ts:194`, status remains `picked_up` during the
+   5-second poll instead of `delivered`. Retry passes; 81 other scenarios pass initially.
+   No CI artifacts were retained. A network reset interrupted `gh run watch`, but direct
+   API/log inspection confirmed the actual result; this was not a failed workflow.
+   Do not use a new green rerun to erase this evidence. Samuel subsequently authorized
+   reproducing/correcting T121. The correction below is tested locally, not a rerun of
+   unchanged code or a relaxed assertion. Node 20,
+   `url.parse()` and `punycode` warnings are absent, and 877 tests/build/check still pass.
+
+   Publication/maintenance history below is retained, not a claim that this later flaky
+   head satisfies the final merge gate:
+   (`003-us5-changes`, based on `34875ba`). Implementation published as `4d2563e`;
+   this documentation follow-up records the actual PR instead of leaving publication
+   as the next action. Samuel approved commit, push and PR with “Si” after final local
+   verification. CI [38851532581](https://github.com/scldrn/domy/actions/runs/38851532581)
+   passed at `ce55c7e`: check, 877 tests, 82 e2e without retries and build. On 2026-10-16
+   Samuel authorized investigating/correcting CI warnings and then squash merging with
+   fresh green latest-head CI. T120 upgrades only the two setup actions after official
+   manifest/release review. T120 is now complete: CI
+   [38857856129](https://github.com/scldrn/domy/actions/runs/38857856129) at `4392341`
+   passed all gates (877 tests, 82 e2e without retries); all three deprecation warnings
+   disappeared and scoped convergence found no gap. This documentation closure must
+   receive green latest-head CI too, then squash merge and verify the resulting `main`
+   state. Starting US6 still requires separate approval. After the authorized merge,
+   use PR #23's merge commit and its post-merge CI as the source of current state; do not
+   create a documentation-only CI/merge loop just to copy that new commit into itself.
+   Samuel authorized continuing with “ok, continuemos” after the separate US4 merge.
+   Both reviewer checklists pass (16/16 requirements, 48/48 courier rules). Initial
+   artifact review found the eight US5 scenarios mapped to T061–T070, but the deeper
+   code/contract analysis identified a HIGH underspecification: no public-key transport
+   for the browser's Web Push subscription. Only the server receives `VAPID_PUBLIC_KEY`;
+   neither the original contract nor the web defined how the phone obtains it. Samuel
+   approved the remediation with “autorizo”: authenticated courier
+   `GET /api/courier/push-config` returning `{ publicKey: string | null }`, with null when
+   disabled and no private key. Contract, plan and T061/T066/T068 are aligned before
+   implementation. Scoped analysis mapped all eight scenarios and ten direct requirements/
+   buildable criteria to tasks, with all nine principles checked. Production implementation
+   now closes the recorded initial RED failures below; convergence added T113–T119 and
+   each corrective regression was reproduced before its fix. Final check, all 877 unit/
+   integration tests, all 82 e2e without retries, build and scoped convergence now pass.
+   The first whole e2e run was 81/82, not green; native push
+   validation now uses a fresh persistent full-Chromium profile and passed ten repetitions.
+   One generated additive migration adds the correctly named handover confirmation notice.
+   Do not confuse the earlier initial RED checkpoint or partial passes with final closure.
+   Correction/revert
+   notices depend on US6's endpoints; do not implement those endpoints ahead of US6.
+   Publication and conditional squash merge are authorized; continuing US6 is not.
+   US4 final-head CI [38822901902](https://github.com/scldrn/domy/actions/runs/38822901902)
+   at `d3e3830` passed check, 821 unit/integration tests, all 76 e2e without retries,
+   and build. Authorized squash merge: `34875ba`; post-merge CI
+   [38825582661](https://github.com/scldrn/domy/actions/runs/38825582661) also passed.
+   Earlier CI retries remain historical evidence below, not unresolved latest-head failures.
 2. Before the end of 003: complete the scenario-by-scenario physical validation T087/T093
    on Android and iPhone (iOS 16.4 or later for notifications), building on the owner's
    successful US1–US3 smoke test below. The owner's DigitalOcean Spaces bucket
@@ -39,6 +91,164 @@ a short-lived branch, so the specification and implementation of every feature l
 4. Before go-live: time SC-001, SC-004, and SC-006 of 002 with the dispatcher, and add a
    content security policy tested on the production host (002 quickstart-results; 003
    research R17 lists what the courier app needs from it).
+
+## T121 synchronization correction — 2026-10-16
+
+- The original single-flight guard discarded every trigger while `running` was set.
+  Deterministic tests against the real courier store and IndexedDB reproduced a dropped
+  reconnect and a saved record missed after the pass had read its outbox: the first
+  five-test run had three failures and two passing guards. Six final tests also cover
+  trigger coalescing, serial transport, pause/resume, failure without a trigger and a
+  failed coalesced pass that must stop rather than loop.
+- The browser journey now holds an actual offline record request, observes the native
+  online event, then releases the failed send. Before the fix it reproduces the exact
+  5-second `picked_up` versus `delivered` assertion, with real PostgreSQL/auth/storage
+  and the built worker. Initial instrumentation first missed its own online listener
+  registration and hit 30 seconds; that harness race was fixed before the meaningful RED.
+  No historical CI trace exists, so this establishes the matching failure mechanism,
+  not proof of that unobserved run's precise interleaving.
+- Production retains one coalesced follow-up request in the existing store. Only one
+  sync runs at a time; every new trigger can request another pass, pause cancels queued
+  work before an account change, and a failure without a new trigger stops. No timer,
+  dependency, queue service, schema, endpoint or business rule was added.
+- Final focused browser revision passes 10/10 repetitions in 44.9 seconds, without
+  retries. The whole local gate passes: `pnpm check`; `pnpm test` (226 domain + 472 server
+  + 185 web = **883**); `env -u NO_COLOR pnpm test:e2e` (**82/82**, 4.7 minutes, no retries);
+  `pnpm build`. Preserve the 5-second final assertion, all offline reload/custody checks,
+  original worker/retry/deadline settings, and add exactly-one applied delivery alongside
+  exactly-one handover confirmation. New test typing/lint issues were fixed without
+  rule exceptions; generated files and dependencies are unchanged.
+- Scoped local convergence reviewed T121, FR-018–FR-022/FR-028, US5/AC4, the coalescing/
+  pause decisions and all nine principles: zero remaining implementation findings.
+  Before/after assessment, tasks.md SHA-256 stayed
+  `2b24ae139cba92589a5d671ee8fd882a591925bd23e35a031305b723cc768ee7`.
+  Optional commit hooks are not executed; no converge hooks are registered. Reviewer
+  checklists remain unchanged at 16/16 and 48/48. T121 remains unchecked until fresh
+  remote CI is inspected; no new remote result or merge is claimed at this checkpoint.
+
+Remote closure: CI `38919233855` at `5bd2b5d` passes every gate, with 883 tests and all
+82 e2e on their first attempt (12.8 minutes). No original action deprecation reappeared.
+Final scoped convergence is clean; before/after tasks.md SHA-256 stayed
+`ce4b83ac5b7ceab4ac7256d23db12c70dac68278bde4c120c6c1c449b9ea9b44`.
+The marker/closure note were updated afterward. No correction goes directly to `main`:
+require fresh clean CI for the tracking head, then the approved squash and deletion of
+the short-lived branch. PR #23 records the exact merge commit/post-merge CI, avoiding a
+new release branch solely to copy its own hash into this document. US6 is not authorized.
+
+## US5 initial test checkpoint — 2026-10-15
+
+- Branch: `003-us5-changes`, based on merged US4 `34875ba`; local changes only.
+- Added `apps/server/tests/courier-notices.test.ts` and
+  `apps/server/tests/courier-late-records.test.ts`; extended `handovers.test.ts` and
+  `custody-history.test.ts`. The test app accepts a VAPID test configuration via its
+  normal dependency wiring; production does not consume it yet. Only web-push's external
+  `sendNotification` is spied; authentication, transactions and PostgreSQL remain real.
+- Reproduce RED: `pnpm --filter @domy/server exec vitest run tests/courier-notices.test.ts tests/courier-late-records.test.ts tests/handovers.test.ts tests/custody-history.test.ts`.
+  Ignored machine-local report: `apps/server/test-results/us5-initial-red.json`.
+  The expanded run has 40 cases: notices 0/17, late records 3/14, handovers 7/7,
+  custody history 2/2. The three newly added T063 cases pass by reuse, not new code.
+  A final deferred-constraint regression additionally rejects commit after notice insertion
+  and forbids push on that rolled-back action: final report
+  `apps/server/test-results/us5-final-red.json` has 29 failures/12 passes in 41 cases
+  (notices 0/18, other files unchanged). This catches premature push even after a
+  successful INSERT, not only failure before inserting the notice.
+  Missing cross-route effects still return 500; no-origin handover cancellation returns
+  409; absent configuration/subscription/review endpoints return 404.
+- Added `apps/web/tests/e2e/courier-changes.spec.ts` (quickstart 14–18 plus worker push).
+  `env -u NO_COLOR pnpm --filter @domy/web exec playwright test tests/e2e/courier-changes.spec.ts`
+  reproduces five failures and one passing second-phone duplicate-delivery journey,
+  using real PostgreSQL, storage and the built worker. Failures stop at absent notices,
+  giver-handover text, review UI, late delivery application and notification handling.
+  Assertions after those blockers still need green verification. Local traces live under
+  ignored `apps/web/test-results/`. The first run also printed the inherited
+  NO_COLOR/FORCE_COLOR conflict; unsetting NO_COLOR for the second run removes that
+  environment warning without changing any runner policy.
+- Static/production gates pass (`pnpm check`, `pnpm build`); the full test gates are
+  deliberately not claimed green. No retries, limits, workers, dependencies or migrations
+  changed. No full-US5 convergence, commit, push or PR is claimed at this RED checkpoint.
+
+## US5 implementation and corrective review — 2026-10-15
+
+- T065/T066: notice creation shares route/shipment/handover transactions. Explicit
+  request-local notice ids pass through existing authors/event orchestration. After the
+  handler finishes, push reads committed rows only, without awaiting transport; rollback
+  creates no push, while earlier committed records in an erroneous batch still notify.
+  Subscription and acknowledgment mutations reuse the empty audit-receipt mechanism,
+  including no-ops, concurrent retries and late replays. Empty receipts stay out of audit UI.
+- T067: execute the shared domain's late-record effects on tasks, custody, handovers,
+  route state, review flags and histories. Records remain exactly-once; no state conflict
+  silently drops them. Review clearing records the note and retains custody/status.
+- T068–T070: offline notice acknowledgments, receiving/giving handover UI, route sync/
+  unseen counts, review dialog, native push and runtime public configuration. Existing
+  "No aplicado" record/board presentations are reused, not reimplemented. The permission
+  prompt is user-initiated and recorded on the phone; sign-out unregisters notifications.
+- T113–T115 regressions first reproduced arbitrary destination acceptance, missing push
+  on a partially failed batch, stale-410 deletion of renewed keys, and duplicate void
+  notices. Shared boundary validation now restricts HTTPS to browser push services; logs
+  contain no subscription keys/endpoints. A void retains its route-removal event but
+  produces one correctly named notice. The first full unit run had 464/466 server passes:
+  two old strict board expectations needed the approved sync/count fields. Strictness
+  and all previous fields were retained. A subsequent full gate passed 225 domain,
+  470 server and 177 web cases (872), before T116–T119; it is not the final revised total.
+- T116/T117 first reproduced a return restored as a delivery and a handover confirmation
+  mislabeled as an address edit. Cancellation now uses the shared held-stop planner and
+  original pickup place. `0005_powerful_eternals.sql` was generated, not hand-written:
+  one `ALTER TYPE notice_type ADD VALUE 'handover_confirmed'`. Snapshot review found only
+  that enum addition and normal snapshot ids; no rows, other enums/tables or constraints
+  change. The ordinary migration runner applies it; no new dependency is needed.
+- T118/T119 first reproduced false unchanged-order notices and the inability to confirm
+  401 notices. Unchanged ordering preserves the route version; stale requests are still
+  rejected after a real reorder. All shown acknowledgment chunks (200/200/1) persist in
+  one IndexedDB transaction with distinct action ids and survive reopening. An injected
+  second-write quota error rolls every chunk back, without weakening the API limit.
+- Native push diagnostics found headless-shell's real permission denied; full Chromium
+  supports it. A first full run with an ephemeral profile had 81/82 passes, with the
+  native push assertion failing. Normal persistent profiles then passed ten repetitions
+  (32.3 s), with real notification permission, trusted CDP push, the built worker, an
+  actual notification and exact title/body/privacy assertions after leaving the app.
+  Profiles stay under ignored test-results; no notification API or handler is replaced.
+  No timeouts, workers, retries, accessibility rules or existing cases were relaxed.
+  Build-overlap during early diagnostics is not evidence of the exact failure cause;
+  final gates must run without concurrently rebuilding the served app.
+- Interim checks caught normal formatting/lint issues and an optional CDP id, all fixed
+  without changing lint configuration or asserting away undefined. A new push unit test
+  caught incorrectly parsing a 204 as JSON; `unwrapEmpty` preserves error handling for
+  these bodyless mutations. The note-validation regression now asserts the repository's
+  actual `400 invalid_request`/field error contract rather than an invented 422.
+
+### Final local verification
+
+Publication follow-up: `ce55c7e` CI passed all four gates. Owner-authorized T120 then
+updated only the two setup actions; `4392341` CI also passes all four gates and removes
+all original deprecations. GitHub's informational notice about a future Ubuntu image
+rollout is left visible; it does not require an application change. Full evidence and
+scoped-convergence hash are in T120's closure in tasks.md. Squash merge is authorized
+only with clean CI on the latest PR head; post-merge status is available on PR #23/main.
+
+- `pnpm check` passes: formatting, lint with zero warnings and all package type checks.
+- `pnpm test` passes: domain 226, server 472, web 179 — **877 total**. Server fixtures use
+  real PostgreSQL, including the generated migration and unchanged capacity/invariant gates.
+- `env -u NO_COLOR pnpm test:e2e` passes **82/82 in 4.7 minutes**, without retries or skips.
+  All six US5 journeys pass within this complete run, including the real native notification.
+- `pnpm build` passes after the full e2e run, with no concurrent rebuild of its served app.
+- Visually inspected `route-notices-phone.png`, `pending-handover-phone.png` and
+  `clear-review-dialog.png` from the final run under ignored `apps/web/test-results/`.
+  The notice list, blocked handover action and review dialog are legible and unclipped;
+  their explicit WCAG scans also pass. Fixture courier names deliberately include UUIDs.
+- Final scoped convergence checked eight US5 acceptance scenarios, seven direct functional
+  requirements and three buildable success criteria, eight relevant plan decisions,
+  T061–T070/T113–T119 (17 tasks), and all nine constitution principles. No remaining
+  missing/partial/contradicting/unrequested finding in this slice. Before/after assessment,
+  `tasks.md` SHA-256 stayed `3a99788fe01943d1f5cc781ee2bc1c32d3158a0b567cc01e1c30f474809e4a45`;
+  no empty convergence phase was appended. Completion checkboxes were updated only afterward.
+  No before/after-converge hooks are registered; optional commit hooks were not executed.
+- T061–T070 and T113–T119 are complete locally; Samuel approved commit/push/PR with “Si”.
+  Published in PR #23 as `4d2563e`, followed by its publication-state documentation.
+  Its latest head must receive fresh CI; no remote green result or merge is claimed.
+  US6 correction/revert notices remain with their already-planned endpoints,
+  not as an unimplemented promise in this slice. US6–US7/polish are not claimed converged.
+- Physical Android/iPhone validation remains T087/T093, not replaced by browser automation.
+  Apply the generated enum migration before running the updated server in any environment.
 
 ## Idempotency correction validation
 

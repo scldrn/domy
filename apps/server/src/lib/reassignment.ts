@@ -30,7 +30,7 @@ import {
 
 export type HandoverRow = typeof handovers.$inferSelect;
 type ShipmentRow = typeof shipments.$inferSelect;
-type Author = { actorUserId: string; now: Date };
+type Author = { actorUserId: string; now: Date; noticeIds?: string[] };
 
 /** Locks routes in one order, the same for every action, so two actions never deadlock. */
 export async function lockRoutes(tx: Executor, ids: (string | null)[]): Promise<void> {
@@ -218,7 +218,7 @@ export async function routeHeldShipment(
       events.push(handoverEvent("handover_requested", target.id, handover, by));
     }
   }
-  await recordRouteEvents(tx, events);
+  await recordRouteEvents(tx, events, by.noticeIds);
   const affected = new Set([
     shipment.routeId,
     toRouteId,
@@ -247,7 +247,7 @@ export async function moveShipment(
   shipment: ShipmentRow,
   toRouteId: string,
   /** Without `actionId` when a route action moves several shipments and keeps it itself. */
-  by: Author & { reason: string; actionId?: string },
+  by: Author & { reason: string; actionId?: string; noticeAsAddition?: boolean },
 ): Promise<void> {
   if (isHeldForRouting(shipment)) {
     if (shipment.routeId === toRouteId)
@@ -346,10 +346,15 @@ export async function moveShipment(
     toCourierId: target.courierId,
     reason: by.reason,
   };
-  await recordRouteEvents(tx, [
-    { ...moved, routeId: from.id, type: "reassigned", changes: { toRouteId: target.id } },
-    { ...moved, routeId: target.id, type: "reassigned", changes: { fromRouteId: from.id } },
-  ]);
+  await recordRouteEvents(
+    tx,
+    [
+      { ...moved, routeId: from.id, type: "reassigned", changes: { toRouteId: target.id } },
+      { ...moved, routeId: target.id, type: "reassigned", changes: { fromRouteId: from.id } },
+    ],
+    by.noticeIds,
+    by.noticeAsAddition ? "shipment_added" : undefined,
+  );
   for (const routeId of [from.id, target.id]) {
     await touchRoute(tx, routeId, by.now);
     await refreshRouteStatus(tx, routeId, by);
@@ -426,11 +431,33 @@ export async function cancelHandover(
 ): Promise<void> {
   const handover = await loadPending(tx, id);
   const back = handover.fromRouteId;
-  if (!back || back === handover.toRouteId) {
+  if (back === handover.toRouteId) {
     throw new AppError("invalid_transition", {
       message:
         "Este traspaso no tiene otra ruta a la cual volver; para deshacerlo, reasigna la ruta o el envío.",
     });
+  }
+  if (!back) {
+    await cancelPendingHandover(tx, handover.shipmentId, by);
+    await removeFromPlan(tx, handover.toRouteId, handover.shipmentId, {
+      actorUserId: by.actorUserId,
+      occurredAt: by.now,
+      reason: "Traspaso cancelado",
+    });
+    await tx
+      .update(shipments)
+      .set({ routeId: null, version: sql`${shipments.version} + 1`, updatedAt: by.now })
+      .where(eq(shipments.id, handover.shipmentId));
+    await tx.insert(shipmentEvents).values({
+      shipmentId: handover.shipmentId,
+      type: "handover_cancelled",
+      actorUserId: by.actorUserId,
+      occurredAt: by.now,
+      routeId: handover.toRouteId,
+      changes: { routeId: [handover.toRouteId, null] },
+    });
+    await recordHandoverOnRoutes(tx, "handover_cancelled", handover, by);
+    return;
   }
   const previous = await loadRouteRow(tx, back);
   if (previous.status !== "in_progress") {
@@ -439,7 +466,10 @@ export async function cancelHandover(
     });
   }
   await cancelPendingHandover(tx, handover.shipmentId, by);
-  const [planned] = await planShipments(tx, [handover.shipmentId]);
+  const [shipment] = await tx.select().from(shipments).where(eq(shipments.id, handover.shipmentId));
+  if (!shipment) throw new AppError("not_found");
+  const purpose = shipment.returnDecided ? "return" : "delivery";
+  const [planned] = await planShipments(tx, [handover.shipmentId], { heldPurpose: purpose });
   if (!planned) throw new AppError("not_found", { message: "No encontramos ese envío." });
   const toStops = await loadPlan(tx, handover.toRouteId);
   await savePlan(
@@ -453,7 +483,10 @@ export async function cancelHandover(
     tx,
     back,
     backStops,
-    addShipmentToStops(backStops, planned, () => crypto.randomUUID(), { deliveryOnly: true }),
+    addHeldShipmentToStops(backStops, planned, () => crypto.randomUUID(), {
+      holder: "courier",
+      purpose,
+    }),
   );
   await tx
     .update(shipments)
@@ -491,6 +524,7 @@ async function recordHandoverOnRoutes(
       onBehalf: type === "handover_confirmed",
       ...(index === 0 && { clientEventId: by.actionId }),
     })),
+    by.noticeIds,
   );
   for (const routeId of routeIds) {
     await touchRoute(tx, routeId, by.now);

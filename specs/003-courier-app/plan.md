@@ -90,6 +90,25 @@ all four gates and scoped convergence; CI continues to invoke the same scripts.
 
 ## Constitution Check
 
+### CI action runtime maintenance — owner-approved 2026-10-16
+
+T120 addresses the deprecation warnings observed in US5 PR #23's successful CI.
+Upgrade only `pnpm/action-setup` from v4 to v6 (current release v6.1.0) and
+`actions/setup-node` from v5 to v7 (current release v7.1.0) in `.github/workflows/ci.yml`.
+Official manifests declare `node24` for both; pnpm v6.1.0 explicitly supports the
+repository's pnpm 12. Keep `packageManager`, `.nvmrc`, pnpm cache inputs, action ordering,
+lockfile and all quality commands unchanged. No registry/token inputs or removed auth
+behavior are used here; setup-node's ESM migration is internal to the action.
+Sources: [pnpm release](https://github.com/pnpm/action-setup/releases/tag/v6.1.0),
+[setup-node release](https://github.com/actions/setup-node/releases/tag/v7.1.0).
+The existing `ce55c7e` CI logs reproduce Node 20, `url.parse()` and `punycode` warnings.
+Do not suppress warnings with environment flags or weaken tests. Validate formatting and
+the complete latest-head CI, inspect its logs for the original warnings, then converge
+this maintenance scope before squash merge. If a residual upstream warning requires a
+disproportionate change and does not affect operation, document it under the owner's
+explicit exception instead of changing the application. Merge is authorized only with
+green latest-head CI; starting US6 remains outside this authorization.
+
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 | Principle | How this plan complies | Status |
@@ -220,6 +239,64 @@ apps/web/tests/e2e/global-setup.ts    # + S3Proxy container, storage and test no
 screen.
 
 ## Cross-feature alignment
+
+T121 owner-authorized synchronization investigation (2026-10-16): reproduce overlapping
+triggers against the real courier store and IndexedDB before changing production code.
+The current single-flight guard returns the running promise and drops later triggers;
+test a reconnect during an in-flight offline failure and a saved record after a sync
+has already read its outbox. If confirmed, retain one coalesced follow-up pass in the
+existing store, never parallel syncs or an autonomous retry loop. Pause/sign-out must
+prevent queued passes and await active work; failures without a new trigger must stop.
+Use no new dependency, timer, retry budget or service. Extend the real-browser handover
+journey with a controlled failed transport overlap if reproducible, keeping its offline
+reload, custody checks and 5-second final assertion. Distinguish a reproduced mechanism
+from proof of the historical CI cause, since that run retained no trace artifacts.
+Run focused repetitions and all gates before scoped convergence and clean latest-head CI.
+
+US5 notification configuration (owner-approved alignment, 2026-10-15): expose
+`GET /api/courier/push-config` through the existing courier role/link guard, returning
+only `{ publicKey: string | null }`. Read the key from the server's validated VAPID
+configuration; null means notifications are disabled in development. Never expose the
+private key or subject. Define the response schema once in
+`packages/domain/src/schemas/courier.ts` and retain Hono RPC inference. T061 tests both
+configured/disabled responses and access isolation before T066 implements the endpoint.
+T068 fetches it before subscribing; no web build-time variable, new dependency or migration.
+Notification failure or absence must not affect notices, acknowledgments or route actions.
+
+US5 security/convergence T113–T115: validate push destinations in the shared schema
+before persistence, accepting only credential-free HTTPS on the standard port at browser
+push services (FCM, Apple's `*.push.apple.com`, Mozilla's Autopush). This prevents the
+authenticated API from becoming an arbitrary server-side request relay. Browser-vendor
+references: [Apple](https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers),
+[Mozilla](https://mozilla-services.github.io/autopush-rs/http.html),
+[web-push/FCM example](https://github.com/web-push-libs/web-push#sendnotificationpushsubscription-payload-options).
+Request-local notice ids are passed explicitly through existing transaction authors and
+route-event orchestration, not through global state. After handlers finish, look up only
+committed ids, including earlier committed records in a partially failed batch; rolled-back
+ids produce no push. No new service, queue, migration or dependency. A delayed expired-
+subscription response deletes only matching id and encryption keys, preserving renewal.
+
+T117 convergence alignment: handover confirmation needs its own `handover_confirmed`
+notice, not `shipment_updated` (which tells the courier to check an edited address).
+Extend the shared notice enum/text once, generate and review the additive PostgreSQL
+enum migration with `pnpm db:generate`, and apply it through normal deployment migrations.
+This is the only additional US5 migration; it changes no existing rows or notice meanings.
+T116 cancellation uses `addHeldShipmentToStops` and the immutable pickup-place projection
+for decided returns, preserving a return task rather than silently creating a delivery.
+
+T118/T119: unchanged stop ordering uses the existing unchanged-route transaction path
+and preserves its version, so a later replay cannot overwrite a newer order. A phone's
+single "Entendido" may cover more than the API's 200-id transport limit: split the shown
+ids into uniquely keyed, schema-validated chunks and persist every chunk in one IndexedDB
+transaction before syncing. A quota error rolls them all back. Keep the API limit and
+acknowledge only notices that were shown, not changes arriving afterward.
+
+T064 notification validation uses a fresh persistent profile in full Chromium's new
+headless channel, not the reduced headless-shell or an incognito context. It grants the
+real permission, leaves the app for about:blank, injects the standard push event via CDP
+and reads actual `getNotifications()` title/body, without replacing the worker handler
+or notification API. Profiles stay under ignored test-results and are closed after each
+case. All other cases keep their existing browser setup, workers, deadlines and retries.
 
 US4 review remediation (owner approval 2026-10-15): T053 explicitly reproduces concurrent
 and late replays of both exception decisions before T056. Persist the accepted action

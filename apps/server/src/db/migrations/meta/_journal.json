@@ -36,6 +36,13 @@
       "when": 1791992064242,
       "tag": "0004_courier_app",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792123589006,
+      "tag": "0005_powerful_eternals",
+      "breakpoints": true
     }
   ]
 }

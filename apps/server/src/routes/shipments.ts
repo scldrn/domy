@@ -98,6 +98,8 @@ import {
   unassignedUpTo,
 } from "../lib/route-store.ts";
 import { AppError } from "../lib/errors.ts";
+import { notifyCourier } from "../lib/notices.ts";
+import { clearReviewInput } from "@domy/domain";
 import { loadRecordFlags, loadShipmentRecords } from "../lib/record-views.ts";
 import { exportTable, findExportRecords, toCsv, toXlsx } from "../lib/export.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
@@ -800,6 +802,47 @@ export const shipmentRoutes = new Hono<AppEnv>()
   .get("/:id", validate("param", idParam), async (c) => {
     return c.json(await loadDetail(c.get("db"), c.req.valid("param").id, c.get("clock")()));
   })
+  // FR-026: clearing review is a traced action, never a shipment/custody correction.
+  .post(
+    "/:id/clear-review",
+    validate("param", idParam),
+    validate("json", clearReviewInput),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { actionId, note } = c.req.valid("json");
+      const db = c.get("db");
+      if (!(await findShipmentAction(db, actionId)))
+        await db
+          .transaction(async (tx) => {
+            const [current] = await tx
+              .select()
+              .from(shipments)
+              .where(eq(shipments.id, id))
+              .for("update");
+            if (!current) throw new AppError("not_found");
+            if (await findShipmentAction(tx, actionId)) return;
+            const now = c.get("clock")();
+            await tx
+              .update(shipments)
+              .set({ needsReview: false, updatedAt: now, version: sql`${shipments.version} + 1` })
+              .where(eq(shipments.id, id));
+            await tx.insert(shipmentEvents).values({
+              shipmentId: id,
+              type: "review_cleared",
+              actorUserId: c.get("user").id,
+              occurredAt: now,
+              recordedAt: now,
+              clientEventId: actionId,
+              reason: note,
+              changes: { needsReview: [current.needsReview, false] },
+            });
+          })
+          .catch((error: unknown) => {
+            if (!isUniqueViolation(error, "shipment_events_client_event_id_key")) throw error;
+          });
+      return c.json(await loadShipment(db, id));
+    },
+  )
   // 003 T056, FR-029–FR-032: a decision and all route effects share one receipt/transaction.
   .post(
     "/:id/exception-decision",
@@ -812,6 +855,7 @@ export const shipmentRoutes = new Hono<AppEnv>()
       const now = c.get("clock")();
       const by = {
         actorUserId: c.get("user").id,
+        noticeIds: c.get("noticeIds"),
         now,
         reason: input.decision === "return" ? "Devolver al remitente" : "Nuevo intento",
       };
@@ -872,6 +916,20 @@ export const shipmentRoutes = new Hono<AppEnv>()
                 serviceDate: [current.serviceDate, state.serviceDate],
               },
             });
+            const recipients = new Set([
+              current.custodyCourierId,
+              ...(current.routeId ? [(await loadRouteRow(tx, current.routeId)).courierId] : []),
+              ...(state.routeId ? [(await loadRouteRow(tx, state.routeId)).courierId] : []),
+            ]);
+            for (const courierId of recipients)
+              await notifyCourier(
+                tx,
+                courierId,
+                "exception_decided",
+                { routeId: state.routeId ?? current.routeId, shipmentId: id },
+                now,
+                by.noticeIds,
+              );
             // FR-041: office-held new attempts re-enter the ordinary assignment flow.
             if (state.status === "registered" && state.routeId) {
               const target = await loadRouteRow(tx, state.routeId);
@@ -904,7 +962,12 @@ export const shipmentRoutes = new Hono<AppEnv>()
       const { actionId } = c.req.valid("json");
       const db = c.get("db");
       const now = c.get("clock")();
-      const by = { actorUserId: c.get("user").id, now, reason: "Recibido en oficina" };
+      const by = {
+        actorUserId: c.get("user").id,
+        now,
+        reason: "Recibido en oficina",
+        noticeIds: c.get("noticeIds"),
+      };
       if (!(await findShipmentAction(db, actionId)))
         await db
           .transaction(async (tx) => {
@@ -968,6 +1031,14 @@ export const shipmentRoutes = new Hono<AppEnv>()
                 heldAtOffice: [false, true],
               },
             });
+            await notifyCourier(
+              tx,
+              current.custodyCourierId,
+              "office_received",
+              { routeId: current.routeId, shipmentId: id },
+              now,
+              by.noticeIds,
+            );
           })
           .catch((error: unknown) => {
             if (isUniqueViolation(error, "shipment_events_client_event_id_key")) return;
@@ -1102,6 +1173,16 @@ export const shipmentRoutes = new Hono<AppEnv>()
       },
       // A new pickup place or address moves its stops (feature 002, FR-013).
       async (tx, routeId) => {
+        const route = await loadRouteRow(tx, routeId);
+        if (route.status === "in_progress")
+          await notifyCourier(
+            tx,
+            route.courierId,
+            "shipment_updated",
+            { routeId, shipmentId: id },
+            occurredAt,
+            c.get("noticeIds"),
+          );
         const before = await loadPlan(tx, routeId);
         const [edited] = await planShipments(tx, [id]);
         const after = edited ? relocateShipment(before, edited, () => crypto.randomUUID()) : before;
@@ -1139,7 +1220,17 @@ export const shipmentRoutes = new Hono<AppEnv>()
       async (tx, routeId) => {
         const removed = await removeFromPlan(tx, routeId, id, { actorUserId, occurredAt, reason });
         await touchRoute(tx, routeId, occurredAt);
-        await recordRouteEvents(tx, [removed]);
+        await recordRouteEvents(tx, [removed], undefined, false);
+        const route = await loadRouteRow(tx, routeId);
+        if (route.dispatchedAt)
+          await notifyCourier(
+            tx,
+            route.courierId,
+            "shipment_voided",
+            { routeId, shipmentId: id },
+            occurredAt,
+            c.get("noticeIds"),
+          );
         await refreshRouteStatus(tx, routeId, { actorUserId, now: occurredAt });
       },
     );
@@ -1155,7 +1246,13 @@ export const shipmentRoutes = new Hono<AppEnv>()
       const { actionId, toRouteId, reason } = c.req.valid("json");
       const db = c.get("db");
       if (!(await findShipmentAction(db, actionId))) {
-        const by = { actorUserId: c.get("user").id, now: c.get("clock")(), reason, actionId };
+        const by = {
+          actorUserId: c.get("user").id,
+          now: c.get("clock")(),
+          reason,
+          actionId,
+          noticeIds: c.get("noticeIds"),
+        };
         await db
           .transaction(async (tx) => {
             const [found] = await tx
