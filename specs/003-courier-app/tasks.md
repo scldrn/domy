@@ -778,3 +778,35 @@ the checked marker and this note were updated afterward. Reviewer checklists are
 unchanged; no hooks changed. This tracking-only closure must also receive clean
 latest-head CI before squash; merge/post-merge receipts live in PR #23. No US6 work
 is authorized. Physical T087/T093 remain pending.
+
+## Phase 32: Convergence
+
+- [X] T122 HIGH Investigate and reproduce the first-attempt native-push failure in post-merge CI 38926371410 (`63c5070`), `apps/web/tests/e2e/courier-changes.spec.ts:433`: actual `getNotifications()` remains empty during the existing 5-second assertion, then the retry passes. Capture exact-origin registration/version lifecycle, permission and worker/push errors without recipient data or secrets; establish test-readiness versus application behavior with deterministic evidence before a fix. Align the plan with the proven cause, preserve real native notifications/full Chromium/built worker/app-closed scenario and every title/body/privacy assertion, add a failing regression first where behavior changes, repeat focused and full gates and scoped convergence. Do not enlarge timeouts, add retries or replace native APIs/handlers; do not call the post-merge flaky run clean. Local correction authorized; publication/PR/merge and US6 require separate approval (FR-040, US5/AC1, Constitution VI/VII, Development Workflow & Quality Gates; partial).
+
+T122 local closure (2026-10-16): the original five-second empty-notification failure
+reproduces before correction, including three failures in an intentionally interrupted
+30-repeat diagnostic run (not a completed repetition gate). Bounded observations show
+an activated worker, granted permission, trusted matching push, native display fulfillment
+and successful push completion. The original query races unfinished native delivery;
+Chromium can prune notification records not yet reported by its display platform.
+The plan records official source permalinks and the historical CI-trace limitation.
+The test now observes successful push completion for its exact origin/registration
+before querying, inside the original single five-second assertion. No application code,
+native API, handler, dependency, schema, migration, timeout or retry policy changed.
+Temporary worker/probe instrumentation is removed; bounded safe diagnostics remain.
+
+Final local gates: `pnpm check`; `pnpm test` (226 domain + 472 server + 185 web = 883);
+`env -u NO_COLOR pnpm test:e2e` (82/82, 4.8 minutes, no retries); `pnpm build`.
+The focused native case also passes 30/30 repetitions (1.0 minute). An earlier full
+e2e invocation was intentionally stopped at 8 passed/1 interrupted/73 not run to remove
+the terminal's conflicting NO_COLOR/FORCE_COLOR variables, not counted as a gate.
+Scoped convergence checks FR-040, US5/AC1, the native validation/privacy plan decisions,
+T122 and all nine principles with zero findings. Before/after assessment, tasks.md
+remained byte-identical at SHA-256
+`36ac15a5ef88d27a2e15dde0d673c74c823ff6b578c94be3550a17be8bce44db`;
+this marker and closure note were updated afterward. Reviewer checklists remain
+unchanged (16/16 and 48/48); no converge hooks exist and optional commit hooks were
+not executed. Samuel subsequently authorized commit, push, a new PR and latest-head
+CI review with “Si” on 2026-10-16. The branch's PR is the publication/CI receipt;
+no remote result is claimed here. Merge and US6 need separate approval; physical
+T087/T093 remain pending.

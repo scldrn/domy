@@ -240,6 +240,42 @@ screen.
 
 ## Cross-feature alignment
 
+T122 owner-authorized local investigation (2026-10-16): post-merge CI 38926371410
+reports success with one retried native-notification test, not a clean run. Work on
+`003-fix-push-validation` from merged `main` 63c5070. Start with bounded test-only
+diagnostics for exact-origin service-worker registrations/versions, permission, native
+push delivery and worker errors; retain actual notifications and built app behavior.
+Use official browser/protocol documentation to interpret evidence, not assumptions.
+Align the smallest fix here only after the cause is demonstrated. Do not relax any
+deadline, retry/worker policy or title/body/privacy assertion; do not suppress failures
+or switch to a synthetic notification implementation. Initially only local changes were
+authorized; Samuel subsequently authorized commit/push/PR and latest-head CI review with
+“Si” on 2026-10-16. Merge and US6 remain separate decisions.
+If passive browser diagnostics cannot identify where the original handler exits, allow
+temporary bounded stage logging inside the built worker (parse accepted/refused,
+show requested/resolved/rejected by error name only). It must not replace native APIs,
+change behavior or expose payloads, and must be removed before final verification.
+
+T122 diagnosed correction: the local failure reproduces with an activated worker,
+granted permission, a trusted push with the expected data, successful native display,
+and a successful push completion, yet the original poll sees no notification. Chromium's
+[dispatch implementation](https://github.com/chromium/chromium/blob/aebd501b19da83e6bb52814865a5fdfdac6248e3/content/browser/devtools/protocol/service_worker_handler.cc)
+acknowledges the CDP command before delivery completes. Its
+[notification read implementation](https://github.com/chromium/chromium/blob/aebd501b19da83e6bb52814865a5fdfdac6248e3/content/browser/notifications/platform_notification_context_impl.cc)
+also prunes persisted notifications not yet reported by the display platform. Avoid
+racing that query against unfinished delivery: observe the real CDP BackgroundService
+[`Push event completed` with `Status: Success`](https://github.com/chromium/chromium/blob/aebd501b19da83e6bb52814865a5fdfdac6248e3/content/browser/push_messaging/push_messaging_router.cc), restricted to the app origin and worker
+registration, before calling the actual `getNotifications()`. Both completion and the
+unchanged title/body assertion must share the existing five-second poll, not sequential
+deadlines. Match only the live exact-origin registration. Retain bounded registration,
+version, permission, worker-error coordinates and push-success diagnostics on failure,
+validated with Zod; never log arbitrary payloads, error text or recipient data. No
+production change, new dependency, direct notification warm-up, synthetic push handler,
+retry or timing-policy change is needed. Temporary worker/probe instrumentation is removed.
+This addresses the locally reproduced symptom; the historical CI run has no retained
+browser trace, so its exact interleaving cannot be reconstructed. Clean latest-head CI
+is still required after separately authorized publication, before any merge.
+
 T121 owner-authorized synchronization investigation (2026-10-16): reproduce overlapping
 triggers against the real courier store and IndexedDB before changing production code.
 The current single-flight guard returns the running promise and drops later triggers;
