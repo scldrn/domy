@@ -14,14 +14,17 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`, clean head/post-merge CI). US5 T061–T070 and convergence T113–T119 are complete and locally converged on `003-us5-changes`: check, 877 unit/integration tests, 82 e2e and build pass. Commit/push/PR authorized; remote CI pending. US6–US7 and feature-wide polish remain pending. No US5 merge or US6 continuation is authorized |
+| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`, clean head/post-merge CI). US5 T061–T070 and convergence T113–T119 are complete and locally converged on `003-us5-changes`: check, 877 unit/integration tests, 82 e2e and build pass. Published as [PR #23](https://github.com/scldrn/domy/pull/23); latest-head remote CI must pass. US6–US7 and feature-wide polish remain pending. No US5 merge or US6 continuation is authorized |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Publish the approved US5 PR from `003-us5-changes`, based on `34875ba`, and inspect
-   every gate on its latest head. Samuel approved commit, push and PR with “Si” after
-   final local verification. Remote CI is not yet claimed green.
+1. Inspect every gate on the latest head of [US5 PR #23](https://github.com/scldrn/domy/pull/23)
+   (`003-us5-changes`, based on `34875ba`). Implementation published as `4d2563e`;
+   this documentation follow-up records the actual PR instead of leaving publication
+   as the next action. Samuel approved commit, push and PR with “Si” after final local
+   verification. Remote CI is not yet claimed green; obtain separate approval before
+   merging or beginning US6.
    Samuel authorized continuing with “ok, continuemos” after the separate US4 merge.
    Both reviewer checklists pass (16/16 requirements, 48/48 courier rules). Initial
    artifact review found the eight US5 scenarios mapped to T061–T070, but the deeper
@@ -158,7 +161,8 @@ a short-lived branch, so the specification and implementation of every feature l
   no empty convergence phase was appended. Completion checkboxes were updated only afterward.
   No before/after-converge hooks are registered; optional commit hooks were not executed.
 - T061–T070 and T113–T119 are complete locally; Samuel approved commit/push/PR with “Si”.
-  This publication must receive fresh CI; no remote green result or merge is claimed.
+  Published in PR #23 as `4d2563e`, followed by its publication-state documentation.
+  Its latest head must receive fresh CI; no remote green result or merge is claimed.
   US6 correction/revert notices remain with their already-planned endpoints,
   not as an unimplemented promise in this slice. US6–US7/polish are not claimed converged.
 - Physical Android/iPhone validation remains T087/T093, not replaced by browser automation.

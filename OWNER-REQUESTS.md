@@ -11,8 +11,9 @@ y la fecha. Responde aquí mismo o en la conversación.
 Nada requiere una respuesta ahora. Autorizaste hacer commit, push y abrir la PR de US5
 con «Si». T061–T070 y T113–T119 están completas en `003-us5-changes`: check,
 877 pruebas unitarias/integración, 82 e2e sin reintentos, build y convergencia local
-aprobados. La publicación incluye la migración generada «Traspaso confirmado» y debe
-validarse en CI. La fusión y continuar US6 requieren autorización aparte y CI verde.
+aprobados. Publicado como [PR #23](https://github.com/scldrn/domy/pull/23), incluye la
+migración generada «Traspaso confirmado» y debe validarse en el CI del último head.
+La fusión y continuar US6 requieren autorización aparte y CI verde.
 
 ## Antes de terminar la 003 (app del mensajero)
 
