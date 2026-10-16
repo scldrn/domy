@@ -1,7 +1,7 @@
 # Project status
 
 Where Domy stands and what comes next, so any session can resume without the conversation
-that produced it. Updated 2026-10-15; update it whenever a slice is merged or the next step
+that produced it. Updated 2026-10-16; update it whenever a slice is merged or the next step
 changes.
 
 ## Features
@@ -14,7 +14,7 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`, clean head/post-merge CI). US5 T061–T070 and convergence T113–T119 are complete and locally converged on `003-us5-changes`: check, 877 unit/integration tests, 82 e2e and build pass. Published as [PR #23](https://github.com/scldrn/domy/pull/23); latest-head remote CI must pass. US6–US7 and feature-wide polish remain pending. No US5 merge or US6 continuation is authorized |
+| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`, clean head/post-merge CI). US5 T061–T070/T113–T119 published as [PR #23](https://github.com/scldrn/domy/pull/23), with 877 tests and 82 e2e passing at `ce55c7e`. Owner authorized CI-warning maintenance T120 and subsequent squash merge only after new latest-head CI/convergence. US6–US7 and feature-wide polish remain pending; starting US6 is not authorized |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
@@ -23,8 +23,12 @@ a short-lived branch, so the specification and implementation of every feature l
    (`003-us5-changes`, based on `34875ba`). Implementation published as `4d2563e`;
    this documentation follow-up records the actual PR instead of leaving publication
    as the next action. Samuel approved commit, push and PR with “Si” after final local
-   verification. Remote CI is not yet claimed green; obtain separate approval before
-   merging or beginning US6.
+   verification. CI [38851532581](https://github.com/scldrn/domy/actions/runs/38851532581)
+   passed at `ce55c7e`: check, 877 tests, 82 e2e without retries and build. On 2026-10-16
+   Samuel authorized investigating/correcting CI warnings and then squash merging with
+   fresh green latest-head CI. T120 upgrades only the two setup actions after official
+   manifest/release review; inspect its new CI logs and converge before merge. Starting
+   US6 still requires separate approval.
    Samuel authorized continuing with “ok, continuemos” after the separate US4 merge.
    Both reviewer checklists pass (16/16 requirements, 48/48 courier rules). Initial
    artifact review found the eight US5 scenarios mapped to T061–T070, but the deeper
@@ -45,7 +49,7 @@ a short-lived branch, so the specification and implementation of every feature l
    Do not confuse the earlier initial RED checkpoint or partial passes with final closure.
    Correction/revert
    notices depend on US6's endpoints; do not implement those endpoints ahead of US6.
-   Publication is authorized; merge and continuing US6 still require separate approval.
+   Publication and conditional squash merge are authorized; continuing US6 is not.
    US4 final-head CI [38822901902](https://github.com/scldrn/domy/actions/runs/38822901902)
    at `d3e3830` passed check, 821 unit/integration tests, all 76 e2e without retries,
    and build. Authorized squash merge: `34875ba`; post-merge CI

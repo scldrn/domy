@@ -90,6 +90,25 @@ all four gates and scoped convergence; CI continues to invoke the same scripts.
 
 ## Constitution Check
 
+### CI action runtime maintenance — owner-approved 2026-10-16
+
+T120 addresses the deprecation warnings observed in US5 PR #23's successful CI.
+Upgrade only `pnpm/action-setup` from v4 to v6 (current release v6.1.0) and
+`actions/setup-node` from v5 to v7 (current release v7.1.0) in `.github/workflows/ci.yml`.
+Official manifests declare `node24` for both; pnpm v6.1.0 explicitly supports the
+repository's pnpm 12. Keep `packageManager`, `.nvmrc`, pnpm cache inputs, action ordering,
+lockfile and all quality commands unchanged. No registry/token inputs or removed auth
+behavior are used here; setup-node's ESM migration is internal to the action.
+Sources: [pnpm release](https://github.com/pnpm/action-setup/releases/tag/v6.1.0),
+[setup-node release](https://github.com/actions/setup-node/releases/tag/v7.1.0).
+The existing `ce55c7e` CI logs reproduce Node 20, `url.parse()` and `punycode` warnings.
+Do not suppress warnings with environment flags or weaken tests. Validate formatting and
+the complete latest-head CI, inspect its logs for the original warnings, then converge
+this maintenance scope before squash merge. If a residual upstream warning requires a
+disproportionate change and does not affect operation, document it under the owner's
+explicit exception instead of changing the application. Merge is authorized only with
+green latest-head CI; starting US6 remains outside this authorization.
+
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 | Principle | How this plan complies | Status |

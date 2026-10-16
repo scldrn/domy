@@ -4,16 +4,15 @@ Preguntas y pendientes para Samuel (propietario de Domy) y, a través de él, pa
 lo mantiene al día: agrega cada pregunta cuando surge y la mueve a «Resueltas» con tu respuesta
 y la fecha. Responde aquí mismo o en la conversación.
 
-Última actualización: 2026-10-15.
+Última actualización: 2026-10-16.
 
 ## Bloquean algo ahora
 
-Nada requiere una respuesta ahora. Autorizaste hacer commit, push y abrir la PR de US5
-con «Si». T061–T070 y T113–T119 están completas en `003-us5-changes`: check,
-877 pruebas unitarias/integración, 82 e2e sin reintentos, build y convergencia local
-aprobados. Publicado como [PR #23](https://github.com/scldrn/domy/pull/23), incluye la
-migración generada «Traspaso confirmado» y debe validarse en el CI del último head.
-La fusión y continuar US6 requieren autorización aparte y CI verde.
+Nada requiere una respuesta ahora. Autorizaste investigar y corregir los avisos de CI
+si su solución es sencilla, y después fusionar la [PR #23](https://github.com/scldrn/domy/pull/23)
+siguiendo las compuertas estrictas. T120 actualiza dos acciones, sin tocar la aplicación;
+requiere un CI nuevo y convergencia antes de fusionar mediante squash. No se iniciará US6
+sin autorización aparte. La migración generada «Traspaso confirmado» sigue incluida.
 
 ## Antes de terminar la 003 (app del mensajero)
 
@@ -43,6 +42,7 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-16 | ¿Investigar/corregir los avisos de GitHub y fusionar US5 respetando la metodología? | Corregir si es sencillo; si no afecta al sistema y requiere un cambio desproporcionado, documentar y dejarlo. Después fusionar con último CI verde. No incluye comenzar US6 |
 | 2026-10-15 | ¿Hacer commit, push y abrir la PR de US5 (T061–T070 y T113–T119)? | «Si». Autorizada la publicación y revisión de CI; no la fusión ni comenzar US6 |
 | 2026-10-15 | ¿Completar la implementación local y corregir todos los hallazgos de US5 siguiendo la metodología estricta? | «Arregla todo, con la mayor calidad y sin deuda tecnica». T061–T070 y T113–T119 completas y verificadas; publicación, fusión y US6 pendientes de autorización |
 | 2026-10-15 | ¿Explicitar `GET /api/courier/push-config` y alinear contrato, plan y T061/T066/T068 antes de implementar US5? | «autorizo». Solo mensajeros vinculados; `{ publicKey: string \| null }`, sin clave privada, migración ni variable de compilación web |
