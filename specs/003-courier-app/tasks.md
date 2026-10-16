@@ -742,3 +742,7 @@ assessment SHA-256 was `230f4823779b6eb5ae4b600d963eaf014be32e2ef864cf04777a946f
 this completion marker/note is subsequent tracking. Optional commit hooks were not used;
 there are no converge hooks. The documentation closure must also receive green
 latest-head CI before the authorized squash merge. Starting US6 is not authorized.
+
+## Phase 31: Convergence
+
+- [ ] T121 HIGH Diagnose and reproduce the first-attempt failure in CI 38860188300 (`8ec27b5`), `courier-changes.spec.ts:194`: after offline handover confirmation/delivery and reconnection, the shipment still reads `picked_up` within the unchanged 5-second polling deadline; the retry passes. Establish whether the synchronization or test setup is responsible using deterministic evidence, then propose the smallest test-first correction under owner authorization. Preserve all scenarios, timing assertions, retries/workers and offline persistence/custody checks; do not rerun until green or call the flaky run clean. Obtain clean final-head CI and repeat scoped convergence before squash merge (US5/AC4, FR-020/FR-028, Constitution VI, Development Workflow & Quality Gates; partial).

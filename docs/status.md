@@ -14,12 +14,25 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`, clean head/post-merge CI). US5 T061–T070/T113–T120 published as [PR #23](https://github.com/scldrn/domy/pull/23); CI at `4392341` passes 877 tests and 82 e2e without the three action deprecations. Convergence is clean; documentation closure requires green latest-head CI, then owner-authorized squash merge. US6–US7 and feature-wide polish remain pending; starting US6 is not authorized |
+| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`, clean head/post-merge CI). US5 T061–T070/T113–T120 published as [PR #23](https://github.com/scldrn/domy/pull/23). T120 removes all three action deprecations; `4392341` CI is clean. Closure head `8ec27b5` reports success but has one flaky handover e2e (81 first-pass + one retry), so merge/convergence are blocked by T121 pending authorization to investigate/correct. US6–US7 and feature-wide polish remain pending; starting US6 is not authorized |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
 1. Inspect every gate on the latest head of [US5 PR #23](https://github.com/scldrn/domy/pull/23)
+   **Merge blocked:** closure CI [38860188300](https://github.com/scldrn/domy/actions/runs/38860188300)
+   at `8ec27b5` reports SUCCESS but contains one flaky e2e: handover confirmation and
+   delivery offline, `courier-changes.spec.ts:194`, status remains `picked_up` during the
+   5-second poll instead of `delivered`. Retry passes; 81 other scenarios pass initially.
+   No CI artifacts were retained. A network reset interrupted `gh run watch`, but direct
+   API/log inspection confirmed the actual result; this was not a failed workflow.
+   Do not merge or use a new green rerun to erase this evidence. T121 is appended;
+   request authorization to reproduce/diagnose and correct this newly discovered scope.
+   No production/test change or relaxed assertion has been made for T121. Node 20,
+   `url.parse()` and `punycode` warnings are absent, and 877 tests/build/check still pass.
+
+   Publication/maintenance history below is retained, not a claim that this later flaky
+   head satisfies the final merge gate:
    (`003-us5-changes`, based on `34875ba`). Implementation published as `4d2563e`;
    this documentation follow-up records the actual PR instead of leaving publication
    as the next action. Samuel approved commit, push and PR with “Si” after final local

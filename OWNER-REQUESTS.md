@@ -8,14 +8,16 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-Nada requiere una respuesta ahora. Autorizaste investigar y corregir los avisos de CI
-si su solución es sencilla, y después fusionar la [PR #23](https://github.com/scldrn/domy/pull/23)
-siguiendo las compuertas estrictas. T120 actualizó dos acciones, sin tocar la aplicación:
-el CI `38857856129` pasó 877 pruebas, 82 e2e y todas las compuertas; desaparecieron
-los tres avisos de deprecación y la convergencia pasó. La nota informativa de GitHub sobre
-la futura actualización de Ubuntu queda visible, sin alterar el sistema. El commit
-documental de cierre también requiere CI verde antes del squash. No se iniciará US6
-sin autorización aparte. La migración generada «Traspaso confirmado» sigue incluida.
+**¿Autorizas investigar y corregir T121 antes de fusionar US5?** Los avisos originales
+ya están resueltos con dos versiones de acciones, sin tocar la aplicación. Sin embargo,
+el CI del cierre `38860188300` (`8ec27b5`) reporta éxito con un e2e inestable: tras
+confirmar un traspaso y entregar offline, el servidor seguía en «Recogido» al vencer
+los 5 segundos de espera; pasó al reintentarse. No se ha probado la causa ni se conservaron
+artefactos. No fusionaré una corrida con ese reintento ni ampliaré límites para ocultarlo.
+La corrección puede requerir cambios de sincronización o del test, fuera del ajuste de
+avisos autorizado. T121 y la evidencia están registrados; no se ha cambiado código para
+esa tarea. Tampoco se iniciará US6. La autorización de squash sigue condicionada a las
+compuertas estrictas y a resolver esta nueva validación pendiente.
 
 ## Antes de terminar la 003 (app del mensajero)
 
