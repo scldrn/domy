@@ -189,11 +189,39 @@ test("keeps a handover blocked until the receiving courier confirms it, then per
     await expect(
       card(receiver, shipment).getByRole("button", { name: "Registrar entrega" }),
     ).toBeVisible();
-    await deliver(receiver, false);
-    await receiver.context().setOffline(false);
+    // T121: reconnect before an already-started offline send reports its failure.
+    const release = Promise.withResolvers<undefined>();
+    let held = false;
+    await receiver.route("**/api/courier/records", async (request) => {
+      if (!held) {
+        held = true;
+        await release.promise;
+        await request.abort("internetdisconnected");
+      } else await request.continue();
+    });
+    try {
+      await deliver(receiver, false);
+      await expect.poll(() => held).toBe(true);
+      await receiver.evaluate(() => {
+        window.addEventListener(
+          "online",
+          () => {
+            document.documentElement.setAttribute("data-t121-online", "true");
+          },
+          { once: true },
+        );
+      });
+      await receiver.context().setOffline(false);
+      await expect(receiver.locator("html")).toHaveAttribute("data-t121-online", "true");
+    } finally {
+      release.resolve(undefined);
+    }
     await expect.poll(async () => (await detail(office, shipment)).status).toBe("delivered");
     const stored = await detail(office, shipment);
     expect(stored.records.filter((r) => r.kind === "handover_confirmation")).toEqual([
+      expect.objectContaining({ outcome: "applied", onBehalf: false }),
+    ]);
+    expect(stored.records.filter((r) => r.kind === "delivery")).toEqual([
       expect.objectContaining({ outcome: "applied", onBehalf: false }),
     ]);
     expect(stored.custodyCourier).toBeNull();

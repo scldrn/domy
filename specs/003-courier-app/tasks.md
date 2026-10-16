@@ -746,3 +746,23 @@ latest-head CI before the authorized squash merge. Starting US6 is not authorize
 ## Phase 31: Convergence
 
 - [ ] T121 HIGH Diagnose and reproduce the first-attempt failure in CI 38860188300 (`8ec27b5`), `courier-changes.spec.ts:194`: after offline handover confirmation/delivery and reconnection, the shipment still reads `picked_up` within the unchanged 5-second polling deadline; the retry passes. Establish whether the synchronization or test setup is responsible using deterministic evidence, then propose the smallest test-first correction under owner authorization. Preserve all scenarios, timing assertions, retries/workers and offline persistence/custody checks; do not rerun until green or call the flaky run clean. Obtain clean final-head CI and repeat scoped convergence before squash merge (US5/AC4, FR-020/FR-028, Constitution VI, Development Workflow & Quality Gates; partial).
+
+T121 local checkpoint (2026-10-16; owner authorized correction and subsequent merge):
+the real store/IndexedDB first reproduces three failures and two passing guards, then
+the browser reproduces the same `picked_up`/`delivered` 5-second failure by controlling
+an offline request's failure until after the native online event. The first browser
+instrumentation had its own listener-registration race; it was corrected before the
+meaningful RED. The historical CI interleaving remains unobserved, since no trace was
+retained. Preserve that distinction rather than claiming historical proof.
+
+One coalesced follow-up pass fixes dropped save/reconnect triggers, without concurrent
+syncs, autonomous retry loops or changing pause/account safety. Six final store tests
+pass; the final strengthened handover journey passes 10/10 repetitions in 44.9 seconds.
+All local gates pass: check, 883 tests (226/472/185), 82/82 e2e without retries (4.7 min),
+build. No limits, assertions, existing cases or runner policy were relaxed; the delivery
+exactly-once assertion is additional. Scoped local convergence reviewed six FRs,
+US5/AC4, two plan decisions, T121 and nine principles: zero findings. Assessment preserved
+this file byte-for-byte at SHA-256
+`2b24ae139cba92589a5d671ee8fd882a591925bd23e35a031305b723cc768ee7`;
+this note is subsequent tracking. Keep T121 unchecked until fresh remote CI is inspected,
+then complete its marker and require clean latest-head CI before the authorized squash.

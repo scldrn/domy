@@ -14,21 +14,25 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`, clean head/post-merge CI). US5 T061–T070/T113–T120 published as [PR #23](https://github.com/scldrn/domy/pull/23). T120 removes all three action deprecations; `4392341` CI is clean. Closure head `8ec27b5` reports success but has one flaky handover e2e (81 first-pass + one retry), so merge/convergence are blocked by T121 pending authorization to investigate/correct. US6–US7 and feature-wide polish remain pending; starting US6 is not authorized |
+| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`, clean head/post-merge CI). US5 is in [PR #23](https://github.com/scldrn/domy/pull/23). T120 removes action deprecations. T121 now has a deterministic RED→GREEN synchronization fix, 883 tests, 82 e2e, build/check and scoped local convergence passing; fresh head CI remains required before completing T121 and the authorized squash merge. US6–US7 and feature-wide polish remain pending; starting US6 is not authorized |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
 1. Inspect every gate on the latest head of [US5 PR #23](https://github.com/scldrn/domy/pull/23)
-   **Merge blocked:** closure CI [38860188300](https://github.com/scldrn/domy/actions/runs/38860188300)
+   **Current gate:** verify fresh CI for the T121 correction below, complete its tracking,
+   then merge only with clean latest-head CI. Samuel authorized T121 and subsequent
+   squash merge with “Si”; starting US6 is not authorized.
+
+   Historical blocker: closure CI [38860188300](https://github.com/scldrn/domy/actions/runs/38860188300)
    at `8ec27b5` reports SUCCESS but contains one flaky e2e: handover confirmation and
    delivery offline, `courier-changes.spec.ts:194`, status remains `picked_up` during the
    5-second poll instead of `delivered`. Retry passes; 81 other scenarios pass initially.
    No CI artifacts were retained. A network reset interrupted `gh run watch`, but direct
    API/log inspection confirmed the actual result; this was not a failed workflow.
-   Do not merge or use a new green rerun to erase this evidence. T121 is appended;
-   request authorization to reproduce/diagnose and correct this newly discovered scope.
-   No production/test change or relaxed assertion has been made for T121. Node 20,
+   Do not use a new green rerun to erase this evidence. Samuel subsequently authorized
+   reproducing/correcting T121. The correction below is tested locally, not a rerun of
+   unchanged code or a relaxed assertion. Node 20,
    `url.parse()` and `punycode` warnings are absent, and 877 tests/build/check still pass.
 
    Publication/maintenance history below is retained, not a claim that this later flaky
@@ -82,6 +86,40 @@ a short-lived branch, so the specification and implementation of every feature l
 4. Before go-live: time SC-001, SC-004, and SC-006 of 002 with the dispatcher, and add a
    content security policy tested on the production host (002 quickstart-results; 003
    research R17 lists what the courier app needs from it).
+
+## T121 synchronization correction — 2026-10-16
+
+- The original single-flight guard discarded every trigger while `running` was set.
+  Deterministic tests against the real courier store and IndexedDB reproduced a dropped
+  reconnect and a saved record missed after the pass had read its outbox: the first
+  five-test run had three failures and two passing guards. Six final tests also cover
+  trigger coalescing, serial transport, pause/resume, failure without a trigger and a
+  failed coalesced pass that must stop rather than loop.
+- The browser journey now holds an actual offline record request, observes the native
+  online event, then releases the failed send. Before the fix it reproduces the exact
+  5-second `picked_up` versus `delivered` assertion, with real PostgreSQL/auth/storage
+  and the built worker. Initial instrumentation first missed its own online listener
+  registration and hit 30 seconds; that harness race was fixed before the meaningful RED.
+  No historical CI trace exists, so this establishes the matching failure mechanism,
+  not proof of that unobserved run's precise interleaving.
+- Production retains one coalesced follow-up request in the existing store. Only one
+  sync runs at a time; every new trigger can request another pass, pause cancels queued
+  work before an account change, and a failure without a new trigger stops. No timer,
+  dependency, queue service, schema, endpoint or business rule was added.
+- Final focused browser revision passes 10/10 repetitions in 44.9 seconds, without
+  retries. The whole local gate passes: `pnpm check`; `pnpm test` (226 domain + 472 server
+  + 185 web = **883**); `env -u NO_COLOR pnpm test:e2e` (**82/82**, 4.7 minutes, no retries);
+  `pnpm build`. Preserve the 5-second final assertion, all offline reload/custody checks,
+  original worker/retry/deadline settings, and add exactly-one applied delivery alongside
+  exactly-one handover confirmation. New test typing/lint issues were fixed without
+  rule exceptions; generated files and dependencies are unchanged.
+- Scoped local convergence reviewed T121, FR-018–FR-022/FR-028, US5/AC4, the coalescing/
+  pause decisions and all nine principles: zero remaining implementation findings.
+  Before/after assessment, tasks.md SHA-256 stayed
+  `2b24ae139cba92589a5d671ee8fd882a591925bd23e35a031305b723cc768ee7`.
+  Optional commit hooks are not executed; no converge hooks are registered. Reviewer
+  checklists remain unchanged at 16/16 and 48/48. T121 remains unchecked until fresh
+  remote CI is inspected; no new remote result or merge is claimed at this checkpoint.
 
 ## US5 initial test checkpoint — 2026-10-15
 

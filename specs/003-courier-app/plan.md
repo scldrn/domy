@@ -240,6 +240,19 @@ screen.
 
 ## Cross-feature alignment
 
+T121 owner-authorized synchronization investigation (2026-10-16): reproduce overlapping
+triggers against the real courier store and IndexedDB before changing production code.
+The current single-flight guard returns the running promise and drops later triggers;
+test a reconnect during an in-flight offline failure and a saved record after a sync
+has already read its outbox. If confirmed, retain one coalesced follow-up pass in the
+existing store, never parallel syncs or an autonomous retry loop. Pause/sign-out must
+prevent queued passes and await active work; failures without a new trigger must stop.
+Use no new dependency, timer, retry budget or service. Extend the real-browser handover
+journey with a controlled failed transport overlap if reproducible, keeping its offline
+reload, custody checks and 5-second final assertion. Distinguish a reproduced mechanism
+from proof of the historical CI cause, since that run retained no trace artifacts.
+Run focused repetitions and all gates before scoped convergence and clean latest-head CI.
+
 US5 notification configuration (owner-approved alignment, 2026-10-15): expose
 `GET /api/courier/push-config` through the existing courier role/link guard, returning
 only `{ publicKey: string | null }`. Read the key from the server's validated VAPID
