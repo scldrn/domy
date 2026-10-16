@@ -5,6 +5,7 @@ import {
   type ShipmentDetail,
 } from "@domy/domain";
 import { chromium, type Page } from "@playwright/test";
+import { z } from "zod";
 import { register } from "./api";
 import { deliver, dispatch, openStop, ownSession, workerControls } from "./courier";
 import { accessibilityViolations, expect, test } from "./fixtures";
@@ -387,20 +388,91 @@ test("shows a private-data-free phone notification from the real service worker 
     viewport: { width: 390, height: 844 },
   });
   const phone = await context.newPage();
+  const diagnostic: { event: string; value: unknown }[] = [];
+  const note = (event: string, value: unknown) => {
+    diagnostic.push({ event, value });
+    if (diagnostic.length > 20) diagnostic.shift();
+  };
+  let pushCompleted = false;
   try {
     const account = await ownSession(phone, owner);
     const shipment = await register(office);
     const route = await dispatch(office, shipment, account.courierId);
+    if (!baseURL) throw new Error("The notification test requires the app origin");
+    const origin = new URL(baseURL).origin;
     const cdp = await phone.context().newCDPSession(phone);
     let registrationId: string | undefined;
-    cdp.on(
-      "ServiceWorker.workerRegistrationUpdated",
-      (event: { registrations: { registrationId: string; scopeURL: string }[] }) => {
-        registrationId = event.registrations.find((registration) =>
-          registration.scopeURL.endsWith("/"),
-        )?.registrationId;
-      },
-    );
+    cdp.on("ServiceWorker.workerRegistrationUpdated", (input: unknown) => {
+      const event = z
+        .object({
+          registrations: z.array(
+            z.object({ registrationId: z.string(), scopeURL: z.url(), isDeleted: z.boolean() }),
+          ),
+        })
+        .parse(input);
+      note("registrations", event.registrations);
+      registrationId = event.registrations.find(
+        (registration) => registration.scopeURL === `${origin}/` && !registration.isDeleted,
+      )?.registrationId;
+    });
+    cdp.on("ServiceWorker.workerVersionUpdated", (input: unknown) => {
+      const event = z
+        .object({
+          versions: z.array(
+            z.object({
+              versionId: z.string(),
+              registrationId: z.string(),
+              status: z.string(),
+              runningStatus: z.string(),
+            }),
+          ),
+        })
+        .parse(input);
+      note("versions", event.versions);
+    });
+    cdp.on("ServiceWorker.workerErrorReported", (input: unknown) => {
+      const { errorMessage } = z
+        .object({
+          errorMessage: z.object({
+            registrationId: z.string(),
+            versionId: z.string(),
+            lineNumber: z.number(),
+            columnNumber: z.number(),
+          }),
+        })
+        .parse(input);
+      // No arbitrary error text, request URL, payload or recipient data enters diagnostics.
+      note("worker-error", errorMessage);
+    });
+    cdp.on("BackgroundService.backgroundServiceEventReceived", (input: unknown) => {
+      const { backgroundServiceEvent: event } = z
+        .object({
+          backgroundServiceEvent: z.object({
+            service: z.string(),
+            origin: z.url(),
+            serviceWorkerRegistrationId: z.string(),
+            eventName: z.string(),
+            eventMetadata: z.array(z.object({ key: z.string(), value: z.string() })),
+          }),
+        })
+        .parse(input);
+      if (
+        event.service === "pushMessaging" &&
+        new URL(event.origin).origin === origin &&
+        event.serviceWorkerRegistrationId === registrationId &&
+        event.eventName === "Push event completed"
+      ) {
+        pushCompleted = event.eventMetadata.some(
+          ({ key, value }) => key === "Status" && value === "Success",
+        );
+        note("push-completed", { success: pushCompleted });
+      }
+    });
+    await cdp.send("BackgroundService.startObserving", { service: "pushMessaging" });
+    await cdp.send("BackgroundService.setRecording", {
+      service: "pushMessaging",
+      shouldRecord: true,
+    });
     await cdp.send("ServiceWorker.enable");
     await phone.goto("/mensajero");
     await phone
@@ -409,26 +481,33 @@ test("shows a private-data-free phone notification from the real service worker 
     await workerControls(phone);
     const worker = phone.context().serviceWorkers()[0];
     if (!worker) throw new Error("The actual built service worker is missing");
-    expect(await worker.evaluate(() => Notification.permission)).toBe("granted");
-    const origin = new URL(phone.url()).origin;
+    const permission = await worker.evaluate(() => Notification.permission);
+    expect(permission).toBe("granted");
+    note("worker-ready", permission);
     await expect.poll(() => registrationId).toEqual(expect.any(String));
     if (!registrationId) throw new Error("The built service worker has no Chromium registration");
     // Keep only an about:blank inspection tab; no app page remains open.
     await phone.goto("about:blank");
+    note("app-closed", { registrationId });
     await cdp.send("ServiceWorker.deliverPushMessage", {
       origin,
       registrationId,
       data: JSON.stringify({ type: "shipment_added", routeNumber: route.number }),
     });
+    // T122 / US5-AC1: CDP acknowledges dispatch before the push finishes. Chromium's
+    // getNotifications also prunes records not yet reported as displayed; do not race
+    // native display with that query. Completion AND the original assertion share 5s.
     await expect
       .poll(() =>
-        worker.evaluate(async () =>
-          (
-            await (
-              globalThis as unknown as ServiceWorkerGlobalScope
-            ).registration.getNotifications()
-          ).map((n) => ({ title: n.title, body: n.body })),
-        ),
+        !pushCompleted
+          ? []
+          : worker.evaluate(async () =>
+              (
+                await (
+                  globalThis as unknown as ServiceWorkerGlobalScope
+                ).registration.getNotifications()
+              ).map((n) => ({ title: n.title, body: n.body })),
+            ),
       )
       .toEqual([
         { title: `Domy · Ruta ${String(route.number)}`, body: "Envío agregado a tu ruta." },
@@ -441,6 +520,9 @@ test("shows a private-data-free phone notification from the real service worker 
     expect(shown).not.toContain("Laura Gómez");
     expect(shown).not.toContain("3001234567");
     expect(shown).not.toContain("Calle 10");
+  } catch (error) {
+    console.info("Domy native push diagnostic", JSON.stringify(diagnostic));
+    throw error;
   } finally {
     await context.close();
   }

@@ -53,6 +53,13 @@ assertions and does not mock the handler or notification API. Physical notificat
 Android and installed iPhone remain part of T087/T093. Apply normal migrations, including
 US5's additive `handover_confirmed` notice enum migration, before deploying the new server.
 
+T122 synchronizes that native check with the browser's successful push-completion event
+for the exact app origin and service-worker registration. Completion and the unchanged
+notification assertion share the original five-second limit. Do not poll native
+`getNotifications()` during unfinished display: Chromium can prune entries it does not
+yet consider visible. Failure diagnostics are bounded and exclude payloads and recipient
+data; the production worker and native notification API remain untouched.
+
 "Offline" means airplane mode on the phone, or "Offline" in the browser's developer tools.
 
 | # | Story | Steps | Expected |

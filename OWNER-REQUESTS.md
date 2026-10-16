@@ -8,15 +8,17 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-Nada requiere respuesta ahora. Autorizaste investigar/corregir T121 y después realizar
-la fusión ya autorizada, conservando pruebas, límites, compuertas y convergencia.
-La ejecución `38860188300` sigue registrada como inestable, no como corrida limpia.
-Se reprodujo y corrigió la pérdida de disparadores de sincronización con pruebas
-deterministas de almacén y navegador; no se afirma conocer la intercalación histórica
-sin su traza. El CI `38919233855` de `5bd2b5d` pasa 883 pruebas, 82 e2e sin reintentos,
-check y build; convergencia final sin hallazgos. T121 está cerrada. El commit documental
-final también debe pasar CI antes del squash autorizado. El recibo de fusión y su CI
-posterior queda en la PR #23. No se iniciará US6.
+Nada requiere respuesta ahora. Autorizaste commit, push y apertura de una nueva PR
+con T122 en `003-fix-push-validation`, para validar CI. Las cuatro compuertas locales pasan:
+883 pruebas, 82 e2e sin reintentos, check y build; además 30 repeticiones de la
+notificación nativa y convergencia puntual sin hallazgos. La corrección sincroniza la
+prueba con la finalización real del push dentro de los mismos cinco segundos; no
+cambia la aplicación ni sustituye notificaciones nativas. Fusión y US6 requieren
+autorización aparte.
+
+La PR #23 ya está fusionada como `63c5070`. Su CI posterior `38926371410` reintentó
+la prueba de notificación nativa: no se considera una corrida limpia, ni la corrección
+local equivale a validación remota. La causa reproducida y sus límites están documentados.
 
 ## Antes de terminar la 003 (app del mensajero)
 
@@ -46,6 +48,8 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-16 | ¿Hacer commit, push y abrir la PR de T122 para validar CI? | «Si». Autorizada publicación y revisión del CI del último commit; no fusión ni iniciar US6 |
+| 2026-10-16 | ¿Investigar/corregir primero la inestabilidad de notificación nativa posterior a la fusión, en una rama nueva y con compuertas estrictas? | «Si». Autorizada corrección local T122; publicación/PR/merge y US6 requieren aprobación aparte |
 | 2026-10-16 | ¿Investigar/corregir T121, repetir compuertas/convergencia y después realizar la fusión autorizada? | «Si». Sin ampliar tiempos, relajar pruebas ni iniciar US6 |
 | 2026-10-16 | ¿Investigar/corregir los avisos de GitHub y fusionar US5 respetando la metodología? | Corregir si es sencillo; si no afecta al sistema y requiere un cambio desproporcionado, documentar y dejarlo. Después fusionar con último CI verde. No incluye comenzar US6 |
 | 2026-10-15 | ¿Hacer commit, push y abrir la PR de US5 (T061–T070 y T113–T119)? | «Si». Autorizada la publicación y revisión de CI; no la fusión ni comenzar US6 |

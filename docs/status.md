@@ -14,13 +14,55 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`). US5 T061–T070/T113–T121 implementation and convergence are complete: 883 tests, 82 e2e without retries, check/build pass on CI `38919233855`. [PR #23](https://github.com/scldrn/domy/pull/23) is the authoritative squash-merge/latest-head/post-merge CI receipt. Final tracking-only head must also pass CI before the authorized squash. US6–US7 and feature-wide polish remain pending; starting US6 is not authorized |
+| 003 Courier app | Setup, foundations and US1–US5 are on `main` (US5 [PR #23](https://github.com/scldrn/domy/pull/23), `63c5070`; clean final-head CI `38922944921`, 883 tests/82 first-pass e2e). Post-merge CI `38926371410` has one retried native-push e2e, not a clean run. T122 corrected and verified locally on `003-fix-push-validation` (883 tests/82 first-pass e2e, 30 native-push repetitions, check/build and scoped convergence); owner authorized commit/push/PR and latest-head CI review. Merge and US6 are not authorized. US6–US7 and feature-wide polish remain pending |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-1. Inspect every gate on the latest head of [US5 PR #23](https://github.com/scldrn/domy/pull/23)
-   T121 correction `5bd2b5d` now has clean CI
+Owner authorized commit, push and a new PR for the locally verified T122 fix with “Si”
+on 2026-10-16. Publish `003-fix-push-validation`, based on `63c5070`, then inspect fresh
+latest-head CI, including first-attempt e2e results rather than the workflow conclusion
+alone. Merge and US6 still need separate approval. Use this branch's PR timeline as the
+authoritative publication/CI receipt; no remote result is claimed at this checkpoint.
+Historical US5/T121 gates and the completed squash are retained below.
+
+T122 reproduces the original five-second empty-notification failure locally even though
+the real worker receives the correct push with granted permission and Chromium fulfills
+native display. CDP acknowledges dispatch before completion; querying notifications
+during that interval can prune records not yet reported visible by the platform. The
+test now observes successful native push completion for the exact origin/registration
+before querying, sharing the original five-second assertion. Every title/body/privacy
+assertion and the actual built worker/full Chromium/app-closed scenario remain. Only
+test code changes; temporary worker logs/probes are removed. Official source evidence
+and the historical CI-trace limitation are in the plan; do not claim to reconstruct
+that unobserved CI interleaving.
+
+Local gates pass: `pnpm check`; `pnpm test` (226/472/185 = 883);
+`env -u NO_COLOR pnpm test:e2e` (82/82 first-pass, 4.8 minutes); `pnpm build`.
+The focused native case passes 30/30 repetitions (1.0 minute). Diagnostic/interrupted
+runs are not counted as gates; details are recorded under T122 in tasks.md. Scoped
+convergence reviewed FR-040, US5/AC1, native validation/privacy decisions, T122 and all
+nine principles: zero findings. Before/after assessment tasks.md SHA-256 remained
+`36ac15a5ef88d27a2e15dde0d673c74c823ff6b578c94be3550a17be8bce44db`;
+the marker/closure note changed afterward. Reviewer checklists remain unchanged.
+Optional commit hooks were not executed; there are no converge hooks. This is local
+closure only, not a clean CI result for a published correction.
+
+Before the end of 003, complete US6–US7 when authorized and scenario-by-scenario physical
+validation T087/T093 on Android and iPhone (iOS 16.4 or later for notifications), building
+on the owner's successful US1–US3 smoke test below. The client's DigitalOcean Spaces
+bucket is needed only at deployment. Then implement 004 with the same methodology.
+Before go-live, time SC-001/SC-004/SC-006 of 002 with the dispatcher and add the content
+security policy tested on the production host (002 quickstart-results; 003 research R17).
+
+## US5 publication and merge history
+
+PR #23 is already squash-merged as `63c5070`. Final-head CI `38922944921` was clean;
+post-merge CI `38926371410` retried the native-push case, which led to T122. The following
+pre-merge checkpoints retain their original context, not instructions to merge PR #23 again.
+
+1. Pre-merge gate review of [US5 PR #23](https://github.com/scldrn/domy/pull/23):
+   T121 correction `5bd2b5d` had clean CI
    [38919233855](https://github.com/scldrn/domy/actions/runs/38919233855): check,
    883 tests, 82 e2e without retries (12.8 minutes), build. Remote logs and final scoped
    convergence are clean; T121 is checked only after this verification. The tracking-only
@@ -83,14 +125,6 @@ a short-lived branch, so the specification and implementation of every feature l
    and build. Authorized squash merge: `34875ba`; post-merge CI
    [38825582661](https://github.com/scldrn/domy/actions/runs/38825582661) also passed.
    Earlier CI retries remain historical evidence below, not unresolved latest-head failures.
-2. Before the end of 003: complete the scenario-by-scenario physical validation T087/T093
-   on Android and iPhone (iOS 16.4 or later for notifications), building on the owner's
-   successful US1–US3 smoke test below. The owner's DigitalOcean Spaces bucket
-   (in the client's name) is needed only at deployment.
-3. Then 004 the same way.
-4. Before go-live: time SC-001, SC-004, and SC-006 of 002 with the dispatcher, and add a
-   content security policy tested on the production host (002 quickstart-results; 003
-   research R17 lists what the courier app needs from it).
 
 ## T121 synchronization correction — 2026-10-16
 
