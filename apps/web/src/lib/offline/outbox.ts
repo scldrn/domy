@@ -1,6 +1,9 @@
 import {
   resolveCourierRecord,
   courierRecordInput,
+  noticeAcknowledgeInput,
+  maxNoticesPerAcknowledgment,
+  type NoticeAcknowledgeInput,
   type CourierRecordInput,
   type CourierSnapshot,
   type CourierTask,
@@ -57,6 +60,45 @@ export async function pendingRecords(db: CourierDb): Promise<CourierRecordInput[
   return items.flatMap((item) => (item.type === "record" ? [item.record] : []));
 }
 
+/** FR-018/FR-027: "Entendido" is persisted under the same account guard as a record. */
+export async function saveAcknowledgment(
+  db: CourierDb,
+  input: NoticeAcknowledgeInput,
+  userId: string,
+): Promise<void> {
+  const batches = [];
+  // One click owns every shown notice; transport-sized chunks share one atomic local write.
+  for (
+    let offset = 0;
+    offset < Math.max(1, input.noticeIds.length);
+    offset += maxNoticesPerAcknowledgment
+  ) {
+    batches.push(
+      noticeAcknowledgeInput.parse({
+        ...input,
+        actionId: offset === 0 ? input.actionId : crypto.randomUUID(),
+        noticeIds: input.noticeIds.slice(offset, offset + maxNoticesPerAcknowledgment),
+      }),
+    );
+  }
+  const tx = db.transaction(courierStores, "readwrite");
+  const done = tx.done;
+  void done.catch(() => undefined);
+  try {
+    await bindCourierIdentity(tx, userId);
+    for (const batch of batches)
+      await tx.objectStore("outbox").add({ type: "acknowledgment", ...batch });
+    await done;
+  } catch (error) {
+    try {
+      tx.abort();
+    } catch {
+      /* The failed transaction may already have ended. */
+    }
+    throw error;
+  }
+}
+
 /** The phone stands in for its courier: the route in the snapshot is theirs. */
 const me = "courier";
 
@@ -99,8 +141,10 @@ export function shipmentOnRoute(
 export function replayRecords(
   snapshot: CourierSnapshot,
   records: CourierRecordInput[],
+  acknowledgedNoticeIds: string[] = [],
 ): CourierSnapshot {
   const state = structuredClone(snapshot);
+  state.notices = state.notices.filter((notice) => !acknowledgedNoticeIds.includes(notice.id));
   const route = state.route;
   if (!route) return state;
   const applied = new Map<string, ShipmentForRecord["appliedRecords"]>();

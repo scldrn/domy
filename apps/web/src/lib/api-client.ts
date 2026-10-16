@@ -60,6 +60,12 @@ export async function unwrap<T>(response: Promise<Response>): Promise<T> {
   );
 }
 
+/** Successful 204 mutations have no JSON body; keep the same error handling. */
+export async function unwrapEmpty(response: Promise<Response>): Promise<void> {
+  const result = await response;
+  if (!result.ok) await unwrap(Promise.resolve(result));
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

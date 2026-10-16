@@ -187,6 +187,8 @@ export type RouteDetail = {
 };
 
 export type RouteSummary = {
+  courierLastSyncedAt: string | null;
+  unacknowledgedNotices: number;
   id: string;
   number: number;
   serviceDate: string;

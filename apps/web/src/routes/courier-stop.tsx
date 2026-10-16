@@ -173,6 +173,22 @@ function TaskCard({ task }: { task: CourierTask }) {
       courierId: shipmentState.route?.courierId ?? "",
     }).outcome === "applied";
   const pickedUp = task.shipmentKind === "errand" || task.shipmentStatus === "picked_up";
+  const receive = async () => {
+    setSaving(true);
+    try {
+      await saveCourierRecord(user.id, {
+        id: crypto.randomUUID(),
+        shipmentId: task.shipmentId,
+        kind: "handover_confirmation",
+        occurredAt: new Date().toISOString(),
+        location: currentLocation(),
+      });
+    } catch {
+      toast.error("No se pudo guardar la recepción en el teléfono. Intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   /** A pickup, saved on the phone first and shown at once (FR-006, FR-018). */
   const pickUp = async () => {
@@ -287,9 +303,15 @@ function TaskCard({ task }: { task: CourierTask }) {
         </Button>
       )}
       {pending && (finishing || returning) && task.blockedByHandover && (
-        <p className="text-body-l text-on-surface-variant">
-          Espera a que {task.blockedByHandover.fromCourier.name} te entregue el paquete.
-        </p>
+        <div className="flex flex-col gap-2">
+          <p className="text-body-l text-on-surface-variant">
+            Traspaso pendiente · Espera a que {task.blockedByHandover.fromCourier.name} te entregue
+            el paquete.
+          </p>
+          <Button disabled={saving} onClick={() => void receive()}>
+            Recibí el paquete
+          </Button>
+        </div>
       )}
       {pending && returning && !task.blockedByHandover && !canReturn && (
         <p className="text-body-l text-on-surface-variant">

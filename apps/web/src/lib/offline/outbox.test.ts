@@ -1,8 +1,8 @@
 import "fake-indexeddb/auto";
 import type { CourierRecordInput, CourierSnapshot, CourierTask } from "@domy/domain";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { openCourierDb, type StoredPhoto } from "./db";
-import { pendingRecords, replayRecords, saveRecord } from "./outbox";
+import { pendingRecords, replayRecords, saveRecord, saveAcknowledgment } from "./outbox";
 
 const id = (n: number) => `0194d9f0-0000-7000-8000-${String(n).padStart(12, "0")}`;
 const opened: string[] = [];
@@ -109,6 +109,63 @@ const tasksOf = (state: CourierSnapshot) => state.route?.stops.flatMap((stop) =>
 
 /** The phone's outbox (feature 003, research R3, R5, FR-018). */
 describe("saveRecord", () => {
+  it("rolls every acknowledgment chunk back when the second storage write fails (T119)", async () => {
+    const { db } = await freshDb();
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- saved native method is explicitly invoked with .call(this) below.
+    const originalAdd = IDBObjectStore.prototype.add;
+    let writes = 0;
+    const spy = vi.spyOn(IDBObjectStore.prototype, "add").mockImplementation(function (
+      this: IDBObjectStore,
+      value: unknown,
+      key?: IDBValidKey,
+    ) {
+      if (this.name === "outbox" && ++writes === 2)
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      return originalAdd.call(this, value, key);
+    });
+    try {
+      await expect(
+        saveAcknowledgment(
+          db,
+          {
+            actionId: id(5000),
+            noticeIds: Array.from({ length: 201 }, (_, index) => id(1000 + index)),
+            occurredAt: snapshot.serverTime,
+          },
+          id(9000),
+        ),
+      ).rejects.toThrow("Quota exceeded");
+      expect(await db.getAll("outbox")).toEqual([]);
+    } finally {
+      spy.mockRestore();
+      db.close();
+    }
+  });
+  it("persists acknowledgment of 401 shown notices in legal, uniquely keyed chunks (T119)", async () => {
+    const { name, db } = await freshDb();
+    await saveAcknowledgment(
+      db,
+      {
+        actionId: id(5000),
+        noticeIds: Array.from({ length: 401 }, (_, index) => id(1000 + index)),
+        occurredAt: snapshot.serverTime,
+      },
+      id(9000),
+    );
+    const items = await db.getAll("outbox");
+    expect(items).toHaveLength(3);
+    expect(
+      items.flatMap((item) => (item.type === "acknowledgment" ? [item.noticeIds.length] : [])),
+    ).toEqual([200, 200, 1]);
+    expect(
+      new Set(items.flatMap((item) => (item.type === "acknowledgment" ? [item.actionId] : [])))
+        .size,
+    ).toBe(3);
+    db.close();
+    const reopened = await openCourierDb(name);
+    expect(await reopened.getAll("outbox")).toEqual(items);
+    reopened.close();
+  });
   it("binds the account in the same save and rejects a different account without adding data", async () => {
     const { db } = await freshDb();
     await saveRecord(db, pickup, [], { userId: id(700), trackingNumber: "AB12CD34" });
@@ -175,6 +232,22 @@ function officeReturnSnapshot() {
 }
 
 describe("replayRecords", () => {
+  it("hides only acknowledged notices even without a route, preserving the saved snapshot (FR-027)", () => {
+    const saved = structuredClone(snapshot);
+    saved.route = null;
+    saved.notices = [id(300), id(301)].map((noticeId) => ({
+      id: noticeId,
+      type: "route_dispatched",
+      routeNumber: 3,
+      trackingNumber: null,
+      createdAt: snapshot.serverTime,
+    }));
+    expect(replayRecords(saved, [], [id(300)]).notices.map((notice) => notice.id)).toEqual([
+      id(301),
+    ]);
+    expect(saved.notices).toHaveLength(2);
+  });
+
   it("refuses a return while the office pickup is still pending (T055, FR-041)", () => {
     const office = officeReturnSnapshot();
     const returned: CourierRecordInput = {

@@ -29,7 +29,12 @@ async function resolve(
 ): Promise<Response> {
   const db = c.get("db");
   if (!(await findRouteAction(db, actionId))) {
-    const by = { actorUserId: c.get("user").id, now: c.get("clock")(), actionId };
+    const by = {
+      actorUserId: c.get("user").id,
+      now: c.get("clock")(),
+      actionId,
+      noticeIds: c.get("noticeIds"),
+    };
     await db
       .transaction((tx) => apply(tx, id, by))
       .catch((error: unknown) => {

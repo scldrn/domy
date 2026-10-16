@@ -27,6 +27,7 @@ import { formatCop, formatDate, formatDateTime, formatWindow } from "@/lib/forma
 import { ConfirmFeeDialog } from "./confirm-fee-dialog";
 import { ExceptionActions } from "./exception-decision-dialog";
 import { ShipmentRecords } from "./shipment-records";
+import { ClearReviewDialog } from "./clear-review-dialog";
 import { VoidDialog } from "./void-dialog";
 
 const panelRoute = getRouteApi("/_panel");
@@ -79,6 +80,7 @@ const fieldLabels: Record<string, string> = {
   custodyCourierId: "Tiene el paquete",
   heldAtOffice: "En oficina",
   returnDecided: "Devolución decidida",
+  needsReview: "Por revisar",
 };
 const moneyFields = new Set(["fee", "calculatedFee", "codAmount"]);
 const enumLabels: Record<string, Record<string, string>> = {
@@ -145,6 +147,7 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         actions={
           <>
             <ExceptionActions shipment={shipment} />
+            <ClearReviewDialog shipment={shipment} />
             {shipment.feeNeedsReview && user.role === "owner" && (
               <ConfirmFeeDialog shipment={shipment} />
             )}
@@ -265,6 +268,11 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         </Section>
       </div>
 
+      {shipment.needsReview && (
+        <p className="rounded-md bg-warning-container p-4 text-body-l text-on-warning-container">
+          Por revisar
+        </p>
+      )}
       <ShipmentRecords records={shipment.records} attempts={shipment.attempts} />
 
       <CustodyHistory events={shipment.events} />

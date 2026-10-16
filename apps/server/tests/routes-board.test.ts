@@ -101,6 +101,8 @@ describe("GET /api/routes/board (FR-018)", () => {
         atRiskCount: 1,
         lateCount: 1,
         pendingHandovers: 0,
+        courierLastSyncedAt: null,
+        unacknowledgedNotices: 1,
       },
       {
         id: second.id,
@@ -114,6 +116,8 @@ describe("GET /api/routes/board (FR-018)", () => {
         atRiskCount: 0,
         lateCount: 0,
         pendingHandovers: 0,
+        courierLastSyncedAt: null,
+        unacknowledgedNotices: 1,
       },
     ]);
   });

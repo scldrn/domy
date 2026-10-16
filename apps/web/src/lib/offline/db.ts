@@ -41,6 +41,7 @@ export const courierMeta = z.object({
   lastSyncedAt: z.iso.datetime({ offset: true }).nullable(),
   sessionStatus: z.enum(["active", "expired", "withdrawn"]).optional(),
   sessionExpiresAt: z.iso.datetime({ offset: true }).nullable().optional(),
+  notificationPrompted: z.boolean().optional(),
 });
 export type Meta = z.output<typeof courierMeta>;
 

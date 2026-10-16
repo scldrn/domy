@@ -248,19 +248,76 @@ offline with its pickup recorded, and verify the result
 
 ### Tests for User Story 5 ⚠️ write first, must fail
 
-- [ ] T061 [P] [US5] Integration tests in `apps/server/tests/courier-notices.test.ts` (FR-027, FR-033, FR-040): every action listed in FR-027 creates a notice for each affected courier in the same transaction, including joining a route to the courier's route in progress (`POST /api/routes/:id/join`) and editing a shipment on the route (`shipment_updated`), and cancelling a route in preparation creates none; the snapshot returns the unacknowledged ones; the acknowledgment sets `acknowledged_at` once; `unacknowledgedNotices` and `courierLastSyncedAt` on `GET /api/routes/board`; a phone notification is sent after commit with only the type and the route number; a failing push service does not fail the action; a `410` deletes the subscription; subscribing and removing a subscription
-- [ ] T062 [P] [US5] Integration tests in `apps/server/tests/courier-late-records.test.ts` covering spec US5 scenarios 5–7 and FR-024–FR-026: pickup of a removed shipment (off route, custody, "Por revisar"); of a shipment on another courier's route in progress (pending handover); on a route in preparation (leaves it); delivery by the holder after a reassignment (handover cancelled, the other stop removed, notice to the other courier); a disbursement for a shipment off the route; `not_applied` for a voided, delivered, or returned shipment or without custody, with a `record_not_applied` notice; a repeated record from a second phone is `duplicate` without a flag; `POST /api/shipments/:id/clear-review` with a note; cancelling a handover with no origin route leaves the shipment off route with its holder (research R17)
-- [ ] T063 [P] [US5] Extend `apps/server/tests/handovers.test.ts` and `apps/server/tests/custody-history.test.ts`: a `handover_confirmation` record gives custody and unblocks the task; `handoversToGive` stays in the giver's snapshot after the route left their app; custody history with the office and with late records leaves no interval without a holder (FR-028, SC-007)
-- [ ] T064 [P] [US5] End-to-end test in `apps/web/tests/e2e/courier-changes.spec.ts` with two phone contexts: quickstart scenarios 14–18 (the notification checked through the service worker's `push` event)
+Owner-approved US5 alignment (2026-10-15): T061 also tests
+`GET /api/courier/push-config` with and without configured notifications, its exact
+`{ publicKey: string | null }` shape, no private key/subject, and refusal of unlinked
+couriers, owner and dispatcher. T066 defines its shared response schema in
+`packages/domain/src/schemas/courier.ts` and implements the role/link-guarded endpoint.
+T068 obtains that runtime configuration before subscribing and skips subscription when
+the key is null; no web build-time variable, migration or dependency is added.
+
+- [X] T061 [P] [US5] Integration tests in `apps/server/tests/courier-notices.test.ts` (FR-027, FR-033, FR-040): every action listed in FR-027 creates a notice for each affected courier in the same transaction, including joining a route to the courier's route in progress (`POST /api/routes/:id/join`) and editing a shipment on the route (`shipment_updated`), and cancelling a route in preparation creates none; the snapshot returns the unacknowledged ones; the acknowledgment sets `acknowledged_at` once; `unacknowledgedNotices` and `courierLastSyncedAt` on `GET /api/routes/board`; a phone notification is sent after commit with only the type and the route number; a failing push service does not fail the action; a `410` deletes the subscription; subscribing and removing a subscription
+- [X] T062 [P] [US5] Integration tests in `apps/server/tests/courier-late-records.test.ts` covering spec US5 scenarios 5–7 and FR-024–FR-026: pickup of a removed shipment (off route, custody, "Por revisar"); of a shipment on another courier's route in progress (pending handover); on a route in preparation (leaves it); delivery by the holder after a reassignment (handover cancelled, the other stop removed, notice to the other courier); a disbursement for a shipment off the route; `not_applied` for a voided, delivered, or returned shipment or without custody, with a `record_not_applied` notice; a repeated record from a second phone is `duplicate` without a flag; `POST /api/shipments/:id/clear-review` with a note; cancelling a handover with no origin route leaves the shipment off route with its holder (research R17)
+- [X] T063 [P] [US5] Extend `apps/server/tests/handovers.test.ts` and `apps/server/tests/custody-history.test.ts`: a `handover_confirmation` record gives custody and unblocks the task; `handoversToGive` stays in the giver's snapshot after the route left their app; custody history with the office and with late records leaves no interval without a holder (FR-028, SC-007)
+- [X] T064 [P] [US5] End-to-end test in `apps/web/tests/e2e/courier-changes.spec.ts` with two phone contexts: quickstart scenarios 14–18 (the notification checked through the service worker's `push` event)
 
 ### Implementation for User Story 5
 
-- [ ] T065 [US5] Implement `apps/server/src/lib/push.ts` (`web-push` client) and `apps/server/src/lib/notices.ts` (`notifyCourier`: notice row in the transaction, phone notification after commit), and call it from every action of FR-027 in `apps/server/src/routes/routes.ts` (including `join`), `apps/server/src/routes/shipments.ts` (including `PATCH` of a shipment on a route in progress), `apps/server/src/routes/handovers.ts`, `apps/server/src/lib/reassignment.ts`, and `apps/server/src/routes/courier-records.ts`
-- [ ] T066 [US5] Implement `POST /api/courier/notices/acknowledge` and the push subscription endpoints in `apps/server/src/routes/courier.ts`, and add `unacknowledgedNotices` and `courierLastSyncedAt` to `GET /api/routes/board` in `apps/server/src/routes/routes.ts`, until T061 passes
-- [ ] T067 [US5] Extend `apps/server/src/lib/courier-records.ts` with the effects across routes (handover created or cancelled, task removed from another route, shipment taken off a route in preparation, "Por revisar", `record_not_applied` notice), let `cancelHandover` in `apps/server/src/lib/reassignment.ts` cancel a handover with no origin route, and implement `POST /api/shipments/:id/clear-review` in `apps/server/src/routes/shipments.ts`, until T062 and T063 pass
-- [ ] T068 [P] [US5] Add the `push` and `notificationclick` handlers to `apps/web/src/sw.ts` (Spanish text per notice type, opens `/mensajero`) and implement `apps/web/src/lib/offline/push.ts` (ask for the permission once after sign-in, register the subscription)
-- [ ] T069 [P] [US5] Build `apps/web/src/features/courier/notice-list.tsx` (notices with one "Entendido" for all shown, acknowledged through the outbox) and the handover actions in `apps/web/src/routes/courier-stop.tsx` and `apps/web/src/routes/courier-route.tsx` ("Recibí el paquete", "Entregar a {courier}")
-- [ ] T070 [US5] Show the last synchronization and the unacknowledged changes in `apps/web/src/features/routes/route-summary-card.tsx`, and the "Por revisar" flag with its clearing dialog and the records "No aplicado" in `apps/web/src/features/board/board-table.tsx` and `apps/web/src/features/shipments/shipment-records.tsx`, until T064 passes
+US5 initial test checkpoint (2026-10-15): owner-approved push configuration is aligned
+before production implementation. Read-only scoped analysis maps all eight scenarios
+to T061–T070 and the seven direct requirements FR-024–FR-028/FR-033/FR-040 plus buildable
+SC-001/SC-004/SC-007 to tasks (10/10); all nine constitution principles checked, no
+remaining HIGH/CRITICAL finding, no unmapped US5 task. The reviewer checklists remain
+unchanged (16/16 and 48/48).
+
+The first two-file PostgreSQL run reproduced 23 failures with three supported cases.
+The expanded four-file run has 28 failures and 12 passes across 40 cases. Failures are
+missing notices/configuration/subscription/review endpoints, omitted cross-route record
+effects (500), and refusal to cancel a handover without an origin route (409). T063's
+three added cases pass with the existing record/snapshot/office behavior, as do its six
+baseline cases; no production rule was duplicated to make them fail artificially.
+The final RED run adds a deferred constraint failure at commit, after inserting a notice,
+and requires no push on that rollback: 29 failures and 12 passes across 41 cases.
+T061 also covers after-commit, non-blocking push, exact payload privacy, HTTP 404/410
+subscription removal, transient service failure, subscription no-op/concurrent/late
+replays and acknowledgment isolation. Tests spy only on the external push transport;
+PostgreSQL is real. Its test-app configuration seam is not a production implementation.
+
+T064 has six phone cases covering quickstart 14–18, offline acknowledgments/handovers,
+review clearing and the real built worker's push event with the app closed. Two runs
+reproduce the same five missing-behavior failures; the second-phone duplicate case
+passes. Assertions behind the initial failures are not yet validated. The second run
+removes only the contradictory inherited NO_COLOR environment variable; no project
+timeout, worker, retry, test or assertion setting changes. `pnpm check` and `pnpm build`
+pass. T061/T062/T064 remain unchecked until green; implementation T065–T070, full
+unit/integration/e2e gates and scoped convergence remain pending. No US5 production code,
+dependency or migration has changed, and nothing has been committed or published.
+
+- [X] T065 [US5] Implement `apps/server/src/lib/push.ts` (`web-push` client) and `apps/server/src/lib/notices.ts` (`notifyCourier`: notice row in the transaction, phone notification after commit), and call it from every action of FR-027 in `apps/server/src/routes/routes.ts` (including `join`), `apps/server/src/routes/shipments.ts` (including `PATCH` of a shipment on a route in progress), `apps/server/src/routes/handovers.ts`, `apps/server/src/lib/reassignment.ts`, and `apps/server/src/routes/courier-records.ts`
+- [X] T066 [US5] Implement `POST /api/courier/notices/acknowledge` and the push subscription endpoints in `apps/server/src/routes/courier.ts`, and add `unacknowledgedNotices` and `courierLastSyncedAt` to `GET /api/routes/board` in `apps/server/src/routes/routes.ts`, until T061 passes
+- [X] T067 [US5] Extend `apps/server/src/lib/courier-records.ts` with the effects across routes (handover created or cancelled, task removed from another route, shipment taken off a route in preparation, "Por revisar", `record_not_applied` notice), let `cancelHandover` in `apps/server/src/lib/reassignment.ts` cancel a handover with no origin route, and implement `POST /api/shipments/:id/clear-review` in `apps/server/src/routes/shipments.ts`, until T062 and T063 pass
+- [X] T068 [P] [US5] Add the `push` and `notificationclick` handlers to `apps/web/src/sw.ts` (Spanish text per notice type, opens `/mensajero`) and implement `apps/web/src/lib/offline/push.ts` (ask for the permission once after sign-in, register the subscription)
+- [X] T069 [P] [US5] Build `apps/web/src/features/courier/notice-list.tsx` (notices with one "Entendido" for all shown, acknowledged through the outbox) and the handover actions in `apps/web/src/routes/courier-stop.tsx` and `apps/web/src/routes/courier-route.tsx` ("Recibí el paquete", "Entregar a {courier}")
+- [X] T070 [US5] Show the last synchronization and the unacknowledged changes in `apps/web/src/features/routes/route-summary-card.tsx`, and the "Por revisar" flag with its clearing dialog and the records "No aplicado" in `apps/web/src/features/board/board-table.tsx` and `apps/web/src/features/shipments/shipment-records.tsx`, until T064 passes
+
+US5 final local closure (2026-10-15; supersedes only the initial checkpoint's pending
+status, not its RED evidence): T061–T070 and T113–T119 pass. `pnpm check`, `pnpm test`
+(226 domain + 472 server + 179 web = 877), `env -u NO_COLOR pnpm test:e2e`
+(82/82, no retries, 4.7 minutes) and `pnpm build` pass. The six US5 journeys include
+offline acknowledgments/handovers, late records, review clearing and an actual native
+notification from the built worker with no app page open. Reviewed the three saved
+phone/dialog screenshots and their passing WCAG scans. No test budget, assertion,
+worker/retry policy or existing coverage was relaxed.
+
+Final scoped convergence checked eight acceptance scenarios, ten direct requirements/
+buildable criteria, eight plan decisions, all 17 US5/corrective tasks and nine principles:
+zero remaining findings. Assessment left this file byte-for-byte unchanged (SHA-256
+`3a99788fe01943d1f5cc781ee2bc1c32d3158a0b567cc01e1c30f474809e4a45`); checkboxes and this
+closure note were updated afterward, not by convergence. Reviewer checklists remain
+unchanged (16/16 and 48/48). T117's additive notice-enum migration was generated and
+reviewed; no new dependency. Physical T087/T093, US6–US7 and feature-wide polish remain
+pending. Samuel subsequently approved commit/push/PR with “Si”; publication must receive
+fresh CI. No remote green result, merge or permission to begin US6 is claimed here.
 
 **Checkpoint**: the dispatcher no longer needs to call couriers about changes
 
@@ -650,3 +707,19 @@ The published CI's retry remains historical evidence, not validation of this loc
 At this local checkpoint commit/push and new CI were still required. Samuel subsequently
 authorized publishing T111/T112 on 2026-10-15; review that new head's CI before merge review.
 Merge and continuing US5 require separate authorization.
+
+## Phase 27: Convergence
+
+- [X] T113 CRITICAL Add failing domain/API regressions proving a courier cannot register an arbitrary, local or credential-bearing push URL and cause server-side requests to it. Restrict `pushSubscriptionInput` in `packages/domain/src/schemas/courier.ts` to HTTPS push services of the supported browsers, with boundary validation and no configurable arbitrary host. Align the security constraint in the contract/plan before implementing; use browser-vendor primary documentation, preserve private-key isolation, and rerun subscription/transport cases (FR-040, Constitution V/IX; contradicts).
+- [X] T114 HIGH Reproduce a record batch whose first record commits a `record_not_applied` notice but whose later record fails shipment-dependent validation. Ensure `apps/server/src/app.ts` sends push for the committed notice even though the HTTP response is an error, never for a rolled-back notice; use the existing committed-id lookup, preserve independent record transactions and all deferred-commit regressions (FR-024/FR-040, Constitution IV; partial).
+- [X] T115 HIGH Add a delayed-410 regression in `apps/server/tests/courier-notices.test.ts`: an old push response must not delete a subscription whose encryption keys were renewed while it was in flight. Delete only the same version of the subscription in `apps/server/src/lib/push.ts`. Also verify a shipment void produces one `shipment_voided` notice rather than a second `shipment_removed` notice for the same action; preserve its route removal history and ordinary removal notices (FR-027/FR-040, Constitution II; partial).
+
+## Phase 28: Convergence
+
+- [X] T116 HIGH Reproduce cancellation of a pending handover for a decided return in `apps/server/tests/courier-late-records.test.ts`: restore a return task at the original pickup place on the holding courier's route, not a delivery task at the recipient. Reuse the domain's held-stop planner and immutable pickup projection in `apps/server/src/lib/reassignment.ts`; retain cancellation without an origin route, custody and all completed history (FR-028/FR-029/FR-031, T067, research R10/R17; contradicts).
+- [X] T117 HIGH Test that confirming a handover names that actual change rather than saying the address changed. Add `handover_confirmed` to the shared notice kinds/texts in `packages/domain/src/courier-records.ts`, align the enum in data-model.md and the notification contract/plan, generate and review its PostgreSQL enum migration through `pnpm db:generate`, then select that notice in `apps/server/src/lib/route-store.ts`. Test both courier and dispatch confirmations, payload privacy and native-worker rendering; do not repurpose an inaccurate existing notice type (FR-027/FR-040, Constitution VII, research R9; contradicts).
+
+## Phase 29: Convergence
+
+- [X] T118 HIGH Reproduce an unchanged stop-order request generating a false change notice. In `apps/server/src/routes/routes.ts`, return through the existing unchanged-route path when the validated stop ids/order already match, preserving the route version and its protection against late replays. Extend `apps/server/tests/courier-notices.test.ts` with unchanged/real reorder and late replay cases; make the phone journey actually reorder two delivery stops rather than re-submit the original order (FR-027, Constitution VII; contradicts).
+- [X] T119 HIGH Reproduce the courier being unable to acknowledge more than 200 accumulated notices. Keep the API's 200-id limit, but persist multiple uniquely keyed acknowledgment chunks atomically in `apps/web/src/lib/offline/outbox.ts` and show their combined local result through `courier-store.ts`; a storage failure must not leave half of the shown notices acknowledged. Define the shared transport limit once in `packages/domain/src/schemas/courier.ts`, test all chunks/reopening/rollback in `outbox.test.ts`, and retain unseen notices and synchronization retry behavior (FR-018/FR-027, Constitution II; partial).

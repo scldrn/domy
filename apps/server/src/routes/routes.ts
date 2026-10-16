@@ -137,7 +137,11 @@ async function applyRouteAction(
       if (events.length === 0) throw new Unchanged();
       const [first, ...rest] = events;
       if (first)
-        await recordRouteEvents(tx, [{ ...first, clientEventId: input.actionId }, ...rest]);
+        await recordRouteEvents(
+          tx,
+          [{ ...first, clientEventId: input.actionId }, ...rest],
+          c.get("noticeIds"),
+        );
       await refreshRouteStatus(tx, routeId, { actorUserId: c.get("user").id, now });
     })
     .catch((error: unknown) => {
@@ -375,6 +379,7 @@ export const routeRoutes = new Hono<AppEnv>()
         );
         const problem = validateStopOrder(before, after);
         if (problem) throw new AppError("invalid_stop_order", { message: problem });
+        if (before.every((stop, index) => stop.id === input.stopIds[index])) return [];
         await savePlan(tx, id, before, after);
         return [
           {
@@ -430,6 +435,7 @@ export const routeRoutes = new Hono<AppEnv>()
             actorUserId: user.id,
             now,
             reason: "Agregado desde Sin asignar",
+            noticeIds: c.get("noticeIds"),
             routeEvent: false,
           });
           await tx
@@ -820,7 +826,13 @@ export const routeRoutes = new Hono<AppEnv>()
           });
         }
         const reason = `Sus envíos pasaron a la Ruta ${String(target.number)}, que su mensajero ya tenía en curso.`;
-        const by = { actorUserId: c.get("user").id, now, reason };
+        const by = {
+          actorUserId: c.get("user").id,
+          now,
+          reason,
+          noticeIds: c.get("noticeIds"),
+          noticeAsAddition: true,
+        };
         for (const shipment of carried) await moveShipment(tx, shipment, target.id, by);
         await tx
           .update(routes)

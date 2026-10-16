@@ -33,6 +33,7 @@ every mutation.
 | `POST /api/courier/records` | `{ deviceNow, records: CourierRecordInput[] }` (1–50, in the order they happened) → `{ results: { id, outcome }[] }`. Each record is applied in its own transaction (FR-018–FR-026) |
 | `PUT /api/courier/photos/:id` | Body: the JPEG image (`image/jpeg`, ≤ 1 MB, else `413 payload_too_large`) → `204`. `404` while its record has not arrived; repeating it is harmless (FR-023) |
 | `POST /api/courier/notices/acknowledge` | `{ actionId, noticeIds, occurredAt }` → `204`; sets `acknowledged_at` only where empty (FR-027) |
+| `GET /api/courier/push-config` | → `200 { publicKey: string \| null }`; the server's VAPID public key, or `null` when phone notifications are disabled in development. Requires a linked courier account like the snapshot; owner, dispatcher and unlinked courier get `403`. Never returns the private key or subject (FR-040, owner-approved US5 alignment) |
 | `POST /api/courier/push-subscriptions` | `{ actionId, endpoint, keys: { p256dh, auth } }` → `204` (FR-040) |
 | `POST /api/courier/push-subscriptions/remove` | `{ actionId, endpoint }` → `204` |
 
@@ -134,4 +135,12 @@ Reasons and notes are 5–200 characters.
 
 ## Phone notification payload (FR-040)
 
+Push subscription endpoints must use HTTPS without URL credentials or a nonstandard port,
+at `fcm.googleapis.com`, `*.push.apple.com`, or `updates.push.services.mozilla.com`.
+Other destinations are `400 invalid_request` before persistence (Constitution IX, T113).
+
 `{ type: NoticeType, routeNumber?: number }`. No names, addresses, or phone numbers.
+
+`handover_confirmed` names confirmation by the receiving courier or dispatch; it does not
+reuse `shipment_updated`, which exclusively describes an edited shipment. Both affected
+couriers receive the confirmation notice (FR-027, research R9, T117).

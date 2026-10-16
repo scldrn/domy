@@ -1,7 +1,8 @@
 import type { Handover, RouteDetail, Shipment, ShipmentDetail } from "@domy/domain";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { handovers, routeTasks, shipments } from "../src/db/schema/index.ts";
+import { couriers, handovers, routeTasks, shipments } from "../src/db/schema/index.ts";
+import { courierWithAccount, sendRecords, snapshot } from "./setup/courier.ts";
 import { createTestApp } from "./setup/app.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
 import { startDatabase, type TestDatabase } from "./setup/database.ts";
@@ -92,6 +93,75 @@ const deliveryTask = (route: RouteDetail) =>
     .find((task) => task.shipmentId === picked.id && task.kind === "delivery");
 
 describe("Handovers (FR-025)", () => {
+  it("lets the receiving courier confirm once through records, unblocks delivery and records its real author (003 T063)", async () => {
+    const signedIn = await t.signIn("courier", { name: "Beto Gómez" });
+    await database.db
+      .update(couriers)
+      .set({ userId: signedIn.user.id })
+      .where(eq(couriers.id, beto));
+    const before = await snapshot(t, signedIn);
+    expect(
+      before.body.route?.stops.flatMap((s) => s.tasks).find((task) => task.shipmentId === picked.id)
+        ?.blockedByHandover,
+    ).toMatchObject({ id: pending.id });
+    const record = {
+      id: crypto.randomUUID(),
+      kind: "handover_confirmation",
+      shipmentId: picked.id,
+    };
+    for (let i = 0; i < 2; i++) {
+      const response = await sendRecords(t, signedIn, [record]);
+      expect(response.status).toBe(200);
+      expect(response.body.results).toEqual([{ id: record.id, outcome: "applied" }]);
+    }
+    expect(await custody()).toBe(beto);
+    expect((await snapshot(t, signedIn)).body.notices.map((notice) => notice.type)).toContain(
+      "handover_confirmed",
+    );
+    expect(deliveryTask(await getRoute(betoRoute.id))?.blockedByHandoverId).toBeNull();
+    expect((await detail()).events.filter((event) => event.type === "handover_confirmed")).toEqual([
+      expect.objectContaining({
+        actor: { id: signedIn.user.id, name: "Beto Gómez" },
+        onBehalf: false,
+        changes: { custodyCourierId: ["Ana Ruiz", "Beto Gómez"] },
+      }),
+    ]);
+    expect(
+      (await snapshot(t, signedIn)).body.route?.stops
+        .flatMap((s) => s.tasks)
+        .find((task) => task.shipmentId === picked.id)?.blockedByHandover,
+    ).toBeNull();
+  });
+
+  it("keeps packages to give in the old courier's snapshot after whole-route reassignment (003 FR-028)", async () => {
+    const giver = await courierWithAccount(t, database.db, "Carla Díaz");
+    const receiver = await courierWithAccount(t, database.db, "Dani Mora");
+    const shipment = await registerShipment(t, cookie, catalog);
+    const route = await dispatched([shipment], giver.id);
+    expect(
+      (await sendRecords(t, giver, [{ kind: "pickup", shipmentId: shipment.id }])).status,
+    ).toBe(200);
+    const current = await getRoute(route.id);
+    const moved = await routeAction(t, cookie, current, "/reassign", {
+      courierId: receiver.id,
+      reason: "Cambio de turno del mensajero",
+    });
+    expect(moved.status).toBe(200);
+    const after = (await snapshot(t, giver)).body;
+    expect(after.route).toBeNull();
+    expect(after.handoversToGive).toEqual([
+      expect.objectContaining({
+        shipmentId: shipment.id,
+        toCourier: { id: receiver.id, name: receiver.name },
+      }),
+    ]);
+    expect(
+      (await sendRecords(t, receiver, [{ kind: "handover_confirmation", shipmentId: shipment.id }]))
+        .status,
+    ).toBe(200);
+    expect((await snapshot(t, giver)).body.handoversToGive).toEqual([]);
+  });
+
   it("keeps custody with the previous courier and the delivery blocked while pending (scenario 2)", async () => {
     expect(await custody()).toBe(ana);
     expect((await getRoute(betoRoute.id)).handovers).toEqual([

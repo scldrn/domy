@@ -52,6 +52,7 @@ const app = createApp({
   clock: () => clock(),
   logger,
   storage,
+  push: env.push,
   ...(env.NODE_ENV === "production" && { webDist: "../web/dist" }),
   ...(env.NODE_ENV === "test" && {
     setNow: (instant: string) => {

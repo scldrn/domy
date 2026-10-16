@@ -8,14 +8,17 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-Nada requiere una respuesta ahora. Autorizaste commit y push de T111/T112 a la PR #22
-para validar la corrección en un CI nuevo. Pasan las cuatro compuertas locales y las
-40 ejecuciones focalizadas; se debe revisar el CI del nuevo head, no el resultado con
-reintento de `a169cbb`. Fusionar y continuar US5 requieren autorización aparte y CI verde.
+Nada requiere una respuesta ahora. Autorizaste hacer commit, push y abrir la PR de US5
+con «Si». T061–T070 y T113–T119 están completas en `003-us5-changes`: check,
+877 pruebas unitarias/integración, 82 e2e sin reintentos, build y convergencia local
+aprobados. La publicación incluye la migración generada «Traspaso confirmado» y debe
+validarse en CI. La fusión y continuar US6 requieren autorización aparte y CI verde.
 
 ## Antes de terminar la 003 (app del mensajero)
 
-Nada pendiente por ahora.
+Completar la validación física por escenarios T087/T093 en Android y iPhone, incluidas
+las notificaciones con la app instalada. Las pruebas automatizadas de US5 no sustituyen
+esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 ## Antes de salir a producción
 
@@ -39,6 +42,11 @@ Nada pendiente por ahora.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-15 | ¿Hacer commit, push y abrir la PR de US5 (T061–T070 y T113–T119)? | «Si». Autorizada la publicación y revisión de CI; no la fusión ni comenzar US6 |
+| 2026-10-15 | ¿Completar la implementación local y corregir todos los hallazgos de US5 siguiendo la metodología estricta? | «Arregla todo, con la mayor calidad y sin deuda tecnica». T061–T070 y T113–T119 completas y verificadas; publicación, fusión y US6 pendientes de autorización |
+| 2026-10-15 | ¿Explicitar `GET /api/courier/push-config` y alinear contrato, plan y T061/T066/T068 antes de implementar US5? | «autorizo». Solo mensajeros vinculados; `{ publicKey: string \| null }`, sin clave privada, migración ni variable de compilación web |
+| 2026-10-15 | ¿Continuar con US5 desde `main` actualizado? | «ok, continuemos». Implementación local siguiendo la metodología obligatoria; sin autorización de publicación o fusión |
+| 2026-10-15 | ¿Fusionar la PR #22 mediante squash con el último CI limpio? | «Autorizo». Fusionada como `34875ba`; CI del head `d3e3830` y CI posterior de `main` aprobados |
 | 2026-10-15 | ¿Publicar T111/T112 mediante commit y push en la PR #22 para validar un CI nuevo? | «Autorizo». Solo publicar la corrección y revisar CI; no fusionar ni continuar US5 |
 | 2026-10-15 | Investigar y corregir la inestabilidad encontrada al revisar la PR #22 | «Investiga y Arreglalo». T111/T112 reproducidas y corregidas localmente; cuatro compuertas y convergencia puntual aprobadas. Publicar la corrección requiere aprobación; sin autorización de fusión ni continuación a US5 |
 | 2026-10-15 | ¿Hacer commit, push y abrir la PR de US4 después de las cuatro compuertas y la convergencia? | «Sí». Autorizada la publicación de T053–T060/T103–T110. La fusión y continuar US5 requieren autorización aparte y CI verde |

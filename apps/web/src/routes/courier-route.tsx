@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/empty-state";
 import { ShipmentStatusMark } from "@/components/shipment-status-mark";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCourierState } from "@/features/courier/courier-store";
+import { NoticeList, HandoversToGive } from "@/features/courier/notice-list";
 import { cn } from "@/lib/cn";
 import { formatDate } from "@/lib/format";
 
@@ -64,6 +65,8 @@ function CourierRoute() {
           title="No tienes una ruta despachada"
           description="Cuando el coordinador te despache una ruta, aparecerá aquí."
         />
+        <NoticeList />
+        <HandoversToGive />
         <HeldOffRoute />
       </div>
     );
@@ -79,6 +82,8 @@ function CourierRoute() {
           {formatDate(route.serviceDate)} · {done} de {route.stops.length} paradas completadas
         </p>
       </header>
+      <NoticeList />
+      <HandoversToGive />
       <ol className="flex flex-col gap-3" aria-label="Paradas">
         {route.stops.map((stop, index) => {
           const pending = pendingOf(stop).length;

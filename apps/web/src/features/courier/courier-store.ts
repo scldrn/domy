@@ -14,7 +14,7 @@ import {
   type OutboxItem,
   type StoredPhoto,
 } from "@/lib/offline/db";
-import { replayRecords, saveRecord } from "@/lib/offline/outbox";
+import { replayRecords, saveRecord, saveAcknowledgment } from "@/lib/offline/outbox";
 import { synchronize, SyncError } from "@/lib/offline/sync";
 
 /**
@@ -99,7 +99,13 @@ async function reload(userId: string): Promise<void> {
   update({
     userId,
     loaded: true,
-    view: snapshot ? replayRecords(snapshot, records) : null,
+    view: snapshot
+      ? replayRecords(
+          snapshot,
+          records,
+          pending.flatMap((item) => (item.type === "acknowledgment" ? item.noticeIds : [])),
+        )
+      : null,
     pendingRecords: records.length,
     pendingPhotos: photos.length,
     pending,
@@ -173,6 +179,21 @@ export async function saveCourierRecord(
     userId,
     ...(trackingNumber && { trackingNumber }),
   });
+  await reload(userId);
+  void synchronizeNow(userId);
+}
+
+export async function acknowledgeCourierNotices(
+  userId: string,
+  noticeIds: string[],
+): Promise<void> {
+  if (paused)
+    throw new CourierDataError("Espera a que termine el cambio de sesión antes de guardar.");
+  await saveAcknowledgment(
+    await courierDatabase(),
+    { actionId: crypto.randomUUID(), noticeIds, occurredAt: new Date().toISOString() },
+    userId,
+  );
   await reload(userId);
   void synchronizeNow(userId);
 }

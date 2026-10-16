@@ -175,6 +175,8 @@ const routeSummary = z
     atRiskCount: z.int().min(0),
     lateCount: z.int().min(0),
     pendingHandovers: z.int().min(0),
+    courierLastSyncedAt: z.iso.datetime({ offset: true }).nullable(),
+    unacknowledgedNotices: z.int().min(0),
   })
   .strict();
 

@@ -36,6 +36,8 @@ import { now } from "@/lib/clock";
 import { ApiError } from "@/lib/api-client";
 import { claimCourierDb, readCourierMeta } from "@/lib/offline/db";
 import { refuseCourierSession } from "@/lib/offline/sync";
+import { enablePush, loadPushKey } from "@/lib/offline/push";
+import { courierMeta } from "@/lib/offline/db";
 
 type Destination = {
   to: "/mensajero" | "/mensajero/pendientes" | "/mensajero/mi-dia";
@@ -116,6 +118,41 @@ function CourierLayout() {
   const router = useRouter();
   const [highContrast, setHighContrast] = useState(readHighContrast);
   const [signingOut, setSigningOut] = useState(false);
+  const [pushKey, setPushKey] = useState<string | null>(null);
+  const [pushAsked, setPushAsked] = useState(false);
+  useEffect(() => {
+    if (!user || typeof Notification === "undefined" || !("serviceWorker" in navigator)) return;
+    let disposed = false;
+    void loadPushKey()
+      .then(async (key) => {
+        if (!disposed) setPushKey(key);
+        if (key && Notification.permission === "granted") await enablePush(key);
+      })
+      .catch(() => undefined);
+    return () => {
+      disposed = true;
+    };
+  }, [user]);
+  const askPush = () => {
+    if (!pushKey || !user) return;
+    setPushAsked(true);
+    // Invoke the native prompt synchronously in the click (required by mobile browsers).
+    const permission = enablePush(pushKey);
+    void courierDatabase()
+      .then(async (db) => {
+        const tx = db.transaction("meta", "readwrite");
+        const meta = courierMeta.parse(await tx.store.get("current"));
+        if (meta.userId === user.id)
+          await tx.store.put({ ...meta, notificationPrompted: true }, "current");
+        await tx.done;
+      })
+      .catch(() => undefined);
+    void permission.catch(() => {
+      toast.error(
+        "No pudimos activar las notificaciones. Los cambios siguen disponibles en «Mi ruta».",
+      );
+    });
+  };
 
   useEffect(() => {
     const reconnect = () => {
@@ -319,6 +356,20 @@ function CourierLayout() {
           )}
           <InstallHint />
         </div>
+        {pushKey &&
+          !pushAsked &&
+          !status.meta?.notificationPrompted &&
+          typeof Notification !== "undefined" &&
+          Notification.permission === "default" && (
+            <aside className="flex flex-col gap-2 rounded-md bg-secondary-container p-4 text-on-secondary-container">
+              <p className="text-body-l">
+                Recibe avisos cuando el coordinador cambie tu ruta, incluso con la app cerrada.
+              </p>
+              <Button variant="outline" className="self-start" onClick={askPush}>
+                Activar notificaciones
+              </Button>
+            </aside>
+          )}
         <Outlet />
       </main>
       <nav

@@ -221,6 +221,51 @@ screen.
 
 ## Cross-feature alignment
 
+US5 notification configuration (owner-approved alignment, 2026-10-15): expose
+`GET /api/courier/push-config` through the existing courier role/link guard, returning
+only `{ publicKey: string | null }`. Read the key from the server's validated VAPID
+configuration; null means notifications are disabled in development. Never expose the
+private key or subject. Define the response schema once in
+`packages/domain/src/schemas/courier.ts` and retain Hono RPC inference. T061 tests both
+configured/disabled responses and access isolation before T066 implements the endpoint.
+T068 fetches it before subscribing; no web build-time variable, new dependency or migration.
+Notification failure or absence must not affect notices, acknowledgments or route actions.
+
+US5 security/convergence T113–T115: validate push destinations in the shared schema
+before persistence, accepting only credential-free HTTPS on the standard port at browser
+push services (FCM, Apple's `*.push.apple.com`, Mozilla's Autopush). This prevents the
+authenticated API from becoming an arbitrary server-side request relay. Browser-vendor
+references: [Apple](https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers),
+[Mozilla](https://mozilla-services.github.io/autopush-rs/http.html),
+[web-push/FCM example](https://github.com/web-push-libs/web-push#sendnotificationpushsubscription-payload-options).
+Request-local notice ids are passed explicitly through existing transaction authors and
+route-event orchestration, not through global state. After handlers finish, look up only
+committed ids, including earlier committed records in a partially failed batch; rolled-back
+ids produce no push. No new service, queue, migration or dependency. A delayed expired-
+subscription response deletes only matching id and encryption keys, preserving renewal.
+
+T117 convergence alignment: handover confirmation needs its own `handover_confirmed`
+notice, not `shipment_updated` (which tells the courier to check an edited address).
+Extend the shared notice enum/text once, generate and review the additive PostgreSQL
+enum migration with `pnpm db:generate`, and apply it through normal deployment migrations.
+This is the only additional US5 migration; it changes no existing rows or notice meanings.
+T116 cancellation uses `addHeldShipmentToStops` and the immutable pickup-place projection
+for decided returns, preserving a return task rather than silently creating a delivery.
+
+T118/T119: unchanged stop ordering uses the existing unchanged-route transaction path
+and preserves its version, so a later replay cannot overwrite a newer order. A phone's
+single "Entendido" may cover more than the API's 200-id transport limit: split the shown
+ids into uniquely keyed, schema-validated chunks and persist every chunk in one IndexedDB
+transaction before syncing. A quota error rolls them all back. Keep the API limit and
+acknowledge only notices that were shown, not changes arriving afterward.
+
+T064 notification validation uses a fresh persistent profile in full Chromium's new
+headless channel, not the reduced headless-shell or an incognito context. It grants the
+real permission, leaves the app for about:blank, injects the standard push event via CDP
+and reads actual `getNotifications()` title/body, without replacing the worker handler
+or notification API. Profiles stay under ignored test-results and are closed after each
+case. All other cases keep their existing browser setup, workers, deadlines and retries.
+
 US4 review remediation (owner approval 2026-10-15): T053 explicitly reproduces concurrent
 and late replays of both exception decisions before T056. Persist the accepted action
 and its event/tasks/handovers transactionally; recognize it before current-state guards

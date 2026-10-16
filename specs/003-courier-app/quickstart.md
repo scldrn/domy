@@ -45,6 +45,14 @@ viewport checks do not replace physical-device validation.
 
 ## Manual validation scenarios
 
+US5's automated journeys in `courier-changes.spec.ts` cover 14–18, offline acknowledgment
+and receiving confirmation, review clearing, and an actual worker notification after
+leaving the app. The notification case uses a fresh full-Chromium persistent test profile
+because headless-shell denies the real permission; it retains exact notification/privacy
+assertions and does not mock the handler or notification API. Physical notifications on
+Android and installed iPhone remain part of T087/T093. Apply normal migrations, including
+US5's additive `handover_confirmed` notice enum migration, before deploying the new server.
+
 "Offline" means airplane mode on the phone, or "Offline" in the browser's developer tools.
 
 | # | Story | Steps | Expected |

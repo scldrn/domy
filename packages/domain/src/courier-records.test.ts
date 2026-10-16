@@ -11,6 +11,12 @@ import {
 
 const ana = "courier-ana";
 
+it("names a confirmed handover without claiming the address changed (T117)", () => {
+  const type = noticeTypes.find((type) => type === "handover_confirmed");
+  if (!type) throw new Error("Missing handover-confirmed notice kind");
+  expect(noticeText(type, {})).toBe("Traspaso confirmado.");
+});
+
 it("selects applied non-reverted delivery and exception attempts, preserving their order and identity (T056, FR-032)", () => {
   const records = [
     { kind: "pickup" as const, outcome: "applied", reverted: null },

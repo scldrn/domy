@@ -9,6 +9,7 @@ import type { Auth } from "./auth.ts";
 import type { Db } from "./db/client.ts";
 import type { Clock } from "./lib/clock.ts";
 import type { PhotoStorage } from "./lib/storage.ts";
+import { sendNoticePushes, type PushConfig } from "./lib/push.ts";
 import { AppError, handleError } from "./lib/errors.ts";
 import { bulkRoutes } from "./routes/bulk.ts";
 import { carrierRoutes } from "./routes/carriers.ts";
@@ -35,6 +36,7 @@ export type AppDeps = {
   logger: Logger;
   /** The private bucket of the courier's photos (feature 003, research R6). */
   storage: PhotoStorage;
+  push?: PushConfig | null;
   /** Built web app served in production; absent in development and tests. */
   webDist?: string;
   /** End-to-end tests only: lets a test move the server clock (research R9). */
@@ -49,6 +51,7 @@ export type AppEnv = {
       user: { id: string; name: string; role: UserRole };
       /** When the signed-in session ends; the courier app warns before it (feature 003, FR-003). */
       sessionExpiresAt: Date;
+      noticeIds: string[];
     };
 };
 
@@ -60,9 +63,14 @@ export function createApp(deps: AppDeps) {
       c.set("auth", deps.auth);
       c.set("clock", deps.clock);
       c.set("storage", deps.storage);
+      c.set("push", deps.push ?? null);
+      const noticeIds: string[] = [];
+      c.set("noticeIds", noticeIds);
       c.set("logger", deps.logger.child({ requestId: c.get("requestId") }));
       const started = performance.now();
       await next();
+      // Every route transaction has finished; transport failure never delays its response.
+      void sendNoticePushes(deps.db, noticeIds, deps.push ?? null, deps.logger);
       // Clients correct their clock with this header (research R9); it follows the fake clock.
       c.header("Date", deps.clock().toUTCString());
       c.get("logger").info(
