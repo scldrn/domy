@@ -726,4 +726,19 @@ Merge and continuing US5 require separate authorization.
 
 ## Phase 30: CI action runtime maintenance
 
-- [ ] T120 Inspect official action manifests/release migration notes and reproduce the Node 20/`url.parse()`/`punycode` warnings from PR #23's existing CI logs. Update only `pnpm/action-setup@v4` → `@v6` and `actions/setup-node@v5` → `@v7` in `.github/workflows/ci.yml` per the owner-approved plan alignment. Preserve Node/pnpm versions, cache, frozen lockfile, every quality command, tests and runner policies. Validate local check, complete latest-head CI and logs, document any harmless residual upstream warning rather than suppressing it, then run scoped convergence before the authorized squash merge (Constitution I/VIII; Development Workflow & Quality Gates).
+- [X] T120 Inspect official action manifests/release migration notes and reproduce the Node 20/`url.parse()`/`punycode` warnings from PR #23's existing CI logs. Update only `pnpm/action-setup@v4` → `@v6` and `actions/setup-node@v5` → `@v7` in `.github/workflows/ci.yml` per the owner-approved plan alignment. Preserve Node/pnpm versions, cache, frozen lockfile, every quality command, tests and runner policies. Validate local check, complete latest-head CI and logs, document any harmless residual upstream warning rather than suppressing it, then run scoped convergence before the authorized squash merge (Constitution I/VIII; Development Workflow & Quality Gates).
+
+T120 closure (2026-10-16): official manifests declare Node 24; current releases are
+pnpm/action-setup v6.1.0 (pnpm 12 support) and actions/setup-node v7.1.0. The existing
+`ce55c7e` run reproduced the three deprecations before the two-line workflow fix.
+Local `pnpm check` and CI [38857856129](https://github.com/scldrn/domy/actions/runs/38857856129)
+at `4392341` pass: 226 domain + 472 server + 179 web = 877 tests; 82/82 e2e without
+retries (12.2 minutes); build. Logs contain none of the Node 20, `url.parse()` or
+`punycode` deprecation warnings. GitHub's separate informational notice about the future
+ubuntu-latest migration is not a runtime failure; no runner pin or warning suppression
+was added. Scoped convergence checked T120, two action-runtime/compatibility decisions,
+the unchanged quality gates and all nine principles: zero findings. Before/after
+assessment SHA-256 was `230f4823779b6eb5ae4b600d963eaf014be32e2ef864cf04777a946f0742f9ca`;
+this completion marker/note is subsequent tracking. Optional commit hooks were not used;
+there are no converge hooks. The documentation closure must also receive green
+latest-head CI before the authorized squash merge. Starting US6 is not authorized.

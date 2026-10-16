@@ -14,7 +14,7 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`, clean head/post-merge CI). US5 T061–T070/T113–T119 published as [PR #23](https://github.com/scldrn/domy/pull/23), with 877 tests and 82 e2e passing at `ce55c7e`. Owner authorized CI-warning maintenance T120 and subsequent squash merge only after new latest-head CI/convergence. US6–US7 and feature-wide polish remain pending; starting US6 is not authorized |
+| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`, clean head/post-merge CI). US5 T061–T070/T113–T120 published as [PR #23](https://github.com/scldrn/domy/pull/23); CI at `4392341` passes 877 tests and 82 e2e without the three action deprecations. Convergence is clean; documentation closure requires green latest-head CI, then owner-authorized squash merge. US6–US7 and feature-wide polish remain pending; starting US6 is not authorized |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
@@ -27,8 +27,14 @@ a short-lived branch, so the specification and implementation of every feature l
    passed at `ce55c7e`: check, 877 tests, 82 e2e without retries and build. On 2026-10-16
    Samuel authorized investigating/correcting CI warnings and then squash merging with
    fresh green latest-head CI. T120 upgrades only the two setup actions after official
-   manifest/release review; inspect its new CI logs and converge before merge. Starting
-   US6 still requires separate approval.
+   manifest/release review. T120 is now complete: CI
+   [38857856129](https://github.com/scldrn/domy/actions/runs/38857856129) at `4392341`
+   passed all gates (877 tests, 82 e2e without retries); all three deprecation warnings
+   disappeared and scoped convergence found no gap. This documentation closure must
+   receive green latest-head CI too, then squash merge and verify the resulting `main`
+   state. Starting US6 still requires separate approval. After the authorized merge,
+   use PR #23's merge commit and its post-merge CI as the source of current state; do not
+   create a documentation-only CI/merge loop just to copy that new commit into itself.
    Samuel authorized continuing with “ok, continuemos” after the separate US4 merge.
    Both reviewer checklists pass (16/16 requirements, 48/48 courier rules). Initial
    artifact review found the eight US5 scenarios mapped to T061–T070, but the deeper
@@ -146,6 +152,13 @@ a short-lived branch, so the specification and implementation of every feature l
   actual `400 invalid_request`/field error contract rather than an invented 422.
 
 ### Final local verification
+
+Publication follow-up: `ce55c7e` CI passed all four gates. Owner-authorized T120 then
+updated only the two setup actions; `4392341` CI also passes all four gates and removes
+all original deprecations. GitHub's informational notice about a future Ubuntu image
+rollout is left visible; it does not require an application change. Full evidence and
+scoped-convergence hash are in T120's closure in tasks.md. Squash merge is authorized
+only with clean CI on the latest PR head; post-merge status is available on PR #23/main.
 
 - `pnpm check` passes: formatting, lint with zero warnings and all package type checks.
 - `pnpm test` passes: domain 226, server 472, web 179 — **877 total**. Server fixtures use

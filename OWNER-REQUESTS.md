@@ -10,8 +10,11 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 Nada requiere una respuesta ahora. Autorizaste investigar y corregir los avisos de CI
 si su solución es sencilla, y después fusionar la [PR #23](https://github.com/scldrn/domy/pull/23)
-siguiendo las compuertas estrictas. T120 actualiza dos acciones, sin tocar la aplicación;
-requiere un CI nuevo y convergencia antes de fusionar mediante squash. No se iniciará US6
+siguiendo las compuertas estrictas. T120 actualizó dos acciones, sin tocar la aplicación:
+el CI `38857856129` pasó 877 pruebas, 82 e2e y todas las compuertas; desaparecieron
+los tres avisos de deprecación y la convergencia pasó. La nota informativa de GitHub sobre
+la futura actualización de Ubuntu queda visible, sin alterar el sistema. El commit
+documental de cierre también requiere CI verde antes del squash. No se iniciará US6
 sin autorización aparte. La migración generada «Traspaso confirmado» sigue incluida.
 
 ## Antes de terminar la 003 (app del mensajero)
