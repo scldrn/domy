@@ -745,7 +745,7 @@ latest-head CI before the authorized squash merge. Starting US6 is not authorize
 
 ## Phase 31: Convergence
 
-- [ ] T121 HIGH Diagnose and reproduce the first-attempt failure in CI 38860188300 (`8ec27b5`), `courier-changes.spec.ts:194`: after offline handover confirmation/delivery and reconnection, the shipment still reads `picked_up` within the unchanged 5-second polling deadline; the retry passes. Establish whether the synchronization or test setup is responsible using deterministic evidence, then propose the smallest test-first correction under owner authorization. Preserve all scenarios, timing assertions, retries/workers and offline persistence/custody checks; do not rerun until green or call the flaky run clean. Obtain clean final-head CI and repeat scoped convergence before squash merge (US5/AC4, FR-020/FR-028, Constitution VI, Development Workflow & Quality Gates; partial).
+- [X] T121 HIGH Diagnose and reproduce the first-attempt failure in CI 38860188300 (`8ec27b5`), `courier-changes.spec.ts:194`: after offline handover confirmation/delivery and reconnection, the shipment still reads `picked_up` within the unchanged 5-second polling deadline; the retry passes. Establish whether the synchronization or test setup is responsible using deterministic evidence, then propose the smallest test-first correction under owner authorization. Preserve all scenarios, timing assertions, retries/workers and offline persistence/custody checks; do not rerun until green or call the flaky run clean. Obtain clean final-head CI and repeat scoped convergence before squash merge (US5/AC4, FR-020/FR-028, Constitution VI, Development Workflow & Quality Gates; partial).
 
 T121 local checkpoint (2026-10-16; owner authorized correction and subsequent merge):
 the real store/IndexedDB first reproduces three failures and two passing guards, then
@@ -766,3 +766,15 @@ this file byte-for-byte at SHA-256
 `2b24ae139cba92589a5d671ee8fd882a591925bd23e35a031305b723cc768ee7`;
 this note is subsequent tracking. Keep T121 unchecked until fresh remote CI is inspected,
 then complete its marker and require clean latest-head CI before the authorized squash.
+
+T121 remote closure: CI [38919233855](https://github.com/scldrn/domy/actions/runs/38919233855)
+at `5bd2b5d` passes check, all 883 tests (226/472/185), all 82 e2e without retries
+(12.8 minutes) and build. Logs show no flaky cases or the three action deprecations.
+The original `8ec27b5` flaky run remains historical evidence, not clean validation.
+Final scoped convergence (same six FRs, US5/AC4, two plan decisions, T121 and nine
+principles) has zero findings. Before/after assessment, this file stayed byte-identical
+at SHA-256 `ce4b83ac5b7ceab4ac7256d23db12c70dac68278bde4c120c6c1c449b9ea9b44`;
+the checked marker and this note were updated afterward. Reviewer checklists are
+unchanged; no hooks changed. This tracking-only closure must also receive clean
+latest-head CI before squash; merge/post-merge receipts live in PR #23. No US6 work
+is authorized. Physical T087/T093 remain pending.

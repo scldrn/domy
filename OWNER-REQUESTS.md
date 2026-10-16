@@ -11,8 +11,12 @@ y la fecha. Responde aquí mismo o en la conversación.
 Nada requiere respuesta ahora. Autorizaste investigar/corregir T121 y después realizar
 la fusión ya autorizada, conservando pruebas, límites, compuertas y convergencia.
 La ejecución `38860188300` sigue registrada como inestable, no como corrida limpia.
-La causa histórica aún no está probada: primero se reproducirá el mecanismo de fallo.
-No se iniciará US6.
+Se reprodujo y corrigió la pérdida de disparadores de sincronización con pruebas
+deterministas de almacén y navegador; no se afirma conocer la intercalación histórica
+sin su traza. El CI `38919233855` de `5bd2b5d` pasa 883 pruebas, 82 e2e sin reintentos,
+check y build; convergencia final sin hallazgos. T121 está cerrada. El commit documental
+final también debe pasar CI antes del squash autorizado. El recibo de fusión y su CI
+posterior queda en la PR #23. No se iniciará US6.
 
 ## Antes de terminar la 003 (app del mensajero)
 

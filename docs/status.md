@@ -14,15 +14,20 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`, clean head/post-merge CI). US5 is in [PR #23](https://github.com/scldrn/domy/pull/23). T120 removes action deprecations. T121 now has a deterministic RED→GREEN synchronization fix, 883 tests, 82 e2e, build/check and scoped local convergence passing; fresh head CI remains required before completing T121 and the authorized squash merge. US6–US7 and feature-wide polish remain pending; starting US6 is not authorized |
+| 003 Courier app | Setup, foundations and US1–US4 are on `main` (US4 #22, `34875ba`). US5 T061–T070/T113–T121 implementation and convergence are complete: 883 tests, 82 e2e without retries, check/build pass on CI `38919233855`. [PR #23](https://github.com/scldrn/domy/pull/23) is the authoritative squash-merge/latest-head/post-merge CI receipt. Final tracking-only head must also pass CI before the authorized squash. US6–US7 and feature-wide polish remain pending; starting US6 is not authorized |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
 1. Inspect every gate on the latest head of [US5 PR #23](https://github.com/scldrn/domy/pull/23)
-   **Current gate:** verify fresh CI for the T121 correction below, complete its tracking,
-   then merge only with clean latest-head CI. Samuel authorized T121 and subsequent
-   squash merge with “Si”; starting US6 is not authorized.
+   T121 correction `5bd2b5d` now has clean CI
+   [38919233855](https://github.com/scldrn/domy/actions/runs/38919233855): check,
+   883 tests, 82 e2e without retries (12.8 minutes), build. Remote logs and final scoped
+   convergence are clean; T121 is checked only after this verification. The tracking-only
+   closure must also pass latest-head CI, then perform the owner-authorized squash if
+   PR #23 is still open. If already merged, verify its merge commit against `main` and
+   inspect post-merge CI there; use the PR as the authoritative receipt. Samuel authorized
+   T121 and subsequent squash with “Si”; stop before US6 until separately authorized.
 
    Historical blocker: closure CI [38860188300](https://github.com/scldrn/domy/actions/runs/38860188300)
    at `8ec27b5` reports SUCCESS but contains one flaky e2e: handover confirmation and
@@ -120,6 +125,15 @@ a short-lived branch, so the specification and implementation of every feature l
   Optional commit hooks are not executed; no converge hooks are registered. Reviewer
   checklists remain unchanged at 16/16 and 48/48. T121 remains unchecked until fresh
   remote CI is inspected; no new remote result or merge is claimed at this checkpoint.
+
+Remote closure: CI `38919233855` at `5bd2b5d` passes every gate, with 883 tests and all
+82 e2e on their first attempt (12.8 minutes). No original action deprecation reappeared.
+Final scoped convergence is clean; before/after tasks.md SHA-256 stayed
+`ce4b83ac5b7ceab4ac7256d23db12c70dac68278bde4c120c6c1c449b9ea9b44`.
+The marker/closure note were updated afterward. No correction goes directly to `main`:
+require fresh clean CI for the tracking head, then the approved squash and deletion of
+the short-lived branch. PR #23 records the exact merge commit/post-merge CI, avoiding a
+new release branch solely to copy its own hash into this document. US6 is not authorized.
 
 ## US5 initial test checkpoint — 2026-10-15
 
