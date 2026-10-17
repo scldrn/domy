@@ -5,11 +5,13 @@ import {
   paymentMethodLabels,
   photoKindLabels,
   type CourierRecord,
+  type ShipmentDetail,
 } from "@domy/domain";
 import { useId, useState } from "react";
 import { OnBehalfMark } from "@/components/on-behalf-mark";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/format";
+import { RecordActions } from "./correct-record-dialog";
 
 /** A record received more than a minute after it happened shows both times (FR-039). */
 const lateMs = 60_000;
@@ -22,9 +24,11 @@ const lateMs = 60_000;
 export function ShipmentRecords({
   records,
   attempts = [],
+  shipment,
 }: {
   records: CourierRecord[];
   attempts?: CourierRecord[];
+  shipment?: ShipmentDetail;
 }) {
   const headingId = useId();
   const attemptsId = useId();
@@ -62,7 +66,7 @@ export function ShipmentRecords({
         </h2>
         <ol className="flex flex-col gap-3">
           {records.map((record) => (
-            <RecordItem key={record.id} record={record} />
+            <RecordItem key={record.id} record={record} shipment={shipment} />
           ))}
         </ol>
       </section>
@@ -70,7 +74,13 @@ export function ShipmentRecords({
   );
 }
 
-function RecordItem({ record }: { record: CourierRecord }) {
+function RecordItem({
+  record,
+  shipment,
+}: {
+  record: CourierRecord;
+  shipment: ShipmentDetail | undefined;
+}) {
   const amounts = [
     [paymentMethodLabels.cash, record.cashAmount],
     [paymentMethodLabels.companyTransfer, record.companyTransferAmount],
@@ -80,6 +90,7 @@ function RecordItem({ record }: { record: CourierRecord }) {
   const late = Date.parse(record.recordedAt) - Date.parse(record.occurredAt) > lateMs;
   return (
     <li className="flex flex-col gap-2 rounded-md border border-outline-variant bg-sheet p-4">
+      {shipment && <RecordActions shipment={shipment} record={record} />}
       <p className="flex flex-wrap items-center gap-2 text-title-m text-on-surface">
         {courierRecordKindLabels[record.kind]}
         {record.outcome === "not_applied" && <Badge variant="warning">No aplicado</Badge>}

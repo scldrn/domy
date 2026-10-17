@@ -7,12 +7,71 @@ import {
   noticeAcknowledgeInput,
   receivedByNameProblem,
   recordCorrectionInput,
+  recordCorrectionProblem,
   recordOnBehalfInput,
   pushSubscriptionInput,
 } from "./courier.ts";
 
 const id = (n: number) => `0194d9f0-0000-7000-8000-${String(n).padStart(12, "0")}`;
 const base = { id: id(1), shipmentId: id(2), occurredAt: "2026-10-01T15:00:00.000Z" };
+
+describe("kind-specific corrections (T072, FR-035)", () => {
+  it.each([
+    [{ amount: 0 }, "El pago debe ser mayor que cero."],
+    [{ amount: 1.5 }, "Usa pesos enteros, sin decimales."],
+    [{ payee: "" }, "Escribe a quién se pagó."],
+    [{ exceptionReason: "unknown" }, "Elige el motivo de la novedad."],
+  ])("keeps correction errors in Spanish (T125): %j", (values, message) => {
+    const parsed = recordCorrectionInput.safeParse({
+      actionId: id(8),
+      reason: "Corregido con el mensajero",
+      ...values,
+    });
+    expect(parsed.success).toBe(false);
+    if (parsed.success) throw new Error("Invalid correction accepted");
+    expect(parsed.error.issues[0]?.message).toBe(message);
+  });
+  const current = {
+    kind: "delivery" as const,
+    cashAmount: 50000,
+    companyTransferAmount: 0,
+    merchantTransferAmount: 0,
+    note: null,
+  };
+  it("allows only a record kind's own fields", () => {
+    expect(recordCorrectionProblem(current, { receivedByName: "Laura Gómez" }, 50000)).toBeNull();
+    expect(
+      recordCorrectionProblem(current, { exceptionReason: "wrong_address" }, 50000),
+    ).not.toBeNull();
+    expect(
+      recordCorrectionProblem({ ...current, kind: "exception" }, { cashAmount: 0 }, 50000),
+    ).not.toBeNull();
+    expect(
+      recordCorrectionProblem(
+        { ...current, kind: "return" },
+        { receivedByName: "Comercio" },
+        50000,
+      ),
+    ).toBeNull();
+    for (const kind of ["pickup", "problem", "handover_confirmation"] as const)
+      expect(
+        recordCorrectionProblem({ ...current, kind }, { note: "Nota corregida" }, 50000),
+      ).not.toBeNull();
+  });
+  it("checks the resulting split, preserving an existing discrepancy explanation", () => {
+    expect(recordCorrectionProblem(current, { cashAmount: 1 }, 50000)).not.toBeNull();
+    expect(
+      recordCorrectionProblem(current, { cashAmount: 40000, companyTransferAmount: 10000 }, 50000),
+    ).toBeNull();
+    expect(
+      recordCorrectionProblem(
+        { ...current, note: "Se acordó un cobro menor" },
+        { cashAmount: 40000 },
+        50000,
+      ),
+    ).toBeNull();
+  });
+});
 
 describe("push endpoint boundary (T113, Constitution IX)", () => {
   it.each([

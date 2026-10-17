@@ -92,6 +92,39 @@ all four gates and scoped convergence; CI continues to invoke the same scripts.
 
 ### CI action runtime maintenance — owner-approved 2026-10-16
 
+T127 follow-up (owner-authorized local investigation/correction, 2026-10-16):
+CI 38994299786 at `af78fa6` passes all gates and 88 first-attempt e2e, but the exact
+`pnpm/action-setup@v6` commit `0977fd99725f1db4007ccb2928dbb4e90d06cc86`
+bootstraps pnpm 11.19.0 and sets `PNPM_HOME` to its own `node_modules/.bin` before
+self-updating to the unchanged project pin 12.8.1. That directory necessarily has a
+pnpm shim and triggers pnpm's legacy-layout detector. The log confirms successful
+12.8.1 activation and frozen installation, not an application failure.
+Sources: [exact installer](https://github.com/pnpm/action-setup/blob/0977fd99725f1db4007ccb2928dbb4e90d06cc86/src/install-pnpm/run.ts),
+[upstream report #281](https://github.com/pnpm/action-setup/issues/281),
+[official migration guidance](https://github.com/pnpm/action-setup#migrating-to-pnpmsetup).
+Changing `dest` or setting `standalone` does not separate the bootstrap shim from
+`PNPM_HOME` on Linux; a later `pnpm setup` cannot undo an already-emitted warning.
+Do not suppress it or modify pinned project versions to match the bootstrap.
+
+Use the maintained successor `pnpm/setup@v3`, verified at
+`a0881977cd8ea73b1ed212236c99ca10dcc80cf4`, only to install pnpm: set `install: false`
+and `node-version-file: false`. Its [manifest](https://github.com/pnpm/setup/blob/a0881977cd8ea73b1ed212236c99ca10dcc80cf4/action.yml)
+declares Node 24 action runtime and these supported inputs; its native download is
+verified against npm signatures/checksums without the npm/self-update bootstrap.
+Keep `actions/setup-node@v7` as sole Node installer with `.nvmrc` and the existing
+pnpm cache; no redundant runtime, dependency installation or cache step is added.
+Preserve `packageManager`, lockfile, checkout, runner, commands and all test policies.
+Run exact old/new action bundles in disposable Linux containers with copied public
+project manifests, no host secrets/configuration, asserting pinned pnpm activation
+and no automatic runtime/dependency installation. Capture the old warning before the
+workflow edit; validate the corrected configuration and all four local gates afterward.
+This is installer maintenance, not a new dependency or business requirement. Fresh
+GitHub CI remains required after publication; local simulation cannot replace it.
+Commit/push, merge and US7 are not authorized by this local correction approval.
+T127 supersedes only T120's pnpm installer choice below; its other constraints remain.
+Samuel subsequently authorized commit/push of T127 in PR #25 and latest-head CI review
+with “Si” (2026-10-16). Merge and US7 remain separate decisions; final-head CI must pass.
+
 T120 addresses the deprecation warnings observed in US5 PR #23's successful CI.
 Upgrade only `pnpm/action-setup` from v4 to v6 (current release v6.1.0) and
 `actions/setup-node` from v5 to v7 (current release v7.1.0) in `.github/workflows/ci.yml`.
@@ -239,6 +272,95 @@ apps/web/tests/e2e/global-setup.ts    # + S3Proxy container, storage and test no
 screen.
 
 ## Cross-feature alignment
+
+T126 owner-authorized local investigation (2026-10-16): PR #25's CI 38991329783
+at `06e606b` is green but has 85 first-attempt e2e passes and one retried keyboard
+registration. The unchanged case also fails once in 20 local repetitions (19 pass).
+A controlled real fee-quote request held through submission reproduces the missing
+success message and shows the positive-fee validation error. Its captured page also
+shows Amy Tecnology selected despite the test having awaited a visible Bullish Hype
+option: `SearchCombobox` keeps previous query results and Base UI's Enter selects the
+highlighted option, not an arbitrary visible match. Do not infer the historical CI's
+exact interleaving: no trace artifact was uploaded there, and the first repetition
+run's local artifacts were replaced by the next diagnostic run before inspection.
+
+Keep this correction test-only in `apps/web/tests/e2e/register-shipment.spec.ts`.
+Await the uniquely named desired option's native `data-highlighted` state before Enter,
+then assert the selected merchant/neighborhood values and default pickup point. Await
+the visible expected COP 13,000 fee before submitting, exercising feature 001's live
+quote (FR-006 and US1/AC1). Preserve the original keyboard inputs, Tab traversal,
+payment action, success toast, full axe scan and all existing deadlines/retries/workers.
+Add a controlled delayed-quote variant using an explicit promise gate, released before
+the fee-readiness assertion, never a sleep or a mocked successful response. Keep the
+ordinary network variant too. A second controlled variant primes real unfiltered
+merchant results and holds the `bullish` search until Amy remains highlighted while
+Bullish is visible; release that response before awaiting the desired highlight.
+With the original Enter behavior, the selected-value assertion fails with Amy instead
+of Bullish. This regression guards the proven selection mechanism, not just the toast.
+Prove the controlled cases fail before the correction,
+repeat both cases and all four gates, and converge against Constitution VI/VII and
+feature 001 FR-003/FR-005/FR-006/FR-038. No production, schema, dependency or CI policy change;
+no publication, merge or US7 is authorized by this investigation approval.
+Samuel subsequently authorized commit/push of the completed T126 correction in PR #25
+and latest-head CI review with “Si” on 2026-10-16; merge and US7 remain separate decisions.
+
+US6 owner-approved refinement (2026-10-16, option A): reversing an errand completion
+must not apply the package's `delivered → picked_up` rule. A shared, contextual rule in
+`packages/domain/src/shipment-lifecycle.ts` selects `dispatched` and the original errand
+task only when the original record's route remains in progress with its recorded courier;
+otherwise it selects `registered` off route. Both clear courier/office custody and keep
+the service date. No generic route transition gains the right to reopen final shipments.
+Align feature 001's lifecycle documentation, the 003 spec/data model/contract/research,
+quickstart 19 and T072/T073/T075/T076. Write domain and real-PostgreSQL tests first,
+including an in-progress route with another pending stop, a finished route, and an
+original route now assigned to a different courier. The browser journey must demonstrate
+reverting and completing an errand again while its route remains in progress, preserving
+revert history, notifications, financial/attempt exclusion and all existing invariants.
+Use existing tables, record route/courier attribution and native framework primitives;
+no new dependency or schema change is implied by this clarification.
+
+US6 safety clarification (2026-10-16, second option A): reject a package revert after a
+subsequent dispatch decision or custody change, even when no newer record of kind
+delivery/exception/return exists. Use `409 record_not_revertible` with an explanatory
+Spanish message and no writes. Serialize with the existing route-before-shipment lock
+order, inspect authoritative append-only operational events, and recognize accepted
+action replays before state/history guards. Test office receipt, a new-attempt/return
+decision, confirmed handover, concurrent operations and unchanged financial/history/
+task/notice counts on refusal. This does not override the approved errand fallback.
+Whole-route courier reassignment has its own route event but no per-shipment event for
+completed stops. Include that event in the package safety guard; the owner-approved
+errand fallback still applies. Regression tests cover delivery, exception and return.
+
+US6 event traceability design: add internal nullable/indexed FK
+`shipment_events.courier_record_id` to `courier_records.id` through a generated migration.
+Populate it on the applied record's state event and on correction/revert receipts; do
+not expose it as an edited user field or duplicate any API response type. This gives
+exact target identity even when business/receipt timestamps tie. Use the existing
+database-generated time-ordered event UUIDs, not the client's random record UUID, to
+inspect subsequent operational events ([PostgreSQL 18 UUID functions](https://www.postgresql.org/docs/18/functions-uuid.html)).
+For preexisting events without the link, accept only a unique match by record author,
+times and result; reject ambiguity safely without modifying old events or guessing.
+Test tied timestamps, legacy unique/ambiguous history, concurrency and late replays.
+Corrections validate only the fields applicable to their record kind through shared
+domain rules and the existing money/name/collection schemas. An accepted unchanged
+correction still records its idempotency receipt but sends no false change notice;
+hide only empty `record_corrected` receipts from the displayed shipment history, like
+the existing empty audit receipts. Keep them stored. A replay returns the original
+target's current projection, even after a subsequent correction/revert. T071–T076 cover
+these existing idempotency/traceability obligations; this adds no service or dependency.
+
+US6 scoped convergence T123/T124: restoring the original task to pending also writes a
+route `record_reverted` event with author, reason, shipment and actual server timestamps.
+Declare route-event values once in domain and consume them in Drizzle; generate the
+additive enum migration. Keep the finished route unchanged and send just the existing
+single revert notice. Shipment revert changes include only values that really changed;
+the custody history labels restored responsibility as a reversion, not a physical pickup.
+
+US6 scoped convergence T125: reuse the original record's Spanish field schemas for
+correction errors. Form serialization preserves blank required fields (including a
+problem's required note), omits only optional blank notes, and uses the same applicable
+field list for rendering and submission. Add adjacent domain/web regressions and a
+real correction-dialog validation assertion before closure.
 
 T122 owner-authorized local investigation (2026-10-16): post-merge CI 38926371410
 reports success with one retried native-notification test, not a clean run. Work on

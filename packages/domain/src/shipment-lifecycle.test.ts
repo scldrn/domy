@@ -4,6 +4,8 @@ import {
   exceptionDecisionState,
   isHeldForRouting,
   officeReceiptStatus,
+  recordRevertState,
+  blocksRecordRevert,
   canTransition,
   canVoid,
   isEditable,
@@ -35,6 +37,120 @@ const allowed: [ShipmentStatus, ShipmentStatus][] = [
   ["delivered", "picked_up"],
   ["returned", "exception"],
 ];
+
+describe("contextual record reversion (T072, FR-035)", () => {
+  it("distinguishes later operational decisions from edits, corrections and review receipts", () => {
+    for (const type of [
+      "status_changed",
+      "reassigned",
+      "handover_confirmed",
+      "handover_cancelled",
+      "exception_decided",
+      "office_received",
+      "record_reverted",
+      "voided",
+    ] as const)
+      expect(blocksRecordRevert(type)).toBe(true);
+    for (const type of [
+      "created",
+      "updated",
+      "fee_confirmed",
+      "record_corrected",
+      "review_cleared",
+    ] as const)
+      expect(blocksRecordRevert(type)).toBe(false);
+  });
+  const state = {
+    kind: "delivery" as const,
+    status: "delivered" as const,
+    custodyCourierId: null,
+    heldAtOffice: false,
+  };
+  const record = {
+    kind: "delivery" as const,
+    courierId: "ana",
+    routeId: "original",
+    outcome: "applied" as const,
+    reverted: false,
+    isLatest: true,
+    hasLaterOperation: false,
+  };
+  const route = { id: "original", status: "in_progress" as const, courierId: "ana" };
+  it.each(["delivery", "exception", "return"] as const)(
+    "restores the %s task and original package holder on an eligible route",
+    (kind) => {
+      const status =
+        kind === "delivery" ? "delivered" : kind === "return" ? "returned" : "exception";
+      expect(recordRevertState({ ...state, status }, { ...record, kind }, route)).toEqual({
+        status: kind === "return" ? "exception" : "picked_up",
+        custodyCourierId: "ana",
+        heldAtOffice: false,
+        routeId: "original",
+        returnDecided: kind === "return",
+        taskKind: kind === "return" ? "return" : "delivery",
+      });
+    },
+  );
+  it("never reopens a finished route and retains package custody off route", () => {
+    expect(recordRevertState(state, record, { ...route, status: "finished" })).toMatchObject({
+      status: "picked_up",
+      routeId: null,
+      custodyCourierId: "ana",
+    });
+    expect(recordRevertState(state, record, null)?.routeId).toBeNull();
+  });
+  it("restores an errand only to its original route with the same courier, without custody", () => {
+    expect(recordRevertState({ ...state, kind: "errand" }, record, route)).toEqual({
+      status: "dispatched",
+      routeId: "original",
+      custodyCourierId: null,
+      heldAtOffice: false,
+      returnDecided: false,
+      taskKind: "errand",
+    });
+    for (const unavailable of [
+      null,
+      { ...route, status: "finished" as const },
+      { ...route, courierId: "beatriz" },
+      { ...route, id: "another-route" },
+    ]) {
+      expect(recordRevertState({ ...state, kind: "errand" }, record, unavailable)).toEqual({
+        status: "registered",
+        routeId: null,
+        custodyCourierId: null,
+        heldAtOffice: false,
+        returnDecided: false,
+        taskKind: "errand",
+      });
+    }
+    expect(canChangeStatus({ kind: "errand", status: "delivered" }, "dispatched")).toBe(false);
+    expect(canTransition("delivered", "registered")).toBe(false);
+  });
+  it("rejects stale, reverted, unapplied, non-final records and changed package operations", () => {
+    for (const change of [
+      { isLatest: false },
+      { reverted: true },
+      { outcome: "not_applied" as const },
+      { hasLaterOperation: true },
+      { kind: "pickup" as const },
+      { kind: "problem" as const },
+      { kind: "disbursement" as const },
+    ]) {
+      expect(recordRevertState(state, { ...record, ...change }, route)).toBeNull();
+    }
+    expect(recordRevertState({ ...state, status: "picked_up" }, record, route)).toBeNull();
+    expect(recordRevertState({ ...state, heldAtOffice: true }, record, route)).toBeNull();
+    expect(recordRevertState({ ...state, custodyCourierId: "beatriz" }, record, route)).toBeNull();
+    // The owner's errand fallback remains valid after the original route was reassigned.
+    expect(
+      recordRevertState(
+        { ...state, kind: "errand" },
+        { ...record, hasLaterOperation: true },
+        { ...route, courierId: "beatriz" },
+      )?.status,
+    ).toBe("registered");
+  });
+});
 
 describe("exception decision state (T056, FR-029–FR-032)", () => {
   const state = {

@@ -13,7 +13,7 @@ import { loadPlan, loadRouteRow, recordRouteEvents } from "./route-store.ts";
 export async function refreshRouteStatus(
   tx: Executor,
   routeId: string,
-  by: { actorUserId: string; now: Date },
+  by: { actorUserId: string; now: Date; onBehalf?: boolean },
 ): Promise<boolean> {
   const route = await loadRouteRow(tx, routeId);
   if (route.status !== "in_progress") return false;
@@ -37,7 +37,13 @@ export async function refreshRouteStatus(
     })
     .where(eq(routes.id, routeId));
   await recordRouteEvents(tx, [
-    { routeId, type: "finished", actorUserId: by.actorUserId, occurredAt: by.now },
+    {
+      routeId,
+      type: "finished",
+      actorUserId: by.actorUserId,
+      occurredAt: by.now,
+      onBehalf: by.onBehalf ?? false,
+    },
   ]);
   return true;
 }

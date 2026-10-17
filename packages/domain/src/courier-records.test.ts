@@ -5,11 +5,23 @@ import {
   noticeTypes,
   resolveCourierRecord,
   deliveryAttempts,
+  onBehalfCourierId,
   type CourierRecordKind,
   type ShipmentForRecord,
 } from "./courier-records.ts";
 
 const ana = "courier-ana";
+
+it("attributes dispatch entry to the actual holder, otherwise the route in progress (T071, FR-034)", () => {
+  const route = { courierId: "beatriz", status: "in_progress" as const };
+  expect(onBehalfCourierId({ custodyCourierId: ana, route })).toBe(ana);
+  expect(onBehalfCourierId({ custodyCourierId: null, route })).toBe("beatriz");
+  expect(onBehalfCourierId({ custodyCourierId: ana, route: null })).toBe(ana);
+  expect(onBehalfCourierId({ custodyCourierId: null, route: null })).toBeNull();
+  expect(
+    onBehalfCourierId({ custodyCourierId: null, route: { ...route, status: "finished" } }),
+  ).toBeNull();
+});
 
 it("names a confirmed handover without claiming the address changed (T117)", () => {
   const type = noticeTypes.find((type) => type === "handover_confirmed");

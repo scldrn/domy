@@ -141,24 +141,88 @@ test("registers once the fields a first try marked are fixed (FR-038)", async ({
   await registerAndOpen(page);
 });
 
-test("registers a shipment with the keyboard only", async ({ dispatcherPage: page }) => {
-  await expect(page.getByRole("combobox", { name: "Cliente" })).toBeFocused();
-  await page.keyboard.type("bullish");
-  await expect(page.getByRole("option", { name: /Bullish Hype/ })).toBeVisible();
-  await page.keyboard.press("Enter");
-  await page.getByLabel("Nombre del destinatario").focus();
-  await page.keyboard.type("Laura Gómez");
-  await page.keyboard.press("Tab");
-  await page.keyboard.type("3001234567");
-  await page.keyboard.press("Tab");
-  await page.keyboard.type("Calle 10 # 43-12");
-  await page.keyboard.press("Tab");
-  await page.keyboard.type("laureles");
-  await expect(page.getByRole("option", { name: /Laureles/ }).first()).toBeVisible();
-  await page.keyboard.press("Enter");
-  await page.getByRole("button", { name: "Crédito del cliente" }).focus();
-  await page.keyboard.press("Enter");
-  await page.getByRole("button", { name: "Registrar envío" }).focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByText(/Envío [0-9A-Z]{4}-[0-9A-Z]{4} registrado/)).toBeVisible();
-});
+for (const delayedResponse of ["none", "merchant search", "fee quote"] as const) {
+  test(`registers a shipment with the keyboard only${delayedResponse === "none" ? "" : ` while the ${delayedResponse} is delayed`}`, async ({
+    dispatcherPage: page,
+  }) => {
+    let releaseResponse = () => {};
+    const responseGate = new Promise<void>((resolve) => {
+      releaseResponse = resolve;
+    });
+    let responseRequested = false;
+    if (delayedResponse !== "none") {
+      const pattern =
+        delayedResponse === "fee quote"
+          ? "**/api/shipments/fee-quote"
+          : "**/api/merchants?q=bullish&active=true";
+      await page.route(pattern, async (route) => {
+        responseRequested = true;
+        await responseGate;
+        await route.continue();
+      });
+    }
+    try {
+      await expect(page.getByRole("combobox", { name: "Cliente" })).toBeFocused();
+      if (delayedResponse === "merchant search") {
+        // Prime real unfiltered results: the desired match is visible but not highlighted.
+        await page.keyboard.press("ArrowDown");
+        await expect(page.getByRole("option", { name: /Amy Tecnology/ })).toHaveAttribute(
+          "data-highlighted",
+          "",
+        );
+      }
+      await page.keyboard.type("bullish");
+      await expect(page.getByRole("option", { name: /Bullish Hype/ })).toBeVisible();
+      if (delayedResponse === "merchant search") {
+        await expect.poll(() => responseRequested).toBe(true);
+        await expect(page.getByRole("option", { name: /Amy Tecnology/ })).toHaveAttribute(
+          "data-highlighted",
+          "",
+        );
+        releaseResponse();
+      }
+      // T126: retained search results can contain the match while another item is active.
+      await expect(page.getByRole("option", { name: /Bullish Hype/ })).toHaveAttribute(
+        "data-highlighted",
+        "",
+      );
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("combobox", { name: "Cliente" })).toHaveValue("Bullish Hype");
+      await expect(page.getByRole("combobox", { name: "Punto de recogida" })).toHaveText(
+        "Bodega Estadio · Cra 70 # 45-10",
+      );
+      await page.getByLabel("Nombre del destinatario").focus();
+      await page.keyboard.type("Laura Gómez");
+      await page.keyboard.press("Tab");
+      await page.keyboard.type("3001234567");
+      await page.keyboard.press("Tab");
+      await page.keyboard.type("Calle 10 # 43-12");
+      await page.keyboard.press("Tab");
+      await page.keyboard.type("laureles");
+      const neighborhood = page.getByRole("option", {
+        name: "Laureles Medellín · Medellín",
+        exact: true,
+      });
+      await expect(neighborhood).toBeVisible();
+      await expect(neighborhood).toHaveAttribute("data-highlighted", "");
+      await page.keyboard.press("Enter");
+      await expect(page.getByRole("combobox", { name: "Barrio", exact: true })).toHaveValue(
+        "Laureles",
+      );
+      await page.getByRole("button", { name: "Crédito del cliente" }).focus();
+      await page.keyboard.press("Enter");
+      if (delayedResponse === "fee quote") {
+        await expect.poll(() => responseRequested).toBe(true);
+        releaseResponse();
+      }
+      // Feature 001 FR-006: see the actual quote before saving, not a transient empty fee.
+      await expect(page.getByText("$ 13.000", { exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Registrar envío" }).focus();
+      await page.keyboard.press("Enter");
+      await expect(page.getByText(/Envío [0-9A-Z]{4}-[0-9A-Z]{4} registrado/)).toBeVisible();
+    } finally {
+      releaseResponse();
+      if (delayedResponse !== "none") await page.unrouteAll({ behavior: "wait" });
+    }
+  });
+}

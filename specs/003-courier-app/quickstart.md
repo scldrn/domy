@@ -62,6 +62,10 @@ data; the production worker and native notification API remain untouched.
 
 "Offline" means airplane mode on the phone, or "Offline" in the browser's developer tools.
 
+For US6, also report a package exception, receive it at the office, then attempt to
+revert that earlier exception. The panel must explain the conflict; office custody,
+the record, subsequent history and all route tasks remain unchanged (FR-035).
+
 | # | Story | Steps | Expected |
 | --- | --- | --- | --- |
 | 1 | US1 | Sign in as a courier on a phone; install the app from the browser | The app opens on "Mi ruta"; without a dispatched route it says none has been dispatched |
@@ -82,6 +86,6 @@ data; the production worker and native notification API remain untouched.
 | 16 | US5 | Put courier A offline; A confirms a pickup; the dispatcher removes that shipment from A's route; A goes online | The shipment is "Recogido" in A's custody, off route, flagged "Por revisar" |
 | 17 | US5 | Put A offline; A delivers a picked-up shipment; the dispatcher reassigns it to B; A goes online | "Entregado" by A; the handover is cancelled; B's stop disappears with a notice |
 | 18 | US5 | Sign in as A on two phones; record the same delivery on both while one is offline; bring it online | The second record is ignored without a flag; one delivery in the history |
-| 19 | US6 | From the panel, record a delivery on a courier's behalf with an earlier time; correct a collected amount; revert a delivery | "Registrado por despacho"; the history keeps the previous amount; the shipment is "Recogido" again with its stop pending |
+| 19 | US6 | From the panel, record a delivery on a courier's behalf with an earlier time; correct a collected amount; revert a package delivery. Also revert an errand while its original route is still in progress with the same courier, and after it finishes or changes courier | "Registrado por despacho"; the history keeps the previous amount; the package is "Recogido" again with its stop pending. The errand returns to "En ruta" with its stop pending only on that eligible original route; otherwise "Registrado", unassigned. No errand custody is created |
 | 20 | US7 | Record deliveries with 100.000 cash, 50.000 to the company, 30.000 to the merchant, and a disbursement of 12.000; open "Mi día" | The four amounts and "Efectivo por entregar: $ 88.000", including records still pending |
 | 21 | All | Let the actual authentication session expire with a route loaded and a pending record. Automated tests control Better Auth's process clock separately, and exercise the phone with an expired-session `401` carrying the server time | The route stays usable; after signing in again as the same courier the record is sent. `DOMY_FAKE_NOW` alone changes business time, not Better Auth's clock |

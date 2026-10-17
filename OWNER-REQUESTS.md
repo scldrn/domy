@@ -4,21 +4,25 @@ Preguntas y pendientes para Samuel (propietario de Domy) y, a través de él, pa
 lo mantiene al día: agrega cada pregunta cuando surge y la mueve a «Resueltas» con tu respuesta
 y la fecha. Responde aquí mismo o en la conversación.
 
-Última actualización: 2026-10-16.
+Última actualización: 2026-10-17.
 
 ## Bloquean algo ahora
 
-Nada requiere respuesta ahora. Autorizaste commit, push y apertura de una nueva PR
-con T122 en `003-fix-push-validation`, para validar CI. Las cuatro compuertas locales pasan:
-883 pruebas, 82 e2e sin reintentos, check y build; además 30 repeticiones de la
-notificación nativa y convergencia puntual sin hallazgos. La corrección sincroniza la
-prueba con la finalización real del push dentro de los mismos cinco segundos; no
-cambia la aplicación ni sustituye notificaciones nativas. Fusión y US6 requieren
-autorización aparte.
+US6 y sus correcciones T126/T127 están verificadas en la [PR #25](https://github.com/scldrn/domy/pull/25).
+El cierre `c079292` pasó CI `39005250252`: check, build, 938 pruebas y 88 e2e al primer
+intento, sin el aviso de PNPM_HOME y con cachés verificadas. Se conservan tus dos
+opciones A y los fallos históricos, sin reclasificarlos como corridas limpias.
 
-La PR #23 ya está fusionada como `63c5070`. Su CI posterior `38926371410` reintentó
-la prueba de notificación nativa: no se considera una corrida limpia, ni la corrección
-local equivale a validación remota. La causa reproducida y sus límites están documentados.
+Autorizaste fusionar la PR #25 mediante squash con «Si» (2026-10-17). La fusión solo
+se ejecuta con el CI del último commit limpio; después se comprueba el CI del squash
+en `main`. El estado real, el hash y sus recibos están en la PR, también al retomar.
+**Iniciar US7 no está autorizado**; requiere una decisión aparte después de verificar
+`main`. La validación física y el cierre global de la 003 siguen pendientes.
+
+T122 ya está fusionada en la PR #24 como `18c832c`. El CI posterior `38945702324`
+pasó 883 pruebas y 82 e2e al primer intento, check y build; el recibo está en la PR.
+El antiguo CI `38926371410` de la PR #23 conserva su fallo con reintento como evidencia
+histórica, no como corrida limpia.
 
 ## Antes de terminar la 003 (app del mensajero)
 
@@ -48,6 +52,16 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-17 | ¿Fusionar la PR #25 mediante squash tras el CI final limpio? | «Si». Autorizada fusión con último head verificado y revisión posterior de main; sin iniciar US7 |
+| 2026-10-16 | ¿Hacer commit y push de T127 en la PR #25 para comprobar el nuevo instalador en GitHub CI? | «Si». Autorizada publicación y revisión del CI del último commit; sin fusión ni iniciar US7 |
+| 2026-10-16 | ¿Investigar y corregir el aviso de PNPM_HOME manteniendo versiones y compuertas? | «Si». Autorizada investigación/corrección local T127; sin commit/push, fusión ni iniciar US7 |
+| 2026-10-16 | ¿Hacer commit y push de T126 en la PR #25 para validar el CI del nuevo commit? | «Si». Autorizada publicación y revisión del CI del último commit, incluidos e2e al primer intento; no fusión ni iniciar US7 |
+| 2026-10-16 | ¿Investigar y corregir el e2e inestable de registro por teclado antes de proponer la fusión de US6? | «si». Autorizada investigación y corrección local T126 con metodología estricta y sin flexibilizar pruebas; publicación, fusión y US7 requieren aprobación aparte |
+| 2026-10-16 | ¿Hacer commit, push y abrir la PR de US6? | «Si». Autorizada publicación de T071–T076/T123–T125 y revisión del CI del último commit; no fusión ni iniciar US7 |
+| 2026-10-16 | ¿Impedir revertir un registro de paquete si después hubo otra decisión de despacho o cambió su custodia? | «A». Rechazar la reversión con conflicto, explicar los cambios posteriores y conservarlos; no deshacerlos implícitamente |
+| 2026-10-16 | ¿Qué ocurre al revertir un mandado terminado por error? | «A». En ruta con parada pendiente si la ruta original sigue en curso con el mismo mensajero; de lo contrario Registrado sin asignar. En ambos casos sin custodia de paquete; spec, modelo, contrato, plan, investigación, quickstart y T072/T073/T075 alineados |
+| 2026-10-16 | ¿Iniciar US6 localmente, sin publicar ni fusionar? | «Autorizo». Autorizada rama local desde main actualizado, análisis previo, pruebas primero, implementación y convergencia; decisiones de negocio no definidas se consultan antes de codificar |
+| 2026-10-16 | ¿Fusionar la PR #24 mediante squash con el último CI limpio? | «Si». Fusionada como `18c832c`; CI previo `38934535031` y posterior `38945702324` limpios, con 883 pruebas/82 e2e al primer intento |
 | 2026-10-16 | ¿Hacer commit, push y abrir la PR de T122 para validar CI? | «Si». Autorizada publicación y revisión del CI del último commit; no fusión ni iniciar US6 |
 | 2026-10-16 | ¿Investigar/corregir primero la inestabilidad de notificación nativa posterior a la fusión, en una rama nueva y con compuertas estrictas? | «Si». Autorizada corrección local T122; publicación/PR/merge y US6 requieren aprobación aparte |
 | 2026-10-16 | ¿Investigar/corregir T121, repetir compuertas/convergencia y después realizar la fusión autorizada? | «Si». Sin ampliar tiempos, relajar pruebas ni iniciar US6 |

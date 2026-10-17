@@ -332,17 +332,29 @@ delivery; verify the marks and the history
 
 ### Tests for User Story 6 ⚠️ write first, must fail
 
-- [ ] T071 [P] [US6] Integration tests in `apps/server/tests/records-on-behalf.test.ts` covering spec US6 scenario 1 and FR-034: every kind except `handover_confirmation` recorded through `POST /api/shipments/:id/records` is stored with `on_behalf`, the dispatcher as author, and the courier who holds the package or whose route carries it, and every event it writes carries `on_behalf = true`, shown as "Registrado por despacho" in the histories of feature 002; `occurredAt` defaults to now; `422 occurred_in_future`; a courier gets `403`
-- [ ] T072 [P] [US6] Integration tests in `apps/server/tests/records-correct-revert.test.ts` covering spec US6 scenarios 2–4 and FR-035: a correction of each correctable field requires a reason and writes `record_corrected` with old and new values; reverting a delivery or an exception returns the shipment to `picked_up` with its task pending on a route in progress, or off route otherwise; reverting a return goes back to `exception` with the return pending; `409 record_not_revertible` for a record that is not the latest; a reverted delivery's collection leaves the day summary and the attempts; the courier gets a notice
-- [ ] T073 [P] [US6] End-to-end test in `apps/web/tests/e2e/records-on-behalf.spec.ts`: quickstart scenario 19
+- [X] T071 [P] [US6] Integration tests in `apps/server/tests/records-on-behalf.test.ts` covering spec US6 scenario 1 and FR-034: every kind except `handover_confirmation` recorded through `POST /api/shipments/:id/records` is stored with `on_behalf`, the dispatcher as author, and the courier who holds the package or whose route carries it, and every event it writes carries `on_behalf = true`, shown as "Registrado por despacho" in the histories of feature 002; `occurredAt` defaults to now; `422 occurred_in_future`; a courier gets `403`
+- [X] T072 [P] [US6] Domain tests in `packages/domain/src/shipment-lifecycle.test.ts` and integration tests in `apps/server/tests/records-correct-revert.test.ts` covering spec US6 scenarios 2–4 and FR-035: a correction of each correctable field requires a reason and writes `record_corrected` with old and new values; reverting a package delivery or exception returns the shipment to `picked_up` with its task pending on a route in progress, or off route otherwise; reverting an errand completion returns it to `dispatched` with its errand task pending only if its original route is still in progress with the same courier, otherwise `registered` off route/unassigned, never creating custody (owner option A, 2026-10-16); cover a finished original route, a different courier on that route, and another current route of the original courier that must not be substituted; reverting a return goes back to `exception` with the return pending; `409 record_not_revertible` for a record that is not the latest; a reverted delivery's collection leaves the day summary and the attempts; the courier gets a notice
+- [X] T073 [P] [US6] End-to-end test in `apps/web/tests/e2e/records-on-behalf.spec.ts`: quickstart scenario 19, including reverting and completing an errand again on its eligible original route and the off-route fallback without custody
 
 ### Implementation for User Story 6
 
-- [ ] T074 [US6] Implement `POST /api/shipments/:id/records` in `apps/server/src/routes/shipments.ts` until T071 passes
-- [ ] T075 [US6] Implement `POST /api/courier-records/:id/correct` and `POST /api/courier-records/:id/revert` in `apps/server/src/routes/courier-records.ts` until T072 passes
-- [ ] T076 [US6] Build `apps/web/src/features/shipments/record-on-behalf-dialog.tsx` and `apps/web/src/features/shipments/correct-record-dialog.tsx`, with "Registrado por despacho" and the revert action in `apps/web/src/features/shipments/shipment-records.tsx`, until T073 passes
+- [X] T074 [US6] Implement `POST /api/shipments/:id/records` in `apps/server/src/routes/shipments.ts` until T071 passes
+- [X] T075 [US6] Implement `POST /api/courier-records/:id/correct` and `POST /api/courier-records/:id/revert` in `apps/server/src/routes/courier-records.ts`, using the shared contextual revert rule in `packages/domain/src/shipment-lifecycle.ts` (including owner-approved errand behavior), until T072 passes; generic route transitions must not reopen final shipments
+- [X] T076 [US6] Build `apps/web/src/features/shipments/record-on-behalf-dialog.tsx` and `apps/web/src/features/shipments/correct-record-dialog.tsx`, with "Registrado por despacho" and the revert action in `apps/web/src/features/shipments/shipment-records.tsx`, until T073 passes
 
 **Checkpoint**: a dead phone or a wrong tap no longer blocks a route
+
+US6 owner safety refinement (2026-10-16, A2 option A): T072 must also cover a package
+record followed by office receipt, exception decision or confirmed custody transfer:
+the revert is `409 record_not_revertible` with no changes to records, custody, history,
+tasks, collections or notices. Include concurrency and accepted-action replay after a
+later operation. T075 enforces this guard transactionally after replay recognition;
+T073/T076 demonstrate the panel's explanatory conflict without rewinding later work.
+Before T075, T072 also tests tied timestamps, unique/ambiguous legacy event linkage,
+kind-specific correction validation and unchanged/concurrent/late correction receipts.
+T074/T075 populate the internal `shipment_events.courier_record_id` trace link; generate
+its nullable indexed FK migration from the schema, never edit generated migrations.
+The shipment-history projection omits empty correction receipts but retains their rows.
 
 ---
 
@@ -810,3 +822,158 @@ not executed. Samuel subsequently authorized commit, push, a new PR and latest-h
 CI review with “Si” on 2026-10-16. The branch's PR is the publication/CI receipt;
 no remote result is claimed here. Merge and US6 need separate approval; physical
 T087/T093 remain pending.
+
+## Phase 33: Convergence
+
+- [X] T123 HIGH Record a US6 reversion that restores an in-progress route task in that route's append-only history, with the shipment, author, reason and both timestamps, in the same transaction as its task/state/receipt/notice. Add failing PostgreSQL and route-history UI tests first; declare the explicit `record_reverted` event in the shared domain values, generate its PostgreSQL enum migration, and render its Spanish label. Preserve one courier notice and unchanged finished routes (FR-035, FR-039, US6/AC3; partial).
+- [X] T124 HIGH Make US6 revert history describe only actual field changes: do not emit unchanged custody pairs for exceptions or errands, and describe restored custody as a reversion, never as a new physical pickup. Add server and UI regressions before implementation, then repeat focused/full gates and scoped convergence (FR-035, FR-039, Constitution IV/VII; partial).
+
+US6 scoped assessment (2026-10-16): FR-034/FR-035, four acceptance scenarios,
+FR-027/FR-039/FR-040, six technical decisions and all nine constitution principles
+reviewed. Two partial/HIGH findings above; no missing, contradictory or unrequested
+scope found. US7 and previously pending physical validation remain outside this slice.
+
+## Phase 34: Convergence
+
+- [X] T125 CRITICAL Keep US6 correction validation in Spanish and preserve submitted empty required fields for schema validation instead of silently omitting them. Add RED domain tests for amount/payee/exception errors and a web serialization regression; reuse the original record's Spanish field schemas and omit only an optional empty note. Filter an errand's inapplicable name field consistently for rendering and submission. Repeat all gates and scoped convergence (Constitution V/VII, FR-035, US6/AC2; contradicts).
+
+US6 local closure (2026-10-16): T071–T076/T123–T125 pass after RED → GREEN work.
+Final sequential gates pass: `pnpm test` (240 domain + 508 server + 190 web = 938),
+`pnpm check`, `pnpm build`, `env -u NO_COLOR pnpm test:e2e` (86/86, 5.1 minutes,
+first attempt). The five expected invalid-password warnings belong to the negative
+lockout scenario, not build/lint warnings; nothing was suppressed. A prior stale-build
+e2e run was intentionally interrupted at 23 passed/1 interrupted/62 not run and is not
+counted as a gate. Limits, assertions, workers and retries are unchanged.
+
+Final read-only scoped convergence checks FR-034/FR-035, all four US6 acceptance
+scenarios, FR-027/FR-039/FR-040, nine implementation decisions, all nine constitution
+principles and these nine tasks: zero remaining findings of any severity/type. Before
+and after that assessment, tasks.md was byte-identical at SHA-256
+`1f88d84686b0be2391f5fe7e01684160dc7547380ceeae5b84263cd5549d319a`;
+checkboxes and this closure note were updated afterward. Reviewer checklists remain
+unchanged (16/16 and 48/48). No converge hooks exist; optional commit hooks were not
+executed. Generated migrations 0006/0007 are additive and reviewed; no new dependency.
+Mobile entry/correction screenshots were inspected and e2e includes required-name
+validation, truthful shipment/route history and the actual courier notice. Whole-route
+reassignment safety covers delivery, exception and return; accepted-action replay still
+precedes guards. US7, physical T087/T093 and feature-wide polish remain pending.
+Samuel subsequently authorized commit, push and a PR with “Si” on 2026-10-16. The
+branch's PR timeline is the publication/CI receipt; this checkpoint claims no remote
+result. Merge and starting US7 still require separate approval.
+
+## Phase 35: Convergence
+
+- [X] T126 HIGH Investigate and reproduce the first-attempt keyboard-registration failure in PR #25 CI 38991329783 at `06e606b`, `apps/web/tests/e2e/register-shipment.spec.ts:163`. Distinguish asynchronous form readiness from an application defect using controlled real-server responses and a failing regression before correction. Align the plan with demonstrated evidence; preserve keyboard-only registration, real PostgreSQL/built app, success and accessibility assertions, all existing deadlines/retries/workers and coverage. Repeat focused repetitions, all four gates and scoped convergence. The historical CI has no retained trace and remains 85 passed/1 flaky, not clean. Only local investigation/correction is authorized; publication, merge and US7 require separate approval (Constitution VI/VII, Development Workflow & Quality Gates; feature 001 FR-006/FR-038 and keyboard registration; partial).
+
+T126 local closure (2026-10-16): the original case fails once in 20 repetitions
+(19 pass), at its unchanged five-second success assertion. A held real quote reproduces
+that failure with a positive-fee validation error; a separate held merchant search
+reproduces Enter selecting Amy Tecnology while Bullish Hype is already visible.
+Both controlled RED traces are retained locally under ignored `.git/t126-red-fee` and
+`.git/t126-red-search`. The first repetition run's artifacts were replaced before
+inspection; neither that run nor the trace-less historical CI establishes an exact
+interleaving. The plan records this evidence and its limits before final correction.
+
+Await native desired-option highlighting, verify actual selected values/default pickup,
+and await the visible real quote before the original keyboard submit. Keep the normal
+network case and add controlled search/quote variants with explicit gates, not sleeps
+or fake responses. Both controlled mechanisms fail without their readiness correction.
+The three corrected cases pass 20 repetitions each (60/60, 2.3 minutes, no retries).
+Final sequential gates pass: `pnpm check`; `pnpm test` (240 domain + 508 server +
+190 web = 938); `env -u NO_COLOR pnpm test:e2e` (88/88, 5.1 minutes, first attempt);
+`pnpm build`, including the actual service worker. The five invalid-password warnings
+are expected output from the negative lockout case, not suppressed build/lint warnings.
+No application, dependency, migration, CI policy, deadline, retry or worker changes.
+
+Scoped convergence checks feature 001 FR-003/FR-005/FR-006/FR-038, US1/AC1 and AC5,
+the keyboard critical flow, two readiness/real-response plan decisions, T126 and all
+nine constitution principles: zero findings. Before/after assessment, this file stayed
+byte-identical at SHA-256
+`bd3e5db967caca42281e13684c6b5a80dc050780673ee843c08a10d4b951b771`;
+this marker and note are subsequent implementation tracking. Reviewer checklists are
+unchanged (16/16 and 48/48); no converge hooks exist and optional commit hooks were
+not executed. Publication of this correction requires approval and fresh latest-head
+CI; the published `06e606b` retry remains historical evidence, not clean validation.
+Merge, US7 and physical T087/T093 remain outside this completed local correction.
+
+Samuel subsequently authorized commit/push of T126 in PR #25 and latest-head CI review
+with “Si” (2026-10-16). The PR timeline is the publication/CI receipt; this local
+checkpoint claims no new remote result. Merge and starting US7 remain unauthorized.
+
+## Phase 36: Convergence
+
+- [X] T127 HIGH Investigate and reproduce the `PNPM_HOME` layout warning in PR #25 CI 38994299786 at `af78fa6`, checking the exact upstream installer source before changing `.github/workflows/ci.yml`. Replace only the warning-producing pnpm installer with the maintained official native installer if isolated before/after verification succeeds. Preserve pnpm 12.8.1 from `packageManager`, Node 24 from `.nvmrc`, checkout/setup-node and cache, explicit frozen install, all four quality commands, tests and runner policies; disable the successor's automatic dependency installation and runtime detection. Record evidence and limits, repeat local gates and scoped convergence, and require fresh latest-head CI after separately approved publication. No warning suppression, custom downloader, vendored action or application changes. Local investigation/correction authorized with “Si”; commit/push, merge and US7 require approval (plan: CI action runtime maintenance, Constitution I/VIII/IX, Development Workflow & Quality Gates; partial).
+
+T127 local implementation checkpoint (2026-10-16): confirmed the exact CI installer
+commit `0977fd99725f1db4007ccb2928dbb4e90d06cc86` bootstraps 11.19.0, places its own
+shim in `PNPM_HOME` and emits the legacy-layout warning while successfully selecting
+the project pin 12.8.1. The upstream source/report confirm the mechanism; the action's
+official successor removes that bootstrap rather than suppressing its warning.
+
+Executed the exact old/new published bundles in disposable Linux/arm64 containers
+(`node:24-bookworm-slim`, image digest
+`sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5`),
+using copied public manifests and no host configuration/secrets. The old installation
+passes the version/no-project-install checks but fails the no-warning assertion.
+`pnpm/setup@v3` at `a0881977cd8ea73b1ed212236c99ca10dcc80cf4` installs 12.8.1 without
+warnings, skips runtime installation and creates no project dependencies. Two initial
+simulation errors (hyphenated inputs dropped by Bash and an incorrect expected log
+phrase) were corrected before final assertions; they are not application defects.
+Local ignored evidence is `.git/t127.8Jbh0u`; no action bundle is vendored in the repo.
+
+The workflow changes only the installer and supported `install: false` /
+`node-version-file: false` inputs. An executable comparison confirms every other
+workflow byte plus the package-manager and Node pins are unchanged. Final sequential
+local gates pass: `pnpm check`; `pnpm test` (240 domain + 508 server + 190 web = 938,
+server phase 98.50 seconds); `env -u NO_COLOR pnpm test:e2e` (88/88 first attempt,
+5.0 minutes); `pnpm build`, including the real service worker. The five expected
+invalid-password warnings belong to the negative lockout scenario; none were suppressed.
+No production code, dependency, lockfile, schema, migration, test or runner policy changed.
+
+Read-only local convergence assesses three maintenance obligations (installer/version
+provenance, unchanged quality gates, supply-chain verification), two plan decisions,
+T127's locally verifiable implementation and all nine principles: zero local code gaps.
+The assessment preserves tasks SHA-256
+`3eb8ee9b6f2098bc998dbfdced2f8ba752b0b71ec31305b9f695c8d139e4924e`;
+this checkpoint is subsequent tracking. Reviewer checklists stay unchanged at 16/16
+and 48/48; no converge hooks exist and optional commit hooks were not executed.
+**T127 stays unchecked** until separately authorized publication and fresh latest-head
+GitHub CI verify setup, post-action/cache behavior, all gates and first-attempt e2e on
+the actual runner. Local simulation is not remote CI and no remote result for this
+change is claimed. Commit/push, merge and US7 require approval.
+
+Samuel subsequently authorized commit/push of T127 in PR #25 and latest-head CI review
+with “Si” (2026-10-16). Close verification tracking only after successful remote
+evidence; the final published head must also pass CI. The PR timeline is the receipt.
+Merge and starting US7 remain unauthorized.
+
+T127 remote verification closure (2026-10-17): [CI 39003878509](https://github.com/scldrn/domy/actions/runs/39003878509)
+on `12185b6` passes check, all 938 tests (240/508/190), all 88 e2e at first attempt
+(9.5 minutes), build, setup and post-actions. Logs confirm native pnpm 12.8.1,
+Node 24.21.0 from unchanged setup-node, skipped redundant runtime installation,
+successful frozen install, and successful saves of both the existing pnpm store cache
+and the successor's native lockfile-verification cache. The old layout warning and
+the earlier action-runtime deprecations are absent. Expected negative-auth messages,
+Git's default-branch hint and GitHub's informational future Ubuntu migration notice
+are not suppressed or mistaken for installer failures. The old warning/flaky runs
+remain historical evidence.
+
+Final scoped convergence checks three maintenance obligations, two plan decisions,
+T127 and all nine constitution principles with zero findings. The read-only assessment
+preserves this file at SHA-256
+`e8cbb2804c5519e37b5eb84fcde3b8384b1bc66c76de312896d9aadd2b4c5498`;
+this checked marker and closure note are subsequent tracking, superseding the earlier
+unchecked checkpoint. Checklists remain unchanged (16/16 and 48/48); no converge
+hooks exist and no optional commit hook runs. Publish this verification closure under
+the existing T127 publication approval and require clean final-head CI too; its receipt
+lives in PR #25 rather than another self-referential status commit. No application,
+workflow, dependency, lockfile or test changes accompany this tracking closure.
+Merge, US7 and physical T087/T093 remain separate and unauthorized/pending.
+
+Subsequent owner decision (2026-10-17): after verification-closure CI 39005250252 on
+`c079292` passed all 938 tests/88 first-attempt e2e, check/build and setup/post-actions
+without the layout warning, Samuel authorized squash-merging PR #25 with “Si”.
+The approval/continuation checkpoint changes documentation only and must also receive
+clean latest-head CI before squash. The PR timeline records the actual merge and
+post-merge `main` verification. US7 still requires separate approval; T087/T093 remain
+pending. No additional business implementation is authorized by the merge decision.

@@ -22,6 +22,18 @@ Added to feature 002's `stop_kind`: `return` ("Devolución").
 Added to feature 001's `shipment_event_type`: `exception_decided`, `office_received`,
 `record_corrected`, `record_reverted`, `review_cleared`.
 
+US6 adds internal nullable `shipment_events.courier_record_id` (FK to
+`courier_records.id`, indexed) to identify the record behind its effect/correction/revert
+without putting identifiers in user-visible field changes. New record effects and US6
+actions populate it transactionally. Existing events remain intact; a legacy record's
+effect can be resolved from its author, times and result only when that match is unique.
+Ambiguous legacy history is refused safely, never ordered by a random client UUID.
+
+US6 adds route event type `record_reverted` for a reversion that restores the original
+task on an in-progress route (FR-039). Its shipment, author, reason, occurred/recorded
+times and task-status change share the reversion transaction; finished routes receive
+no task change or route event. Shipment changes omit unchanged custody/status pairs.
+
 ## Tables
 
 **`courier_records`** — one row per courier action, including those that could not be
@@ -163,10 +175,22 @@ These rows replace the rows marked "003" in feature 001's lifecycle table
 | `picked_up`, off route and held by a courier | `registered` | Office receipt after a new attempt was already decided (FR-041); contextual action only, never a generic route transition |
 | `exception` | `returned` | Return record |
 | `exception` (return decided) | `picked_up` | Return changed to a new attempt before the return stop is completed (FR-029) |
-| `delivered` | `picked_up` | Delivery reverted by the owner or dispatcher |
+| `delivered` | `picked_up` | Package delivery reverted by the owner or dispatcher |
+| `delivered`, kind `errand` | `dispatched` | Errand reverted; original route still in progress with the same courier, errand task pending, no custody |
+| `delivered`, kind `errand` | `registered` | Errand reverted when that original route is no longer in progress with the same courier; off route/unassigned, no custody |
 | `returned` | `exception` | Return reverted (with `return_decided` true again) |
 
 ## Custody
+
+The errand-revert transitions above are exclusive to dispatch reverts (owner approval
+2026-10-16). They do not allow route actions to reopen final shipments or give package
+deliveries the errand transitions. Errands remain without courier/office custody and
+retain their service date. The route eligibility is evaluated against the original
+record's route and courier, not another current route of that courier.
+For package records, a subsequent dispatch decision or custody change blocks reverting
+the earlier record, including after office receipt or a confirmed handover (owner option
+A, 2026-10-16). The transaction checks this before changing anything; a replay of an
+accepted action remains a replay, not a new revert. Later operations are never rewound.
 
 The office-receipt row above is guarded in the shared domain lifecycle. Generic
 `picked_up → registered` remains forbidden, including removal, cancellation and undoing

@@ -260,7 +260,9 @@ vocabulary, and are finalized by the features that own them.
 | `exception` | `picked_up` | New attempt while a courier holds the package; or exception reverted | 003 |
 | `exception` | `registered` | New attempt while the office holds the package | 003 |
 | `exception` | `returned` | Return stop completed | 003 |
-| `delivered` | `picked_up` | Delivery reverted by the owner or dispatcher | 003 |
+| `delivered` | `picked_up` | Package delivery reverted by the owner or dispatcher | 003 |
+| `delivered`, kind `errand` | `dispatched` | Dispatch reverts an errand; original route still in progress with the same courier, task pending, no custody | 003 |
+| `delivered`, kind `errand` | `registered` | Dispatch reverts an errand otherwise; off route/unassigned, no custody | 003 |
 | `returned` | `exception` | Return reverted | 003 |
 
 - **Editable** (FR-015): `registered`, `assigned`, `dispatched`; every field except

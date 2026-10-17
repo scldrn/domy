@@ -36,6 +36,11 @@ stops, reassignment, custody, handovers). UI terms appear in Spanish between quo
 
 - Q: When a new attempt was already decided and rescheduled off route, what happens when the office receives the picked-up package? → A: "Recibido en oficina" changes "Recogido" to "Registrado" and transfers custody to the office, keeping its service date. This transition is exclusive to that action on an off-route package held by a courier; route actions still cannot change "Recogido" to "Registrado" (owner-approved alignment of FR-041).
 
+### Session 2026-10-16
+
+- Q: What happens when dispatch reverts an errand marked completed by mistake? → A: If its original route is still in progress with the same courier, it returns to "En ruta" with its errand stop pending. Otherwise it returns to "Registrado", off route and unassigned. Neither case creates package custody (owner chose option A; FR-007, FR-035).
+- Q: May a package record be reverted after another dispatch decision or a custody change? → A: No. Refuse the revert, explain that subsequent operations exist, and preserve them without changes (owner chose option A; FR-035).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Carry out a route (Priority: P1)
@@ -286,7 +291,10 @@ its stop pending.
 3. **Given** a delivery or an exception recorded by mistake, **When** the dispatcher reverts
    it with a reason, **Then** the shipment returns to "Recogido" in the same courier's
    custody and its delivery stop is pending again (on its route if it is still in progress;
-   otherwise off route, as in User Story 4 scenario 3).
+   otherwise off route, as in User Story 4 scenario 3). An errand instead returns to "En
+   ruta" with its errand stop pending if its original route is still in progress with
+   the same courier; otherwise it returns to "Registrado", off route and unassigned.
+   Neither errand case creates package custody.
 4. **Given** a courier, **Then** they cannot correct or revert a record already saved.
 
 ---
@@ -592,11 +600,17 @@ over equal to cash collected minus disbursements.
   characters, the received-by name, the collected amounts and payment methods, the reason
   and note of an exception, and a disbursement; and to revert the latest delivery,
   exception, or return of a shipment recorded by mistake. Reverting a delivery or an
-  exception returns the shipment to "Recogido", and reverting a return returns it to
+  exception returns a package to "Recogido", and reverting a return returns it to
   "Novedad" with the return pending, in the custody of the courier who held it, with its
   stop pending again on its route if that route is still in progress, otherwise off route
   (FR-031). A reverted delivery's collection no longer counts. Corrections and reverts keep the previous values in the history and are
-  notified to the courier.
+  notified to the courier. Reverting a completed errand instead returns it to "En ruta"
+  with its errand stop pending when its original route is still in progress with the
+  same courier; otherwise it returns to "Registrado", off route and unassigned. An
+  errand never gains package custody through a revert.
+  A package record MUST NOT be reverted after a subsequent dispatch decision or custody
+  change, even if it is still the latest delivery, exception, or return. The system
+  explains the conflict and preserves that later operation; it does not undo it implicitly.
 - **FR-036**: The shipment detail MUST show its proof of delivery (received-by name, photos,
   time, location), collection by payment method with receipt photos, disbursements, every
   attempt, and every record "No aplicado". Photos are visible to the owner and the
@@ -663,7 +677,9 @@ over equal to cash collected minus disbursements.
   "Registrado" (new attempt while the office holds the package); "Novedad" → "Devuelto"
   (return stop completed); "Recogido" off route → "Registrado" only through receipt at
   the office after a new attempt was already decided;
-  "Entregado" → "Recogido" and "Devuelto" → "Novedad" (reverted by the dispatcher);
+  "Entregado" → "Recogido" for a package and "Devuelto" → "Novedad" (reverted by the dispatcher);
+  "Entregado" → "En ruta" for an errand whose original route is still in progress
+  with the same courier, otherwise "Entregado" → "Registrado" off route (errand reverted);
   "Registrado" or "Asignado" → "Recogido" (pickup record that arrives after the dispatcher
   changed the route).
 

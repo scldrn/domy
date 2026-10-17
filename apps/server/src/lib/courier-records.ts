@@ -1,5 +1,7 @@
 import {
   receivedByNameProblem,
+  collectionProblem,
+  onBehalfCourierId,
   resolveCourierRecord,
   type CourierRecordInput,
   type RecordEffect,
@@ -61,7 +63,7 @@ async function storedOutcome(tx: Executor, id: string): Promise<RecordResult | n
 }
 
 /** The shipment as the record rules see it (`ShipmentForRecord`), with its row. */
-async function loadState(
+export async function loadState(
   tx: Executor,
   shipmentId: string,
 ): Promise<{ row: ShipmentRow; forRecord: ShipmentForRecord; routeIds: string[] }> {
@@ -171,18 +173,20 @@ function recordColumns(input: CourierRecordInput) {
 export async function applyCourierRecord(
   db: Db,
   input: CourierRecordInput,
-  by: RecordAuthor,
+  requestedBy: Omit<RecordAuthor, "courierId"> & { courierId?: string },
 ): Promise<RecordResult> {
   return db.transaction(async (tx) => {
     const stored = await storedOutcome(tx, input.id);
     if (stored) return stored;
 
-    const [courierRoute] = await tx
-      .select({ id: routes.id })
-      .from(routes)
-      .where(and(eq(routes.courierId, by.courierId), eq(routes.status, "in_progress")));
+    const [phoneRoute] = requestedBy.courierId
+      ? await tx
+          .select({ id: routes.id, courierId: routes.courierId })
+          .from(routes)
+          .where(and(eq(routes.courierId, requestedBy.courierId), eq(routes.status, "in_progress")))
+      : [];
     const peek = await loadState(tx, input.shipmentId);
-    await lockRoutes(tx, [...peek.routeIds, courierRoute?.id ?? null]);
+    await lockRoutes(tx, [...peek.routeIds, phoneRoute?.id ?? null]);
     await tx
       .select({ id: shipments.id })
       .from(shipments)
@@ -192,7 +196,22 @@ export async function applyCourierRecord(
     const raced = await storedOutcome(tx, input.id);
     if (raced) return raced;
     const { row, forRecord } = await loadState(tx, input.shipmentId);
+    // FR-034: resolve attribution under the same locks as the effect, never from a stale HTTP read.
+    const courierId = requestedBy.onBehalf ? onBehalfCourierId(forRecord) : requestedBy.courierId;
+    if (!courierId) throw new AppError("courier_required");
+    const by: RecordAuthor = { ...requestedBy, courierId };
+    const courierRoute = by.onBehalf
+      ? forRecord.route?.courierId === courierId
+        ? forRecord.route
+        : null
+      : phoneRoute;
+    if (by.onBehalf && new Date(input.occurredAt) > by.recordedAt)
+      throw new AppError("occurred_in_future");
     checkInput(input, row);
+    if (by.onBehalf && input.kind === "delivery") {
+      const problem = collectionProblem(row.codAmount, input);
+      if (problem) throw new AppError("invalid_request", { fields: { note: problem } });
+    }
 
     // Phone time corrected by the caller, and never after the server received it (FR-019).
     const claimed = new Date(input.occurredAt);
@@ -282,7 +301,7 @@ async function executeEffect(
   },
 ): Promise<void> {
   const { row, forRecord, input, effect, occurredAt, by } = context;
-  const author = { actorUserId: by.authorUserId, now: by.recordedAt };
+  const author = { actorUserId: by.authorUserId, now: by.recordedAt, onBehalf: by.onBehalf };
   const touchedRoutes = new Set<string>();
   // FR-025: execute only the shared domain's cross-route decision, retaining completed history.
   if (effect.cancelHandoverId) {
@@ -293,7 +312,10 @@ async function executeEffect(
       );
       await recordRouteEvents(
         tx,
-        ids.map((id) => handoverEvent("handover_cancelled", id, cancelled, author)),
+        ids.map((id) => ({
+          ...handoverEvent("handover_cancelled", id, cancelled, author),
+          onBehalf: by.onBehalf,
+        })),
         by.noticeIds,
       );
       await tx.insert(shipmentEvents).values({
@@ -303,6 +325,7 @@ async function executeEffect(
         occurredAt,
         recordedAt: by.recordedAt,
         routeId: cancelled.toRouteId,
+        onBehalf: by.onBehalf,
       });
       for (const id of ids) touchedRoutes.add(id);
     }
@@ -318,7 +341,7 @@ async function executeEffect(
       occurredAt: by.recordedAt,
       reason: "Registro recibido después de cambiar la ruta",
     });
-    await recordRouteEvents(tx, [removed], by.noticeIds);
+    await recordRouteEvents(tx, [{ ...removed, onBehalf: by.onBehalf }], by.noticeIds);
     await touchRoute(tx, routeId, by.recordedAt);
     touchedRoutes.add(routeId);
   }
@@ -361,7 +384,12 @@ async function executeEffect(
     );
     await recordRouteEvents(
       tx,
-      [handoverEvent("handover_requested", handover.toRouteId, handover, author)],
+      [
+        {
+          ...handoverEvent("handover_requested", handover.toRouteId, handover, author),
+          onBehalf: by.onBehalf,
+        },
+      ],
       by.noticeIds,
     );
     touchedRoutes.add(handover.toRouteId);
@@ -421,6 +449,7 @@ async function executeEffect(
   };
   const event = {
     shipmentId: row.id,
+    courierRecordId: input.id,
     actorUserId: by.authorUserId,
     occurredAt,
     recordedAt: by.recordedAt,

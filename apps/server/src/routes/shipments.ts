@@ -1,5 +1,6 @@
 import {
   codConfirmationThreshold,
+  recordOnBehalfInput,
   deliveryAttempts,
   exceptionDecisionInput,
   exceptionDecisionState,
@@ -73,6 +74,7 @@ import {
   users,
 } from "../db/schema/index.ts";
 import { findShipmentAction } from "../lib/action-id.ts";
+import { applyCourierRecord } from "../lib/courier-records.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import {
   deliveryWindow,
@@ -188,7 +190,7 @@ async function loadShipments(db: Executor, ids: string[]): Promise<Shipment[]> {
   }));
 }
 
-async function loadShipment(db: Executor, id: string): Promise<Shipment> {
+export async function loadShipment(db: Executor, id: string): Promise<Shipment> {
   const [shipment] = await loadShipments(db, [id]);
   if (!shipment) throw new AppError("not_found", { message: "No encontramos ese envío." });
   return shipment;
@@ -251,28 +253,33 @@ async function loadDetail(db: Executor, id: string, now: Date): Promise<Shipment
   return {
     ...shipment,
     ...(await loadRouteState(db, id)),
-    events: events.map(({ event, actor }) => ({
-      id: event.id,
-      type: event.type,
-      fromStatus: event.fromStatus,
-      toStatus: event.toStatus,
-      actor,
-      occurredAt: event.occurredAt.toISOString(),
-      recordedAt: event.recordedAt.toISOString(),
-      reason: event.reason,
-      changes:
-        event.type === "created" || !event.changes
-          ? null
-          : Object.fromEntries(
-              Object.entries(changesOf(event)).map(([field, [before, after]]) => [
-                field,
-                referenceFields.has(field)
-                  ? [named(names, before), named(names, after)]
-                  : [before, after],
-              ]),
-            ),
-      onBehalf: event.onBehalf,
-    })),
+    events: events
+      .filter(
+        ({ event }) =>
+          event.type !== "record_corrected" || Object.keys(changesOf(event)).length > 0,
+      )
+      .map(({ event, actor }) => ({
+        id: event.id,
+        type: event.type,
+        fromStatus: event.fromStatus,
+        toStatus: event.toStatus,
+        actor,
+        occurredAt: event.occurredAt.toISOString(),
+        recordedAt: event.recordedAt.toISOString(),
+        reason: event.reason,
+        changes:
+          event.type === "created" || !event.changes
+            ? null
+            : Object.fromEntries(
+                Object.entries(changesOf(event)).map(([field, [before, after]]) => [
+                  field,
+                  referenceFields.has(field)
+                    ? [named(names, before), named(names, after)]
+                    : [before, after],
+                ]),
+              ),
+        onBehalf: event.onBehalf,
+      })),
     // The courier's records and their flags (feature 003, FR-036).
     records,
     attempts: deliveryAttempts(records),
@@ -802,6 +809,32 @@ export const shipmentRoutes = new Hono<AppEnv>()
   .get("/:id", validate("param", idParam), async (c) => {
     return c.json(await loadDetail(c.get("db"), c.req.valid("param").id, c.get("clock")()));
   })
+  // 003 T074 / FR-034: the same transactional application as the phone, attributed under lock.
+  .post(
+    "/:id/records",
+    validate("param", idParam),
+    validate("json", recordOnBehalfInput),
+    async (c) => {
+      const now = c.get("clock")();
+      const input = c.req.valid("json");
+      return c.json(
+        await applyCourierRecord(
+          c.get("db"),
+          {
+            ...input,
+            shipmentId: c.req.valid("param").id,
+            occurredAt: input.occurredAt ?? now.toISOString(),
+          },
+          {
+            authorUserId: c.get("user").id,
+            onBehalf: true,
+            recordedAt: now,
+            noticeIds: c.get("noticeIds"),
+          },
+        ),
+      );
+    },
+  )
   // FR-026: clearing review is a traced action, never a shipment/custody correction.
   .post(
     "/:id/clear-review",

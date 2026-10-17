@@ -227,6 +227,15 @@ npm registry on 2026-09-30 and again on 2026-10-14, after feature 002 shipped (R
   uses for shipment edits). A revert marks the record (`reverted_at`, `reverted_by`,
   `revert_reason`), applies the inverse transition from the shared lifecycle, and sets the
   task back to `pending` when its route is still in progress.
+  Owner clarification on 2026-10-16: an errand completion returns to `dispatched` with
+  its errand task pending only if its original route is still in progress with the
+  same courier; otherwise it returns to `registered` off route. Neither creates custody.
+  Declare these contextual revert transitions in the shared domain lifecycle; do not
+  broaden ordinary route transitions or copy the rule into the server and web.
+  The owner also chose refusal when a package's record is followed by a dispatch decision
+  or custody change: a revert must not implicitly undo later decisions or office/other
+  courier custody. Check the append-only operational history in the same transaction;
+  recognize accepted action replays first.
 - **Rationale**: FR-034, FR-035, Constitution IV (nothing deleted; previous values in the
   append-only history).
 
