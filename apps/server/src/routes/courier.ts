@@ -6,6 +6,7 @@ import {
   pushSubscriptionInput,
   pushSubscriptionRemoveInput,
   daySummary,
+  routeProgress,
   type CourierRoute,
   type CourierSnapshot,
   type CourierStop,
@@ -229,9 +230,7 @@ async function loadSummary(db: Executor, courierId: string, route: CourierRoute 
     .select()
     .from(courierRecords)
     .where(and(eq(courierRecords.courierId, courierId), gte(courierRecords.occurredAt, since)));
-  const pendingStops = (route?.stops ?? []).filter((stop) =>
-    stop.tasks.some((task) => task.status === "pending"),
-  ).length;
+  const progress = routeProgress(route?.stops ?? []);
   return daySummary(
     records.map((record) => ({
       kind: record.kind,
@@ -243,7 +242,7 @@ async function loadSummary(db: Executor, courierId: string, route: CourierRoute 
       merchantTransferAmount: record.merchantTransferAmount,
       disbursementAmount: record.disbursementAmount ?? 0,
     })),
-    { date: bogotaToday(now), pendingStops },
+    { date: bogotaToday(now), pendingStops: progress.total - progress.completed },
   );
 }
 

@@ -367,13 +367,18 @@ disbursement; verify each total and "Efectivo por entregar"
 
 ### Tests for User Story 7 ⚠️ write first, must fail
 
-- [ ] T077 [P] [US7] Integration tests in `apps/server/tests/courier-summary.test.ts` covering spec US7 scenarios 1 and 3: the `summary` of `GET /api/courier/route` returns today's counts and the four amounts from applied, not reverted records of that courier, with corrected values
-- [ ] T078 [P] [US7] End-to-end test in `apps/web/tests/e2e/courier-day.spec.ts`: quickstart scenario 20, including records still pending while offline
+- [X] T077 [P] [US7] Integration tests in `apps/server/tests/courier-summary.test.ts` covering spec US7 scenarios 1 and 3: the `summary` of `GET /api/courier/route` returns today's counts and the four amounts from applied, not reverted records of that courier, with corrected values
+- [X] T078 [P] [US7] End-to-end test in `apps/web/tests/e2e/courier-day.spec.ts`: quickstart scenario 20, including records still pending while offline
+  Before T080, extend `apps/web/src/lib/offline/outbox.test.ts` for saved totals plus
+  pending applied records, excluded duplicates/not-applied records, projected pending
+  stops, reopen persistence, disbursements after delivery and held off route, corrected
+  clock/Bogotá dates and day rollover. Extend `day-summary.test.ts` before adding its
+  optional same-date baseline. Preserve the original snapshot and synchronization rules.
 
 ### Implementation for User Story 7
 
-- [ ] T079 [US7] Add `summary` to `GET /api/courier/route` in `apps/server/src/routes/courier.ts` with `day-summary.ts` until T077 passes
-- [ ] T080 [US7] Build `apps/web/src/routes/courier-day.tsx` ("Mi día": the `summary` of the stored snapshot plus the outbox through `day-summary.ts`, labelled as an estimate) until T078 passes
+- [X] T079 [US7] Add `summary` to `GET /api/courier/route` in `apps/server/src/routes/courier.ts` with `day-summary.ts` until T077 passes
+- [X] T080 [US7] Build `apps/web/src/routes/courier-day.tsx` ("Mi día": the `summary` of the stored snapshot plus the outbox through `day-summary.ts`, labelled as an estimate) until T078 passes
 
 **Checkpoint**: all seven user stories work independently
 
@@ -977,3 +982,53 @@ The approval/continuation checkpoint changes documentation only and must also re
 clean latest-head CI before squash. The PR timeline records the actual merge and
 post-merge `main` verification. US7 still requires separate approval; T087/T093 remain
 pending. No additional business implementation is authorized by the merge decision.
+
+## Phase 37: Convergence
+
+- [X] T128 CRITICAL Remove the duplicated pending-stop selection in `apps/server/src/routes/courier.ts` and `apps/web/src/lib/offline/outbox.ts`. Reuse the existing domain `routeProgress` rule (total minus completed) for FR-037, rather than copying its task-status predicate. Preserve the already passing domain progress cases, T077's shared-pickup-stop assertions and T078's projected/offline pending-stop assertions; repeat all four gates and scoped convergence. This is a behavior-preserving refactor, not a new business rule, response field or dependency (Constitution III, FR-037, plan: shared domain rules; contradicts).
+
+## Phase 38: Convergence
+
+- [X] T129 HIGH Correct the scroll precondition of the added financial-row visibility assertion in `apps/web/tests/e2e/courier-day.spec.ts`. The 360 px/high-contrast trace leaves the amount's bottom at 800.28125 while fixed navigation begins at 719: minimal viewport scrolling does not establish visibility above an overlay. Use native centered scrolling, then preserve the exact bounding-box assertion, actual 360/390 px app, all money/offline/correction checks and axe scans. Verify the unchanged application's scroll space with actual scrolled captures, repeat focused cases and all four gates; do not change production layout, deadlines, retries or workers to accommodate the helper (FR-038, T078, Constitution VI/VII; partial).
+
+US7 local closure (2026-10-17): Samuel authorized starting locally with “Inicia”, after
+PR #25 merged as `525ca94` with clean post-merge CI. T077's four PostgreSQL tests pass
+against the existing server aggregation: no working implementation was removed to
+manufacture RED. Foundation T006/T011 already supplied test-first domain calculation.
+The new same-day-baseline test and four outbox tests fail before implementation;
+the two phone cases fail at the missing summary before the page is built. T079 reuses
+the existing server summary and T128 centralizes pending-stop progress. T080 adds the
+estimated, dated page and the persisted replay projection with corrected Bogotá dates.
+
+The initial complete 90-case e2e gate passes before the stronger scrolled-row check.
+That additional check then exposes the T129 helper precondition (89 passed/1 failed,
+5.0 minutes), not a missing scroll allowance in the app. Its trace/context are retained
+locally under ignored `.git/us7-scroll-red`. Native centered scrolling preserves the
+same above-navigation bound and needs no production change. Both cases pass five
+repetitions each (10/10, 31.1 seconds), with scrolled 360/390 px captures inspected.
+A subsequent check catches a void-arrow style error in the test helper; explicit braces
+resolve it without changing behavior. Neither failed gate is called clean.
+
+Final sequential gates after all corrections pass: `pnpm check`; `pnpm test`
+(242 domain + 512 server + 194 web = 948, server 97.08 seconds); `pnpm build`;
+`env -u NO_COLOR pnpm test:e2e` (90/90, 5.1 minutes, first attempt). The five expected
+invalid-password warnings belong to the negative lockout scenario; none are suppressed.
+No dependency, migration, API response shape, CI setting, deadline, retry or worker
+policy changes. Phone tests use the built service worker and real PostgreSQL and cover
+offline totals/reopening, exactly-once synchronization, dispatch corrections, no-route
+zero totals, high contrast and financial rows above fixed navigation.
+
+Final scoped convergence reviews FR-037/FR-018/FR-019/FR-022/FR-035/FR-038, all three
+US7 acceptance scenarios, six plan decisions, eight tasks (T006/T011/T077–T080/T128/T129)
+and all nine principles: zero findings. Its read-only assessment leaves tasks unchanged
+at SHA-256 `1f806815456959a5f29640ee58c3c243c998861c8ea06a4bd29f4f2b0de11008`;
+these checked markers and this note are subsequent implementation tracking. Checklists
+remain unchanged (16/16 and 48/48); no converge hooks exist and optional commit hooks
+are not executed. No commit, push, PR or remote CI is claimed. Physical T087/T093 and
+feature-wide polish remain pending; this does not close the entire feature.
+
+US7 publication authorization (2026-10-17): Samuel approved commit, push and opening
+the PR with “sI”. Publish T077–T080/T128/T129 and inspect fresh latest-head CI, including
+first-attempt e2e and installer/post-action warnings. The PR timeline records the actual
+publication/CI receipt; this authorization checkpoint claims no new remote result.
+Merge, physical T087/T093 and continuation to feature-wide polish remain separate.

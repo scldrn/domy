@@ -8,16 +8,20 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-US6 y sus correcciones T126/T127 están verificadas en la [PR #25](https://github.com/scldrn/domy/pull/25).
-El cierre `c079292` pasó CI `39005250252`: check, build, 938 pruebas y 88 e2e al primer
-intento, sin el aviso de PNPM_HOME y con cachés verificadas. Se conservan tus dos
-opciones A y los fallos históricos, sin reclasificarlos como corridas limpias.
+US7 («Mi día») está implementada y convergida localmente en `003-us7-my-day`, según tu
+autorización «Inicia» (2026-10-17). T077–T080/T128/T129 pasan check, build, 948 pruebas
+y 90 e2e al primer intento en la última corrida completa. Se conserva el fallo previo
+de la comprobación de scroll y su corrección, sin ocultarlo ni relajar límites.
+Autorizaste commit, push y abrir la PR con «sI» (2026-10-17). Se publica este cierre
+y se revisa el CI del último commit, incluidos e2e al primer intento y advertencias.
+El recibo de publicación/CI queda en la PR; este registro local no afirma un resultado
+remoto nuevo. Fusionar y continuar con el pulido requieren decisiones aparte.
+La validación física y el cierre global de la 003 siguen pendientes.
 
-Autorizaste fusionar la PR #25 mediante squash con «Si» (2026-10-17). La fusión solo
-se ejecuta con el CI del último commit limpio; después se comprueba el CI del squash
-en `main`. El estado real, el hash y sus recibos están en la PR, también al retomar.
-**Iniciar US7 no está autorizado**; requiere una decisión aparte después de verificar
-`main`. La validación física y el cierre global de la 003 siguen pendientes.
+US6 y T126/T127 ya están fusionadas en la [PR #25](https://github.com/scldrn/domy/pull/25)
+como `525ca94`; el CI posterior `39008252312` pasó check, build, 938 pruebas y 88 e2e
+al primer intento. El recibo está en la PR. Se conservan tus dos opciones A y los
+fallos históricos; no hay que repetir esa fusión.
 
 T122 ya está fusionada en la PR #24 como `18c832c`. El CI posterior `38945702324`
 pasó 883 pruebas y 82 e2e al primer intento, check y build; el recibo está en la PR.
@@ -52,6 +56,8 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-17 | ¿Hacer commit, push y abrir la PR de US7? | «sI». Autorizada publicación de T077–T080/T128/T129 y revisión del CI del último commit; no fusión ni continuar con el pulido |
+| 2026-10-17 | ¿Iniciar US7 después de verificar la fusión de US6 y el CI de main? | «Inicia». Autorizada implementación local T077–T080 con análisis, pruebas primero y convergencia; sin commit, push, PR ni fusión |
 | 2026-10-17 | ¿Fusionar la PR #25 mediante squash tras el CI final limpio? | «Si». Autorizada fusión con último head verificado y revisión posterior de main; sin iniciar US7 |
 | 2026-10-16 | ¿Hacer commit y push de T127 en la PR #25 para comprobar el nuevo instalador en GitHub CI? | «Si». Autorizada publicación y revisión del CI del último commit; sin fusión ni iniciar US7 |
 | 2026-10-16 | ¿Investigar y corregir el aviso de PNPM_HOME manteniendo versiones y compuertas? | «Si». Autorizada investigación/corrección local T127; sin commit/push, fusión ni iniciar US7 |
