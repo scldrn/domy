@@ -1148,3 +1148,13 @@ unchanged before this subsequent completion marker/checkpoint. Checklists remain
 byte-identical, 16/16 and 48/48. No convergence hooks exist; optional commit hooks are
 not executed (autocommit disabled). T131 and physical/polish tasks remain open. Remote
 CI/artifact verification is not claimed here; the authorized PR timeline records it.
+
+T132 merge authorization (2026-10-17): PR #28 source `393e5c7` passed CI
+39077701647 with check/build, all 948 tests (242/512/194), 90 first-attempt e2e
+(13.7 minutes), setup and post-actions. The trace-upload step succeeded with no files
+and zero artifacts, verifying the no-files path, not a real failed-trace upload.
+The PR timeline preserves exact source/tree/base and the historical flaky evidence.
+Samuel authorized squash merge and verification of the resulting main CI with “Si”.
+This documentation-only authorization checkpoint must pass fresh latest-head CI
+before squash; the timeline records actual merge hashes/results. T131 remains open;
+no causal patch, feature-wide polish or physical-validation completion is authorized.

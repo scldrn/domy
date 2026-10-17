@@ -14,7 +14,7 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations, US1–US7 and T130 are on `main`, through [PR #27](https://github.com/scldrn/domy/pull/27), squash `f4f124d`. Final-head CI passed cleanly; post-merge CI passed overall but retried another offline-server-recovery e2e (89 first-attempt passes/one flaky). T131 remains unresolved; T132 diagnostic CI preparation/publication is authorized. Merge and feature-wide polish are not. Physical T087/T093 remain pending |
+| 003 Courier app | Setup, foundations, US1–US7 and T130 are on `main`, through [PR #27](https://github.com/scldrn/domy/pull/27), squash `f4f124d`. Its post-merge CI has one flaky server-recovery e2e; T131 remains unresolved. T132 is published in [PR #28](https://github.com/scldrn/domy/pull/28), source `393e5c7` with clean CI (948 tests/90 first-attempt e2e). Squash is authorized after clean final-head CI, followed by verification of main; its timeline records the actual merge/result. Feature-wide polish and physical T087/T093 remain pending |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
@@ -55,8 +55,22 @@ ten condition combinations and eight path examples; it is not a remote upload.
 Publish, then audit actual latest-head CI and artifact handling in the PR timeline,
 which records delivery without a self-referential status-only commit. A clean/no-artifact
 run is not verification of a real failed-trace upload or a T131 correction. Do not
-invent a causal patch, close T131, merge or start polish. The following T130 checkpoint
-is historical and superseded by this result.
+invent a causal patch or close T131. The initial diagnostic publication approval did not
+include merge or polish; the later merge authorization below supersedes only that restriction.
+
+T132 delivery/merge checkpoint (2026-10-17): [PR #28](https://github.com/scldrn/domy/pull/28)
+source `393e5c7`, tree `f3bf659e6266b2d54ab6003f5d5b8e23ae0135a8`, passed
+CI `39077701647`: check/build, 948 tests and 90 first-attempt e2e (13.7 minutes),
+setup and post-actions. Its [delivery receipt](https://github.com/scldrn/domy/pull/28#issuecomment-6243133009)
+preserves the earlier flaky run and expected negative-auth/infrastructure notices.
+The upload step ran successfully with zero artifacts: actual no-files behavior verified,
+not a real failed-trace upload. Samuel subsequently authorized squash merge and
+post-merge main CI verification with “Si”. This approval checkpoint changes documentation
+only and requires fresh clean final-head CI before squash. The PR timeline records
+the actual final head, merge hash/tree and post-merge result, without a self-referential
+status-only commit. If merged on resume, do not repeat it. A green run does not resolve
+T131; no polish or physical-validation completion is authorized. The following T130
+checkpoint is historical and superseded by this result.
 
 ### Previous T130 delivery checkpoint
 
