@@ -273,6 +273,44 @@ screen.
 
 ## Cross-feature alignment
 
+### T130 notification/navigation investigation — 2026-10-17
+
+Samuel authorized local investigation/correction after PR #26 merged as `e43ea1e`.
+Post-merge CI 39043360351 passed overall but retried the T101 exception-controls case:
+expanded native notifications intercepted the delivery-stop link before the modal opened.
+No trace artifact was uploaded. Do not infer the historical runner's exact scheduling or
+attribute this to US7 without evidence. First reproduce with actual success/error toasts
+from an offline pickup in the real built app, PostgreSQL and service worker, explicitly
+waiting for the full stack rather than its first member. Capture hit targets and scroll
+geometry before choosing a test-precondition correction versus an application fix.
+Keep notifications visible and expanded throughout the photo/save nine-point hit checks,
+the native pointer interaction and full axe scan. Preserve all timeouts, retries, workers
+and coverage; no forced clicks, hidden/dismissed toasts, sleeps or mocked successful API
+responses. Refine this plan with the demonstrated cause before implementing the fix,
+then repeat focused cases, all four gates and scoped convergence. Publication, merge and
+feature-wide polish require separate approval; physical T087/T093 remain pending.
+
+Local RED evidence: awaiting both actual pickup/sync notifications and their completed
+finite animations reproduces the original 30-second pointer-interception timeout.
+At 390×844, the delivery link spans y=590.78125–730.921875 (center 660.8515625);
+the expanded error toast spans 658–740 and the success toast 590.5–644. The earlier
+diagnostic passes while expansion is still animating, so a visible/expanded attribute
+alone is insufficient readiness. The RED trace/context are retained in ignored
+`.git/t130-red`; this proves the mechanism, not the historical runner's exact ordering.
+Correct only this test's navigation: wait for both actual notifications and completed
+animations, then natively center-scroll and normally click the stop's visible address
+inside its accessible link, rather than the obscured card center. Keep
+the shared `openStop` helper and production layout unchanged. Verify both notifications
+remain visible and expanded at the photo and confirmation checks, not just at setup.
+Use the existing app's bottom scroll allowance; no overlay, timeout or accessibility
+workaround is introduced. Do not rely on racing the stack's entrance animation.
+Centering the whole card alone was also tested and failed: its center reaches y=581.85,
+but Sonner's expanded `::after` interaction area extends 15 px above the painted toast
+into the stack's gap (installed Sonner CSS: `height: calc(var(--gap) + 1px)`).
+The failed trial trace remains under ignored `.git/t130-card-center-red`.
+The actual address above that area is the native pointer target;
+do not force the card-center click or change production padding for this test.
+
 ### US7 local implementation checkpoint — 2026-10-17
 
 Samuel authorized local US7 implementation after PR #25 merged as `525ca94` and its

@@ -1042,3 +1042,51 @@ documentation only and must also receive clean latest-head CI before squash; the
 timeline records the actual squash and post-merge main verification. Continuing to
 polish and physical T087/T093 remain unauthorized/pending. No further implementation
 is authorized by this merge decision.
+
+## Phase 39: Convergence
+
+- [X] T130 HIGH Investigate and deterministically reproduce notification interception before the exception form in `apps/web/tests/e2e/courier-exceptions.spec.ts`, as observed in post-merge CI 39043360351 at `e43ea1e` (89 first-attempt passes, one flaky). Distinguish test navigation readiness from an application defect with the real built app, PostgreSQL, service worker and native expanded Sonner notifications. Align the plan with demonstrated evidence before correction; preserve the photo/save nine-point hit tests, full axe scan, visible notifications and all existing deadlines/retries/workers. Do not force clicks, dismiss/hide notifications, mock a successful response or rerun until green. Retain RED evidence, repeat focused cases, all four gates and scoped convergence. Historical CI uploaded no trace artifact; do not claim its exact scheduling was reproduced. Local correction only is authorized; publication, merge and feature-wide polish require separate approval (FR-038, T101, Constitution VI/VII and quality gates; partial).
+
+T130 local closure (2026-10-17): explicitly awaiting both real offline pickup/sync
+notifications and completed finite animations reproduces the original 30-second
+delivery-link interception. Initial diagnostics pass while the stack is still entering;
+waiting only for the first toast/expanded attribute does not establish stable geometry.
+Centering the entire card also fails because Sonner's native expanded interaction area
+extends into its gap. Both failed traces/contexts remain under ignored `.git/t130-red`
+and `.git/t130-card-center-red`; neither is called clean. Historical CI uploaded no trace,
+so only the mechanism, not its exact scheduling, is locally demonstrated.
+
+The correction is test-only: center-scroll and normally click the visible address inside
+the same accessible link. Keep the shared helper and production layout untouched; do not
+force a covered card-center click. Both notifications must remain visible and expanded
+at the unchanged photo/save nine-point hit checks, with the complete axe scan retained.
+Ten focused repetitions pass (10/10, 36.8 seconds). All four gates pass: `pnpm check`,
+`pnpm test` (242 domain + 512 server + 194 web = 948; server 126.45 seconds), `pnpm build`,
+`env -u NO_COLOR pnpm test:e2e` (90/90, 5.2 minutes, first attempt). The five expected
+invalid-password warnings belong to the negative lockout case and are not suppressed.
+No application, dependency, migration, API, CI setting, timeout, retry or worker change.
+
+Read-only scoped convergence checks FR-038, three plan decisions, T100/T101/T112/T130
+and all nine principles: zero findings. It preserves tasks SHA-256
+`1bb156f019bc4000dab33fca820039d5c3d75872c06cd102148e099bbe14c34c`;
+this checked marker and closure note are subsequent implementation tracking. Checklists
+remain unchanged (16/16 and 48/48); no convergence hooks exist and optional commit hooks
+are not executed. No commit, push, PR or new remote CI is claimed. Publication/merge,
+feature-wide polish and physical T087/T093 remain separate and unauthorized/pending.
+
+T130 publication authorization (2026-10-17): Samuel approved commit, push and opening
+the PR with “Si”, including review of fresh latest-head CI. Publish this test-only
+correction and its aligned documentation; the PR timeline records actual commit/tree/base
+and CI evidence. The preceding local checkpoint claims no remote verification. Preserve
+the historical flaky CI and both local RED trials. No merge, feature-wide polish or
+physical-validation completion is authorized by this publication decision.
+
+T130 merge authorization (2026-10-17): PR #27 source `bf26d7b` passed CI 39057471380
+with check/build, all 948 tests (242/512/194), 90 first-attempt e2e (10.8 minutes), setup
+and post-actions. Its timeline receipt records exact source/tree/base and preserves the
+historical flaky main run, both RED trials and expected negative-auth/infrastructure logs.
+Samuel authorized squash merge and post-merge main CI verification with “Si”. This
+approval/continuation checkpoint changes documentation only and must also pass fresh
+latest-head CI before squash. The PR timeline records the actual merge and subsequent
+CI outcome; no merge result is claimed here. Feature-wide polish and physical T087/T093
+remain separate and unauthorized/pending.
