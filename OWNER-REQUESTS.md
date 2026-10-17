@@ -8,15 +8,18 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-US7 («Mi día») está implementada y convergida localmente en `003-us7-my-day`, según tu
-autorización «Inicia» (2026-10-17). T077–T080/T128/T129 pasan check, build, 948 pruebas
-y 90 e2e al primer intento en la última corrida completa. Se conserva el fallo previo
-de la comprobación de scroll y su corrección, sin ocultarlo ni relajar límites.
-La [PR #26](https://github.com/scldrn/domy/pull/26) está publicada: `7125292` pasó CI
-`39038016265`, con check/build, 948 pruebas y 90 e2e al primer intento, sin avisos del
-instalador. El recibo está en la PR. Autorizaste fusionarla mediante squash con «Si»
-(2026-10-17): solo con CI limpio del último commit y posterior comprobación del CI del
-squash en main. La PR registra el estado/hash real y sus recibos, también al retomar.
+PR #26 ya está fusionada como `e43ea1e`. Su CI final previo `39040911443` pasó limpio;
+el posterior de main `39043360351` pasó check/build y 948 pruebas, pero los e2e fueron
+89 al primer intento y uno con reintento: notificaciones expandidas interceptaron el
+enlace de la parada antes del formulario de novedad. No es una corrida limpia.
+Autorizaste investigar y corregirlo localmente con «Si» (2026-10-17), en
+`003-fix-exception-navigation`, T130.
+T130 ya está corregida y convergida localmente: reproducción determinista conservada,
+10 repeticiones aprobadas, check/build, 948 pruebas y 90 e2e al primer intento (5,2 min).
+Solo cambia la navegación de esa prueba y fortalece las verificaciones de avisos;
+la aplicación y los límites no cambian. Autorizaste commit, push y abrir la PR con «Si»
+(2026-10-17), incluida la revisión del CI del último commit. El recibo de publicación y
+CI quedará en la PR; esta autorización no implica fusión.
 **Continuar con el pulido no está autorizado**; requiere otra decisión.
 La validación física y el cierre global de la 003 siguen pendientes.
 
@@ -58,6 +61,8 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-17 | ¿Hacer commit, push y abrir la PR de T130 para verificar CI? | «Si». Autorizada publicación y revisión del CI del último commit; sin fusionar ni comenzar el pulido |
+| 2026-10-17 | ¿Investigar y corregir la inestabilidad e2e posterior a la fusión de US7, antes del pulido? | «Si». Autorizada corrección local T130 con reproducción, pruebas primero y metodología estricta; publicación, fusión y pulido requieren otra aprobación |
 | 2026-10-17 | ¿Fusionar la PR #26 mediante squash después de su CI limpio? | «Si». Autorizada fusión con último head verificado y comprobación posterior de main; sin continuar con el pulido |
 | 2026-10-17 | ¿Hacer commit, push y abrir la PR de US7? | «sI». Autorizada publicación de T077–T080/T128/T129 y revisión del CI del último commit; no fusión ni continuar con el pulido |
 | 2026-10-17 | ¿Iniciar US7 después de verificar la fusión de US6 y el CI de main? | «Inicia». Autorizada implementación local T077–T080 con análisis, pruebas primero y convergencia; sin commit, push, PR ni fusión |

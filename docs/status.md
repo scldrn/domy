@@ -14,32 +14,53 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US6 are on `main`, through [PR #25](https://github.com/scldrn/domy/pull/25), squash `525ca94`. US7 (T077–T080/T128/T129) delivery checkpoint is [PR #26](https://github.com/scldrn/domy/pull/26), authorized for squash after clean latest-head CI. Its implementation passes check/build, 948 tests and 90 first-attempt e2e locally and remotely. The PR timeline is authoritative for the actual squash and post-merge main CI. Physical validation and feature-wide polish remain pending and are not authorized by the merge decision |
+| 003 Courier app | Setup, foundations and US1–US7 are on `main`, through [PR #26](https://github.com/scldrn/domy/pull/26), squash `e43ea1e`. Its final-head CI passed cleanly; post-merge CI passed overall with one retried e2e (89 first-attempt passes/1 flaky). T130 is corrected and converged locally, authorized for publication and latest-head CI review; merge remains unauthorized. Physical T087/T093 and feature-wide polish remain pending |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-Current checkpoint (2026-10-17): PR #25 is squash-merged as `525ca94`; pre-merge CI
-`39007113416` and post-merge CI `39008252312` pass check/build, 938 tests and 88 e2e
-at first attempt, without the pnpm layout warning. Source and squash trees match.
-Samuel subsequently authorized starting US7 locally with “Inicia”. It is now complete
-locally on `003-us7-my-day`: T077–T080 and convergence T128/T129. Samuel subsequently
-authorized publication with “sI”; PR #26 source `7125292` passes
-[CI 39038016265](https://github.com/scldrn/domy/actions/runs/39038016265): check/build,
-948 tests (242/512/194), 90 first-attempt e2e (12.8 minutes), setup and post-actions,
-without installer/runtime warnings. Its [receipt](https://github.com/scldrn/domy/pull/26#issuecomment-6235066005)
-records exact source/tree/base and preserves the historical local failures.
-
-Samuel authorized squash-merging PR #26 with “Si” (2026-10-17). This checkpoint records
-approval/continuation only; no application, dependency, migration, workflow or test changes.
-If the PR is open on resume, require clean latest-head CI and the current main base
-before squash. If already merged, fast-forward local main and inspect CI for the actual
-squash. The PR timeline records the authoritative merge/post-merge receipts; do not add
-a status-only commit to copy its own hash/results. Continuing to feature-wide polish
-requires separate approval and is not included in this merge authorization.
-Physical T087/T093 and the remaining Phase 10 work still prevent feature-wide closure.
+Current authoritative checkpoint (2026-10-17): PR #26 merged as `e43ea1e`, whose tree
+matches approved head `08ebd9e`. Final-head CI `39040911443` passed cleanly (948 tests,
+90 first-attempt e2e, check/build/setup/post-actions). Post-merge main CI `39043360351`
+passed overall but has 89 first-attempt e2e passes and one flaky T101 exception-controls
+test: expanded notifications intercept the delivery-stop link before opening the form.
+No historical trace artifact was uploaded. The [merge receipt](https://github.com/scldrn/domy/pull/26#issuecomment-6235793746)
+retains this distinction. US1–US7 are on main; feature 003 is not globally complete.
+Samuel authorized local investigation/correction with “Si”, branch
+`003-fix-exception-navigation`, T130. The local correction is complete and converged;
+Samuel subsequently authorized commit/push/PR and latest-head CI review with “Si”.
+Publish this approved slice and inspect fresh CI; the PR timeline records the actual
+source/head/base hashes and verification receipt, without a self-referential status commit.
+Merge and feature-wide polish remain unauthorized. Physical T087/T093 remain
+pending. Do not repeat the completed merge or classify its flaky run as clean.
 PR #25's [timeline receipt](https://github.com/scldrn/domy/pull/25#issuecomment-6230668996)
 is authoritative for its merge/post-merge verification; do not repeat that merge.
+
+### T130 local correction context
+
+Waiting for both actual offline pickup/sync toasts and completed finite animations
+reproduces the 30-second blocked delivery-link click. Initial diagnostics pass during
+the entrance animation; centering the whole card also fails because Sonner's expanded
+interaction area extends 15 px above the painted toast. RED traces/context are retained
+in ignored `.git/t130-red` and `.git/t130-card-center-red`. This proves the mechanism,
+not the historical CI's exact scheduling; no historical trace was uploaded.
+
+Only this test changes: native centered scrolling and a normal pointer click on the
+visible address inside the link, not its covered card center. The actual application,
+shared helper, timeout/retry/worker policies and nine-point photo/save hit checks stay
+unchanged. Both real notifications must remain visible and expanded at those checks;
+the full axe scan remains. Ten focused repetitions pass (36.8 seconds), then all four
+gates pass: check, 948 tests (242/512/194; server 126.45 seconds), build, 90 first-attempt
+e2e (5.2 minutes). Expected negative-auth logs are preserved, not suppressed.
+
+Final scoped convergence checks FR-038, three plan decisions, T100/T101/T112/T130 and
+all nine principles with zero findings; tasks stay byte-identical at SHA-256
+`1bb156f019bc4000dab33fca820039d5c3d75872c06cd102148e099bbe14c34c` during assessment.
+The checked marker and closure note follow under implementation tracking. Checklists
+remain unchanged (16/16 and 48/48); no converge hooks exist and optional commit hooks
+are not executed. No new commit, publication or remote CI is claimed by that local
+checkpoint. Publication was subsequently authorized as recorded above; merge and
+feature-wide polish still require approval, and physical T087/T093 stay pending.
 
 ## US7 local implementation context
 

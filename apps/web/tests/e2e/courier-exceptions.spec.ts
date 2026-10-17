@@ -85,19 +85,41 @@ test("keeps exception controls above visible synchronization notifications", asy
   await page.context().setOffline(true);
   await page.getByRole("list", { name: "Paradas" }).getByRole("link").first().click();
   await page.getByRole("button", { name: "Confirmar recogida" }).click();
-  await expect(page.locator("[data-sonner-toast]").first()).toBeVisible();
+  const notifications = page.locator("[data-sonner-toast]");
+  await expect(
+    notifications.filter({ hasText: "Sin conexión. Tus pendientes siguen guardados." }),
+  ).toBeVisible();
+  await expect(notifications.filter({ hasText: "recogida" })).toBeVisible();
   await page.mouse.move(0, 0);
   await page.keyboard.press("Alt+t");
-  await expect(page.locator("[data-sonner-toast]").first()).toHaveAttribute(
-    "data-expanded",
-    "true",
+  await expect(notifications).toHaveCount(2);
+  await expect(page.locator("[data-sonner-toast][data-expanded=true]")).toHaveCount(2);
+  await page.getByRole("link", { name: "Mi ruta", exact: true }).first().click();
+  const stop = page
+    .getByRole("list", { name: "Paradas" })
+    .getByRole("link")
+    .filter({ hasText: "Calle 25 # 40-05" });
+  const address = stop.getByText("Calle 25 # 40-05", { exact: true });
+  // T130: the full stack must have arrived; racing its entrance animation hid interception.
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+      .every((animation) => animation.playState !== "running"),
   );
-  await openStop(page, "Calle 25 # 40-05");
+  // The card center is under the stack, but its address is a real unobscured tap target.
+  await address.evaluate((element) => {
+    element.scrollIntoView({ block: "center", behavior: "instant" });
+  });
+  await address.click();
   await page.getByRole("button", { name: "Reportar novedad" }).click();
   const sheet = page.getByRole("dialog");
   expect(await accessibilityViolations(page)).toEqual([]);
   const photo = sheet.getByRole("button", { name: "Tomar foto" });
   await photo.scrollIntoViewIfNeeded();
+  await expect(page.locator("[data-sonner-toast][data-expanded=true]")).toHaveCount(2);
+  await expect(notifications.nth(0)).toBeVisible();
+  await expect(notifications.nth(1)).toBeVisible();
   expect(
     await photo.evaluate(targetIsUncovered),
     "the complete photo target stays above notifications",
@@ -105,6 +127,9 @@ test("keeps exception controls above visible synchronization notifications", asy
   await sheet.getByRole("radio", { name: "Destinatario ausente" }).check();
   await sheet.getByRole("button", { name: "Revisar" }).click();
   const save = sheet.getByRole("button", { name: "Guardar novedad" });
+  await expect(page.locator("[data-sonner-toast][data-expanded=true]")).toHaveCount(2);
+  await expect(notifications.nth(0)).toBeVisible();
+  await expect(notifications.nth(1)).toBeVisible();
   expect(
     await save.evaluate(targetIsUncovered),
     "the complete confirmation target stays above notifications",
