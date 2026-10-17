@@ -969,3 +969,11 @@ the existing T127 publication approval and require clean final-head CI too; its 
 lives in PR #25 rather than another self-referential status commit. No application,
 workflow, dependency, lockfile or test changes accompany this tracking closure.
 Merge, US7 and physical T087/T093 remain separate and unauthorized/pending.
+
+Subsequent owner decision (2026-10-17): after verification-closure CI 39005250252 on
+`c079292` passed all 938 tests/88 first-attempt e2e, check/build and setup/post-actions
+without the layout warning, Samuel authorized squash-merging PR #25 with “Si”.
+The approval/continuation checkpoint changes documentation only and must also receive
+clean latest-head CI before squash. The PR timeline records the actual merge and
+post-merge `main` verification. US7 still requires separate approval; T087/T093 remain
+pending. No additional business implementation is authorized by the merge decision.

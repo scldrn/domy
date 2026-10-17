@@ -14,21 +14,24 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US5 are on `main`, including T122 [PR #24](https://github.com/scldrn/domy/pull/24), squash `18c832c`. US6/T126 and T127's installer correction are published in [PR #25](https://github.com/scldrn/domy/pull/25). T127 source `12185b6` passes check/build, 938 tests and 88 first-attempt e2e remotely, including setup/post-actions/cache and absence of the layout warning; scoped convergence is complete. Its checked task/verification closure is published under the existing approval and must receive clean final-head CI too; the PR timeline carries that receipt. Merge and US7 require approval. Physical validation and feature-wide polish remain pending |
+| 003 Courier app | Setup, foundations and US1–US5 are on `main`, including T122 [PR #24](https://github.com/scldrn/domy/pull/24), squash `18c832c`. US6/T126/T127 delivery checkpoint is [PR #25](https://github.com/scldrn/domy/pull/25), authorized for squash after clean latest-head CI. Implementation and verification closure pass check/build, 938 tests and 88 first-attempt e2e remotely, with the pnpm warning removed and scoped convergence complete. The PR timeline is authoritative for the actual squash and post-merge `main` CI. US7 has not started and requires separate approval. Physical validation and feature-wide polish remain pending |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-T127's implementation and remote verification pass: [CI 39003878509](https://github.com/scldrn/domy/actions/runs/39003878509)
-on `12185b6` confirms pnpm 12.8.1, Node 24.21.0, skipped redundant runtime installation,
-frozen install, successful post-actions/cache saves, 938 tests and 88 first-attempt
-e2e (9.5 minutes), check/build, and absence of the old layout warning. Scoped
-convergence is complete. Publish its checked task/verification closure under Samuel's
-existing commit/push approval and inspect clean final-head CI before proposing merge.
-The PR timeline is the authoritative receipt for that final head; do not create another
-status-only commit merely to copy its own hash/result. The earlier `06e606b` e2e retry
-and `af78fa6` installer warning remain historical evidence. Merge and US7 need their
-own approval; no merge or continuation is claimed here.
+Samuel authorized squash-merging PR #25 with “Si” on 2026-10-17, after its verification
+closure `c079292` passed [CI 39005250252](https://github.com/scldrn/domy/actions/runs/39005250252):
+check/build, 938 tests and 88 first-attempt e2e (13.1 minutes), no old pnpm layout
+warning, and successful setup/post-actions/cache restoration. This checkpoint records
+that approval and the next-step boundary; it changes no application or workflow.
+
+On resume, check PR #25's state and its authoritative timeline. If still open, squash
+the approved PR only after clean CI on its latest head and a current base. If merged,
+refresh `main` with a fast-forward and inspect the CI of the actual squash commit;
+do not start US7 until both that verification and a separate owner approval are present.
+Use the PR timeline for exact merge/post-merge receipts, not another status-only commit
+to copy its own hash/result. The earlier `06e606b` e2e retry and `af78fa6` installer
+warning remain historical evidence. No continuation to US7 is authorized here.
 Physical T087/T093 remain required before closing feature 003.
 
 ### T127 pnpm installer warning

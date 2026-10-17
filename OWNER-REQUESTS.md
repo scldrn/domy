@@ -8,21 +8,16 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-US6 y T126 están publicadas en la [PR #25](https://github.com/scldrn/domy/pull/25),
-commit `af78fa6`, desde `18c832c`, con tus dos opciones A. Su CI pasó check, build,
-938 pruebas y 88 e2e al primer intento. El recibo completo está en la PR; el fallo con
-reintento del commit anterior `06e606b` se conserva como evidencia histórica.
+US6 y sus correcciones T126/T127 están verificadas en la [PR #25](https://github.com/scldrn/domy/pull/25).
+El cierre `c079292` pasó CI `39005250252`: check, build, 938 pruebas y 88 e2e al primer
+intento, sin el aviso de PNPM_HOME y con cachés verificadas. Se conservan tus dos
+opciones A y los fallos históricos, sin reclasificarlos como corridas limpias.
 
-Autorizaste investigar y corregir localmente el aviso de `PNPM_HOME` con «Si» (T127).
-Se reproduce en el instalador externo, no en la aplicación. La corrección local
-sustituye solo ese instalador por su sucesor oficial, sin cambiar pnpm 12.8.1, Node 24,
-instalación congelada ni compuertas. Pasan la comprobación aislada, check, build,
-938 pruebas y 88 e2e al primer intento. Tras tu autorización de commit/push, el CI
-`39003878509` en `12185b6` confirmó esos resultados, la ausencia del aviso y el correcto
-cierre de ambos mecanismos de caché. T127 pasó convergencia y se cerró su verificación.
-La publicación de ese cierre está cubierta por tu aprobación de T127; el último
-commit también debe pasar CI y su recibo queda en la PR.
-**Fusionar e iniciar US7 no está autorizado**; requiere aprobación aparte.
+Autorizaste fusionar la PR #25 mediante squash con «Si» (2026-10-17). La fusión solo
+se ejecuta con el CI del último commit limpio; después se comprueba el CI del squash
+en `main`. El estado real, el hash y sus recibos están en la PR, también al retomar.
+**Iniciar US7 no está autorizado**; requiere una decisión aparte después de verificar
+`main`. La validación física y el cierre global de la 003 siguen pendientes.
 
 T122 ya está fusionada en la PR #24 como `18c832c`. El CI posterior `38945702324`
 pasó 883 pruebas y 82 e2e al primer intento, check y build; el recibo está en la PR.
@@ -57,6 +52,7 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-17 | ¿Fusionar la PR #25 mediante squash tras el CI final limpio? | «Si». Autorizada fusión con último head verificado y revisión posterior de main; sin iniciar US7 |
 | 2026-10-16 | ¿Hacer commit y push de T127 en la PR #25 para comprobar el nuevo instalador en GitHub CI? | «Si». Autorizada publicación y revisión del CI del último commit; sin fusión ni iniciar US7 |
 | 2026-10-16 | ¿Investigar y corregir el aviso de PNPM_HOME manteniendo versiones y compuertas? | «Si». Autorizada investigación/corrección local T127; sin commit/push, fusión ni iniciar US7 |
 | 2026-10-16 | ¿Hacer commit y push de T126 en la PR #25 para validar el CI del nuevo commit? | «Si». Autorizada publicación y revisión del CI del último commit, incluidos e2e al primer intento; no fusión ni iniciar US7 |
