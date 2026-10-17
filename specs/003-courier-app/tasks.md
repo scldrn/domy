@@ -1080,3 +1080,13 @@ correction and its aligned documentation; the PR timeline records actual commit/
 and CI evidence. The preceding local checkpoint claims no remote verification. Preserve
 the historical flaky CI and both local RED trials. No merge, feature-wide polish or
 physical-validation completion is authorized by this publication decision.
+
+T130 merge authorization (2026-10-17): PR #27 source `bf26d7b` passed CI 39057471380
+with check/build, all 948 tests (242/512/194), 90 first-attempt e2e (10.8 minutes), setup
+and post-actions. Its timeline receipt records exact source/tree/base and preserves the
+historical flaky main run, both RED trials and expected negative-auth/infrastructure logs.
+Samuel authorized squash merge and post-merge main CI verification with “Si”. This
+approval/continuation checkpoint changes documentation only and must also pass fresh
+latest-head CI before squash. The PR timeline records the actual merge and subsequent
+CI outcome; no merge result is claimed here. Feature-wide polish and physical T087/T093
+remain separate and unauthorized/pending.

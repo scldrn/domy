@@ -14,7 +14,7 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US7 are on `main`, through [PR #26](https://github.com/scldrn/domy/pull/26), squash `e43ea1e`. Its final-head CI passed cleanly; post-merge CI passed overall with one retried e2e (89 first-attempt passes/1 flaky). T130 is corrected and converged locally, authorized for publication and latest-head CI review; merge remains unauthorized. Physical T087/T093 and feature-wide polish remain pending |
+| 003 Courier app | Setup, foundations and US1–US7 are on `main`, through [PR #26](https://github.com/scldrn/domy/pull/26), squash `e43ea1e`. Its post-merge CI has one retried e2e (89 first-attempt passes/1 flaky). T130 is published in [PR #27](https://github.com/scldrn/domy/pull/27), source `bf26d7b` with clean CI (948 tests/90 first-attempt e2e); squash is authorized after clean final-head CI and requires post-merge verification. The PR timeline records the actual merge/result. Physical T087/T093 and feature-wide polish remain pending |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
@@ -29,10 +29,16 @@ retains this distinction. US1–US7 are on main; feature 003 is not globally com
 Samuel authorized local investigation/correction with “Si”, branch
 `003-fix-exception-navigation`, T130. The local correction is complete and converged;
 Samuel subsequently authorized commit/push/PR and latest-head CI review with “Si”.
-Publish this approved slice and inspect fresh CI; the PR timeline records the actual
-source/head/base hashes and verification receipt, without a self-referential status commit.
-Merge and feature-wide polish remain unauthorized. Physical T087/T093 remain
-pending. Do not repeat the completed merge or classify its flaky run as clean.
+PR #27 source `bf26d7b` passed CI `39057471380`: check/build, 948 tests and 90
+first-attempt e2e (10.8 minutes), setup and post-actions. Its [receipt](https://github.com/scldrn/domy/pull/27#issuecomment-6238901913)
+records exact source/tree/base and keeps the earlier failed/flaky evidence.
+Samuel subsequently authorized squash merge and post-merge main CI verification with
+“Si” (2026-10-17). This approval/continuation checkpoint changes documentation only;
+require clean latest-head CI before squash and inspect CI for the actual resulting main
+commit. The PR timeline records the actual hashes and results, without a self-referential
+status-only commit. If already merged on resume, do not repeat the merge. Feature-wide
+polish is not authorized; physical T087/T093 remain pending. Do not classify the earlier
+flaky main CI as clean.
 PR #25's [timeline receipt](https://github.com/scldrn/domy/pull/25#issuecomment-6230668996)
 is authoritative for its merge/post-merge verification; do not repeat that merge.
 

@@ -18,8 +18,13 @@ T130 ya está corregida y convergida localmente: reproducción determinista cons
 10 repeticiones aprobadas, check/build, 948 pruebas y 90 e2e al primer intento (5,2 min).
 Solo cambia la navegación de esa prueba y fortalece las verificaciones de avisos;
 la aplicación y los límites no cambian. Autorizaste commit, push y abrir la PR con «Si»
-(2026-10-17), incluida la revisión del CI del último commit. El recibo de publicación y
-CI quedará en la PR; esta autorización no implica fusión.
+(2026-10-17), incluida la revisión del CI del último commit. La [PR #27](https://github.com/scldrn/domy/pull/27)
+está publicada: `bf26d7b` pasó CI `39057471380` con check/build, 948 pruebas y 90 e2e
+al primer intento (10,8 min), incluidas instalación y tareas posteriores. El recibo
+conserva los fallos históricos y los avisos esperados de autenticación/infraestructura.
+Después autorizaste fusionarla mediante squash con «Si» (2026-10-17), solo con CI limpio
+del último commit y posterior verificación del CI del squash en main. La PR registra
+los hashes y resultados reales al retomar; no se declara una fusión antes de realizarla.
 **Continuar con el pulido no está autorizado**; requiere otra decisión.
 La validación física y el cierre global de la 003 siguen pendientes.
 
@@ -61,6 +66,7 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-17 | ¿Fusionar la PR #27 mediante squash y verificar después el CI de main? | «Si». Autorizada fusión con CI limpio del último commit y comprobación posterior del squash; sin comenzar el pulido |
 | 2026-10-17 | ¿Hacer commit, push y abrir la PR de T130 para verificar CI? | «Si». Autorizada publicación y revisión del CI del último commit; sin fusionar ni comenzar el pulido |
 | 2026-10-17 | ¿Investigar y corregir la inestabilidad e2e posterior a la fusión de US7, antes del pulido? | «Si». Autorizada corrección local T130 con reproducción, pruebas primero y metodología estricta; publicación, fusión y pulido requieren otra aprobación |
 | 2026-10-17 | ¿Fusionar la PR #26 mediante squash después de su CI limpio? | «Si». Autorizada fusión con último head verificado y comprobación posterior de main; sin continuar con el pulido |
