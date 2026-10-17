@@ -14,18 +14,57 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US5 are on `main`, including T122 [PR #24](https://github.com/scldrn/domy/pull/24), squash `18c832c`. US6 is complete and scoped-converged on `003-us6-dispatch-records`: T071–T076/T123–T125, local check/build, 938 tests and 86 first-attempt e2e pass. Commit/push/PR are authorized; consult this branch's PR timeline for publication and latest-head CI receipts. Merge and US7 are not authorized. Physical validation and feature-wide polish remain pending |
+| 003 Courier app | Setup, foundations and US1–US5 are on `main`, including T122 [PR #24](https://github.com/scldrn/domy/pull/24), squash `18c832c`. US6 T071–T076/T123–T125 is published in [PR #25](https://github.com/scldrn/domy/pull/25) at `06e606b`. Its CI passes check/build and 938 tests but has 85 first-attempt e2e passes and one flaky keyboard-registration case. T126 is corrected and scoped-converged locally: check/build, 938 tests, 88 first-attempt e2e and 60 focused repetitions pass. Commit/push of T126 and latest-head CI review are authorized; the PR timeline records publication/results. Merge and US7 require approval. Physical validation and feature-wide polish remain pending |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-Samuel authorized commit, push and a PR for US6 with “Si” on 2026-10-16. Publish
-`003-us6-dispatch-records`, verified against current `origin/main` `18c832c`, and inspect
-fresh latest-head CI, including first-attempt e2e rather than only the workflow result.
-Use that branch's PR timeline as the authoritative publication/CI receipt; do not create
-a documentation-only commit merely to copy its own hash or CI result here. This checkpoint
-does not claim remote success or merge. Merge and US7 need their own approval.
+Samuel authorized local investigation/correction T126 with “si” on 2026-10-16 after
+reviewing PR #25's [CI 38991329783](https://github.com/scldrn/domy/actions/runs/38991329783).
+The correction, focused repetitions, all four gates and scoped convergence now pass
+locally without weakening tests. Samuel subsequently authorized commit/push of T126
+in PR #25 with “Si”. Publish the correction and inspect fresh latest-head CI before
+proposing merge. Do not call the original head's retried e2e clean. Use the PR timeline as the
+authoritative publication/CI receipt, not a documentation-only commit to copy its own
+hash/result. This checkpoint claims no new remote result. Merge and US7 need their own approval.
 Physical T087/T093 remain required before closing feature 003.
+
+### T126 keyboard-registration investigation
+
+Read-only scoped analysis maps feature 001 FR-003/FR-005/FR-006/FR-038 and keyboard access
+to T126 and its readiness/real-response plan decisions (4/4 requirements, one task,
+all nine constitution principles; no unmapped task or unresolved HIGH/CRITICAL
+artifact inconsistency). Reviewer-owned checklists remain 16/16 and 48/48 unchanged.
+The convergence finding was partial/HIGH validation, not an approved business change.
+
+The unchanged keyboard case failed once in 20 local repetitions (19 passed), at the
+same missing-success assertion as CI. Those first-run artifacts were replaced by the
+next diagnostic before inspection, so they do not establish the exact local cause.
+Controlled fee withholding reproduced the same assertion with a positive-fee validation
+error. That retained trace also shows Amy selected despite awaiting a visible Bullish
+option. A separate controlled unfiltered-results/search gate then reproduces the
+selected-value failure deterministically: expected Bullish, actual Amy. Both RED
+traces are retained locally under ignored `.git/t126-red-fee` and `.git/t126-red-search`.
+The historical CI's precise interleaving remains unknown because no trace was uploaded.
+
+The correction is test-only: await the uniquely named native highlighted merchant and
+neighborhood, verify selected values/default pickup, and await the actual COP 13,000
+quote before the original keyboard submit and success assertion. The ordinary case and
+two controlled-response variants retain real PostgreSQL/server data and the built app;
+no response is mocked, sleep added, or deadline/retry/worker/assertion relaxed. Focused
+repetitions pass 60/60 (20 per variant, 2.3 minutes). Sequential full gates pass:
+check, 938 tests (240/508/190), 88 e2e first attempt (5.1 minutes), and build with the
+real service worker. The five expected invalid-password warnings come from the negative
+lockout scenario; none were suppressed. Publication was subsequently authorized with
+“Si”; the PR timeline carries its receipt and latest-head CI, not this local checkpoint.
+
+Final scoped convergence checks those four requirements, feature 001 US1/AC1 and AC5,
+the keyboard critical flow, two plan decisions, T126 and all nine constitution
+principles with zero findings. The read-only assessment preserved `tasks.md` SHA-256
+`bd3e5db967caca42281e13684c6b5a80dc050780673ee843c08a10d4b951b771`;
+the checked marker/closure note were updated afterward. Checklists remain unchanged,
+no converge hooks exist and optional commit hooks were not executed. This local
+validation does not replace latest-head CI after the subsequently approved publication.
 
 ## US6 implementation context
 

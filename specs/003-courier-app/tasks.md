@@ -860,3 +860,42 @@ precedes guards. US7, physical T087/T093 and feature-wide polish remain pending.
 Samuel subsequently authorized commit, push and a PR with “Si” on 2026-10-16. The
 branch's PR timeline is the publication/CI receipt; this checkpoint claims no remote
 result. Merge and starting US7 still require separate approval.
+
+## Phase 35: Convergence
+
+- [X] T126 HIGH Investigate and reproduce the first-attempt keyboard-registration failure in PR #25 CI 38991329783 at `06e606b`, `apps/web/tests/e2e/register-shipment.spec.ts:163`. Distinguish asynchronous form readiness from an application defect using controlled real-server responses and a failing regression before correction. Align the plan with demonstrated evidence; preserve keyboard-only registration, real PostgreSQL/built app, success and accessibility assertions, all existing deadlines/retries/workers and coverage. Repeat focused repetitions, all four gates and scoped convergence. The historical CI has no retained trace and remains 85 passed/1 flaky, not clean. Only local investigation/correction is authorized; publication, merge and US7 require separate approval (Constitution VI/VII, Development Workflow & Quality Gates; feature 001 FR-006/FR-038 and keyboard registration; partial).
+
+T126 local closure (2026-10-16): the original case fails once in 20 repetitions
+(19 pass), at its unchanged five-second success assertion. A held real quote reproduces
+that failure with a positive-fee validation error; a separate held merchant search
+reproduces Enter selecting Amy Tecnology while Bullish Hype is already visible.
+Both controlled RED traces are retained locally under ignored `.git/t126-red-fee` and
+`.git/t126-red-search`. The first repetition run's artifacts were replaced before
+inspection; neither that run nor the trace-less historical CI establishes an exact
+interleaving. The plan records this evidence and its limits before final correction.
+
+Await native desired-option highlighting, verify actual selected values/default pickup,
+and await the visible real quote before the original keyboard submit. Keep the normal
+network case and add controlled search/quote variants with explicit gates, not sleeps
+or fake responses. Both controlled mechanisms fail without their readiness correction.
+The three corrected cases pass 20 repetitions each (60/60, 2.3 minutes, no retries).
+Final sequential gates pass: `pnpm check`; `pnpm test` (240 domain + 508 server +
+190 web = 938); `env -u NO_COLOR pnpm test:e2e` (88/88, 5.1 minutes, first attempt);
+`pnpm build`, including the actual service worker. The five invalid-password warnings
+are expected output from the negative lockout case, not suppressed build/lint warnings.
+No application, dependency, migration, CI policy, deadline, retry or worker changes.
+
+Scoped convergence checks feature 001 FR-003/FR-005/FR-006/FR-038, US1/AC1 and AC5,
+the keyboard critical flow, two readiness/real-response plan decisions, T126 and all
+nine constitution principles: zero findings. Before/after assessment, this file stayed
+byte-identical at SHA-256
+`bd3e5db967caca42281e13684c6b5a80dc050780673ee843c08a10d4b951b771`;
+this marker and note are subsequent implementation tracking. Reviewer checklists are
+unchanged (16/16 and 48/48); no converge hooks exist and optional commit hooks were
+not executed. Publication of this correction requires approval and fresh latest-head
+CI; the published `06e606b` retry remains historical evidence, not clean validation.
+Merge, US7 and physical T087/T093 remain outside this completed local correction.
+
+Samuel subsequently authorized commit/push of T126 in PR #25 and latest-head CI review
+with “Si” (2026-10-16). The PR timeline is the publication/CI receipt; this local
+checkpoint claims no new remote result. Merge and starting US7 remain unauthorized.

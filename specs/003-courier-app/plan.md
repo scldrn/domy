@@ -240,6 +240,37 @@ screen.
 
 ## Cross-feature alignment
 
+T126 owner-authorized local investigation (2026-10-16): PR #25's CI 38991329783
+at `06e606b` is green but has 85 first-attempt e2e passes and one retried keyboard
+registration. The unchanged case also fails once in 20 local repetitions (19 pass).
+A controlled real fee-quote request held through submission reproduces the missing
+success message and shows the positive-fee validation error. Its captured page also
+shows Amy Tecnology selected despite the test having awaited a visible Bullish Hype
+option: `SearchCombobox` keeps previous query results and Base UI's Enter selects the
+highlighted option, not an arbitrary visible match. Do not infer the historical CI's
+exact interleaving: no trace artifact was uploaded there, and the first repetition
+run's local artifacts were replaced by the next diagnostic run before inspection.
+
+Keep this correction test-only in `apps/web/tests/e2e/register-shipment.spec.ts`.
+Await the uniquely named desired option's native `data-highlighted` state before Enter,
+then assert the selected merchant/neighborhood values and default pickup point. Await
+the visible expected COP 13,000 fee before submitting, exercising feature 001's live
+quote (FR-006 and US1/AC1). Preserve the original keyboard inputs, Tab traversal,
+payment action, success toast, full axe scan and all existing deadlines/retries/workers.
+Add a controlled delayed-quote variant using an explicit promise gate, released before
+the fee-readiness assertion, never a sleep or a mocked successful response. Keep the
+ordinary network variant too. A second controlled variant primes real unfiltered
+merchant results and holds the `bullish` search until Amy remains highlighted while
+Bullish is visible; release that response before awaiting the desired highlight.
+With the original Enter behavior, the selected-value assertion fails with Amy instead
+of Bullish. This regression guards the proven selection mechanism, not just the toast.
+Prove the controlled cases fail before the correction,
+repeat both cases and all four gates, and converge against Constitution VI/VII and
+feature 001 FR-003/FR-005/FR-006/FR-038. No production, schema, dependency or CI policy change;
+no publication, merge or US7 is authorized by this investigation approval.
+Samuel subsequently authorized commit/push of the completed T126 correction in PR #25
+and latest-head CI review with “Si” on 2026-10-16; merge and US7 remain separate decisions.
+
 US6 owner-approved refinement (2026-10-16, option A): reversing an errand completion
 must not apply the package's `delivered → picked_up` rule. A shared, contextual rule in
 `packages/domain/src/shipment-lifecycle.ts` selects `dispatched` and the original errand

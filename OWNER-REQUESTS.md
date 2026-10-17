@@ -8,14 +8,17 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-US6 quedó implementada y convergida localmente en `003-us6-dispatch-records`, desde
-`18c832c`, con tus dos opciones A. Pasan check, build, 938 pruebas y los 86 e2e al primer
-intento. Se cerraron también los tres hallazgos de convergencia, con pruebas primero.
+US6 está publicada en la [PR #25](https://github.com/scldrn/domy/pull/25), commit
+`06e606b`, desde `18c832c`, con tus dos opciones A. Su CI pasó check, build y 938 pruebas,
+pero los e2e no quedaron limpios: 85 pasaron al primer intento y el registro por teclado
+necesitó reintento. El recibo completo está en la PR; no se considera una corrida limpia.
 
-Autorizaste commit, push y apertura de la PR de US6 con «Si». La publicación y sus
-resultados de CI se registran en la PR de `003-us6-dispatch-records`; hay que revisar el
-último commit y los e2e al primer intento antes de proponer la fusión. **La fusión y el
-inicio de US7 no están autorizados** y requieren una decisión aparte.
+Autorizaste investigar y corregir localmente esa inestabilidad con «si» (T126).
+La corrección ya pasó convergencia, check, build, 938 pruebas, 88 e2e al primer intento
+y 60 repeticiones enfocadas, sin flexibilizar pruebas ni cambiar la aplicación.
+Autorizaste publicar la corrección mediante commit/push en la PR #25 con «Si» y
+revisar el CI del último commit; su recibo queda en la PR. **La fusión y el inicio de US7 no están
+autorizados** y requieren una decisión aparte.
 
 T122 ya está fusionada en la PR #24 como `18c832c`. El CI posterior `38945702324`
 pasó 883 pruebas y 82 e2e al primer intento, check y build; el recibo está en la PR.
@@ -50,6 +53,8 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-16 | ¿Hacer commit y push de T126 en la PR #25 para validar el CI del nuevo commit? | «Si». Autorizada publicación y revisión del CI del último commit, incluidos e2e al primer intento; no fusión ni iniciar US7 |
+| 2026-10-16 | ¿Investigar y corregir el e2e inestable de registro por teclado antes de proponer la fusión de US6? | «si». Autorizada investigación y corrección local T126 con metodología estricta y sin flexibilizar pruebas; publicación, fusión y US7 requieren aprobación aparte |
 | 2026-10-16 | ¿Hacer commit, push y abrir la PR de US6? | «Si». Autorizada publicación de T071–T076/T123–T125 y revisión del CI del último commit; no fusión ni iniciar US7 |
 | 2026-10-16 | ¿Impedir revertir un registro de paquete si después hubo otra decisión de despacho o cambió su custodia? | «A». Rechazar la reversión con conflicto, explicar los cambios posteriores y conservarlos; no deshacerlos implícitamente |
 | 2026-10-16 | ¿Qué ocurre al revertir un mandado terminado por error? | «A». En ruta con parada pendiente si la ruta original sigue en curso con el mismo mensajero; de lo contrario Registrado sin asignar. En ambos casos sin custodia de paquete; spec, modelo, contrato, plan, investigación, quickstart y T072/T073/T075 alineados |
