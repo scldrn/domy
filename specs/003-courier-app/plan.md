@@ -92,6 +92,39 @@ all four gates and scoped convergence; CI continues to invoke the same scripts.
 
 ### CI action runtime maintenance — owner-approved 2026-10-16
 
+T127 follow-up (owner-authorized local investigation/correction, 2026-10-16):
+CI 38994299786 at `af78fa6` passes all gates and 88 first-attempt e2e, but the exact
+`pnpm/action-setup@v6` commit `0977fd99725f1db4007ccb2928dbb4e90d06cc86`
+bootstraps pnpm 11.19.0 and sets `PNPM_HOME` to its own `node_modules/.bin` before
+self-updating to the unchanged project pin 12.8.1. That directory necessarily has a
+pnpm shim and triggers pnpm's legacy-layout detector. The log confirms successful
+12.8.1 activation and frozen installation, not an application failure.
+Sources: [exact installer](https://github.com/pnpm/action-setup/blob/0977fd99725f1db4007ccb2928dbb4e90d06cc86/src/install-pnpm/run.ts),
+[upstream report #281](https://github.com/pnpm/action-setup/issues/281),
+[official migration guidance](https://github.com/pnpm/action-setup#migrating-to-pnpmsetup).
+Changing `dest` or setting `standalone` does not separate the bootstrap shim from
+`PNPM_HOME` on Linux; a later `pnpm setup` cannot undo an already-emitted warning.
+Do not suppress it or modify pinned project versions to match the bootstrap.
+
+Use the maintained successor `pnpm/setup@v3`, verified at
+`a0881977cd8ea73b1ed212236c99ca10dcc80cf4`, only to install pnpm: set `install: false`
+and `node-version-file: false`. Its [manifest](https://github.com/pnpm/setup/blob/a0881977cd8ea73b1ed212236c99ca10dcc80cf4/action.yml)
+declares Node 24 action runtime and these supported inputs; its native download is
+verified against npm signatures/checksums without the npm/self-update bootstrap.
+Keep `actions/setup-node@v7` as sole Node installer with `.nvmrc` and the existing
+pnpm cache; no redundant runtime, dependency installation or cache step is added.
+Preserve `packageManager`, lockfile, checkout, runner, commands and all test policies.
+Run exact old/new action bundles in disposable Linux containers with copied public
+project manifests, no host secrets/configuration, asserting pinned pnpm activation
+and no automatic runtime/dependency installation. Capture the old warning before the
+workflow edit; validate the corrected configuration and all four local gates afterward.
+This is installer maintenance, not a new dependency or business requirement. Fresh
+GitHub CI remains required after publication; local simulation cannot replace it.
+Commit/push, merge and US7 are not authorized by this local correction approval.
+T127 supersedes only T120's pnpm installer choice below; its other constraints remain.
+Samuel subsequently authorized commit/push of T127 in PR #25 and latest-head CI review
+with “Si” (2026-10-16). Merge and US7 remain separate decisions; final-head CI must pass.
+
 T120 addresses the deprecation warnings observed in US5 PR #23's successful CI.
 Upgrade only `pnpm/action-setup` from v4 to v6 (current release v6.1.0) and
 `actions/setup-node` from v5 to v7 (current release v7.1.0) in `.github/workflows/ci.yml`.

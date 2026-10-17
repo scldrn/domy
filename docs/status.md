@@ -14,20 +14,65 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US5 are on `main`, including T122 [PR #24](https://github.com/scldrn/domy/pull/24), squash `18c832c`. US6 T071–T076/T123–T125 is published in [PR #25](https://github.com/scldrn/domy/pull/25) at `06e606b`. Its CI passes check/build and 938 tests but has 85 first-attempt e2e passes and one flaky keyboard-registration case. T126 is corrected and scoped-converged locally: check/build, 938 tests, 88 first-attempt e2e and 60 focused repetitions pass. Commit/push of T126 and latest-head CI review are authorized; the PR timeline records publication/results. Merge and US7 require approval. Physical validation and feature-wide polish remain pending |
+| 003 Courier app | Setup, foundations and US1–US5 are on `main`, including T122 [PR #24](https://github.com/scldrn/domy/pull/24), squash `18c832c`. US6 and T126 are published in [PR #25](https://github.com/scldrn/domy/pull/25) at `af78fa6`: check/build, 938 tests and 88 first-attempt e2e pass remotely. T127's installer-only correction passes isolated verification and all four local gates with 938 tests/88 first-attempt e2e; no local implementation gap remains. Commit/push and latest-head CI review of T127 are authorized; its completion remains subject to remote verification. The PR timeline carries publication/CI receipts. Merge and US7 require approval. Physical validation and feature-wide polish remain pending |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-Samuel authorized local investigation/correction T126 with “si” on 2026-10-16 after
-reviewing PR #25's [CI 38991329783](https://github.com/scldrn/domy/actions/runs/38991329783).
-The correction, focused repetitions, all four gates and scoped convergence now pass
-locally without weakening tests. Samuel subsequently authorized commit/push of T126
-in PR #25 with “Si”. Publish the correction and inspect fresh latest-head CI before
-proposing merge. Do not call the original head's retried e2e clean. Use the PR timeline as the
-authoritative publication/CI receipt, not a documentation-only commit to copy its own
-hash/result. This checkpoint claims no new remote result. Merge and US7 need their own approval.
+Samuel authorized local investigation/correction of the `PNPM_HOME` warning with “Si”
+on 2026-10-16 (T127). The [prior published CI](https://github.com/scldrn/domy/actions/runs/38994299786)
+at `af78fa6` passes check/build, 938 tests and 88 first-attempt e2e, but still emits the
+installer warning. Its receipt is in PR #25; the earlier `06e606b` e2e retry remains
+historical evidence, not a clean run. T127's isolated verification, all four local
+gates and local convergence pass. Samuel subsequently authorized commit/push in PR #25
+and latest-head CI review with “Si”. Publish T127 and inspect fresh CI, including
+setup/post-action/cache behavior, before proposing merge. Close its verification
+tracking only after that evidence passes and require clean CI on the final published head.
+The PR timeline is the authoritative
+publication/CI receipt, not a documentation-only commit to copy its own hash/results.
+This checkpoint claims no remote validation of T127; consult the PR timeline.
+Merge and US7 need their own approval.
 Physical T087/T093 remain required before closing feature 003.
+
+### T127 pnpm installer warning
+
+The exact action source and the existing CI reproduce the known false-positive
+[upstream report #281](https://github.com/pnpm/action-setup/issues/281): an npm-installed
+bootstrap lives directly in the action's `PNPM_HOME`, so self-update mistakes its shim
+for a legacy installation. Changing the action's destination or standalone mode on
+Linux does not remove that internal layout. A later `pnpm setup` would be too late.
+The action's own [migration guidance](https://github.com/pnpm/action-setup#migrating-to-pnpmsetup)
+recommends `pnpm/setup` for modern pnpm.
+
+T127 changes only the installer to `pnpm/setup@v3` with `install: false` and
+`node-version-file: false`. Node installation/cache stay with unchanged setup-node;
+pnpm 12.8.1, Node 24, frozen install, runner, lockfile and all gate/test policies remain
+unchanged. Read-only scoped analysis checks installer/version provenance, unchanged
+quality gates and supply-chain verification (three obligations, one task, all nine
+principles): no unresolved HIGH/CRITICAL artifact conflicts. Checklists remain unchanged
+(16/16 and 48/48); optional commit hooks are not executed.
+
+Disposable Linux containers run the exact old/new official bundles against copies of
+the public project manifests, without host secrets/configuration. The old installer
+reproduces the warning despite successful 12.8.1 activation; the new one installs the
+same version without warnings and explicitly skips runtime installation, with no
+project `node_modules`. Initial simulation mistakes in hyphenated environment inputs
+and the expected skip-log wording were corrected; they are not application failures.
+Evidence is local/ignored under `.git/t127.8Jbh0u`. An executable static comparison
+verifies every other workflow byte and both version pins are unchanged. The containers
+use Linux/arm64 and the exact action commits, not the full GitHub Ubuntu runner.
+
+The four full local gates pass sequentially: check; 938 tests (240/508/190, server
+98.50 seconds); 88 e2e first attempt (5.0 minutes); build with the real service worker.
+The five expected invalid-password warnings come from the negative lockout scenario,
+not the installer. Local scoped convergence checks the three maintenance obligations,
+two plan decisions and all nine principles with no implementation gaps. The read-only
+assessment preserves tasks SHA-256
+`3eb8ee9b6f2098bc998dbfdced2f8ba752b0b71ec31305b9f695c8d139e4924e`;
+its subsequent checkpoint records results without closing T127. Reviewer checklists
+stay unchanged; no converge hooks exist and optional commit hooks were not executed.
+Fresh GitHub CI, including post-action/cache behavior, remains required after separately
+authorized publication; T127 stays unchecked and local simulation is not remote CI.
 
 ### T126 keyboard-registration investigation
 

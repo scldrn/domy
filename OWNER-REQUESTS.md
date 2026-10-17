@@ -8,17 +8,20 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-US6 está publicada en la [PR #25](https://github.com/scldrn/domy/pull/25), commit
-`06e606b`, desde `18c832c`, con tus dos opciones A. Su CI pasó check, build y 938 pruebas,
-pero los e2e no quedaron limpios: 85 pasaron al primer intento y el registro por teclado
-necesitó reintento. El recibo completo está en la PR; no se considera una corrida limpia.
+US6 y T126 están publicadas en la [PR #25](https://github.com/scldrn/domy/pull/25),
+commit `af78fa6`, desde `18c832c`, con tus dos opciones A. Su CI pasó check, build,
+938 pruebas y 88 e2e al primer intento. El recibo completo está en la PR; el fallo con
+reintento del commit anterior `06e606b` se conserva como evidencia histórica.
 
-Autorizaste investigar y corregir localmente esa inestabilidad con «si» (T126).
-La corrección ya pasó convergencia, check, build, 938 pruebas, 88 e2e al primer intento
-y 60 repeticiones enfocadas, sin flexibilizar pruebas ni cambiar la aplicación.
-Autorizaste publicar la corrección mediante commit/push en la PR #25 con «Si» y
-revisar el CI del último commit; su recibo queda en la PR. **La fusión y el inicio de US7 no están
-autorizados** y requieren una decisión aparte.
+Autorizaste investigar y corregir localmente el aviso de `PNPM_HOME` con «Si» (T127).
+Se reproduce en el instalador externo, no en la aplicación. La corrección local
+sustituye solo ese instalador por su sucesor oficial, sin cambiar pnpm 12.8.1, Node 24,
+instalación congelada ni compuertas. Pasan la comprobación aislada, check, build,
+938 pruebas y 88 e2e al primer intento. La revisión local de convergencia no encontró
+brechas de implementación; T127 sigue abierta hasta validar CI en GitHub.
+Autorizaste commit y push de T127 en la PR #25 con «Si» y revisar el CI del nuevo
+commit. Su recibo queda en la PR; T127 solo se cierra tras verificarlo.
+**Fusionar e iniciar US7 no está autorizado**; requiere aprobación aparte.
 
 T122 ya está fusionada en la PR #24 como `18c832c`. El CI posterior `38945702324`
 pasó 883 pruebas y 82 e2e al primer intento, check y build; el recibo está en la PR.
@@ -53,6 +56,8 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-16 | ¿Hacer commit y push de T127 en la PR #25 para comprobar el nuevo instalador en GitHub CI? | «Si». Autorizada publicación y revisión del CI del último commit; sin fusión ni iniciar US7 |
+| 2026-10-16 | ¿Investigar y corregir el aviso de PNPM_HOME manteniendo versiones y compuertas? | «Si». Autorizada investigación/corrección local T127; sin commit/push, fusión ni iniciar US7 |
 | 2026-10-16 | ¿Hacer commit y push de T126 en la PR #25 para validar el CI del nuevo commit? | «Si». Autorizada publicación y revisión del CI del último commit, incluidos e2e al primer intento; no fusión ni iniciar US7 |
 | 2026-10-16 | ¿Investigar y corregir el e2e inestable de registro por teclado antes de proponer la fusión de US6? | «si». Autorizada investigación y corrección local T126 con metodología estricta y sin flexibilizar pruebas; publicación, fusión y US7 requieren aprobación aparte |
 | 2026-10-16 | ¿Hacer commit, push y abrir la PR de US6? | «Si». Autorizada publicación de T071–T076/T123–T125 y revisión del CI del último commit; no fusión ni iniciar US7 |

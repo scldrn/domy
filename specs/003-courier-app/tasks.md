@@ -899,3 +899,50 @@ Merge, US7 and physical T087/T093 remain outside this completed local correction
 Samuel subsequently authorized commit/push of T126 in PR #25 and latest-head CI review
 with “Si” (2026-10-16). The PR timeline is the publication/CI receipt; this local
 checkpoint claims no new remote result. Merge and starting US7 remain unauthorized.
+
+## Phase 36: Convergence
+
+- [ ] T127 HIGH Investigate and reproduce the `PNPM_HOME` layout warning in PR #25 CI 38994299786 at `af78fa6`, checking the exact upstream installer source before changing `.github/workflows/ci.yml`. Replace only the warning-producing pnpm installer with the maintained official native installer if isolated before/after verification succeeds. Preserve pnpm 12.8.1 from `packageManager`, Node 24 from `.nvmrc`, checkout/setup-node and cache, explicit frozen install, all four quality commands, tests and runner policies; disable the successor's automatic dependency installation and runtime detection. Record evidence and limits, repeat local gates and scoped convergence, and require fresh latest-head CI after separately approved publication. No warning suppression, custom downloader, vendored action or application changes. Local investigation/correction authorized with “Si”; commit/push, merge and US7 require approval (plan: CI action runtime maintenance, Constitution I/VIII/IX, Development Workflow & Quality Gates; partial).
+
+T127 local implementation checkpoint (2026-10-16): confirmed the exact CI installer
+commit `0977fd99725f1db4007ccb2928dbb4e90d06cc86` bootstraps 11.19.0, places its own
+shim in `PNPM_HOME` and emits the legacy-layout warning while successfully selecting
+the project pin 12.8.1. The upstream source/report confirm the mechanism; the action's
+official successor removes that bootstrap rather than suppressing its warning.
+
+Executed the exact old/new published bundles in disposable Linux/arm64 containers
+(`node:24-bookworm-slim`, image digest
+`sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5`),
+using copied public manifests and no host configuration/secrets. The old installation
+passes the version/no-project-install checks but fails the no-warning assertion.
+`pnpm/setup@v3` at `a0881977cd8ea73b1ed212236c99ca10dcc80cf4` installs 12.8.1 without
+warnings, skips runtime installation and creates no project dependencies. Two initial
+simulation errors (hyphenated inputs dropped by Bash and an incorrect expected log
+phrase) were corrected before final assertions; they are not application defects.
+Local ignored evidence is `.git/t127.8Jbh0u`; no action bundle is vendored in the repo.
+
+The workflow changes only the installer and supported `install: false` /
+`node-version-file: false` inputs. An executable comparison confirms every other
+workflow byte plus the package-manager and Node pins are unchanged. Final sequential
+local gates pass: `pnpm check`; `pnpm test` (240 domain + 508 server + 190 web = 938,
+server phase 98.50 seconds); `env -u NO_COLOR pnpm test:e2e` (88/88 first attempt,
+5.0 minutes); `pnpm build`, including the real service worker. The five expected
+invalid-password warnings belong to the negative lockout scenario; none were suppressed.
+No production code, dependency, lockfile, schema, migration, test or runner policy changed.
+
+Read-only local convergence assesses three maintenance obligations (installer/version
+provenance, unchanged quality gates, supply-chain verification), two plan decisions,
+T127's locally verifiable implementation and all nine principles: zero local code gaps.
+The assessment preserves tasks SHA-256
+`3eb8ee9b6f2098bc998dbfdced2f8ba752b0b71ec31305b9f695c8d139e4924e`;
+this checkpoint is subsequent tracking. Reviewer checklists stay unchanged at 16/16
+and 48/48; no converge hooks exist and optional commit hooks were not executed.
+**T127 stays unchecked** until separately authorized publication and fresh latest-head
+GitHub CI verify setup, post-action/cache behavior, all gates and first-attempt e2e on
+the actual runner. Local simulation is not remote CI and no remote result for this
+change is claimed. Commit/push, merge and US7 require approval.
+
+Samuel subsequently authorized commit/push of T127 in PR #25 and latest-head CI review
+with “Si” (2026-10-16). Close verification tracking only after successful remote
+evidence; the final published head must also pass CI. The PR timeline is the receipt.
+Merge and starting US7 remain unauthorized.
