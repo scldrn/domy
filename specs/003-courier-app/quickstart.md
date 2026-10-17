@@ -45,6 +45,14 @@ viewport checks do not replace physical-device validation.
 
 ## Manual validation scenarios
 
+US7's automated `courier-day.spec.ts` covers scenario 20 with a real server baseline,
+offline transfers and disbursement, reopening through the service worker, exactly-once
+synchronization and corrected totals after dispatch edits. It also checks a dated zero
+summary without a route, high contrast at 360 px, and financial rows scrolled above fixed
+navigation at 360/390 px. Domain/outbox tests cover Bogotá midnight and clock correction;
+PostgreSQL tests cover reverts and courier isolation. These are automated checks, not
+physical T087/T093 completion or a Phase 2 cash-up.
+
 US5's automated journeys in `courier-changes.spec.ts` cover 14–18, offline acknowledgment
 and receiving confirmation, review clearing, and an actual worker notification after
 leaving the app. The notification case uses a fresh full-Chromium persistent test profile

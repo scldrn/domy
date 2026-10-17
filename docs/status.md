@@ -14,25 +14,74 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US5 are on `main`, including T122 [PR #24](https://github.com/scldrn/domy/pull/24), squash `18c832c`. US6/T126/T127 delivery checkpoint is [PR #25](https://github.com/scldrn/domy/pull/25), authorized for squash after clean latest-head CI. Implementation and verification closure pass check/build, 938 tests and 88 first-attempt e2e remotely, with the pnpm warning removed and scoped convergence complete. The PR timeline is authoritative for the actual squash and post-merge `main` CI. US7 has not started and requires separate approval. Physical validation and feature-wide polish remain pending |
+| 003 Courier app | Setup, foundations and US1–US6 are on `main`, through [PR #25](https://github.com/scldrn/domy/pull/25), squash `525ca94`. US7 (T077–T080/T128/T129) delivery checkpoint is [PR #26](https://github.com/scldrn/domy/pull/26), authorized for squash after clean latest-head CI. Its implementation passes check/build, 948 tests and 90 first-attempt e2e locally and remotely. The PR timeline is authoritative for the actual squash and post-merge main CI. Physical validation and feature-wide polish remain pending and are not authorized by the merge decision |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-Samuel authorized squash-merging PR #25 with “Si” on 2026-10-17, after its verification
-closure `c079292` passed [CI 39005250252](https://github.com/scldrn/domy/actions/runs/39005250252):
-check/build, 938 tests and 88 first-attempt e2e (13.1 minutes), no old pnpm layout
-warning, and successful setup/post-actions/cache restoration. This checkpoint records
-that approval and the next-step boundary; it changes no application or workflow.
+Current checkpoint (2026-10-17): PR #25 is squash-merged as `525ca94`; pre-merge CI
+`39007113416` and post-merge CI `39008252312` pass check/build, 938 tests and 88 e2e
+at first attempt, without the pnpm layout warning. Source and squash trees match.
+Samuel subsequently authorized starting US7 locally with “Inicia”. It is now complete
+locally on `003-us7-my-day`: T077–T080 and convergence T128/T129. Samuel subsequently
+authorized publication with “sI”; PR #26 source `7125292` passes
+[CI 39038016265](https://github.com/scldrn/domy/actions/runs/39038016265): check/build,
+948 tests (242/512/194), 90 first-attempt e2e (12.8 minutes), setup and post-actions,
+without installer/runtime warnings. Its [receipt](https://github.com/scldrn/domy/pull/26#issuecomment-6235066005)
+records exact source/tree/base and preserves the historical local failures.
 
-On resume, check PR #25's state and its authoritative timeline. If still open, squash
-the approved PR only after clean CI on its latest head and a current base. If merged,
-refresh `main` with a fast-forward and inspect the CI of the actual squash commit;
-do not start US7 until both that verification and a separate owner approval are present.
-Use the PR timeline for exact merge/post-merge receipts, not another status-only commit
-to copy its own hash/result. The earlier `06e606b` e2e retry and `af78fa6` installer
-warning remain historical evidence. No continuation to US7 is authorized here.
-Physical T087/T093 remain required before closing feature 003.
+Samuel authorized squash-merging PR #26 with “Si” (2026-10-17). This checkpoint records
+approval/continuation only; no application, dependency, migration, workflow or test changes.
+If the PR is open on resume, require clean latest-head CI and the current main base
+before squash. If already merged, fast-forward local main and inspect CI for the actual
+squash. The PR timeline records the authoritative merge/post-merge receipts; do not add
+a status-only commit to copy its own hash/results. Continuing to feature-wide polish
+requires separate approval and is not included in this merge authorization.
+Physical T087/T093 and the remaining Phase 10 work still prevent feature-wide closure.
+PR #25's [timeline receipt](https://github.com/scldrn/domy/pull/25#issuecomment-6230668996)
+is authoritative for its merge/post-merge verification; do not repeat that merge.
+
+## US7 local implementation context
+
+Scoped analysis found no unresolved HIGH/CRITICAL artifact conflict. T077 adds four
+real-PostgreSQL tests for all payment methods, disbursements after the route finishes,
+corrections/reverts, Bogotá midnight, duplicate/not-applied exclusion, other-courier
+isolation and pending stops grouped across tasks. They pass against the existing server
+aggregation; no production code was removed to fabricate RED. The new baseline domain
+test and four outbox cases fail before implementation; both phone cases fail at the
+empty page before T080. The baseline and operational calculations stay in domain.
+
+The snapshot plus outbox now supplies dated estimated totals, cash to hand over, the
+four activity counts and all payment methods, including pending records across reopening.
+Only locally applied outcomes contribute; pending timestamps use the stored clock offset,
+and yesterday's baseline cannot inflate today's totals. T128 removes the duplicated
+pending-stop predicate from server and phone by reusing existing domain `routeProgress`.
+There is no new dependency, migration, response field, persisted store or cash-up action.
+
+The stronger scrolled-row check initially fails at 360 px/high contrast: the helper's
+minimum viewport scroll leaves the amount under fixed navigation (89 passed/1 failed,
+5.0 minutes). T129 centers it with native scrolling and preserves the exact above-bar
+bound, all assertions and the unchanged application layout. Its RED trace/context stay
+under ignored `.git/us7-scroll-red`. Five repetitions of each case pass (10/10,
+31.1 seconds); real scrolled 360/390 px captures were inspected. A subsequent lint error
+in that helper's void-arrow style was corrected with explicit braces. Neither failed
+gate is reclassified as clean, and no limit/retry/worker policy was relaxed.
+
+Final sequential gates pass: `pnpm check`; `pnpm test` (242 domain, 512 server,
+194 web = 948; server 97.08 seconds); `pnpm build`; `env -u NO_COLOR pnpm test:e2e`
+(90/90, 5.1 minutes, first attempt). Expected invalid-password logs come only from the
+negative lockout scenario and are not suppressed. The real built service worker and
+PostgreSQL back the offline/reopen/once-only/correction journey; the zero summary works
+without a route, with high contrast at 360 px. These are not physical phone results.
+
+Final read-only scoped convergence checks six requirements, all three US7 scenarios,
+six plan decisions, eight tasks (T006/T011/T077–T080/T128/T129) and all nine principles:
+zero remaining findings. Assessment preserves tasks SHA-256
+`1f806815456959a5f29640ee58c3c243c998861c8ea06a4bd29f4f2b0de11008`;
+checked markers and the closure note are subsequent tracking. Checklists remain unchanged
+at 16/16 and 48/48; no converge hooks exist and optional commit hooks are not executed.
+Publication was subsequently approved as recorded above; no US7 remote result is claimed
+by this local checkpoint. Do not add a status-only commit just to copy its own CI receipt.
 
 ### T127 pnpm installer warning
 
@@ -123,7 +172,7 @@ the checked marker/closure note were updated afterward. Checklists remain unchan
 no converge hooks exist and optional commit hooks were not executed. This local
 validation does not replace latest-head CI after the subsequently approved publication.
 
-## US6 implementation context
+## US6 implementation context (historical local checkpoint)
 
 US6 analysis A1 is resolved: the owner chose option A on 2026-10-16. A reverted errand
 returns to `dispatched` with its errand task pending when its original route remains

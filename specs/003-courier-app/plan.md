@@ -273,6 +273,34 @@ screen.
 
 ## Cross-feature alignment
 
+### US7 local implementation checkpoint — 2026-10-17
+
+Samuel authorized local US7 implementation after PR #25 merged as `525ca94` and its
+post-merge CI passed. T077 verifies the existing server summary rather than replacing
+working aggregation. T078 additionally tests the summary projection in
+`apps/web/src/lib/offline/outbox.test.ts` before T080: use the same record resolutions
+as route replay, add only applied pending records to the saved day's totals through
+`day-summary.ts`, and count pending stops from the projected route, not record count.
+Keep the snapshot immutable and never count duplicate/not-applied records. Include
+disbursements even after local delivery completes a task, and held off-route packages.
+T128 reuses existing domain `routeProgress` for both pending-stop projections (total
+minus completed); do not duplicate its task-status predicate in server and phone.
+
+The shared day-summary function accepts an optional saved baseline for the same date;
+the server keeps its existing no-baseline call. The phone uses the stored clock offset
+for pending record dates and the corrected current Bogotá day. A baseline from another
+day contributes nothing; old pending records still replay operationally but do not
+inflate today's totals. The existing reload/sync triggers refresh this projection.
+No additional persisted store, response field, dependency, migration or cash-up action.
+The screen shows the date, four operational counts, collections by payment method,
+disbursements and cash to hand over, explicitly estimated until Phase 2. Loading,
+unavailable/offline-without-snapshot and zero-activity states must not invent totals.
+Use existing Spanish glossary labels, tokens, navigation and accessibility checks.
+T129's financial-row capture uses the platform's centered `scrollIntoView` before
+checking the amount above fixed navigation: minimum viewport intersection alone is
+not overlay visibility. Keep the bounding-box assertion and existing layout/padding.
+Publication, merge and feature-wide polish are outside this local approval.
+
 T126 owner-authorized local investigation (2026-10-16): PR #25's CI 38991329783
 at `06e606b` is green but has 85 first-attempt e2e passes and one retried keyboard
 registration. The unchanged case also fails once in 20 local repetitions (19 pass).

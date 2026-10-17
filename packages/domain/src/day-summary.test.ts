@@ -16,6 +16,49 @@ const record = (extra: Partial<SummaryRecord>): SummaryRecord => ({
 
 /** "Mi día" (FR-037, US7). */
 describe("daySummary", () => {
+  it("adds pending records to a same-day baseline without mutating it (US7 AC2)", () => {
+    const baseline = daySummary([record({ cashAmount: 100_000 })], {
+      date: today,
+      pendingStops: 3,
+    });
+    expect(
+      daySummary(
+        [
+          record({ companyTransferAmount: 50_000 }),
+          record({ merchantTransferAmount: 30_000 }),
+          record({ kind: "disbursement", disbursementAmount: 12_000 }),
+        ],
+        { date: today, pendingStops: 1 },
+        baseline,
+      ),
+    ).toEqual({
+      ...baseline,
+      deliveries: 3,
+      pendingStops: 1,
+      companyTransfer: 50_000,
+      merchantTransfer: 30_000,
+      disbursements: 12_000,
+      cashToHandOver: 88_000,
+    });
+    expect(baseline).toMatchObject({ deliveries: 1, pendingStops: 3, disbursements: 0 });
+  });
+
+  it("does not carry yesterday's baseline into today's estimate (FR-037)", () => {
+    const yesterday = daySummary([record({ cashAmount: 100_000 })], {
+      date: "2026-09-30",
+      pendingStops: 3,
+    });
+    yesterday.cash = 100_000;
+    yesterday.deliveries = 1;
+    yesterday.cashToHandOver = 100_000;
+    expect(daySummary([], { date: today, pendingStops: 2 }, yesterday)).toMatchObject({
+      date: today,
+      deliveries: 0,
+      cash: 0,
+      cashToHandOver: 0,
+      pendingStops: 2,
+    });
+  });
   it("adds the collections by payment method and the cash to hand over (US7 scenario 1)", () => {
     const summary = daySummary(
       [

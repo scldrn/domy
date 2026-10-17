@@ -50,7 +50,10 @@ export function collectedTotal(collection: {
 export function daySummary(
   records: SummaryRecord[],
   day: { date: string; pendingStops: number },
+  baseline?: DaySummary,
 ): DaySummary {
+  // FR-037/US7: a cached previous day must not inflate today's offline estimate.
+  const saved = baseline?.date === day.date ? baseline : undefined;
   const counted = records.filter(
     (record) =>
       record.outcome === "applied" &&
@@ -61,17 +64,20 @@ export function daySummary(
   const total = (list: SummaryRecord[], pick: (record: SummaryRecord) => number) =>
     list.reduce((sum, record) => sum + pick(record), 0);
   const deliveries = of("delivery");
-  const cash = total(deliveries, (record) => record.cashAmount);
-  const disbursements = total(of("disbursement"), (record) => record.disbursementAmount);
+  const cash = (saved?.cash ?? 0) + total(deliveries, (record) => record.cashAmount);
+  const disbursements =
+    (saved?.disbursements ?? 0) + total(of("disbursement"), (record) => record.disbursementAmount);
   return {
     date: day.date,
-    deliveries: deliveries.length,
-    exceptions: of("exception").length,
-    returns: of("return").length,
+    deliveries: (saved?.deliveries ?? 0) + deliveries.length,
+    exceptions: (saved?.exceptions ?? 0) + of("exception").length,
+    returns: (saved?.returns ?? 0) + of("return").length,
     pendingStops: day.pendingStops,
     cash,
-    companyTransfer: total(deliveries, (record) => record.companyTransferAmount),
-    merchantTransfer: total(deliveries, (record) => record.merchantTransferAmount),
+    companyTransfer:
+      (saved?.companyTransfer ?? 0) + total(deliveries, (record) => record.companyTransferAmount),
+    merchantTransfer:
+      (saved?.merchantTransfer ?? 0) + total(deliveries, (record) => record.merchantTransferAmount),
     disbursements,
     cashToHandOver: cash - disbursements,
   };

@@ -1,6 +1,11 @@
-import { courierSnapshot, type CourierRecordInput, type CourierSnapshot } from "@domy/domain";
+import {
+  bogotaToday,
+  courierSnapshot,
+  type CourierRecordInput,
+  type CourierSnapshot,
+} from "@domy/domain";
 import { useEffect, useSyncExternalStore } from "react";
-import { setClockOffset } from "@/lib/clock";
+import { now, setClockOffset } from "@/lib/clock";
 import {
   claimCourierDb,
   courierMeta,
@@ -104,6 +109,7 @@ async function reload(userId: string): Promise<void> {
           snapshot,
           records,
           pending.flatMap((item) => (item.type === "acknowledgment" ? item.noticeIds : [])),
+          { date: bogotaToday(now()), clockOffsetMs: meta.clockOffsetMs },
         )
       : null,
     pendingRecords: records.length,

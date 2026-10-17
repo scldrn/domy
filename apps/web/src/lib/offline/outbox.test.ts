@@ -232,6 +232,108 @@ function officeReturnSnapshot() {
 }
 
 describe("replayRecords", () => {
+  it("adds only applied pending collections to saved totals and counts projected stops (US7)", () => {
+    const saved = structuredClone(snapshot);
+    saved.summary = {
+      ...saved.summary,
+      deliveries: 2,
+      cash: 100_000,
+      companyTransfer: 50_000,
+      cashToHandOver: 100_000,
+    };
+    const payment: CourierRecordInput = {
+      ...pickup,
+      id: id(207),
+      kind: "disbursement",
+      amount: 12_000,
+      payee: "Transportadora",
+      photos: [],
+    };
+    const after = replayRecords(saved, [
+      { ...delivery, id: id(209) },
+      pickup,
+      delivery,
+      { ...delivery, id: id(206) },
+      payment,
+    ]);
+    expect(after.summary).toEqual({
+      ...saved.summary,
+      deliveries: 3,
+      cash: 150_000,
+      disbursements: 12_000,
+      cashToHandOver: 138_000,
+      pendingStops: 0,
+    });
+    expect(saved.summary).toMatchObject({ deliveries: 2, cash: 100_000, pendingStops: 2 });
+  });
+
+  it("summarizes pending records identically after reopening IndexedDB (US7 AC2)", async () => {
+    const { name, db } = await freshDb();
+    await db.put("snapshot", snapshot, "current");
+    await saveRecord(db, pickup);
+    await saveRecord(db, delivery);
+    db.close();
+    const reopened = await openCourierDb(name);
+    try {
+      const saved = await reopened.get("snapshot", "current");
+      if (!saved) throw new Error("Missing saved snapshot");
+      expect(replayRecords(saved, await pendingRecords(reopened)).summary).toMatchObject({
+        deliveries: 1,
+        cash: 50_000,
+        pendingStops: 0,
+      });
+    } finally {
+      reopened.close();
+    }
+  });
+
+  it("counts a held off-route disbursement without a current route (FR-037)", () => {
+    const saved = structuredClone(snapshot);
+    saved.route = null;
+    saved.summary.pendingStops = 0;
+    saved.heldOffRoute = [
+      {
+        shipmentId: id(1),
+        trackingNumber: "AB12CD34",
+        status: "picked_up",
+        serviceDate: "2026-10-01",
+        merchant: { id: id(50), name: "Bullish Hype" },
+        recipientName: "Laura Gómez",
+        returnDecided: false,
+      },
+    ];
+    const payment: CourierRecordInput = {
+      ...pickup,
+      kind: "disbursement",
+      amount: 12_000,
+      payee: "Transportadora",
+      photos: [],
+    };
+    expect(replayRecords(saved, [payment]).summary).toMatchObject({
+      disbursements: 12_000,
+      cashToHandOver: -12_000,
+    });
+  });
+
+  it("uses corrected pending timestamps and discards a previous-day baseline (FR-019/FR-037)", () => {
+    const devicePickup = { ...pickup, occurredAt: "2026-10-02T05:01:00Z" };
+    const deviceDelivery = { ...delivery, occurredAt: "2026-10-02T05:02:00Z" };
+    // Phone is five minutes fast: both actions happened before Bogotá midnight.
+    expect(
+      replayRecords(snapshot, [devicePickup, deviceDelivery], [], {
+        date: "2026-10-01",
+        clockOffsetMs: -300_000,
+      }).summary.cash,
+    ).toBe(50_000);
+    const saved = structuredClone(snapshot);
+    saved.summary.cash = 100_000;
+    saved.summary.cashToHandOver = 100_000;
+    saved.summary.deliveries = 1;
+    expect(
+      replayRecords(saved, [pickup, delivery], [], { date: "2026-10-02", clockOffsetMs: 0 })
+        .summary,
+    ).toMatchObject({ date: "2026-10-02", deliveries: 0, cash: 0, pendingStops: 0 });
+  });
   it("hides only acknowledged notices even without a route, preserving the saved snapshot (FR-027)", () => {
     const saved = structuredClone(snapshot);
     saved.route = null;

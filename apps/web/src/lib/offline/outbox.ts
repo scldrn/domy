@@ -3,6 +3,9 @@ import {
   courierRecordInput,
   noticeAcknowledgeInput,
   maxNoticesPerAcknowledgment,
+  daySummary,
+  routeProgress,
+  type SummaryRecord,
   type NoticeAcknowledgeInput,
   type CourierRecordInput,
   type CourierSnapshot,
@@ -142,24 +145,52 @@ export function replayRecords(
   snapshot: CourierSnapshot,
   records: CourierRecordInput[],
   acknowledgedNoticeIds: string[] = [],
+  day: { date: string; clockOffsetMs: number } = { date: snapshot.summary.date, clockOffsetMs: 0 },
 ): CourierSnapshot {
   const state = structuredClone(snapshot);
   state.notices = state.notices.filter((notice) => !acknowledgedNoticeIds.includes(notice.id));
   const route = state.route;
-  if (!route) return state;
+  const summaryRecords: SummaryRecord[] = [];
   const applied = new Map<string, ShipmentForRecord["appliedRecords"]>();
   for (const record of records) {
-    const tasks = route.stops
+    const tasks = (route?.stops ?? [])
       .flatMap((stop) => stop.tasks)
       .filter((task) => task.shipmentId === record.shipmentId);
-    // Records for packages off the route change nothing the phone shows.
-    if (tasks.length === 0) continue;
     const before = applied.get(record.shipmentId) ?? [];
-    const resolution = resolveCourierRecord(shipmentOnRoute(route, tasks, before), {
+    const held = state.heldOffRoute.find((shipment) => shipment.shipmentId === record.shipmentId);
+    const shipment: ShipmentForRecord | null =
+      route && tasks.length > 0
+        ? shipmentOnRoute(route, tasks, before)
+        : held && record.kind === "disbursement"
+          ? {
+              kind: "delivery",
+              status: held.status,
+              custodyCourierId: me,
+              heldAtOffice: false,
+              returnDecided: held.returnDecided,
+              route: null,
+              pendingTasks: [],
+              pendingHandover: null,
+              appliedRecords: before,
+            }
+          : null;
+    if (!shipment) continue;
+    const resolution = resolveCourierRecord(shipment, {
       kind: record.kind,
       courierId: me,
     });
     if (resolution.outcome !== "applied") continue;
+    // US7/FR-037: totals share precisely the route replay's applied outcomes, not inputs.
+    summaryRecords.push({
+      kind: record.kind,
+      outcome: resolution.outcome,
+      reverted: false,
+      occurredAt: new Date(Date.parse(record.occurredAt) + day.clockOffsetMs),
+      cashAmount: record.kind === "delivery" ? record.cashAmount : 0,
+      companyTransferAmount: record.kind === "delivery" ? record.companyTransferAmount : 0,
+      merchantTransferAmount: record.kind === "delivery" ? record.merchantTransferAmount : 0,
+      disbursementAmount: record.kind === "disbursement" ? record.amount : 0,
+    });
     applied.set(record.shipmentId, [...before, { kind: record.kind, courierId: me }]);
     const { effect } = resolution;
     for (const task of tasks) {
@@ -174,5 +205,14 @@ export function replayRecords(
       if (effect.confirmHandoverId) task.blockedByHandover = null;
     }
   }
+  const progress = routeProgress(route?.stops ?? []);
+  state.summary = daySummary(
+    summaryRecords,
+    {
+      date: day.date,
+      pendingStops: progress.total - progress.completed,
+    },
+    snapshot.summary,
+  );
   return state;
 }
