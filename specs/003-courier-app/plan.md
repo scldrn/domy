@@ -273,6 +273,80 @@ screen.
 
 ## Cross-feature alignment
 
+### T131 unavailable-server recovery investigation — 2026-10-17
+
+Samuel authorized local investigation/correction after PR #27 merged as `f4f124d`.
+Post-merge CI 39071328672 passed overall but retried the temporary-server-unavailability
+case in `courier-offline.spec.ts:191`: after API recovery and the empty-pending assertion,
+`openStop` waits for the delivery-stop link until the original 30-second test timeout.
+The log does not establish a resolved link or notification interception; teardown's
+closed-page error is not evidence of a browser crash. No trace artifact was uploaded.
+Do not infer T130's cause or the exact historical scheduling.
+
+First inspect real navigation/session/sync ordering around the deliberate 503 response
+and reconnection. Use the built app, PostgreSQL, actual service worker and explicit
+promise gates for transport interleavings, not sleeps or successful-response mocks.
+Retain the ordinary case and every cached-route, local-pickup, pending-count, recovery,
+delivery and full axe assertion. Preserve all deadlines, retries and workers; do not
+force clicks, hide notifications or rerun until green. Capture bounded diagnostics
+without credentials/recipient data, retain RED and refine this plan with demonstrated
+evidence before choosing the smallest test-readiness or application correction.
+Then repeat focused cases, all four gates and scoped convergence. T121's queued-trigger
+semantics must not regress. No publication, merge or feature-wide polish is authorized;
+physical T087/T093 remain pending.
+
+T131 diagnostic checkpoint: ten original repetitions pass (39.8 seconds), ten with
+temporary Chromium CPU throttling at rate 4 pass (48.8 seconds), and three controlled
+session/navigation/late-503 orders pass. The first reverse-order experiment failed at
+an ambiguous retry selector; the first late-503 harness removed its own active route
+before fulfilling it. Both harness failures are retained, NOT application RED or proof
+of the historical timeout. Correctly scoped/held variants pass. All experimental source
+and CPU controls were removed; at that checkpoint the original test/app/shared helper/CI
+were identical to main. A fresh build and one complete original e2e diagnostic run pass (90/90,
+5.8 minutes, first attempt, all traces retained locally). Do not call this a correction
+or convergence: no cause or application fix is demonstrated.
+
+Evidence and experimental source snapshots remain under ignored `.git/t131-*`, with
+an inventory in `.git/t131-local-investigation.md`. The existing workflow never uploads
+Playwright's retained failure traces, including failures hidden by a successful retry.
+Propose narrowly scoped CI trace retention/capture to the owner before implementing
+or publishing it, without changing deadlines/retries/workers or successful responses.
+Use runner evidence to inform the next causal reproduction if local tests remain
+negative; a further runner pass alone is not proof of resolution. T131 stays
+unchecked and the four-gate correction/convergence closure is not claimed.
+
+#### T132 diagnostic retention — approved 2026-10-17
+
+Samuel subsequently authorized preparation, commit, push and a diagnostic PR, including
+fresh latest-head CI review, not merge or polish. Retain the existing Playwright
+`trace: "retain-on-failure"` setting and every deadline, retry, worker and assertion.
+Give the e2e step an id and immediately follow it with the official
+[upload-artifact v7.0.2](https://github.com/actions/upload-artifact/releases/tag/v7.0.2),
+pinned to commit `cf430e030ddbb5b0abf93d22962f4752f3646cd9` (Node 24 action).
+Use `!cancelled()` plus an explicit e2e outcome of `success` or `failure`: this overrides
+the implicit success guard without running before/skipping e2e or after cancellation,
+and includes green jobs whose first attempt failed. Preserve failure propagation;
+no `continue-on-error`. Name artifacts with run id and attempt to avoid ambiguity.
+
+Allow only `apps/web/test-results/**/trace.zip`, seven-day retention, hidden files
+excluded and `if-no-files-found: ignore`. A clean run should have no trace artifact,
+not a warning. Do not upload whole report/auth/environment/cache directories or ignored
+local investigation evidence. The repository is private; the reviewed e2e setup uses
+fresh PostgreSQL and in-memory S3Proxy, fixture data and test-only credentials. Traces
+can still include those sessions, request/response data, screenshots and source; they
+are restricted diagnostic artifacts, not sanitized public reports. Do not republish
+their contents or upload production data/secrets. No CI production secrets are added.
+
+Before implementation, read-only analyze checks FR-018/020/022, US2/AC4, T131/T132,
+the retention design and all nine constitutional principles. Validate YAML structure,
+condition truth table and the narrow path, including no-files behavior; run check,
+test, build and e2e without competing heavy suites. No business behavior changes, so
+this trivial CI wiring uses review/structural verification rather than manufactured
+application RED (Constitution VI). Scope convergence to T132; T131 remains unresolved.
+After publication, audit the actual source/checkout tree, CI logs and artifacts. A clean
+CI with no trace verifies the no-files path only, not a real failed-trace upload;
+record that limitation explicitly rather than inducing failures or repeating CI.
+
 ### T130 notification/navigation investigation — 2026-10-17
 
 Samuel authorized local investigation/correction after PR #26 merged as `e43ea1e`.

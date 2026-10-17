@@ -14,10 +14,51 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US7 are on `main`, through [PR #26](https://github.com/scldrn/domy/pull/26), squash `e43ea1e`. Its post-merge CI has one retried e2e (89 first-attempt passes/1 flaky). T130 is published in [PR #27](https://github.com/scldrn/domy/pull/27), source `bf26d7b` with clean CI (948 tests/90 first-attempt e2e); squash is authorized after clean final-head CI and requires post-merge verification. The PR timeline records the actual merge/result. Physical T087/T093 and feature-wide polish remain pending |
+| 003 Courier app | Setup, foundations, US1–US7 and T130 are on `main`, through [PR #27](https://github.com/scldrn/domy/pull/27), squash `f4f124d`. Final-head CI passed cleanly; post-merge CI passed overall but retried another offline-server-recovery e2e (89 first-attempt passes/one flaky). T131 remains unresolved; T132 diagnostic CI preparation/publication is authorized. Merge and feature-wide polish are not. Physical T087/T093 remain pending |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
+
+Current checkpoint (2026-10-17): PR #27 is merged as `f4f124d`, tree identical to
+approved final head `6ce5933`; CI 39059903192 passed check/build, 948 tests and 90
+first-attempt e2e (11.2 minutes). Post-merge main CI 39071328672 passes overall but
+has 89 first-attempt e2e passes and one flaky temporary-server-unavailability case,
+`courier-offline.spec.ts:191`, caller line 222 / `courier.ts:86`. Its log only waits
+for the delivery-stop link; it does not prove notification interception or a browser
+crash. No trace artifact was uploaded. The [final merge receipt](https://github.com/scldrn/domy/pull/27#issuecomment-6241871750)
+preserves this distinction. Do not repeat the completed merge or rerun until green.
+
+Samuel authorized local investigation/correction with “Si”, branch
+`003-fix-offline-recovery`, T131. Reproduce the ordering with controlled transport and
+real app/storage before correction, align the plan, retain RED, then repeat focused
+cases, all gates and convergence. Do not infer T130's cause or change the shared helper
+without evidence. The initial authorization covered local work only; the later T132
+approval below permits diagnostic publication, not merge or polish. T087/T093 remain pending.
+
+Local T131 investigation has not reproduced the remote timeout: ten original repetitions
+pass (39.8 seconds), ten with temporary 4× Chromium CPU throttling pass (48.8 seconds),
+and three controlled session/navigation/late-503 interleavings pass. Two diagnostic
+harness mistakes are preserved as harness failures, not application RED. All experimental
+source changes were removed: at that checkpoint app, original tests, shared helper and
+workflow equaled main. T132 below subsequently changes only CI and documentation.
+Fresh build and one complete original diagnostic e2e run pass (90/90, 5.8 minutes, first
+attempt). Trace/source inventories are in ignored `.git/t131-local-investigation.md` and
+`.git/t131-*`. These passes do not demonstrate a correction; T131 remains unchecked.
+
+Samuel subsequently authorized preparing/publishing the diagnostic CI PR with “Si”
+(2026-10-17), T132: retain failure traces even when a retry makes CI green, without
+changing limits. Use a trace-only allowlist, seven-day retention and the official pinned
+action. Local T132 implementation and scoped convergence are complete: check/build,
+948 tests (242/512/194) and 90 first-attempt e2e (5.1 minutes), with unchanged app/tests
+and policies. The structural check covers baseline absence, YAML, preserved steps,
+ten condition combinations and eight path examples; it is not a remote upload.
+Publish, then audit actual latest-head CI and artifact handling in the PR timeline,
+which records delivery without a self-referential status-only commit. A clean/no-artifact
+run is not verification of a real failed-trace upload or a T131 correction. Do not
+invent a causal patch, close T131, merge or start polish. The following T130 checkpoint
+is historical and superseded by this result.
+
+### Previous T130 delivery checkpoint
 
 Current authoritative checkpoint (2026-10-17): PR #26 merged as `e43ea1e`, whose tree
 matches approved head `08ebd9e`. Final-head CI `39040911443` passed cleanly (948 tests,

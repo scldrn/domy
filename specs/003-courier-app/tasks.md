@@ -1090,3 +1090,61 @@ approval/continuation checkpoint changes documentation only and must also pass f
 latest-head CI before squash. The PR timeline records the actual merge and subsequent
 CI outcome; no merge result is claimed here. Feature-wide polish and physical T087/T093
 remain separate and unauthorized/pending.
+
+## Phase 40: Convergence
+
+- [ ] T131 HIGH Investigate and deterministically reproduce the distinct first-attempt server-recovery failure in `apps/web/tests/e2e/courier-offline.spec.ts:191`, post-merge CI 39071328672 at `f4f124d`: `openStop` waits for the delivery-stop link at caller line 222 until the unchanged 30-second timeout (89 first-attempt passes/one flaky). Establish test navigation readiness versus an application/session/synchronization defect with controlled real transport ordering, built app, PostgreSQL and service worker before selecting the smallest correction. Align the plan with demonstrated evidence; preserve the unavailable-server scenario, cached route, saved pickup, automatic recovery, pending-count assertions, subsequent delivery, full axe scan and every deadline/retry/worker policy. Retain RED evidence, repeat focused cases, all four gates and scoped convergence. Do not infer T130's overlay cause, force clicks, hide notifications, mock successful responses or rerun until green. Historical CI uploaded no trace artifact; its exact scheduling and a browser crash are not proven. Only local investigation/correction is authorized; commit/push/PR, merge and feature-wide polish require separate approval (FR-018/FR-020/FR-022, US2/AC4, T043/T044, Constitution VI/VII and quality gates; partial).
+
+T131 investigation checkpoint (2026-10-17, NOT completion): original case passes ten
+repetitions (39.8 seconds) and ten under temporary 4× Chromium CPU throttling (48.8
+seconds). Three controlled real-session/late-503 interleavings also pass. Two initial
+diagnostic harness failures (ambiguous retry selector; fulfilling a removed interception)
+are preserved, not misclassified as application RED. Experimental test/CPU changes
+were removed; application, original tests, shared helper and workflow are unchanged.
+Fresh build and a single complete diagnostic e2e run pass: 90/90, 5.8 minutes, first
+attempt, traces retained at `.git/t131-suite-baseline`. Other evidence is inventoried
+in ignored `.git/t131-local-investigation.md`; no repeat-until-green loop was used.
+
+The historical CI has zero uploaded artifacts and the workflow has no upload step,
+although Playwright retains failed traces on its runner. Root cause is still unknown;
+local passes do not resolve the flaky run. T131 remains unchecked, with no claimed
+correction, final four-gate closure or convergence. Request owner authority to prepare
+and publish a narrowly scoped CI diagnostic/trace-retention PR (including failures
+whose retry makes the job green) before changing the workflow or publishing anything.
+Do not guess a navigation/sync fix, weaken a limit or start feature-wide polish.
+
+## Phase 41: Convergence
+
+- [X] T132 Retain Playwright failure traces in `.github/workflows/ci.yml` after either successful or failed e2e execution, including a failed first attempt followed by a successful retry. Upload only `apps/web/test-results/**/trace.zip` through the official SHA-pinned upload-artifact action, with seven-day retention, hidden files excluded and no-files ignored. Do not upload authentication storage, environment files, arbitrary reports or local investigation traces; retain existing test policies and application behavior. Validate workflow structure, condition outcomes and allowlist, run all four local gates and scoped convergence. This implementation task does not claim a real remote failed-trace upload or resolve T131; never induce an application failure or rerun until green to manufacture evidence. No merge or feature-wide polish is authorized (plan: T131 diagnostic retention, FR-018/FR-020/FR-022, Constitution VI/IX and quality gates; missing).
+
+Publication authorization (2026-10-17): Samuel approved preparing, committing, pushing
+and opening the diagnostic CI PR with “Si”, including latest-head CI review. This
+supersedes only the earlier diagnostic-publication restriction; it does not authorize
+merge, a guessed recovery fix, feature-wide polish or physical-validation completion.
+After local T132 completion, publish the authorized diagnostic PR and audit its exact-head
+CI and artifact handling as a delivery checkpoint in its timeline, not a self-referential
+status-only commit. Distinguish a clean/no-trace execution from an actual failed-trace
+upload and explicitly record any remaining upload-verification limitation.
+
+T132 local implementation checkpoint (2026-10-17): check/build pass, all 948 tests
+(242 domain / 512 server / 194 web) pass, and all 90 e2e pass first attempt in 5.1
+minutes, with the original trace policy and no failure traces generated. Five expected
+negative-password warnings remain visible in e2e; no unexpected warnings are observed.
+The retained structural check in ignored `.git/t132-workflow-verification.mjs` detects
+the missing baseline upload, parses current YAML, verifies existing steps/triggers/runner
+unchanged, ten condition combinations and eight path examples (Node glob model, not
+an Actions upload). The installed Playwright trace lifecycle retains failed attempts
+independently of successful retries; its default preserves output directories.
+
+Read-only analyze and scoped convergence cover three supporting requirements
+(FR-018/020/022), US2/AC4, the retention design and all nine constitutional principles:
+I direct official action/no app service or dependency; II–V courier persistence,
+domain rules, transactions and type boundaries unchanged; VI all gates, no business
+behavior change or fabricated application RED; VII UI/axe untouched; VIII English
+development artifacts, minimal ordered workflow; IX private trace-only diagnostics,
+seven-day retention, no production credentials added. Zero additional T132 findings;
+convergence left tasks SHA-256 `a05ff8a32c80093126cbfaffb8cf7e3959eb6ae32f2d302dc7fad7869d082b47`
+unchanged before this subsequent completion marker/checkpoint. Checklists remain
+byte-identical, 16/16 and 48/48. No convergence hooks exist; optional commit hooks are
+not executed (autocommit disabled). T131 and physical/polish tasks remain open. Remote
+CI/artifact verification is not claimed here; the authorized PR timeline records it.
