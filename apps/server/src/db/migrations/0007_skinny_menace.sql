@@ -1,0 +1,1 @@
+ALTER TYPE "public"."route_event_type" ADD VALUE 'record_reverted';

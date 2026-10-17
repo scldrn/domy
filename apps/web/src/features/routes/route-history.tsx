@@ -23,6 +23,7 @@ const eventLabels: Record<RouteEventType, string> = {
   handover_cancelled: "Traspaso cancelado",
   cancelled: "Ruta cancelada",
   finished: "Ruta finalizada",
+  record_reverted: "Registro revertido",
 };
 
 /** Every action on the route, with author, time, couriers, and reason (FR-019, FR-022). */
@@ -82,10 +83,12 @@ export function CustodyHistory({ events }: { events: ShipmentEvent[] }) {
   const headingId = useId();
   const records = events.flatMap((event) => {
     const change = event.changes?.["custodyCourierId"];
-    return change ? [{ event, from: change[0], to: change[1] }] : [];
+    return change && change[0] !== change[1] ? [{ event, from: change[0], to: change[1] }] : [];
   });
   if (records.length === 0) return null;
   const text = ({ event, from, to }: (typeof records)[number]) => {
+    if (event.type === "record_reverted" && typeof to === "string")
+      return `Se restablece la custodia de ${to} por reversión`;
     // US4 FR-041: a change to office custody is not a delivery.
     if (event.type === "office_received") return "La recibe la oficina";
     if (typeof to === "string" && event.changes?.["heldAtOffice"]?.[0] === true)

@@ -5,6 +5,7 @@ import {
   packageSizeLabels,
   paymentModeLabels,
   routeStatusLabels,
+  exceptionReasonLabels,
   serviceLevelLabels,
   shipmentKindLabels,
   shipmentStatusLabels,
@@ -28,6 +29,7 @@ import { ConfirmFeeDialog } from "./confirm-fee-dialog";
 import { ExceptionActions } from "./exception-decision-dialog";
 import { ShipmentRecords } from "./shipment-records";
 import { ClearReviewDialog } from "./clear-review-dialog";
+import { RecordOnBehalfDialog } from "./record-on-behalf-dialog";
 import { VoidDialog } from "./void-dialog";
 
 const panelRoute = getRouteApi("/_panel");
@@ -81,12 +83,31 @@ const fieldLabels: Record<string, string> = {
   heldAtOffice: "En oficina",
   returnDecided: "Devolución decidida",
   needsReview: "Por revisar",
+  receivedByName: "Recibido por",
+  cashAmount: "Efectivo",
+  companyTransferAmount: "Transferencia a la empresa",
+  merchantTransferAmount: "Transferencia al cliente",
+  exceptionReason: "Motivo de la novedad",
+  note: "Nota",
+  disbursementAmount: "Valor del pago",
+  payee: "A quién se pagó",
+  status: "Estado",
 };
-const moneyFields = new Set(["fee", "calculatedFee", "codAmount"]);
+const moneyFields = new Set([
+  "fee",
+  "calculatedFee",
+  "codAmount",
+  "cashAmount",
+  "companyTransferAmount",
+  "merchantTransferAmount",
+  "disbursementAmount",
+]);
 const enumLabels: Record<string, Record<string, string>> = {
   paymentMode: paymentModeLabels,
   serviceLevel: serviceLevelLabels,
   packageSize: packageSizeLabels,
+  exceptionReason: exceptionReasonLabels,
+  status: shipmentStatusLabels,
 };
 
 function changeValue(field: string, value: unknown): string {
@@ -148,6 +169,7 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
           <>
             <ExceptionActions shipment={shipment} />
             <ClearReviewDialog shipment={shipment} />
+            <RecordOnBehalfDialog shipment={shipment} />
             {shipment.feeNeedsReview && user.role === "owner" && (
               <ConfirmFeeDialog shipment={shipment} />
             )}
@@ -273,7 +295,11 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
           Por revisar
         </p>
       )}
-      <ShipmentRecords records={shipment.records} attempts={shipment.attempts} />
+      <ShipmentRecords
+        records={shipment.records}
+        attempts={shipment.attempts}
+        shipment={shipment}
+      />
 
       <CustodyHistory events={shipment.events} />
 

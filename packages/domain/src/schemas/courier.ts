@@ -220,10 +220,10 @@ export const recordCorrectionInput = z
     cashAmount: money.optional(),
     companyTransferAmount: money.optional(),
     merchantTransferAmount: money.optional(),
-    exceptionReason: z.enum(exceptionReasons).optional(),
+    exceptionReason: exception.shape.reason.optional(),
     note: note.optional(),
-    amount: z.number().int().positive().optional(),
-    payee: z.string().trim().min(2).max(100).optional(),
+    amount: disbursement.shape.amount.optional(),
+    payee: disbursement.shape.payee.optional(),
   })
   .refine(
     ({ actionId: _, reason: __, ...values }) =>
@@ -231,6 +231,47 @@ export const recordCorrectionInput = z
     { message: "Indica qué valor corriges." },
   );
 export type RecordCorrectionInput = z.input<typeof recordCorrectionInput>;
+
+/** FR-035: the same applicability rule drives dispatch forms and server validation. */
+export const recordCorrectionFields = {
+  pickup: [],
+  delivery: [
+    "receivedByName",
+    "cashAmount",
+    "companyTransferAmount",
+    "merchantTransferAmount",
+    "note",
+  ],
+  exception: ["exceptionReason", "note"],
+  problem: [],
+  return: ["receivedByName"],
+  disbursement: ["amount", "payee", "note"],
+  handover_confirmation: [],
+} as const satisfies Record<CourierRecordKind, readonly string[]>;
+
+export function recordCorrectionProblem(
+  record: {
+    kind: CourierRecordKind;
+    cashAmount: number;
+    companyTransferAmount: number;
+    merchantTransferAmount: number;
+    note: string | null;
+  },
+  values: Omit<RecordCorrectionInput, "actionId" | "reason">,
+  codAmount: number,
+): string | null {
+  const allowed: readonly string[] = recordCorrectionFields[record.kind];
+  if (Object.keys(values).some((field) => !allowed.includes(field)))
+    return "Ese dato no corresponde a este registro. Revisa los campos que puedes corregir.";
+  return record.kind === "delivery"
+    ? collectionProblem(codAmount, {
+        cashAmount: values.cashAmount ?? record.cashAmount,
+        companyTransferAmount: values.companyTransferAmount ?? record.companyTransferAmount,
+        merchantTransferAmount: values.merchantTransferAmount ?? record.merchantTransferAmount,
+        note: values.note ?? record.note ?? undefined,
+      })
+    : null;
+}
 
 /** `POST /api/courier-records/:id/revert` (FR-035). */
 export const recordRevertInput = z.object({ actionId, reason });

@@ -14,10 +14,86 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US5 are on `main` (US5 [PR #23](https://github.com/scldrn/domy/pull/23), `63c5070`; clean final-head CI `38922944921`, 883 tests/82 first-pass e2e). Post-merge CI `38926371410` has one retried native-push e2e, not a clean run. T122 corrected and verified locally on `003-fix-push-validation` (883 tests/82 first-pass e2e, 30 native-push repetitions, check/build and scoped convergence); owner authorized commit/push/PR and latest-head CI review. Merge and US6 are not authorized. US6–US7 and feature-wide polish remain pending |
+| 003 Courier app | Setup, foundations and US1–US5 are on `main`, including T122 [PR #24](https://github.com/scldrn/domy/pull/24), squash `18c832c`. US6 is complete and scoped-converged on `003-us6-dispatch-records`: T071–T076/T123–T125, local check/build, 938 tests and 86 first-attempt e2e pass. Commit/push/PR are authorized; consult this branch's PR timeline for publication and latest-head CI receipts. Merge and US7 are not authorized. Physical validation and feature-wide polish remain pending |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
+
+Samuel authorized commit, push and a PR for US6 with “Si” on 2026-10-16. Publish
+`003-us6-dispatch-records`, verified against current `origin/main` `18c832c`, and inspect
+fresh latest-head CI, including first-attempt e2e rather than only the workflow result.
+Use that branch's PR timeline as the authoritative publication/CI receipt; do not create
+a documentation-only commit merely to copy its own hash or CI result here. This checkpoint
+does not claim remote success or merge. Merge and US7 need their own approval.
+Physical T087/T093 remain required before closing feature 003.
+
+## US6 implementation context
+
+US6 analysis A1 is resolved: the owner chose option A on 2026-10-16. A reverted errand
+returns to `dispatched` with its errand task pending when its original route remains
+in progress with the same courier; otherwise `registered`, off route/unassigned.
+Neither creates custody. Spec, both lifecycle data models, contract, plan, research,
+quickstart 19 and T072/T073/T075 are aligned.
+
+A2 is also resolved by owner option A: reject package reversions after a subsequent
+dispatch decision or custody change, preserving all later operations. Both answers
+are integrated into the spec, contract, model, plan/research and test tasks. The technical
+plan uses an internal nullable event-to-record FK for exact provenance and safe legacy
+resolution, without exposing identifiers as changed user fields. T071–T073 were exercised
+RED before their corresponding implementation: nine missing-endpoint cases, six missing
+lifecycle-rule cases, two missing correction-rule cases, and four missing-control e2e.
+The legacy-linkage cases initially also expose the absent schema field. US6 is authorized locally
+from clean, up-to-date `main` `18c832c` on
+`003-us6-dispatch-records`. Samuel subsequently authorized commit/push/PR; merge and US7
+remain separate decisions.
+
+Initial read-only scoped analysis maps both core requirements FR-034/FR-035 and all
+four US6 acceptance scenarios to T071–T076 (six tasks); A1's HIGH contradiction is now
+resolved by owner option A; A2's HIGH underspecification is now resolved by the second A.
+All nine constitution principles were reviewed; no architectural conflict was found.
+Clarify answered two questions; the spec-quality checklist returns from 15/16 to 16/16
+(only the unambiguous-requirements marker changed); the reviewer-owned courier-rules
+checklist remains unchanged at 48/48. Both core requirements and four scenarios map to
+six US6 tasks, with contextual errand and package safety guards now explicit.
+Local implementation now covers the on-behalf endpoint, kind-specific corrections,
+idempotent empty/changed receipts, guarded reversions and dispatch forms. The original
+task becomes pending again without creating a duplicate stop; completed routes stay
+finished and errands never gain custody. Test fixtures use real PostgreSQL.
+
+Scoped convergence added and closed T123/T124 (route reversion history and truthful
+custody changes) and T125 (Spanish correction schemas and preserving blank required
+inputs for validation). Whole-route reassignment after a package record is guarded too:
+completed stops have a route event but no per-shipment event, so both histories are
+inspected. An accepted replay still precedes all guards. The errand exception is kept.
+
+Final sequential gates pass on the completed code: `pnpm test` (240 domain, 508 server,
+190 web; 938 total), `pnpm check`, `pnpm build`, `env -u NO_COLOR pnpm test:e2e` (86/86,
+5.1 minutes, first attempt). The expected invalid-password warnings come only from the
+negative lockout test; no warning is suppressed. A prior stale-build e2e was intentionally
+interrupted at 23 passed/1 interrupted/62 not run and is not counted as a gate.
+Mobile screenshots were inspected; e2e covers blank-name validation, corrections,
+truthful shipment/route history, actual courier notices, errand re-completion and the
+no-custody off-route fallback. Generated migrations 0006 (nullable indexed event-to-record
+FK) and 0007 (route-event enum value) are additive and reviewed; no historical rows are
+rewritten and no dependency added.
+
+Final read-only scoped convergence reviewed both core requirements, four acceptance
+scenarios, three transverse requirements, nine implementation decisions, nine tasks and
+all nine constitution principles: zero remaining findings. tasks.md remained byte-identical
+before/after that assessment at SHA-256
+`1f88d84686b0be2391f5fe7e01684160dc7547380ceeae5b84263cd5549d319a`;
+T071–T076/T123–T125 were marked complete afterward. Reviewer checklists remain unchanged
+(16/16 and 48/48). No convergence hooks exist and optional commit hooks remain unexecuted.
+US7 and physical T087/T093 are not claimed complete; no remote CI result is claimed for US6.
+
+## T122 publication and merge checkpoint (completed)
+
+PR #24 was subsequently authorized and squash-merged as `18c832c`. Its source and merge
+trees match (`42416ff1248bf2d5e98331365546380e2dd698a7`). Post-merge CI `38945702324`
+passes 883 tests, 82 first-attempt e2e (13.0 minutes), check and build. The temporary
+branch was deleted and local main synchronized. PR #24's timeline holds the authoritative
+merge/CI receipts. The following publication checkpoint is historical, not a pending
+request to publish or merge again.
 
 Owner authorized commit, push and a new PR for the locally verified T122 fix with “Si”
 on 2026-10-16. Publish `003-fix-push-validation`, based on `63c5070`, then inspect fresh

@@ -1,5 +1,8 @@
 import type { ShipmentKind } from "./schemas/enums.ts";
 import type { ExceptionDecisionInput } from "./schemas/courier.ts";
+import type { CourierRecordKind, RecordOutcome } from "./courier-records.ts";
+import type { RouteStatus, StopKind } from "./routes.ts";
+import type { ShipmentEvent } from "./schemas/shipment.ts";
 
 /**
  * The shared shipment lifecycle (data-model.md of feature 001, completed by features 002 and
@@ -70,6 +73,91 @@ export function isFinal(status: ShipmentStatus): boolean {
 
 export function canVoid(status: ShipmentStatus): boolean {
   return canTransition(status, "voided");
+}
+
+/** FR-035 / A2: metadata edits do not rewind operations; custody and dispatch decisions do. */
+export function blocksRecordRevert(type: ShipmentEvent["type"]): boolean {
+  return (
+    [
+      "status_changed",
+      "reassigned",
+      "handover_confirmed",
+      "handover_cancelled",
+      "exception_decided",
+      "office_received",
+      "record_reverted",
+      "voided",
+    ] as readonly ShipmentEvent["type"][]
+  ).includes(type);
+}
+
+/** 003 FR-035, owner clarifications A1/A2: reverting is contextual, never a route transition. */
+export function recordRevertState(
+  state: {
+    kind: ShipmentKind;
+    status: ShipmentStatus;
+    custodyCourierId: string | null;
+    heldAtOffice: boolean;
+  },
+  record: {
+    kind: CourierRecordKind;
+    courierId: string;
+    routeId: string | null;
+    outcome: RecordOutcome;
+    reverted: boolean;
+    isLatest: boolean;
+    hasLaterOperation: boolean;
+  },
+  route: { id: string; status: RouteStatus; courierId: string | null } | null,
+): {
+  status: ShipmentStatus;
+  routeId: string | null;
+  custodyCourierId: string | null;
+  heldAtOffice: false;
+  returnDecided: boolean;
+  taskKind: StopKind;
+} | null {
+  if (record.outcome !== "applied" || record.reverted || !record.isLatest) return null;
+  const expected =
+    record.kind === "delivery"
+      ? "delivered"
+      : record.kind === "exception"
+        ? "exception"
+        : record.kind === "return"
+          ? "returned"
+          : null;
+  if (!expected || state.status !== expected) return null;
+  const routeId =
+    route?.id === record.routeId &&
+    route.status === "in_progress" &&
+    route.courierId === record.courierId
+      ? route.id
+      : null;
+  if (state.kind === "errand") {
+    if (record.kind !== "delivery") return null;
+    return {
+      status: routeId ? "dispatched" : "registered",
+      routeId,
+      custodyCourierId: null,
+      heldAtOffice: false,
+      returnDecided: false,
+      taskKind: "errand",
+    };
+  }
+  if (
+    record.hasLaterOperation ||
+    state.heldAtOffice ||
+    (state.custodyCourierId !== null && state.custodyCourierId !== record.courierId)
+  )
+    return null;
+  return {
+    status: record.kind === "return" ? "exception" : "picked_up",
+    routeId,
+    custodyCourierId: record.courierId,
+    heldAtOffice: false,
+    returnDecided: record.kind === "return",
+    taskKind: record.kind === "return" ? "return" : "delivery",
+  };
 }
 
 /** 003 FR-041: only office receipt may register a picked-up package, and only off route. */

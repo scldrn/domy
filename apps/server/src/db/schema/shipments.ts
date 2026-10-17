@@ -26,6 +26,7 @@ import {
 } from "./enums.ts";
 import { neighborhoods, rateZones } from "./geography.ts";
 import { routes } from "./routes.ts";
+import { courierRecords } from "./courier-records.ts";
 
 export const bulkBatches = pgTable("bulk_batches", {
   id: uuid().primaryKey(),
@@ -194,10 +195,15 @@ export const shipmentEvents = pgTable(
     reason: text(),
     changes: jsonb(),
     clientEventId: uuid().unique("shipment_events_client_event_id_key"),
+    /** Exact record provenance for corrections/reverts, including tied clocks (003 FR-035). */
+    courierRecordId: uuid().references((): AnyPgColumn => courierRecords.id),
     /** The route a status change, reassignment, or handover refers to (feature 002). */
     routeId: uuid().references((): AnyPgColumn => routes.id),
     /** Recorded by dispatch for a courier, as confirming a handover (feature 002, FR-025). */
     onBehalf: boolean().notNull().default(false),
   },
-  (table) => [index("shipment_events_shipment_idx").on(table.shipmentId, table.occurredAt)],
+  (table) => [
+    index("shipment_events_shipment_idx").on(table.shipmentId, table.occurredAt),
+    index("shipment_events_courier_record_idx").on(table.courierRecordId),
+  ],
 );

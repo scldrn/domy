@@ -21,7 +21,7 @@ every mutation.
 | --- | --- | --- |
 | 409 | `no_exception_to_decide` | Deciding for a shipment that is not in "Novedad"; a return already decided accepts only a change to `new_attempt` (FR-029) |
 | 409 | `not_held_by_courier` | "Recibido en oficina" for a package no courier holds (FR-041) |
-| 409 | `record_not_revertible` | Reverting a record that is not the shipment's latest applied delivery, exception, or return (FR-035) |
+| 409 | `record_not_revertible` | Reverting a record that is not the shipment's latest applied delivery, exception, or return, or a package record followed by another dispatch decision or custody change (FR-035) |
 | 409 | `office_not_configured` | "Recibido en oficina" before the office address is set (FR-041) |
 | 422 | `occurred_in_future` | A record on behalf with `occurredAt` later than now (FR-034) |
 
@@ -80,6 +80,17 @@ receipts, including unchanged edits, so those replays cannot overwrite a newer v
 
 Reasons and notes are 5–200 characters.
 
+For `POST /api/courier-records/:id/revert`, an applied errand completion uses the
+owner-approved exception to the package rule (FR-007, FR-035): `dispatched` with the
+errand task pending if the original record's route is still `in_progress` with the
+same courier; otherwise `registered` with no route. Neither outcome creates courier
+or office custody. The record stays with its revert author/time/reason and stops
+contributing to attempts/collections like any reverted delivery. Service date is kept.
+For packages, a subsequent dispatch decision or custody movement makes the revert
+`409 record_not_revertible`, even without a newer delivery/exception/return. Refusal
+changes no record, shipment, task, custody, event or notice. Replaying an already accepted
+revert is still recognized before this guard and does not undo any intervening operation.
+
 ## Changes to the contracts of features 001 and 002
 
 - **`GET /api/couriers`**: each courier gains `account: { id, email } | null` (FR-002).
@@ -132,6 +143,10 @@ Reasons and notes are 5–200 characters.
   route) is cancelled too, leaving the shipment off route with its holder (FR-031).
 - **Events** (`RouteEvent`, `ShipmentEvent`): `onBehalf` is true on the events of a record
   entered on a courier's behalf (FR-034).
+  A revert that restores the original task on an in-progress route also writes a
+  `RouteEvent` of type `record_reverted` with the shipment, author and reason (FR-039).
+  Its occurred/recorded times are stored together with the revert; a finished route is
+  not changed. `ShipmentEvent.changes` includes only values that actually changed.
 
 ## Phone notification payload (FR-040)
 

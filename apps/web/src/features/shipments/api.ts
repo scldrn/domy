@@ -1,5 +1,9 @@
 import type {
   FeeConfirmInput,
+  RecordOnBehalfInput,
+  RecordCorrectionInput,
+  RecordRevertInput,
+  CourierRecord,
   ExceptionDecisionInput,
   OfficeReceiptInput,
   FeeQuote,
@@ -145,3 +149,12 @@ export const receiveAtOffice = (id: string, input: OfficeReceiptInput) =>
   unwrap<Shipment>(
     api.api.shipments[":id"]["office-receipt"].$post({ param: { id }, json: input }),
   );
+
+export const enterCourierRecord = (id: string, input: RecordOnBehalfInput) =>
+  unwrap(api.api.shipments[":id"].records.$post({ param: { id }, json: input }));
+export const correctCourierRecord = (id: string, input: RecordCorrectionInput) =>
+  unwrap<CourierRecord>(
+    api.api["courier-records"][":id"].correct.$post({ param: { id }, json: input }),
+  );
+export const revertCourierRecord = (id: string, input: RecordRevertInput) =>
+  unwrap<Shipment>(api.api["courier-records"][":id"].revert.$post({ param: { id }, json: input }));

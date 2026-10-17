@@ -54,6 +54,24 @@ const renderToStaticMarkup = (node: ReactNode) =>
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
 describe("RouteHistory (FR-019, FR-022)", () => {
+  it("names a restored task's reversion, with its reason and dispatcher (T123, FR-039)", () => {
+    const read = text(
+      renderToStaticMarkup(
+        <RouteHistory
+          events={[
+            routeEvent({
+              type: "record_reverted",
+              reason: "Registro equivocado",
+              shipment: { id: "s1", trackingNumber: "7SMQ5M5T" },
+            }),
+          ]}
+        />,
+      ),
+    );
+    expect(read).toContain("Registro revertido · 7SMQ-5M5T");
+    expect(read).toContain("John Coordinador");
+    expect(read).toContain("Registro equivocado");
+  });
   it("names each action with its author, time, couriers, shipment, and reason", () => {
     const html = renderToStaticMarkup(
       <RouteHistory
@@ -109,6 +127,29 @@ describe("RouteHistory (FR-019, FR-022)", () => {
 });
 
 describe("CustodyHistory (SC-005)", () => {
+  it("labels restored responsibility without claiming another pickup and omits unchanged legacy pairs (T124)", () => {
+    const read = text(
+      renderToStaticMarkup(
+        <CustodyHistory
+          events={[
+            shipmentEvent({
+              type: "record_reverted",
+              changes: { custodyCourierId: [null, "Ana Ruiz"] },
+            }),
+            shipmentEvent({
+              type: "record_reverted",
+              changes: { custodyCourierId: ["Ana Ruiz", "Ana Ruiz"] },
+            }),
+            shipmentEvent({ type: "record_reverted", changes: { custodyCourierId: [null, null] } }),
+          ]}
+        />,
+      ),
+    );
+    expect(read).toContain("Se restablece la custodia de Ana Ruiz por reversión");
+    expect(read).not.toContain("Lo recoge");
+    expect(read).not.toContain("Lo entrega");
+    expect(read.match(/Registró John/g)).toHaveLength(1);
+  });
   it("distinguishes office receipt and pickup from delivery and ordinary pickup (US4 T058)", () => {
     const html = renderToStaticMarkup(
       <CustodyHistory

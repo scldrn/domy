@@ -240,6 +240,64 @@ screen.
 
 ## Cross-feature alignment
 
+US6 owner-approved refinement (2026-10-16, option A): reversing an errand completion
+must not apply the package's `delivered → picked_up` rule. A shared, contextual rule in
+`packages/domain/src/shipment-lifecycle.ts` selects `dispatched` and the original errand
+task only when the original record's route remains in progress with its recorded courier;
+otherwise it selects `registered` off route. Both clear courier/office custody and keep
+the service date. No generic route transition gains the right to reopen final shipments.
+Align feature 001's lifecycle documentation, the 003 spec/data model/contract/research,
+quickstart 19 and T072/T073/T075/T076. Write domain and real-PostgreSQL tests first,
+including an in-progress route with another pending stop, a finished route, and an
+original route now assigned to a different courier. The browser journey must demonstrate
+reverting and completing an errand again while its route remains in progress, preserving
+revert history, notifications, financial/attempt exclusion and all existing invariants.
+Use existing tables, record route/courier attribution and native framework primitives;
+no new dependency or schema change is implied by this clarification.
+
+US6 safety clarification (2026-10-16, second option A): reject a package revert after a
+subsequent dispatch decision or custody change, even when no newer record of kind
+delivery/exception/return exists. Use `409 record_not_revertible` with an explanatory
+Spanish message and no writes. Serialize with the existing route-before-shipment lock
+order, inspect authoritative append-only operational events, and recognize accepted
+action replays before state/history guards. Test office receipt, a new-attempt/return
+decision, confirmed handover, concurrent operations and unchanged financial/history/
+task/notice counts on refusal. This does not override the approved errand fallback.
+Whole-route courier reassignment has its own route event but no per-shipment event for
+completed stops. Include that event in the package safety guard; the owner-approved
+errand fallback still applies. Regression tests cover delivery, exception and return.
+
+US6 event traceability design: add internal nullable/indexed FK
+`shipment_events.courier_record_id` to `courier_records.id` through a generated migration.
+Populate it on the applied record's state event and on correction/revert receipts; do
+not expose it as an edited user field or duplicate any API response type. This gives
+exact target identity even when business/receipt timestamps tie. Use the existing
+database-generated time-ordered event UUIDs, not the client's random record UUID, to
+inspect subsequent operational events ([PostgreSQL 18 UUID functions](https://www.postgresql.org/docs/18/functions-uuid.html)).
+For preexisting events without the link, accept only a unique match by record author,
+times and result; reject ambiguity safely without modifying old events or guessing.
+Test tied timestamps, legacy unique/ambiguous history, concurrency and late replays.
+Corrections validate only the fields applicable to their record kind through shared
+domain rules and the existing money/name/collection schemas. An accepted unchanged
+correction still records its idempotency receipt but sends no false change notice;
+hide only empty `record_corrected` receipts from the displayed shipment history, like
+the existing empty audit receipts. Keep them stored. A replay returns the original
+target's current projection, even after a subsequent correction/revert. T071–T076 cover
+these existing idempotency/traceability obligations; this adds no service or dependency.
+
+US6 scoped convergence T123/T124: restoring the original task to pending also writes a
+route `record_reverted` event with author, reason, shipment and actual server timestamps.
+Declare route-event values once in domain and consume them in Drizzle; generate the
+additive enum migration. Keep the finished route unchanged and send just the existing
+single revert notice. Shipment revert changes include only values that really changed;
+the custody history labels restored responsibility as a reversion, not a physical pickup.
+
+US6 scoped convergence T125: reuse the original record's Spanish field schemas for
+correction errors. Form serialization preserves blank required fields (including a
+problem's required note), omits only optional blank notes, and uses the same applicable
+field list for rendering and submission. Add adjacent domain/web regressions and a
+real correction-dialog validation assertion before closure.
+
 T122 owner-authorized local investigation (2026-10-16): post-merge CI 38926371410
 reports success with one retried native-notification test, not a clean run. Work on
 `003-fix-push-validation` from merged `main` 63c5070. Start with bounded test-only

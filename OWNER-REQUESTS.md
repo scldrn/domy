@@ -8,17 +8,19 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-Nada requiere respuesta ahora. Autorizaste commit, push y apertura de una nueva PR
-con T122 en `003-fix-push-validation`, para validar CI. Las cuatro compuertas locales pasan:
-883 pruebas, 82 e2e sin reintentos, check y build; además 30 repeticiones de la
-notificación nativa y convergencia puntual sin hallazgos. La corrección sincroniza la
-prueba con la finalización real del push dentro de los mismos cinco segundos; no
-cambia la aplicación ni sustituye notificaciones nativas. Fusión y US6 requieren
-autorización aparte.
+US6 quedó implementada y convergida localmente en `003-us6-dispatch-records`, desde
+`18c832c`, con tus dos opciones A. Pasan check, build, 938 pruebas y los 86 e2e al primer
+intento. Se cerraron también los tres hallazgos de convergencia, con pruebas primero.
 
-La PR #23 ya está fusionada como `63c5070`. Su CI posterior `38926371410` reintentó
-la prueba de notificación nativa: no se considera una corrida limpia, ni la corrección
-local equivale a validación remota. La causa reproducida y sus límites están documentados.
+Autorizaste commit, push y apertura de la PR de US6 con «Si». La publicación y sus
+resultados de CI se registran en la PR de `003-us6-dispatch-records`; hay que revisar el
+último commit y los e2e al primer intento antes de proponer la fusión. **La fusión y el
+inicio de US7 no están autorizados** y requieren una decisión aparte.
+
+T122 ya está fusionada en la PR #24 como `18c832c`. El CI posterior `38945702324`
+pasó 883 pruebas y 82 e2e al primer intento, check y build; el recibo está en la PR.
+El antiguo CI `38926371410` de la PR #23 conserva su fallo con reintento como evidencia
+histórica, no como corrida limpia.
 
 ## Antes de terminar la 003 (app del mensajero)
 
@@ -48,6 +50,11 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-16 | ¿Hacer commit, push y abrir la PR de US6? | «Si». Autorizada publicación de T071–T076/T123–T125 y revisión del CI del último commit; no fusión ni iniciar US7 |
+| 2026-10-16 | ¿Impedir revertir un registro de paquete si después hubo otra decisión de despacho o cambió su custodia? | «A». Rechazar la reversión con conflicto, explicar los cambios posteriores y conservarlos; no deshacerlos implícitamente |
+| 2026-10-16 | ¿Qué ocurre al revertir un mandado terminado por error? | «A». En ruta con parada pendiente si la ruta original sigue en curso con el mismo mensajero; de lo contrario Registrado sin asignar. En ambos casos sin custodia de paquete; spec, modelo, contrato, plan, investigación, quickstart y T072/T073/T075 alineados |
+| 2026-10-16 | ¿Iniciar US6 localmente, sin publicar ni fusionar? | «Autorizo». Autorizada rama local desde main actualizado, análisis previo, pruebas primero, implementación y convergencia; decisiones de negocio no definidas se consultan antes de codificar |
+| 2026-10-16 | ¿Fusionar la PR #24 mediante squash con el último CI limpio? | «Si». Fusionada como `18c832c`; CI previo `38934535031` y posterior `38945702324` limpios, con 883 pruebas/82 e2e al primer intento |
 | 2026-10-16 | ¿Hacer commit, push y abrir la PR de T122 para validar CI? | «Si». Autorizada publicación y revisión del CI del último commit; no fusión ni iniciar US6 |
 | 2026-10-16 | ¿Investigar/corregir primero la inestabilidad de notificación nativa posterior a la fusión, en una rama nueva y con compuertas estrictas? | «Si». Autorizada corrección local T122; publicación/PR/merge y US6 requieren aprobación aparte |
 | 2026-10-16 | ¿Investigar/corregir T121, repetir compuertas/convergencia y después realizar la fusión autorizada? | «Si». Sin ampliar tiempos, relajar pruebas ni iniciar US6 |

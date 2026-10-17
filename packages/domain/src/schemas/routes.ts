@@ -123,20 +123,23 @@ export type RouteStop = {
   tasks: RouteTask[];
 };
 
-export type RouteEventType =
-  | "created"
-  | "shipment_added"
-  | "shipment_removed"
-  | "reordered"
-  | "courier_set"
-  | "dispatched"
-  | "dispatch_undone"
-  | "reassigned"
-  | "handover_requested"
-  | "handover_confirmed"
-  | "handover_cancelled"
-  | "cancelled"
-  | "finished";
+export const routeEventTypes = [
+  "created",
+  "shipment_added",
+  "shipment_removed",
+  "reordered",
+  "courier_set",
+  "dispatched",
+  "dispatch_undone",
+  "reassigned",
+  "handover_requested",
+  "handover_confirmed",
+  "handover_cancelled",
+  "cancelled",
+  "finished",
+  "record_reverted",
+] as const;
+export type RouteEventType = (typeof routeEventTypes)[number];
 
 export type RouteEvent = {
   id: string;

@@ -332,17 +332,29 @@ delivery; verify the marks and the history
 
 ### Tests for User Story 6 ⚠️ write first, must fail
 
-- [ ] T071 [P] [US6] Integration tests in `apps/server/tests/records-on-behalf.test.ts` covering spec US6 scenario 1 and FR-034: every kind except `handover_confirmation` recorded through `POST /api/shipments/:id/records` is stored with `on_behalf`, the dispatcher as author, and the courier who holds the package or whose route carries it, and every event it writes carries `on_behalf = true`, shown as "Registrado por despacho" in the histories of feature 002; `occurredAt` defaults to now; `422 occurred_in_future`; a courier gets `403`
-- [ ] T072 [P] [US6] Integration tests in `apps/server/tests/records-correct-revert.test.ts` covering spec US6 scenarios 2–4 and FR-035: a correction of each correctable field requires a reason and writes `record_corrected` with old and new values; reverting a delivery or an exception returns the shipment to `picked_up` with its task pending on a route in progress, or off route otherwise; reverting a return goes back to `exception` with the return pending; `409 record_not_revertible` for a record that is not the latest; a reverted delivery's collection leaves the day summary and the attempts; the courier gets a notice
-- [ ] T073 [P] [US6] End-to-end test in `apps/web/tests/e2e/records-on-behalf.spec.ts`: quickstart scenario 19
+- [X] T071 [P] [US6] Integration tests in `apps/server/tests/records-on-behalf.test.ts` covering spec US6 scenario 1 and FR-034: every kind except `handover_confirmation` recorded through `POST /api/shipments/:id/records` is stored with `on_behalf`, the dispatcher as author, and the courier who holds the package or whose route carries it, and every event it writes carries `on_behalf = true`, shown as "Registrado por despacho" in the histories of feature 002; `occurredAt` defaults to now; `422 occurred_in_future`; a courier gets `403`
+- [X] T072 [P] [US6] Domain tests in `packages/domain/src/shipment-lifecycle.test.ts` and integration tests in `apps/server/tests/records-correct-revert.test.ts` covering spec US6 scenarios 2–4 and FR-035: a correction of each correctable field requires a reason and writes `record_corrected` with old and new values; reverting a package delivery or exception returns the shipment to `picked_up` with its task pending on a route in progress, or off route otherwise; reverting an errand completion returns it to `dispatched` with its errand task pending only if its original route is still in progress with the same courier, otherwise `registered` off route/unassigned, never creating custody (owner option A, 2026-10-16); cover a finished original route, a different courier on that route, and another current route of the original courier that must not be substituted; reverting a return goes back to `exception` with the return pending; `409 record_not_revertible` for a record that is not the latest; a reverted delivery's collection leaves the day summary and the attempts; the courier gets a notice
+- [X] T073 [P] [US6] End-to-end test in `apps/web/tests/e2e/records-on-behalf.spec.ts`: quickstart scenario 19, including reverting and completing an errand again on its eligible original route and the off-route fallback without custody
 
 ### Implementation for User Story 6
 
-- [ ] T074 [US6] Implement `POST /api/shipments/:id/records` in `apps/server/src/routes/shipments.ts` until T071 passes
-- [ ] T075 [US6] Implement `POST /api/courier-records/:id/correct` and `POST /api/courier-records/:id/revert` in `apps/server/src/routes/courier-records.ts` until T072 passes
-- [ ] T076 [US6] Build `apps/web/src/features/shipments/record-on-behalf-dialog.tsx` and `apps/web/src/features/shipments/correct-record-dialog.tsx`, with "Registrado por despacho" and the revert action in `apps/web/src/features/shipments/shipment-records.tsx`, until T073 passes
+- [X] T074 [US6] Implement `POST /api/shipments/:id/records` in `apps/server/src/routes/shipments.ts` until T071 passes
+- [X] T075 [US6] Implement `POST /api/courier-records/:id/correct` and `POST /api/courier-records/:id/revert` in `apps/server/src/routes/courier-records.ts`, using the shared contextual revert rule in `packages/domain/src/shipment-lifecycle.ts` (including owner-approved errand behavior), until T072 passes; generic route transitions must not reopen final shipments
+- [X] T076 [US6] Build `apps/web/src/features/shipments/record-on-behalf-dialog.tsx` and `apps/web/src/features/shipments/correct-record-dialog.tsx`, with "Registrado por despacho" and the revert action in `apps/web/src/features/shipments/shipment-records.tsx`, until T073 passes
 
 **Checkpoint**: a dead phone or a wrong tap no longer blocks a route
+
+US6 owner safety refinement (2026-10-16, A2 option A): T072 must also cover a package
+record followed by office receipt, exception decision or confirmed custody transfer:
+the revert is `409 record_not_revertible` with no changes to records, custody, history,
+tasks, collections or notices. Include concurrency and accepted-action replay after a
+later operation. T075 enforces this guard transactionally after replay recognition;
+T073/T076 demonstrate the panel's explanatory conflict without rewinding later work.
+Before T075, T072 also tests tied timestamps, unique/ambiguous legacy event linkage,
+kind-specific correction validation and unchanged/concurrent/late correction receipts.
+T074/T075 populate the internal `shipment_events.courier_record_id` trace link; generate
+its nullable indexed FK migration from the schema, never edit generated migrations.
+The shipment-history projection omits empty correction receipts but retains their rows.
 
 ---
 
@@ -810,3 +822,41 @@ not executed. Samuel subsequently authorized commit, push, a new PR and latest-h
 CI review with “Si” on 2026-10-16. The branch's PR is the publication/CI receipt;
 no remote result is claimed here. Merge and US6 need separate approval; physical
 T087/T093 remain pending.
+
+## Phase 33: Convergence
+
+- [X] T123 HIGH Record a US6 reversion that restores an in-progress route task in that route's append-only history, with the shipment, author, reason and both timestamps, in the same transaction as its task/state/receipt/notice. Add failing PostgreSQL and route-history UI tests first; declare the explicit `record_reverted` event in the shared domain values, generate its PostgreSQL enum migration, and render its Spanish label. Preserve one courier notice and unchanged finished routes (FR-035, FR-039, US6/AC3; partial).
+- [X] T124 HIGH Make US6 revert history describe only actual field changes: do not emit unchanged custody pairs for exceptions or errands, and describe restored custody as a reversion, never as a new physical pickup. Add server and UI regressions before implementation, then repeat focused/full gates and scoped convergence (FR-035, FR-039, Constitution IV/VII; partial).
+
+US6 scoped assessment (2026-10-16): FR-034/FR-035, four acceptance scenarios,
+FR-027/FR-039/FR-040, six technical decisions and all nine constitution principles
+reviewed. Two partial/HIGH findings above; no missing, contradictory or unrequested
+scope found. US7 and previously pending physical validation remain outside this slice.
+
+## Phase 34: Convergence
+
+- [X] T125 CRITICAL Keep US6 correction validation in Spanish and preserve submitted empty required fields for schema validation instead of silently omitting them. Add RED domain tests for amount/payee/exception errors and a web serialization regression; reuse the original record's Spanish field schemas and omit only an optional empty note. Filter an errand's inapplicable name field consistently for rendering and submission. Repeat all gates and scoped convergence (Constitution V/VII, FR-035, US6/AC2; contradicts).
+
+US6 local closure (2026-10-16): T071–T076/T123–T125 pass after RED → GREEN work.
+Final sequential gates pass: `pnpm test` (240 domain + 508 server + 190 web = 938),
+`pnpm check`, `pnpm build`, `env -u NO_COLOR pnpm test:e2e` (86/86, 5.1 minutes,
+first attempt). The five expected invalid-password warnings belong to the negative
+lockout scenario, not build/lint warnings; nothing was suppressed. A prior stale-build
+e2e run was intentionally interrupted at 23 passed/1 interrupted/62 not run and is not
+counted as a gate. Limits, assertions, workers and retries are unchanged.
+
+Final read-only scoped convergence checks FR-034/FR-035, all four US6 acceptance
+scenarios, FR-027/FR-039/FR-040, nine implementation decisions, all nine constitution
+principles and these nine tasks: zero remaining findings of any severity/type. Before
+and after that assessment, tasks.md was byte-identical at SHA-256
+`1f88d84686b0be2391f5fe7e01684160dc7547380ceeae5b84263cd5549d319a`;
+checkboxes and this closure note were updated afterward. Reviewer checklists remain
+unchanged (16/16 and 48/48). No converge hooks exist; optional commit hooks were not
+executed. Generated migrations 0006/0007 are additive and reviewed; no new dependency.
+Mobile entry/correction screenshots were inspected and e2e includes required-name
+validation, truthful shipment/route history and the actual courier notice. Whole-route
+reassignment safety covers delivery, exception and return; accepted-action replay still
+precedes guards. US7, physical T087/T093 and feature-wide polish remain pending.
+Samuel subsequently authorized commit, push and a PR with “Si” on 2026-10-16. The
+branch's PR timeline is the publication/CI receipt; this checkpoint claims no remote
+result. Merge and starting US7 still require separate approval.

@@ -1,4 +1,10 @@
-import { handoverStatuses, routeStatuses, stopKinds, taskStatuses } from "@domy/domain";
+import {
+  handoverStatuses,
+  routeStatuses,
+  routeEventTypes,
+  stopKinds,
+  taskStatuses,
+} from "@domy/domain";
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -27,21 +33,7 @@ export const routeStatus = pgEnum("route_status", routeStatuses);
 export const stopKind = pgEnum("stop_kind", stopKinds);
 export const taskStatus = pgEnum("task_status", taskStatuses);
 export const handoverStatus = pgEnum("handover_status", handoverStatuses);
-export const routeEventType = pgEnum("route_event_type", [
-  "created",
-  "shipment_added",
-  "shipment_removed",
-  "reordered",
-  "courier_set",
-  "dispatched",
-  "dispatch_undone",
-  "reassigned",
-  "handover_requested",
-  "handover_confirmed",
-  "handover_cancelled",
-  "cancelled",
-  "finished",
-]);
+export const routeEventType = pgEnum("route_event_type", routeEventTypes);
 
 export const routes = pgTable(
   "routes",

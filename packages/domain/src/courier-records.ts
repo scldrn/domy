@@ -162,6 +162,16 @@ export type ShipmentForRecord = {
   appliedRecords: { kind: CourierRecordKind; courierId: string }[];
 };
 
+/** FR-034: the panel and server must name the same courier, including held-off-route work. */
+export function onBehalfCourierId(state: {
+  custodyCourierId: string | null;
+  route: { status: RouteStatus; courierId: string | null } | null;
+}): string | null {
+  return (
+    state.custodyCourierId ?? (state.route?.status === "in_progress" ? state.route.courierId : null)
+  );
+}
+
 export type RecordEffect = {
   status?: ShipmentStatus;
   /** Who holds the package after the record: a courier, the office, or nobody. */
