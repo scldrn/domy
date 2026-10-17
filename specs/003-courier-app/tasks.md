@@ -902,7 +902,7 @@ checkpoint claims no new remote result. Merge and starting US7 remain unauthoriz
 
 ## Phase 36: Convergence
 
-- [ ] T127 HIGH Investigate and reproduce the `PNPM_HOME` layout warning in PR #25 CI 38994299786 at `af78fa6`, checking the exact upstream installer source before changing `.github/workflows/ci.yml`. Replace only the warning-producing pnpm installer with the maintained official native installer if isolated before/after verification succeeds. Preserve pnpm 12.8.1 from `packageManager`, Node 24 from `.nvmrc`, checkout/setup-node and cache, explicit frozen install, all four quality commands, tests and runner policies; disable the successor's automatic dependency installation and runtime detection. Record evidence and limits, repeat local gates and scoped convergence, and require fresh latest-head CI after separately approved publication. No warning suppression, custom downloader, vendored action or application changes. Local investigation/correction authorized with “Si”; commit/push, merge and US7 require approval (plan: CI action runtime maintenance, Constitution I/VIII/IX, Development Workflow & Quality Gates; partial).
+- [X] T127 HIGH Investigate and reproduce the `PNPM_HOME` layout warning in PR #25 CI 38994299786 at `af78fa6`, checking the exact upstream installer source before changing `.github/workflows/ci.yml`. Replace only the warning-producing pnpm installer with the maintained official native installer if isolated before/after verification succeeds. Preserve pnpm 12.8.1 from `packageManager`, Node 24 from `.nvmrc`, checkout/setup-node and cache, explicit frozen install, all four quality commands, tests and runner policies; disable the successor's automatic dependency installation and runtime detection. Record evidence and limits, repeat local gates and scoped convergence, and require fresh latest-head CI after separately approved publication. No warning suppression, custom downloader, vendored action or application changes. Local investigation/correction authorized with “Si”; commit/push, merge and US7 require approval (plan: CI action runtime maintenance, Constitution I/VIII/IX, Development Workflow & Quality Gates; partial).
 
 T127 local implementation checkpoint (2026-10-16): confirmed the exact CI installer
 commit `0977fd99725f1db4007ccb2928dbb4e90d06cc86` bootstraps 11.19.0, places its own
@@ -946,3 +946,26 @@ Samuel subsequently authorized commit/push of T127 in PR #25 and latest-head CI 
 with “Si” (2026-10-16). Close verification tracking only after successful remote
 evidence; the final published head must also pass CI. The PR timeline is the receipt.
 Merge and starting US7 remain unauthorized.
+
+T127 remote verification closure (2026-10-17): [CI 39003878509](https://github.com/scldrn/domy/actions/runs/39003878509)
+on `12185b6` passes check, all 938 tests (240/508/190), all 88 e2e at first attempt
+(9.5 minutes), build, setup and post-actions. Logs confirm native pnpm 12.8.1,
+Node 24.21.0 from unchanged setup-node, skipped redundant runtime installation,
+successful frozen install, and successful saves of both the existing pnpm store cache
+and the successor's native lockfile-verification cache. The old layout warning and
+the earlier action-runtime deprecations are absent. Expected negative-auth messages,
+Git's default-branch hint and GitHub's informational future Ubuntu migration notice
+are not suppressed or mistaken for installer failures. The old warning/flaky runs
+remain historical evidence.
+
+Final scoped convergence checks three maintenance obligations, two plan decisions,
+T127 and all nine constitution principles with zero findings. The read-only assessment
+preserves this file at SHA-256
+`e8cbb2804c5519e37b5eb84fcde3b8384b1bc66c76de312896d9aadd2b4c5498`;
+this checked marker and closure note are subsequent tracking, superseding the earlier
+unchecked checkpoint. Checklists remain unchanged (16/16 and 48/48); no converge
+hooks exist and no optional commit hook runs. Publish this verification closure under
+the existing T127 publication approval and require clean final-head CI too; its receipt
+lives in PR #25 rather than another self-referential status commit. No application,
+workflow, dependency, lockfile or test changes accompany this tracking closure.
+Merge, US7 and physical T087/T093 remain separate and unauthorized/pending.

@@ -1,7 +1,7 @@
 # Project status
 
 Where Domy stands and what comes next, so any session can resume without the conversation
-that produced it. Updated 2026-10-16; update it whenever a slice is merged or the next step
+that produced it. Updated 2026-10-17; update it whenever a slice is merged or the next step
 changes.
 
 ## Features
@@ -14,24 +14,21 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US5 are on `main`, including T122 [PR #24](https://github.com/scldrn/domy/pull/24), squash `18c832c`. US6 and T126 are published in [PR #25](https://github.com/scldrn/domy/pull/25) at `af78fa6`: check/build, 938 tests and 88 first-attempt e2e pass remotely. T127's installer-only correction passes isolated verification and all four local gates with 938 tests/88 first-attempt e2e; no local implementation gap remains. Commit/push and latest-head CI review of T127 are authorized; its completion remains subject to remote verification. The PR timeline carries publication/CI receipts. Merge and US7 require approval. Physical validation and feature-wide polish remain pending |
+| 003 Courier app | Setup, foundations and US1–US5 are on `main`, including T122 [PR #24](https://github.com/scldrn/domy/pull/24), squash `18c832c`. US6/T126 and T127's installer correction are published in [PR #25](https://github.com/scldrn/domy/pull/25). T127 source `12185b6` passes check/build, 938 tests and 88 first-attempt e2e remotely, including setup/post-actions/cache and absence of the layout warning; scoped convergence is complete. Its checked task/verification closure is published under the existing approval and must receive clean final-head CI too; the PR timeline carries that receipt. Merge and US7 require approval. Physical validation and feature-wide polish remain pending |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-Samuel authorized local investigation/correction of the `PNPM_HOME` warning with “Si”
-on 2026-10-16 (T127). The [prior published CI](https://github.com/scldrn/domy/actions/runs/38994299786)
-at `af78fa6` passes check/build, 938 tests and 88 first-attempt e2e, but still emits the
-installer warning. Its receipt is in PR #25; the earlier `06e606b` e2e retry remains
-historical evidence, not a clean run. T127's isolated verification, all four local
-gates and local convergence pass. Samuel subsequently authorized commit/push in PR #25
-and latest-head CI review with “Si”. Publish T127 and inspect fresh CI, including
-setup/post-action/cache behavior, before proposing merge. Close its verification
-tracking only after that evidence passes and require clean CI on the final published head.
-The PR timeline is the authoritative
-publication/CI receipt, not a documentation-only commit to copy its own hash/results.
-This checkpoint claims no remote validation of T127; consult the PR timeline.
-Merge and US7 need their own approval.
+T127's implementation and remote verification pass: [CI 39003878509](https://github.com/scldrn/domy/actions/runs/39003878509)
+on `12185b6` confirms pnpm 12.8.1, Node 24.21.0, skipped redundant runtime installation,
+frozen install, successful post-actions/cache saves, 938 tests and 88 first-attempt
+e2e (9.5 minutes), check/build, and absence of the old layout warning. Scoped
+convergence is complete. Publish its checked task/verification closure under Samuel's
+existing commit/push approval and inspect clean final-head CI before proposing merge.
+The PR timeline is the authoritative receipt for that final head; do not create another
+status-only commit merely to copy its own hash/result. The earlier `06e606b` e2e retry
+and `af78fa6` installer warning remain historical evidence. Merge and US7 need their
+own approval; no merge or continuation is claimed here.
 Physical T087/T093 remain required before closing feature 003.
 
 ### T127 pnpm installer warning
@@ -71,8 +68,20 @@ assessment preserves tasks SHA-256
 `3eb8ee9b6f2098bc998dbfdced2f8ba752b0b71ec31305b9f695c8d139e4924e`;
 its subsequent checkpoint records results without closing T127. Reviewer checklists
 stay unchanged; no converge hooks exist and optional commit hooks were not executed.
-Fresh GitHub CI, including post-action/cache behavior, remains required after separately
-authorized publication; T127 stays unchecked and local simulation is not remote CI.
+That local checkpoint is superseded by the successful remote verification on `12185b6`
+described above. The actual runner uses Linux/x64 and the same verified action commit
+`a0881977cd8ea73b1ed212236c99ca10dcc80cf4`. The setup-node pnpm store cache and the
+successor's lockfile-verification cache both save successfully; no layout warning or
+action-runtime deprecation is emitted. Negative-auth test messages, Git's default-branch
+hint and GitHub's informational future Ubuntu migration notice remain unsuppressed.
+
+Final scoped convergence checks all three maintenance obligations, both plan decisions,
+T127 and all nine principles with zero findings, preserving tasks SHA-256
+`e8cbb2804c5519e37b5eb84fcde3b8384b1bc66c76de312896d9aadd2b4c5498`
+before subsequent completion tracking. T127 is now checked and its verification closure
+requires fresh final-head CI too. Checklists remain unchanged; no converge hooks exist
+and optional commit hooks were not executed. The verification closure changes no code,
+workflow, dependency, lockfile or test.
 
 ### T126 keyboard-registration investigation
 

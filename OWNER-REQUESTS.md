@@ -4,7 +4,7 @@ Preguntas y pendientes para Samuel (propietario de Domy) y, a través de él, pa
 lo mantiene al día: agrega cada pregunta cuando surge y la mueve a «Resueltas» con tu respuesta
 y la fecha. Responde aquí mismo o en la conversación.
 
-Última actualización: 2026-10-16.
+Última actualización: 2026-10-17.
 
 ## Bloquean algo ahora
 
@@ -17,10 +17,11 @@ Autorizaste investigar y corregir localmente el aviso de `PNPM_HOME` con «Si» 
 Se reproduce en el instalador externo, no en la aplicación. La corrección local
 sustituye solo ese instalador por su sucesor oficial, sin cambiar pnpm 12.8.1, Node 24,
 instalación congelada ni compuertas. Pasan la comprobación aislada, check, build,
-938 pruebas y 88 e2e al primer intento. La revisión local de convergencia no encontró
-brechas de implementación; T127 sigue abierta hasta validar CI en GitHub.
-Autorizaste commit y push de T127 en la PR #25 con «Si» y revisar el CI del nuevo
-commit. Su recibo queda en la PR; T127 solo se cierra tras verificarlo.
+938 pruebas y 88 e2e al primer intento. Tras tu autorización de commit/push, el CI
+`39003878509` en `12185b6` confirmó esos resultados, la ausencia del aviso y el correcto
+cierre de ambos mecanismos de caché. T127 pasó convergencia y se cerró su verificación.
+La publicación de ese cierre está cubierta por tu aprobación de T127; el último
+commit también debe pasar CI y su recibo queda en la PR.
 **Fusionar e iniciar US7 no está autorizado**; requiere aprobación aparte.
 
 T122 ya está fusionada en la PR #24 como `18c832c`. El CI posterior `38945702324`
