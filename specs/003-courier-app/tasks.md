@@ -1032,3 +1032,13 @@ the PR with “sI”. Publish T077–T080/T128/T129 and inspect fresh latest-hea
 first-attempt e2e and installer/post-action warnings. The PR timeline records the actual
 publication/CI receipt; this authorization checkpoint claims no new remote result.
 Merge, physical T087/T093 and continuation to feature-wide polish remain separate.
+
+US7 merge authorization (2026-10-17): PR #26 source `7125292` passed CI 39038016265:
+check/build, 948 tests (242/512/194), 90 first-attempt e2e (12.8 minutes), setup and
+post-actions without installer/runtime warnings. The PR timeline records its exact
+source/tree/base receipt and retains the failed local scroll/lint history. Samuel
+authorized squash merge with “Si”. This approval/continuation checkpoint changes
+documentation only and must also receive clean latest-head CI before squash; the PR
+timeline records the actual squash and post-merge main verification. Continuing to
+polish and physical T087/T093 remain unauthorized/pending. No further implementation
+is authorized by this merge decision.

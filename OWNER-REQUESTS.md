@@ -12,10 +12,12 @@ US7 («Mi día») está implementada y convergida localmente en `003-us7-my-day`
 autorización «Inicia» (2026-10-17). T077–T080/T128/T129 pasan check, build, 948 pruebas
 y 90 e2e al primer intento en la última corrida completa. Se conserva el fallo previo
 de la comprobación de scroll y su corrección, sin ocultarlo ni relajar límites.
-Autorizaste commit, push y abrir la PR con «sI» (2026-10-17). Se publica este cierre
-y se revisa el CI del último commit, incluidos e2e al primer intento y advertencias.
-El recibo de publicación/CI queda en la PR; este registro local no afirma un resultado
-remoto nuevo. Fusionar y continuar con el pulido requieren decisiones aparte.
+La [PR #26](https://github.com/scldrn/domy/pull/26) está publicada: `7125292` pasó CI
+`39038016265`, con check/build, 948 pruebas y 90 e2e al primer intento, sin avisos del
+instalador. El recibo está en la PR. Autorizaste fusionarla mediante squash con «Si»
+(2026-10-17): solo con CI limpio del último commit y posterior comprobación del CI del
+squash en main. La PR registra el estado/hash real y sus recibos, también al retomar.
+**Continuar con el pulido no está autorizado**; requiere otra decisión.
 La validación física y el cierre global de la 003 siguen pendientes.
 
 US6 y T126/T127 ya están fusionadas en la [PR #25](https://github.com/scldrn/domy/pull/25)
@@ -56,6 +58,7 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-17 | ¿Fusionar la PR #26 mediante squash después de su CI limpio? | «Si». Autorizada fusión con último head verificado y comprobación posterior de main; sin continuar con el pulido |
 | 2026-10-17 | ¿Hacer commit, push y abrir la PR de US7? | «sI». Autorizada publicación de T077–T080/T128/T129 y revisión del CI del último commit; no fusión ni continuar con el pulido |
 | 2026-10-17 | ¿Iniciar US7 después de verificar la fusión de US6 y el CI de main? | «Inicia». Autorizada implementación local T077–T080 con análisis, pruebas primero y convergencia; sin commit, push, PR ni fusión |
 | 2026-10-17 | ¿Fusionar la PR #25 mediante squash tras el CI final limpio? | «Si». Autorizada fusión con último head verificado y revisión posterior de main; sin iniciar US7 |

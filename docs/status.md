@@ -14,7 +14,7 @@ a short-lived branch, so the specification and implementation of every feature l
 | 001 Shipment registration | Done and converged, on `main` |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US6 are on `main`, through [PR #25](https://github.com/scldrn/domy/pull/25), squash `525ca94`; post-merge CI passes 938 tests and 88 first-attempt e2e. US7 (T077–T080/T128/T129) is implemented and converged locally on `003-us7-my-day`: check/build, 948 tests and 90 first-attempt e2e pass. Owner authorized commit/push/PR; inspect the PR timeline for publication and latest-head CI. Merge, physical validation and feature-wide polish remain pending |
+| 003 Courier app | Setup, foundations and US1–US6 are on `main`, through [PR #25](https://github.com/scldrn/domy/pull/25), squash `525ca94`. US7 (T077–T080/T128/T129) delivery checkpoint is [PR #26](https://github.com/scldrn/domy/pull/26), authorized for squash after clean latest-head CI. Its implementation passes check/build, 948 tests and 90 first-attempt e2e locally and remotely. The PR timeline is authoritative for the actual squash and post-merge main CI. Physical validation and feature-wide polish remain pending and are not authorized by the merge decision |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
@@ -24,11 +24,19 @@ Current checkpoint (2026-10-17): PR #25 is squash-merged as `525ca94`; pre-merge
 at first attempt, without the pnpm layout warning. Source and squash trees match.
 Samuel subsequently authorized starting US7 locally with “Inicia”. It is now complete
 locally on `003-us7-my-day`: T077–T080 and convergence T128/T129. Samuel subsequently
-authorized commit, push and opening its PR with “sI” (2026-10-17). Publish the approved
-slice and inspect fresh CI for its exact latest head, including first-attempt e2e and
-warnings, not only the workflow conclusion. The PR timeline is the authoritative
-publication/CI receipt; this checkpoint claims no new remote result. Merge and
-continuation to polish require separate approval.
+authorized publication with “sI”; PR #26 source `7125292` passes
+[CI 39038016265](https://github.com/scldrn/domy/actions/runs/39038016265): check/build,
+948 tests (242/512/194), 90 first-attempt e2e (12.8 minutes), setup and post-actions,
+without installer/runtime warnings. Its [receipt](https://github.com/scldrn/domy/pull/26#issuecomment-6235066005)
+records exact source/tree/base and preserves the historical local failures.
+
+Samuel authorized squash-merging PR #26 with “Si” (2026-10-17). This checkpoint records
+approval/continuation only; no application, dependency, migration, workflow or test changes.
+If the PR is open on resume, require clean latest-head CI and the current main base
+before squash. If already merged, fast-forward local main and inspect CI for the actual
+squash. The PR timeline records the authoritative merge/post-merge receipts; do not add
+a status-only commit to copy its own hash/results. Continuing to feature-wide polish
+requires separate approval and is not included in this merge authorization.
 Physical T087/T093 and the remaining Phase 10 work still prevent feature-wide closure.
 PR #25's [timeline receipt](https://github.com/scldrn/domy/pull/25#issuecomment-6230668996)
 is authoritative for its merge/post-merge verification; do not repeat that merge.
