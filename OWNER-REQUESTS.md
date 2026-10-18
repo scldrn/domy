@@ -8,6 +8,40 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
+La [PR #27](https://github.com/scldrn/domy/pull/27) ya está fusionada como `f4f124d`,
+con árbol idéntico al head aprobado y CI previo limpio `39059903192` (948 pruebas/90 e2e
+al primer intento). El CI posterior `39071328672` pasó check/build y 948 pruebas, pero
+tuvo 89 e2e directos y uno con reintento: recuperación tras indisponibilidad temporal del
+servidor, esperando el enlace de la parada. No es una corrida limpia ni se conoce aún
+la causa. El [recibo](https://github.com/scldrn/domy/pull/27#issuecomment-6241871750)
+conserva la evidencia; no hay traza subida. Autorizaste investigar y corregir localmente
+con «Si» (2026-10-17), T131 en `003-fix-offline-recovery`. La autorización posterior
+de T132 permitió publicar el cambio diagnóstico; la posterior aprobación de fusión
+descrita abajo permite solo su squash y verificar main, no comenzar el pulido.
+La validación física T087/T093 sigue pendiente.
+
+La investigación local no reprodujo el timeout: 20 repeticiones (10 normales y 10 con
+CPU ralentizada), tres órdenes de sesión/red controlados y los 90 e2e originales pasan.
+Al terminar esa investigación se retiró toda la instrumentación temporal y no había
+cambios de aplicación, prueba, helper ni CI. No hay un arreglo confirmado ni T131
+terminada; la evidencia queda conservada. T132 cambia ahora solo el CI y su documentación.
+Autorizaste con «Si» (2026-10-17) preparar, hacer commit/push y publicar una PR
+diagnóstica que conserve las trazas de CI, incluso si un reintento deja el job en verde,
+sin cambiar tiempos, reintentos, workers ni cobertura: T132. Se subirán solo trazas,
+con caducidad de siete días, y se revisará el CI real del último commit. Una corrida
+limpia sin trazas no demuestra la subida de una traza fallida ni soluciona T131.
+La [PR #28](https://github.com/scldrn/domy/pull/28), source `393e5c7`, pasó el CI
+`39077701647`: check/build, 948 pruebas y 90 e2e al primer intento (13,7 min).
+El paso de trazas se ejecutó sin archivos ni artefactos; no hubo un fallo cuya traza
+se pudiera subir. El [recibo](https://github.com/scldrn/domy/pull/28#issuecomment-6243133009)
+mantiene esta limitación y el fallo histórico. Después autorizaste con «Si» fusionar
+mediante squash, solo con CI limpio del último commit, y comprobar el CI posterior
+de main. Este registro documental debe pasar también CI antes de la fusión. La PR
+registra hashes y resultados reales; no se declara una fusión antes de realizarla.
+T131 sigue abierta; no implica comenzar el pulido ni completar la validación física.
+
+Contexto histórico de T130 (no repetir su fusión):
+
 PR #26 ya está fusionada como `e43ea1e`. Su CI final previo `39040911443` pasó limpio;
 el posterior de main `39043360351` pasó check/build y 948 pruebas, pero los e2e fueron
 89 al primer intento y uno con reintento: notificaciones expandidas interceptaron el
@@ -66,6 +100,9 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-17 | ¿Fusionar la PR #28 diagnóstica mediante squash y verificar después el CI de main? | «Si». Autorizada fusión solo con CI limpio del último commit y verificación posterior; sin cerrar T131 ni comenzar el pulido |
+| 2026-10-17 | ¿Preparar y publicar una PR diagnóstica que conserve las trazas de CI incluso tras un reintento exitoso? | «Si». Autorizados preparación, commit, push, PR y revisión del CI del último commit para T132; sin cambiar límites/cobertura, fusionar, cerrar T131 ni comenzar el pulido |
+| 2026-10-17 | ¿Investigar y corregir localmente la nueva inestabilidad offline posterior a la PR #27, antes del pulido? | «Si». Autorizada investigación/corrección local T131 con metodología estricta y pruebas primero; sin publicación, fusión ni pulido |
 | 2026-10-17 | ¿Fusionar la PR #27 mediante squash y verificar después el CI de main? | «Si». Autorizada fusión con CI limpio del último commit y comprobación posterior del squash; sin comenzar el pulido |
 | 2026-10-17 | ¿Hacer commit, push y abrir la PR de T130 para verificar CI? | «Si». Autorizada publicación y revisión del CI del último commit; sin fusionar ni comenzar el pulido |
 | 2026-10-17 | ¿Investigar y corregir la inestabilidad e2e posterior a la fusión de US7, antes del pulido? | «Si». Autorizada corrección local T130 con reproducción, pruebas primero y metodología estricta; publicación, fusión y pulido requieren otra aprobación |
