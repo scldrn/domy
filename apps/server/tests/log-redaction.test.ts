@@ -1,6 +1,11 @@
 import { Writable } from "node:stream";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { errorForLog } from "../src/lib/errors.ts";
+import { copyFileSync, mkdtempSync, rmSync, symlinkSync, mkdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { sql } from "drizzle-orm";
+import postgres from "postgres";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { AppError, errorForLog, setErrorReporter } from "../src/lib/errors.ts";
 import { createLogger } from "../src/lib/logger.ts";
 import { createTestApp } from "./setup/app.ts";
 import { createCatalog } from "./setup/catalog.ts";
@@ -15,6 +20,9 @@ afterAll(async () => {
 });
 
 describe("logs (FR-041)", () => {
+  beforeEach(async () => {
+    await database.truncate();
+  });
   it("never contain passwords, cookies, or recipients' data", async () => {
     let output = "";
     const sink = new Writable({
@@ -64,19 +72,248 @@ describe("logs (FR-041)", () => {
     }
   });
 
-  it("keep only the database's message of a failed query, never its parameters", () => {
-    const failure = new Error(
-      'Failed query: insert into "shipments" ... \nparams: Rosalba Quintero,3009998877',
-      {
-        cause: Object.assign(new Error("duplicate key value"), {
-          code: "23505",
-          constraint_name: "x",
-        }),
+  it("retains a real unique-violation code without driver text or parameters (T153)", async () => {
+    const marker = crypto.randomUUID();
+    let failure: unknown;
+    try {
+      await database.db.transaction(async (tx) => {
+        await tx.execute(sql`create temporary table t153_unique (name text primary key)`);
+        await tx.execute(sql`insert into t153_unique values (${marker})`);
+        await tx.execute(sql`insert into t153_unique values (${marker})`);
+      });
+    } catch (error) {
+      failure = error;
+    }
+    if (!(failure instanceof Error)) throw new Error("Expected real PostgreSQL violation");
+    const logged = errorForLog(failure);
+    expect(logged.type).toBe("DatabaseError");
+    expect(logged.code).toBe("23505");
+    expect(JSON.stringify(logged).includes(marker)).toBe(false);
+    expect(JSON.stringify(logged).includes("t153_unique")).toBe(false);
+  });
+
+  it("keeps real driver input out of actual request logs and reporting, with rollback (T153)", async () => {
+    let output = "";
+    const reported: Error[] = [];
+    const sink = new Writable({
+      write(chunk: Buffer, _encoding, done) {
+        output += chunk.toString();
+        done();
       },
-    );
-    const logged = JSON.stringify(errorForLog(failure));
-    expect(logged).toContain("23505");
-    expect(logged).not.toContain("3009998877");
-    expect(logged).not.toContain("Rosalba");
+    });
+    const t = createTestApp(database.db, { logger: createLogger("debug", sink) });
+    const owner = await t.signIn("owner");
+    const catalog = await createCatalog(database.db, owner.user.id);
+    const id = crypto.randomUUID();
+    const marker = crypto.randomUUID();
+    setErrorReporter((error) => reported.push(error));
+    try {
+      await database.db.execute(sql`
+        create function t153_reject_shipment() returns trigger language plpgsql as $$
+        begin perform new.recipient_name::integer; return new; end $$`);
+      await database.db.execute(sql`
+        create trigger t153_reject before insert on shipments
+        for each row execute function t153_reject_shipment()`);
+      const response = await t.request("/api/shipments", {
+        method: "POST",
+        cookie: owner.cookie,
+        body: {
+          id,
+          kind: "delivery",
+          merchantId: catalog.merchant.bullish,
+          pickupPointId: catalog.pickup.bullish,
+          recipientName: marker,
+          recipientPhone: "3009998877",
+          recipientAddress: "Calle 99 # 77-55",
+          recipientNeighborhoodId: catalog.place.laureles,
+          paymentMode: "merchant_account",
+          fee: 13000,
+        },
+      });
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({
+        error: {
+          code: "internal_error",
+          message: "Ocurrió un error inesperado. Intenta de nuevo.",
+        },
+      });
+      const rows = await database.db.execute(sql`select id from shipments where id = ${id}`);
+      expect(rows).toHaveLength(0);
+      expect(output.includes('"msg":"unhandled error"')).toBe(true);
+      expect(output.includes("22P02")).toBe(true);
+      expect(output.includes(marker)).toBe(false);
+      expect(output.includes("3009998877")).toBe(false);
+      expect(reported).toHaveLength(1);
+      const error = reported[0];
+      if (!error) throw new Error("Reporter was not called");
+      expect(error.name).toBe("DatabaseError");
+      expect(`${error.message}\n${error.stack ?? ""}`.includes(marker)).toBe(false);
+      expect(error.stack?.includes("apps/server/src/")).toBe(true);
+      expect(error.cause).toBeUndefined();
+    } finally {
+      setErrorReporter(null);
+      await database.db.execute(sql`drop trigger if exists t153_reject on shipments`);
+      await database.db.execute(sql`drop function if exists t153_reject_shipment()`);
+    }
+  });
+
+  it("projects ordinary exceptions through the actual monolith, without mutable text (T153)", async () => {
+    const marker = crypto.randomUUID();
+    let output = "";
+    const reported: Error[] = [];
+    const t = createTestApp(database.db, {
+      logger: createLogger(
+        "debug",
+        new Writable({
+          write(chunk: Buffer, _encoding, done) {
+            output += chunk.toString();
+            done();
+          },
+        }),
+      ),
+    });
+    const failure = new TypeError(marker, { cause: new Error(marker) });
+    failure.name = marker;
+    // Test-only route on the real application; no production route or mocked handler.
+    t.app.get("/api/test/t153-fault", () => {
+      throw failure;
+    });
+    t.app.get("/api/test/t153-expected", () => {
+      throw new AppError("forbidden");
+    });
+    setErrorReporter((error) => reported.push(error));
+    try {
+      const response = await t.request("/api/test/t153-fault");
+      expect(response.status).toBe(500);
+      expect((await response.text()).includes(marker)).toBe(false);
+      expect(output.includes('"msg":"unhandled error"')).toBe(true);
+      expect(output.includes(marker)).toBe(false);
+      expect(reported).toHaveLength(1);
+      const error = reported[0];
+      if (!error) throw new Error("Reporter was not called");
+      expect(error).not.toBe(failure);
+      expect(error.name === "TypeError").toBe(true);
+      expect(`${error.message}\n${error.stack ?? ""}`.includes(marker)).toBe(false);
+      expect(error.cause).toBeUndefined();
+      expect(error.stack?.includes("reporting_site")).toBe(true);
+      expect((await t.request("/api/test/t153-expected")).status).toBe(403);
+      expect(reported).toHaveLength(1);
+    } finally {
+      setErrorReporter(null);
+    }
+  });
+
+  it("recognizes a real raw driver error and rejects its invalid mutable code (T153)", async () => {
+    const marker = crypto.randomUUID();
+    let failure: unknown;
+    try {
+      await database.db.$client`select ${marker}::integer`;
+    } catch (error) {
+      failure = error;
+    }
+    if (!(failure instanceof postgres.PostgresError))
+      throw new Error("Expected raw PostgreSQL error");
+    expect(errorForLog(failure).code).toBe("22P02");
+    Object.defineProperty(failure, "code", { value: marker });
+    const logged = errorForLog(failure);
+    expect(logged.type).toBe("DatabaseError");
+    expect(logged.code).toBeUndefined();
+    expect(JSON.stringify(logged).includes(marker)).toBe(false);
+  });
+});
+
+describe("bounded structural error locations (T153/R14)", () => {
+  const source = fileURLToPath(new URL("../src/lib/errors.ts", import.meta.url));
+  const projectRelative = "apps/server/src/lib/errors.ts:1:1";
+
+  it("retains only a verified source location, not its function or stack header", () => {
+    const marker = crypto.randomUUID();
+    const error = new RangeError(marker);
+    error.stack = `${marker}\n    at ${marker} (${source}:1:1)`;
+    const logged = errorForLog(error);
+    expect(logged.type).toBe("RangeError");
+    expect(logged.stack.includes(projectRelative)).toBe(true);
+    expect(JSON.stringify(logged).includes(marker)).toBe(false);
+    expect(logged.stack.includes("reporting_site")).toBe(false);
+  });
+
+  it("accepts native bare/file URL locations and shared domain sources", () => {
+    // Resolve directly from this test module, independently of production roots.
+    const domainSource = new URL("../../../packages/domain/src/fees.ts", import.meta.url);
+    for (const location of [
+      source,
+      new URL("../src/lib/errors.ts", import.meta.url).href,
+      domainSource.href,
+    ]) {
+      const error = new Error("private");
+      error.stack = `private\n    at ${location}:1:1`;
+      const logged = errorForLog(error);
+      expect(logged.stack.includes("reporting_site")).toBe(false);
+      expect(logged.stack.includes("source (")).toBe(true);
+      expect(JSON.stringify(logged).includes("private")).toBe(false);
+    }
+  });
+
+  it("bounds stack scanning and fails closed on mutable stack accessors", () => {
+    const error = new Error("private");
+    error.stack = `private\n${"    at unknown\n".repeat(32)}    at ${source}:1:1`;
+    expect(errorForLog(error).stack.includes("reporting_site")).toBe(true);
+    error.stack = `private\n${" ".repeat(65_536)}\n    at ${source}:1:1`;
+    expect(errorForLog(error).stack.includes("reporting_site")).toBe(true);
+    Object.defineProperty(error, "stack", {
+      get() {
+        throw new Error("private");
+      },
+    });
+    const logged = errorForLog(error);
+    expect(logged.stack.includes("reporting_site")).toBe(true);
+    expect(JSON.stringify(logged).includes("private")).toBe(false);
+  });
+
+  it.each([
+    "file://person:secret@localhost/unsafe.ts:1:1",
+    "https://example.test/unsafe.ts?token=secret:1:1",
+    "file:///private/outside.ts:1:1",
+    `${source}?token=secret:1:1`,
+    `${source}#secret:1:1`,
+    `${source}/../errors.ts:1:1`,
+    `${source}.missing.ts:1:1`,
+    `${source}:0:1`,
+    `${source}:999999999:1`,
+    `${source}:1:999999999`,
+    "eval at secret (unsafe.ts:1:1)",
+  ])("rejects unsafe candidate %s without retaining arbitrary stack content", (candidate) => {
+    const error = new Error("private message");
+    error.stack = `private header\n    at secret (${candidate})`;
+    const logged = errorForLog(error);
+    expect(logged.stack.includes("reporting_site")).toBe(true);
+    expect(JSON.stringify(logged).includes("secret")).toBe(false);
+    expect(JSON.stringify(logged).includes("private")).toBe(false);
+  });
+
+  it("rejects final and ancestor symlinks without reading their targets", () => {
+    const directory = mkdtempSync(fileURLToPath(new URL("../src/t153-fixture-", import.meta.url)));
+    try {
+      symlinkSync(source, join(directory, "alias.ts"));
+      mkdirSync(join(directory, "real"));
+      copyFileSync(source, join(directory, "real", "source.ts"));
+      symlinkSync(join(directory, "real"), join(directory, "linked"));
+      for (const path of [join(directory, "alias.ts"), join(directory, "linked", "source.ts")]) {
+        const error = new Error("private");
+        error.stack = `private\n    at (${path}:1:1)`;
+        expect(errorForLog(error).stack.includes("reporting_site")).toBe(true);
+      }
+    } finally {
+      rmSync(directory, { recursive: true });
+    }
+  });
+
+  it("does not classify an arbitrary cause as PostgreSQL by duck typing", () => {
+    const marker = crypto.randomUUID();
+    const error = new Error(marker, { cause: { code: marker, message: marker } });
+    const logged = errorForLog(error);
+    expect(logged.type).toBe("Error");
+    expect(logged.code).toBeUndefined();
+    expect(JSON.stringify(logged).includes(marker)).toBe(false);
   });
 });

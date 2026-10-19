@@ -48,6 +48,32 @@ Design 3, PostgreSQL through Drizzle, Better Auth, and business rules in a share
 
 ## Technical Context
 
+### T153 diagnostic correction boundary
+
+Implement research R14's bounded diagnostic projection directly in
+`apps/server/src/lib/errors.ts`. No schema, domain rule, public endpoint, response shape,
+auth behavior, dependency, service or wrapper changes. Preserve expected AppError and
+client HTTPException handling, ordinary pino delivery and the existing reporter.
+Permit resetting the existing reporter to null for deterministic test cleanup.
+
+Test first in `apps/server/tests/log-redaction.test.ts`: actual monolith request and real
+PostgreSQL trigger failure (`22P02`), actual unique violation (`23505`, replacing the
+old synthetic case without dropping its code assertion), and an ordinary exception from
+a test-only native Hono route appended to the actual monolith (no production endpoint).
+Capture complete log/reporter output without printing sensitive sentinels; verify generic
+Spanish HTTP 500, rollback and retained useful diagnostics. Exercise source-frame
+validation, malformed/mutable error values, safe fallback and bounded cost, using native
+filesystem fixtures with recoverable cleanup. Preserve all existing privacy assertions.
+Run all four gates and scoped convergence before checking T153. T150–T152 and the
+separately published accessibility/session/transport slices are not closed by this fix.
+
+Constitution re-check: I no added architecture/dependency/cache; II no sync changes;
+III no duplicated domain rules; IV no transaction changes; V strict native types;
+VI permanent real-PG RED before behavior; VII Spanish responses unchanged; VIII scoped
+source/test/document locations and all gates; IX no arbitrary runtime values in diagnostics.
+No Complexity Tracking exception is required. The source immutability assumption and
+reporting-site fallback limits are explicit in R14, not a hostile-filesystem guarantee.
+
 **Language/Version**: TypeScript 6.0 (strict), Node.js 24 LTS (native type stripping)
 
 **Primary Dependencies**:

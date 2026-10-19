@@ -31,9 +31,22 @@ sample merchants, couriers, and carriers.
 pnpm check
 pnpm test
 pnpm test:e2e
+pnpm build
 ```
 
-All three must pass with zero warnings (Constitution, quality gates).
+All four must pass with zero warnings (Constitution, quality gates).
+
+### T153 fallback error diagnostics
+
+Run `pnpm --filter @domy/server exec vitest run tests/log-redaction.test.ts` with Docker.
+Its disposable migrated PostgreSQL must exercise a real failing shipment request and
+unique violation, plus an ordinary exception on the actual application. Expect generic Spanish
+HTTP 500, no committed failed shipment, real log/reporter delivery, fixed classes,
+retained SQLSTATE and trusted structural source locations. Complete captures must exclude
+synthetic private values without printing them. Frame validation must reject unsafe URLs,
+outside/missing/symlink paths and invalid positions, with a labelled reporting-site fallback.
+Retain the original RED and measured bounded error-path cost, then execute all four gates.
+This does not validate SDK-added context or the separately tracked auth/mail surfaces.
 
 ## Manual validation scenarios
 

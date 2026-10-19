@@ -19,6 +19,29 @@ a short-lived branch, so the specification and implementation of every feature l
 
 ## Next step
 
+### Current narrow diagnostic work — 2026-10-19 UTC
+
+The exhaustive current handoff is [the detailed execution backlog](integral-execution-backlog.md):
+81 open canonical task entries(27/2/17/35), preserved implementation states, exact next
+steps/dependencies/tests/exit criteria, CI failures, historical regressions and operational
+acceptance. This is a snapshot, not81 unstarted implementations or a readiness certificate.
+
+T141 is merged (`321ef93`, PR #29). The current branch is `001-fix-error-diagnostics`:
+T153 has real application/PostgreSQL RED, aligned design, and 21 focused green cases.
+All four local gates pass: check, 967 tests (242/531/194), 91 first-attempt e2e (5.0 minutes)
+and build. T153 is verified locally and receipt recorded in quickstart-results.md; publication remains. The accessibility correction is separately published in PR #32
+(`f4feb8c`); CI39285191879 failed with95 passed/one failed/one flaky and build skipped.
+The retained traces show a fixed lockout-time expectation versus a progressing clock and
+expanded notifications intercepting a disbursement button. The second causal sequence
+still needs investigation; no unchanged rerun or merge is authorized by a later local pass.
+PR #31/#30 remain held for reconciliation and fresh gates;
+the account-integrity commit `0504631` remains preserved locally.
+
+A further native development recovery probe confirms secret-bearing email URL logging
+without provider configuration. IV-41 is appended as 001 T155, not hidden inside T153.
+No actual customer data/external delivery was used, and no fix is claimed yet.
+The paragraphs below are historical execution receipts, not the current branch/status.
+
 ### Authorized remediation — execution checkpoint
 
 Publication authorization (2026-10-19 UTC): Samuel answered “autorizo” to the explicit

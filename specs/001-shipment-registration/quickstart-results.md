@@ -1,5 +1,30 @@
 # Quickstart Results: Shipment Registration and Dispatch Board
 
+## T153 fallback error diagnostics correction — 2026-10-19 UTC
+
+Local branch `001-fix-error-diagnostics`, base `321ef93`.
+This is a narrow correction receipt for IV-39 / T153, not whole-feature convergence.
+
+**RED:** Real PostgreSQL trigger `22P02` failure and native `TypeError` leak arbitrary message and stack headers into logs and reporter Error. Redacted parameters omitted by Drizzle were still leaked by PostgreSQL driver message. Captured complete logs and reporter output demonstrated runtime values in diagnostics.
+
+**Correction:** Implemented research R14's bounded diagnostic projection directly in `apps/server/src/lib/errors.ts`:
+- Fixed builtin labels and messages (`DatabaseError`, `TypeError`, etc.).
+- Native recognition of `DrizzleQueryError` and `postgres.PostgresError`; validates and retains only 5-character SQLSTATE (`candidate.code`), omitting driver messages, queries, parameters, and causes.
+- Independently reconstructed reporter Error.
+- Bounded structural `.ts` locations from trusted immutable sources (`apps/server/src`, `packages/domain/src`), verifying existence and line/column boundaries on disk.
+- Rejects candidate URLs with credentials, search, hash, traversal, or symlinks, and out-of-bounds positions.
+- Safe labelled fallback `reporting_site` when no original frame survives.
+
+**Verification:** 21 focused tests in `apps/server/tests/log-redaction.test.ts` PASS.
+Error-path cost benchmark (`.git/t153-native-diagnostic-check.mjs`): 1000 iterations, 32 frames across 3 files: median 0.11 ms, p95 0.15 ms, max 2.87 ms.
+Full quality gates pass sequentially:
+- `pnpm check`: PASS (0 errors, 0 warnings)
+- `pnpm test`: PASS (967 tests: 242 domain, 531 server with real PostgreSQL, 194 web)
+- `pnpm test:e2e`: PASS (91 first-attempt passes, 5.0 minutes)
+- `pnpm build`: PASS
+
+**Scoped post-implementation assessment:** FR-041, plan research R14, and all nine constitutional principles verified. No sensitive values in logs or reporter. T153 marked completed.
+
 ## T141 keyboard verification correction — 2026-10-19 UTC
 
 Local branch `001-fix-keyboard-readiness`, base `9006db3`; no commit/publication yet.
