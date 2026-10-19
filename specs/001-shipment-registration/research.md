@@ -208,3 +208,24 @@ this research also fixes the project foundation that features 002–004 build on
   DigitalOcean) is added when the first release is prepared.
 - **Rationale**: Constitution quality gates; one command per gate.
 - **Alternatives considered**: Turborepo or Nx (unneeded at three packages).
+
+## R17. Keyboard selection with asynchronous catalog results (T141)
+
+- **Decision**: keep the production combobox's native arrows-and-Enter interaction.
+  The keyboard e2e test waits for its fixture's sole filtered result, uses ArrowDown,
+  asserts that the intended option is highlighted, then uses Enter. Preserve normal,
+  delayed-search and delayed-quote cases and add the initial-empty-response ordering.
+- **Evidence**: holding the real initial merchant responses while typing, then releasing
+  them, deterministically yields a visible Bullish Hype without `data-highlighted`.
+  The unchanged five-second assertion fails; RED trace/context are retained in ignored
+  `.git/t141-keyboard-red/`. Installed Base UI boolean `autoHighlight` uses input-change
+  behavior; empty results clear its active index and late items need not restore it.
+  This establishes a mechanism, not the exact schedule of the historical full-gate
+  failure retained separately in `.git/integral-e2e-keyboard/`.
+- **Rationale**: `search-combobox.tsx` already documents arrows and Enter. Keyboard access
+  does not require automatic selection after an asynchronous response. Twenty focused
+  corrected executions pass with real responses and unchanged full axe assertions.
+- **Alternatives rejected**: changing application selection policy or upgrading a
+  dependency for a test precondition; relying on an internal `always` mode not exposed
+  by the installed public boolean prop; sleeps, extra time, retries, forced input or
+  removing intended-selection assertions. No API/data-model/contract change is needed.

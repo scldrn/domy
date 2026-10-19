@@ -1,5 +1,44 @@
 # Quickstart Results: Shipment Registration and Dispatch Board
 
+## T141 keyboard verification correction — 2026-10-19 UTC
+
+Local branch `001-fix-keyboard-readiness`, base `9006db3`; no commit/publication yet.
+This is a narrow correction receipt, not a replacement of the historical results below
+or whole-feature convergence. The remaining 21 open 001 tasks still block its closure.
+
+**RED:** the initial merchant-response barrier holds real requests while the dispatcher
+types. After release, the sole intended merchant is visible without a highlight; the
+original five-second assertion fails (1/1, 6.2 seconds). Trace/context are retained in
+ignored `.git/t141-keyboard-red/`. The original 89/90 full-gate failure remains in
+`.git/integral-e2e-keyboard/`; its exact scheduling is not asserted as proven.
+
+**Correction:** per research R17 and the aligned plan, use native ArrowDown, assert
+the exact highlighted merchant/neighborhood, then Enter. Keep all original delayed
+variants and add the initial-response case. Actual selection, pickup, fee, success and
+full fixture axe assertions remain; runtime/API/schema/CI and all deadlines, worker
+and retry policies are unchanged. No sleeps, fake successful responses or forced input.
+
+**Verification:** four keyboard variants × five repetitions PASS (20/20, 51.6 seconds).
+Then sequentially `pnpm check` PASS, `pnpm test` PASS (242 domain, 512 server with real
+PostgreSQL, 194 web = 948), `env -u NO_COLOR pnpm test:e2e` PASS (91 first-attempt
+passes, 5.1 minutes), `pnpm build` PASS. Five expected invalid-password warnings came
+from the lockout negative scenario; no unexpected warning or failed attempt observed.
+The passing historical-recovery case does not establish a fix for 003 T131.
+
+**Scoped post-implementation assessment:** five related requirement references
+(FR-003/005/006/034/038), US1/AC1 and AC5, three plan decisions (native keyboard
+selection, real response barrier, unchanged verification policy), T141 and its T126
+historical guard were checked. All nine constitutional principles were considered:
+I no added layer/dependency; II–IV no persistence/domain/history change; V typed test
+and unchanged validated boundaries; VI deterministic RED and real infrastructure;
+VII preserved keyboard/Spanish/axe flow; VIII one slice and retained evidence;
+IX unchanged auth/privacy and private diagnostics. No new scoped missing/partial/
+contradictory/unrequested finding, at any severity; no convergence tasks appended.
+Existing project findings/tasks are not duplicated or declared resolved. T141 is
+checked only after the passing gates; the global outcome remains not converged.
+
+## Original implementation receipt
+
 **Date**: 2026-09-30 · **Branch**: `001-shipment-registration-impl` · **Task**: T120
 
 Every manual validation scenario of [quickstart.md](quickstart.md) is automated as an

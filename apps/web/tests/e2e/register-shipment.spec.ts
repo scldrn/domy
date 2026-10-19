@@ -141,7 +141,12 @@ test("registers once the fields a first try marked are fixed (FR-038)", async ({
   await registerAndOpen(page);
 });
 
-for (const delayedResponse of ["none", "merchant search", "fee quote"] as const) {
+for (const delayedResponse of [
+  "none",
+  "initial merchant response",
+  "merchant search",
+  "fee quote",
+] as const) {
   test(`registers a shipment with the keyboard only${delayedResponse === "none" ? "" : ` while the ${delayedResponse} is delayed`}`, async ({
     dispatcherPage: page,
   }) => {
@@ -154,14 +159,26 @@ for (const delayedResponse of ["none", "merchant search", "fee quote"] as const)
       const pattern =
         delayedResponse === "fee quote"
           ? "**/api/shipments/fee-quote"
-          : "**/api/merchants?q=bullish&active=true";
+          : delayedResponse === "initial merchant response"
+            ? "**/api/merchants?**"
+            : "**/api/merchants?q=bullish&active=true";
       await page.route(pattern, async (route) => {
-        responseRequested = true;
+        if (
+          delayedResponse !== "initial merchant response" ||
+          new URL(route.request().url()).searchParams.get("q") === "bullish"
+        ) {
+          responseRequested = true;
+        }
         await responseGate;
         await route.continue();
       });
     }
     try {
+      if (delayedResponse === "initial merchant response") {
+        // Start a fresh query cache with every real merchant response held while typing.
+        await page.reload();
+        await expect(page.getByRole("heading", { name: "Nuevo envío", exact: true })).toBeVisible();
+      }
       await expect(page.getByRole("combobox", { name: "Cliente" })).toBeFocused();
       if (delayedResponse === "merchant search") {
         // Prime real unfiltered results: the desired match is visible but not highlighted.
@@ -172,6 +189,10 @@ for (const delayedResponse of ["none", "merchant search", "fee quote"] as const)
         );
       }
       await page.keyboard.type("bullish");
+      if (delayedResponse === "initial merchant response") {
+        await expect.poll(() => responseRequested).toBe(true);
+        releaseResponse();
+      }
       await expect(page.getByRole("option", { name: /Bullish Hype/ })).toBeVisible();
       if (delayedResponse === "merchant search") {
         await expect.poll(() => responseRequested).toBe(true);
@@ -181,7 +202,11 @@ for (const delayedResponse of ["none", "merchant search", "fee quote"] as const)
         );
         releaseResponse();
       }
-      // T126: retained search results can contain the match while another item is active.
+      // T141: late results need actual list navigation, not assumed auto-highlighting.
+      // The real filtered response has one match in this fixture; retained results do not.
+      await expect(page.getByRole("option")).toHaveCount(1);
+      await page.keyboard.press("ArrowDown");
+      // T126: still verify the intended active item before Enter, never just visibility.
       await expect(page.getByRole("option", { name: /Bullish Hype/ })).toHaveAttribute(
         "data-highlighted",
         "",
@@ -204,6 +229,8 @@ for (const delayedResponse of ["none", "merchant search", "fee quote"] as const)
         exact: true,
       });
       await expect(neighborhood).toBeVisible();
+      await expect(page.getByRole("option")).toHaveCount(1);
+      await page.keyboard.press("ArrowDown");
       await expect(neighborhood).toHaveAttribute("data-highlighted", "");
       await page.keyboard.press("Enter");
       await expect(page.getByRole("combobox", { name: "Barrio", exact: true })).toHaveValue(

@@ -1,7 +1,7 @@
 # Project status
 
 Where Domy stands and what comes next, so any session can resume without the conversation
-that produced it. Updated 2026-10-17; update it whenever a slice is merged or the next step
+that produced it. Updated 2026-10-19 UTC; update it whenever a slice is merged or the next step
 changes.
 
 ## Features
@@ -11,13 +11,119 @@ a short-lived branch, so the specification and implementation of every feature l
 
 | Feature | State |
 | --- | --- |
-| 001 Shipment registration | Done and converged, on `main` |
+| 001 Shipment registration | Implemented on `main`; integral audit identifies additional conformance defects. T141 corrected/verified locally, not published; other T128–T149 remain open; historical convergence is not current global sign-off |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
-| 002 Routes and dispatch | Done and converged, on `main` (#4–#11); test and review results in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations, US1–US7 and T130 are on `main`, through [PR #27](https://github.com/scldrn/domy/pull/27), squash `f4f124d`. Its post-merge CI has one flaky server-recovery e2e; T131 remains unresolved. T132 is published in [PR #28](https://github.com/scldrn/domy/pull/28), source `393e5c7` with clean CI (948 tests/90 first-attempt e2e). Squash is authorized after clean final-head CI, followed by verification of main; its timeline records the actual merge/result. Feature-wide polish and physical T087/T093 remain pending |
+| 002 Routes and dispatch | Implemented on `main` (#4–#11), with 003 custody extensions; audit adds T063/T064 for aggregate overflow and traceability. Earlier test/review evidence remains in `specs/002-routes-dispatch/quickstart-results.md` |
+| 003 Courier app | Setup, foundations and US1–US7 are on `main`. [PR #28](https://github.com/scldrn/domy/pull/28) merged as `9006db3`; post-merge CI 39081231438 is clean (948 tests/90 first-attempt e2e). T131, final closure and physical T087/T093 remain pending; audit adds T133–T135 for photo lifecycle, immutable upload and account-link form readiness |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
+
+### Authorized remediation — execution checkpoint
+
+Publication authorization (2026-10-19 UTC): Samuel answered “autorizo” to the explicit
+per-slice commit/push/PR/squash request, conditional on review and clean local/latest-head
+CI gates. This resolves the temporary authority blocker below. Resume T141 publication,
+then the next short-lived auth slice. No deployment/production infrastructure authority
+or CSV/photo contract decision is implied. No publication/merge is claimed before it occurs.
+
+Historical pre-authorization continuation: Samuel requested a persistent goal to complete the 75
+remaining tasks under the same strict method. Publication-cycle authorization was
+asked explicitly (per-slice commit/push/PR/squash only after review and clean local/CI
+gates; no production deployment). No external write has been performed meanwhile.
+Initial D4 real-PG research demonstrates outer-Tx rollback of ban/session deletion
+and user/credential creation on audit FK failure, plus explicit rollback for an error
+Response. Private program/limitations are retained in `.git/d4-auth-transaction-*`.
+This is partial design evidence only: no auth code change, D4 sign-off, task completion
+or global readiness claim. Keep the 75-task queue and unresolved owner choices intact.
+Follow-up research now passes six real-PG capability cases: the original three plus
+credential-write rollback, session-deletion rollback and successful commit followed by
+real password sign-in. Expected SQL fault codes are asserted specifically, not any
+exception. Permanent app/guard/replay/concurrency tests still precede implementation.
+GitHub read-only recheck shows no open PR. Publication authority remains unanswered;
+do not turn an automatic goal continuation into owner approval or merge permission.
+Blocked audit: the same publication-authority prerequisite remained unanswered across
+the initial goal turn and two automatic continuations. Safe preparatory D4 research
+has produced six bounded capability results; the next implementation slice requires
+closing the verified T141 branch through the mandated approved PR cycle. Do not bundle
+the next implementation into this branch or fabricate approval. Goal execution is
+blocked pending owner authorization; the 75-task objective and all evidence are retained.
+
+Samuel authorized starting all recommended local remediation (2026-10-18 UTC).
+[integral-remediation-plan.md](integral-remediation-plan.md) maps all 76 open tasks
+at planning time to ordered slices, with explicit design/owner and operational gates.
+Publication is now authorized conditionally above; infrastructure still needs separate approval. The current
+local branch is `001-fix-keyboard-readiness`, based on `9006db3`; the pre-existing
+uncommitted audit documents were preserved when creating it.
+
+The first slice is 001 T141 only. A real initial-response barrier deterministically
+reproduced the missing option highlight (RED trace/context in ignored
+`.git/t141-keyboard-red/`). The test now uses native ArrowDown before asserting the
+intended option and Enter, for both merchant and neighborhood. All original selection,
+fee, success, accessibility and delay assertions remain. Twenty focused executions
+pass (four variants repeated five times, 51.6 seconds). Fresh full gates PASS: check,
+948 unit/integration tests (242/512/194), 91 first-attempt e2e in 5.1 minutes and build.
+T141 is complete locally; 75 program tasks remain open. No application runtime, dependency,
+schema, timeout, retry, worker or CI behavior was changed. The older failure below is
+retained evidence, not overwritten by the focused passes. T131 remains unresolved.
+
+The two pending CSV/photo scope choices below remain unanswered; authorization to
+start was not silently treated as choosing an alternative. Independent slices proceed.
+The T141 review receipt is in 001 `quickstart-results.md`; no whole-feature/global
+convergence is claimed. Next, execute the authorized publication/clean-CI/squash cycle
+for this first slice before starting another implementation branch; auth surface/invariants
+are the next priority.
+
+### Integral verification and completion — current owner request
+
+Deep-review checkpoint (2026-10-18 UTC): consolidated evidence and coverage are in
+[integral-verification.md](integral-verification.md), IV-01–IV-34. Reproductions use
+disposable migrated PostgreSQL, real authentication/storage and controlled browser or
+database barriers, not operational data. Findings include administrative invariant
+bypasses, non-atomic account audit, delayed replay defects, concurrent master-data
+creation/history/alias failures, bulk creation-event corruption, monetary overflow,
+fee snapshot drift, silent neighborhood/account-link changes and replaceable photos.
+Boundary/response-type, Spanish/error-state and traceability debt is also recorded.
+
+Fresh check, all 948 unit/integration tests and build pass. The fresh full browser
+gate FAILS: 89 passed / 1 failed (5.2 minutes), ordinary keyboard-only registration at
+`register-shipment.spec.ts:185` waiting for the desired option's highlight. Both
+controlled-delay variants pass. Original trace/context are retained in ignored
+`.git/integral-e2e-keyboard/`; no repeat full run replaces this failure. It is a
+distinct investigation from T131; no causal fix is claimed.
+
+After presenting the findings and metrics, append-only convergence adds 24 unchecked
+tasks: 001 Phase 13 T130–T149, 002 Phase 10 T063/T064, 003 Phase 43 T134/T135.
+No old task/checklist was rewritten and 004's existing 35 tasks were not duplicated.
+No app/test/dependency/schema/CI behavior, commit or remote state was changed.
+Proceed with the ordered test-first remediation queue, not a global-ready assertion;
+CSV/photo scope choices and actual device/deployment acceptance remain open.
+
+Samuel requested a single project-wide closure stage covering planned behavior,
+historical defects/difficulties, approved additions, integration quality and technical
+debt. He explicitly included completing 004 after the initial review identified it as
+unimplemented. The audit working branch was `chore/integral-verification`, based on clean
+main `9006db3`; [integral-verification.md](integral-verification.md) is the unified
+inventory, evidence log and exit criteria. It is NOT a global readiness certificate.
+
+PR #28 is already merged; [the final receipt](https://github.com/scldrn/domy/pull/28#issuecomment-6243721439)
+records source/tree and clean post-merge CI 39081231438. Do not repeat the merge. The
+older checkpoints below are historical and their no-polish scope restrictions do not
+override the owner's new integral-verification request. Publication/merge still need
+separate approval. Review findings alone do not authorize an arbitrary production fix;
+004 local completion is explicitly in scope, while CSV/photo contract choices are
+being clarified before remediation.
+
+The initial review below predates the deep-review checkpoint above. It confirms missing operational exports and a delivery flow above the
+three-tap budget; existing 003 closure tasks remain open. New follow-ups are 001
+T128 (CSV formula safety), T129 (development advisory review), and 003 T133 (photo
+lifecycle spec/contract alignment, not a demonstrated cache leak). Do not duplicate
+T131 or the existing polish tasks. No app/test/dependency change has been made by the
+review. Real devices, production infrastructure and business approvals remain explicit
+evidence requirements, not assumptions. See the report for current gate results and
+the distinction between inventory and verified coverage.
+
+### Previous diagnostic-retention checkpoint
 
 Current checkpoint (2026-10-17): PR #27 is merged as `f4f124d`, tree identical to
 approved final head `6ce5933`; CI 39059903192 passed check/build, 948 tests and 90
