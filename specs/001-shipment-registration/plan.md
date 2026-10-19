@@ -29,6 +29,102 @@ longer deadlines, retries or worker changes. Retain RED traces privately, run fo
 repetitions followed by all four gates and scoped convergence before marking T141 done.
 No closure of 003 T131 or other integral tasks is implied by this correction.
 
+### T154 modal notification audit investigation — 2026-10-19 UTC
+
+`001-fix-modal-notification-audit` starts independently from main `321ef93`.
+PR #31 source `b4c83f3` passes check, 955 tests and build in CI `39273068925`,
+but its 92-case browser gate has 91 first-attempt passes/one flaky master-data
+scenario16. Its final dispatcher-page axe scan sees notification contrast1.69;
+the normal retry passes. Restricted first-failure artifact `12196664566` is retained
+privately (SHA-256 `0f9bd5370bdc7e58ecef4f394d5177f718f3c59fb7e76224799dc6ad8468218c`).
+Both #31 and transport #30 remain held; no green-rerun substitution or merge.
+
+The trace shows a real success notification, then an edit dialog; the shared helper
+skips notification stabilization because a dialog exists. Axe starts before native
+expiry and the toast becomes `data-removed=true` while the scan is in progress.
+Installed Base UI explicitly preserves aria-live regions when hiding other content;
+Sonner uses such a region. The helper's assumption that a modal hides notifications
+is therefore false. This does not yet prove a stable production contrast defect.
+
+Clarify: existing Spanish/M3/WCAG and focus requirements suffice; no new product,
+visual choice, data model or API contract. Reviewer checklists remain read-only
+(16/16, 47/47). Reuse T154's ordered diagnosis/RED/correction/gates obligations;
+do not duplicate 003 T100/T112 or close other pending work.
+
+Investigation-stage design: add an actual account-created toast and an actual open
+modal to `access.spec.ts`, with the native test clock installed before their creation.
+Advance native expiry at the existing pre-analyze hook: require the toast to remain
+visible/stabilized and the original modal input to remain focused. The current
+helper must fail before any correction. Retain original timing regressions, then
+cover native pause cleanup: after scanning, the modal stays open/focused and the
+notification expires normally. Include alertdialog/expiry-before-pause and the
+courier's lower toaster where applicable, not only the panel's higher stack.
+
+Resolve pause/cleanup capability before selecting the smallest correction. Native
+Sonner keyboard expansion pauses expiry, and blur does not collapse, so restoring
+modal focus before axe is a candidate, not sufficient proof of cleanup. Escape can
+also close the modal; do not send it blindly. Real pointer hover/leave preserves
+focus but may be blocked by courier sheets; never force through them. No global
+clock/visibility manipulation, fake notifications/responses, altered lifetime,
+z-index/color change, hidden/excluded nodes, closed modal, sleep or raised budget.
+Record unsuccessful probes separately from actual application/harness RED. Refine
+this design with demonstrated native behavior and re-analyze before correction.
+
+Constitution: I direct installed primitives/no dependency or abstraction; II–V no
+mutation, persistence, domain or boundary change; VI controlled RED and every existing
+budget/gate; VII complete axe/Spanish/real modal input and focus; VIII independent
+short-lived slice with preserved failures; IX private traces/synthetic data, no auth
+state/artifact disclosure. All nine pass this bounded investigation; runtime design
+approval awaits its capability evidence. No complexity exception or global sign-off.
+
+Selected scanner-only design after permanent RED: the new real-modal/native-clock
+case fails (notification absent at the pre-axe gate, 6.3 seconds), retained privately
+under `.git/t154-modal-notification-red/`; the helper is still unchanged at that RED.
+Use existing native Alt+t expansion for a stack that was not already expanded,
+await remaining notifications expanded or naturally absent, and restore the original
+modal input BEFORE axe. Preserve preexisting user expansion rather than releasing it.
+The current SDK exposes no pause/resume API. Its Escape and Base UI's global Escape
+handler would both run, so Escape is rejected for modal cleanup. Real hover is not a
+general replacement because courier sheets can cover the lower stack.
+
+For modal cleanup ONLY, dispatch one bubbling native-constructed MouseEvent('mouseout',
+relatedTarget=document.body) on the toaster, then verify native collapse/absence and
+restore focus in finally. This is explicitly SYNTHETIC scanner-state cleanup
+(isTrusted=false), not proof of a real hover, an unobscured target or a product action.
+It invokes Sonner's existing onMouseLeave pause release without changing duration,
+CSS, React internals or production code. Actual user-journey clicks/hit tests remain
+unforced and unsimulated. Only release scanner-owned expansion on this idle completed-
+action scan; do not interfere with a user's preexpanded stack or active drag.
+Keep normal non-modal native Escape behavior. Cover modal/alertdialog, expiry-before-
+pause, thrown pre-analyze hook, subsequent normal expiry, and the courier's lower
+stack/preexpanded nine-point hit tests. All nine constitutional checks still hold:
+this bounded test-fixture event is not a new runtime abstraction or UX change.
+
+State-restoration boundary: initial focus inside the toaster does not itself prove
+it was expanded (Sonner's onFocus does not set expansion). Preserve initial focus,
+but release expansion introduced by the scanner even in this case; conversely, keep
+a preexpanded stack untouched even if its original focus was in a modal input.
+Cover the focused-but-collapsed state explicitly before final cleanup validation.
+Its additional permanent regression fails after the full scan: the stack remains
+expanded instead of restoring its initial collapsed state (6.6 seconds, retained in
+`.git/t154-focused-stack-red/`). The existing focus-based cleanup exemption confuses
+two independent states. Make pause release depend only on scanner ownership, while
+focus restoration still preserves an already focused toaster. This is the same T154
+cleanup contract, not a production behavior change. The earlier 96-case pass is an
+intermediate candidate; repeat all final gates after this correction and added case.
+
+Capability verification: the original modal test now preserves the toast/input
+through the actual full scan and resumes expiry. Its first cleanup check mistakenly
+uses Node's wall clock after advancing browser time and fails with "Cannot fast-forward
+to the past"; the test now derives its next pause from the controlled browser clock.
+The first added courier setup mixes controlled time and offline navigation and stalls
+at the first stop click, BEFORE helper invocation. Retain it as a setup failure, not
+application RED or proof of the scan mechanism. The corrected case uses an actual
+online pickup notification and real courier sheet; native hit testing proves the toast
+is beneath the sheet, then clock-controlled scan/focus/expiry assertions pass. Existing
+offline/preexpanded two-toast/photo/save hit tests remain unchanged. All nine focused
+cases pass three repetitions (27/27, 1.1 minutes); general gates remain required.
+
 **Branch**: `001-shipment-registration` | **Date**: 2026-09-30 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/001-shipment-registration/spec.md`

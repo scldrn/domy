@@ -84,9 +84,14 @@ test("shows my day offline, survives reopening, syncs once and reflects dispatch
     await dialog.getByRole("button", { name: "Guardar entrega", exact: true }).click();
     await expect(dialog).not.toBeVisible();
   }
-  await phone
-    .getByRole("button", { name: "Registrar pago por cuenta del cliente", exact: true })
-    .click();
+  const registerPaymentButton = phone.getByRole("button", {
+    name: "Registrar pago por cuenta del cliente",
+    exact: true,
+  });
+  await registerPaymentButton.evaluate((element) => {
+    element.scrollIntoView({ block: "center", behavior: "instant" });
+  });
+  await registerPaymentButton.click();
   const payment = phone.getByRole("dialog");
   await payment.getByLabel("Valor pagado", { exact: true }).fill("12000");
   await payment.getByLabel("A quién se pagó", { exact: true }).fill("Transportadora");

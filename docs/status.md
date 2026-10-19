@@ -19,28 +19,27 @@ a short-lived branch, so the specification and implementation of every feature l
 
 ## Next step
 
-### Current narrow diagnostic work — 2026-10-19 UTC
+### Current diagnostic and stabilization work — 2026-10-19 UTC
 
-The exhaustive current handoff is [the detailed execution backlog](integral-execution-backlog.md):
-81 open canonical task entries(27/2/17/35), preserved implementation states, exact next
-steps/dependencies/tests/exit criteria, CI failures, historical regressions and operational
-acceptance. This is a snapshot, not81 unstarted implementations or a readiness certificate.
+Main is at `fedbb63` (T141 merged via PR #29 `321ef93`, T153 merged via PR #33 `fedbb63`).
+The authoritative tracking document is [docs/integral-execution-backlog.md](integral-execution-backlog.md)
+with 81 open canonical task entries across Features 001–004, preserved implementation states,
+dependencies, tests, CI failures, and operational acceptance criteria.
 
-T141 is merged (`321ef93`, PR #29). The current branch is `001-fix-error-diagnostics`:
-T153 has real application/PostgreSQL RED, aligned design, and 21 focused green cases.
-All four local gates pass: check, 967 tests (242/531/194), 91 first-attempt e2e (5.0 minutes)
-and build. T153 is verified locally and receipt recorded in quickstart-results.md; publication remains. The accessibility correction is separately published in PR #32
-(`f4feb8c`); CI39285191879 failed with95 passed/one failed/one flaky and build skipped.
-The retained traces show a fixed lockout-time expectation versus a progressing clock and
-expanded notifications intercepting a disbursement button. The second causal sequence
-still needs investigation; no unchanged rerun or merge is authorized by a later local pass.
-PR #31/#30 remain held for reconciliation and fresh gates;
-the account-integrity commit `0504631` remains preserved locally.
+Current active branch is `001-fix-modal-notification-audit` (PR #32), rebasing onto `main` (`fedbb63`).
+T154 stabilizes accessibility scans with open modals/notifications. Previous CI run on PR #32
+exhibited 1 failure (`access.spec.ts:407` CI-LOCK from progressing server clock vs fixed expected time)
+and 1 flaky toast interception (`courier-day.spec.ts:31` CI-POINTER). These are being addressed directly
+on this branch alongside an observed race in `exception-decision.spec.ts:385`.
+Once verified across all four local gates, the branch will be force-pushed to PR #32 for clean CI verification
+and squash merge.
 
-A further native development recovery probe confirms secret-bearing email URL logging
-without provider configuration. IV-41 is appended as 001 T155, not hidden inside T153.
-No actual customer data/external delivery was used, and no fix is claimed yet.
-The paragraphs below are historical execution receipts, not the current branch/status.
+PR #31 (`b4c83f3`) and PR #30 (`682bc97`) remain held pending reconciliation with `main` and clean latest-head CI.
+Account-integrity commit `0504631` (T130/T131/T150/T151 work) remains preserved locally.
+Development mail bearer token logging is tracked under Phase 19 as T155.
+Decisions D1 (spreadsheet-safe CSV) and D2 (courier photos of own work in app) are resolved by the owner.
+Owner authorization for per-slice publication and squash merge upon clean gates is in effect.
+All following execution sections are historical receipts.
 
 ### Authorized remediation — execution checkpoint
 

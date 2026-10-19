@@ -138,6 +138,63 @@ test("keeps exception controls above visible synchronization notifications", asy
   await expect(sheet).not.toBeVisible();
 });
 
+test("stabilizes notifications below a courier sheet and restores expiry without losing its draft (T154)", async ({
+  courierPage: page,
+  dispatcherPage: office,
+  ownerPage: owner,
+}) => {
+  await page.clock.install();
+  const account = await ownSession(page, owner);
+  const shipment = await register(office, { recipientAddress: "Calle 26 # 40-06" });
+  await dispatch(office, shipment, account.courierId);
+  await page.goto("/mensajero");
+  await expect(page.getByRole("list", { name: "Paradas" })).toBeVisible();
+  await workerControls(page);
+  await page.getByRole("list", { name: "Paradas" }).getByRole("link").first().click();
+  await page.getByRole("button", { name: "Confirmar recogida" }).click();
+  const notifications = page.locator("[data-sonner-toast]").filter({ hasText: "recogida" });
+  await expect(notifications).toHaveCount(1);
+  await page.getByRole("link", { name: "Mi ruta", exact: true }).first().click();
+  await openStop(page, "Calle 26 # 40-06");
+  await page.getByRole("button", { name: "Reportar novedad" }).click();
+  const sheet = page.getByRole("dialog");
+  const input = sheet.getByLabel("Nota (opcional)");
+  await input.fill("Nota conservada durante la revisión");
+  await expect(input).toBeFocused();
+  expect(
+    await notifications.first().evaluate(targetIsUncovered),
+    "the notification is below the real sheet, not a force-hovered target",
+  ).toBe(false);
+  expect(
+    await accessibilityViolations(page, async () => {
+      await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+      try {
+        await page.clock.runFor(5_000);
+        await expect(notifications).toHaveCount(1);
+        await expect(notifications.first()).toHaveAttribute("data-expanded", "true");
+        await expect(sheet).toBeVisible();
+        await expect(input).toBeFocused();
+        await expect(input).toHaveValue("Nota conservada durante la revisión");
+      } finally {
+        await page.clock.resume();
+      }
+    }),
+  ).toEqual([]);
+  await expect(sheet).toBeVisible();
+  await expect(input).toBeFocused();
+  await expect(page.locator("[data-sonner-toast][data-expanded=true]")).toHaveCount(0);
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  try {
+    await page.clock.runFor(5_000);
+    await expect(notifications).toHaveCount(0);
+    await expect(sheet).toBeVisible();
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue("Nota conservada durante la revisión");
+  } finally {
+    await page.clock.resume();
+  }
+});
+
 /** US3 T049: actual phone forms, board sections/flags and private photos (quickstart 11). */
 test("reports and replaces a pickup problem, clears it upon pickup and reviews a delivery exception", async ({
   courierPage: page,

@@ -23,31 +23,40 @@ export async function accessibilityViolations(
   // visible screen only afterward, or its background toast would escape stabilization.
   await settleAnimations();
   // T100: waiting for entrance animations alone cannot stop a dismissal during axe.
-  // Sonner's native shortcut expands the stack and pauses its timer. A modal already
-  // hides background notifications from the accessibility tree; never move its focus.
-  const hasNotifications =
-    (await page.getByRole("dialog").count()) === 0 &&
-    (await page.getByRole("alertdialog").count()) === 0 &&
-    (await page.locator("[data-sonner-toast]:not([data-removed=true])").count()) > 0;
+  // Sonner's native shortcut expands the stack and pauses its timer. T154: Base UI
+  // preserves aria-live notifications even with a modal; restore its focus before axe.
+  const hasModal =
+    (await page.getByRole("dialog").count()) > 0 ||
+    (await page.getByRole("alertdialog").count()) > 0;
+  const notifications = await page
+    .locator("[data-sonner-toast]:not([data-removed=true])")
+    .evaluateAll((toasts) => ({
+      present: toasts.length > 0,
+      expanded: toasts.every((toast) => toast.getAttribute("data-expanded") === "true"),
+    }));
+  const hasNotifications = notifications.present;
   const previousFocus = hasNotifications
     ? await page.evaluateHandle(() => document.activeElement)
     : null;
   const wasInNotifications = previousFocus
     ? await previousFocus.evaluate((element) => Boolean(element?.closest("[data-sonner-toaster]")))
     : false;
+  let expandedByScan = false;
   try {
-    if (hasNotifications) {
+    if (hasNotifications && !notifications.expanded) {
       // T112: tests can advance native expiry between discovery and stabilization.
       await beforePause?.();
       // The pointer may remain where the just-closed dialog's submit button was. Keep
       // stack expansion from moving a toast away from it and firing mouseleave mid-scan.
       await page.mouse.move(0, 0);
+      expandedByScan = true;
       await page.keyboard.press("Alt+t");
-      await page.waitForFunction(
-        () =>
-          Boolean(document.activeElement?.closest("[data-sonner-toaster]")) ||
-          document.querySelector("[data-sonner-toast]:not([data-removed=true])") === null,
-      );
+      if (!hasModal)
+        await page.waitForFunction(
+          () =>
+            Boolean(document.activeElement?.closest("[data-sonner-toaster]")) ||
+            document.querySelector("[data-sonner-toast]:not([data-removed=true])") === null,
+        );
       // Discovery and the shortcut are separate browser steps: expiry may win between them.
       // Read absence/expansion atomically; every toast still present must be stabilized.
       await expect
@@ -59,6 +68,11 @@ export async function accessibilityViolations(
           ),
         )
         .toBe(true);
+      if (hasModal && previousFocus)
+        await previousFocus.evaluate((element) => {
+          if (element instanceof HTMLElement && element.isConnected)
+            element.focus({ preventScroll: true });
+        });
     }
     await settleAnimations();
     await beforeAnalyze?.();
@@ -74,19 +88,38 @@ export async function accessibilityViolations(
     );
   } finally {
     if (previousFocus) {
-      if (!wasInNotifications) {
+      if (expandedByScan) {
         await page.mouse.move(0, 0);
-        if (
+        if (hasModal) {
+          // T154: synthetic scanner-only release, NOT a real hover/hit-test.
+          // Escape would also close the modal; never collapse a preexpanded user stack.
+          await page.locator("[data-sonner-toaster]").evaluateAll((toasters) => {
+            for (const toaster of toasters)
+              toaster.dispatchEvent(
+                new MouseEvent("mouseout", { bubbles: true, relatedTarget: document.body }),
+              );
+          });
+          await expect
+            .poll(() =>
+              page.evaluate(() =>
+                [
+                  ...document.querySelectorAll("[data-sonner-toast]:not([data-removed=true])"),
+                ].every((toast) => toast.getAttribute("data-expanded") === "false"),
+              ),
+            )
+            .toBe(true);
+        } else if (
           await page.evaluate(() =>
             Boolean(document.activeElement?.closest("[data-sonner-toaster]")),
           )
         )
           await page.keyboard.press("Escape");
+      }
+      if (!wasInNotifications)
         await previousFocus.evaluate((element) => {
           if (element instanceof HTMLElement && element.isConnected)
             element.focus({ preventScroll: true });
         });
-      }
       await previousFocus.dispose();
     }
   }

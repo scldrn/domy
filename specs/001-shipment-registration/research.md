@@ -167,6 +167,24 @@ this research also fixes the project foundation that features 002–004 build on
 
 ## R13. Testing strategy
 
+- **T154 investigation refinement (2026-10-19 UTC)**: PR #31's retained first-failure
+  trace shows Sonner expiry during a full axe scan with an open modal. Base UI keeps
+  live regions outside background hiding; a modal is not proof that notification
+  stabilization can be skipped. Use actual built-app notifications/modal input and
+  a case-local native clock to reproduce missing stabilization before correction.
+  Native keyboard expansion/pointer hover are candidates only until focus and normal
+  expiry cleanup are proven, including modal Escape propagation and occluded courier
+  toasters. Preserve existing 003 T100/T112 cases and all complete axe rules/budgets;
+  reject hiding/dismissing nodes, changed lifetime/colors, force or a green-rerun loop.
+  Permanent modal/native-clock RED proves expiry while the helper is unchanged.
+  Select native Alt+t pause with original modal focus restored before axe; preserve
+  an already expanded user stack. Native Escape cleanup would also close the modal,
+  and hover cannot reach a courier toaster below its sheet. The smallest test-only
+  cleanup uses one explicitly synthetic bubbling MouseEvent('mouseout') to invoke
+  Sonner's native onMouseLeave release, verifying collapse/normal expiry in finally.
+  It is NOT actual hover/hit-test evidence or an allowed product-interaction shortcut;
+  no CSS, duration, production state, private React API or dependency changes.
+
 - **Decision**:
   - Vitest unit tests next to the code for `packages/domain` (lifecycle, fees, payment
     modes, delivery windows, flags, tracking numbers, schemas), written first.

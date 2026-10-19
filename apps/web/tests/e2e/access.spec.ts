@@ -4,6 +4,11 @@ import { apiPort } from "./ports";
 
 const password = "contrasena-de-prueba";
 const unique = () => String(Date.now()).slice(-6);
+const startOfSuite = "2026-10-01T15:00:00Z";
+
+test.afterEach(async ({ setServerNow }) => {
+  await setServerNow(startOfSuite);
+});
 
 async function chooseOption(page: Page, label: string, option: string) {
   await page.getByRole("combobox", { name: label, exact: true }).click();
@@ -210,10 +215,214 @@ test("scans and restores focus when a notification expires before it can be paus
   await expect(button).toBeFocused();
 });
 
+test("keeps notification scans stable with a modal and restores normal expiry (T154)", async ({
+  ownerPage: page,
+}) => {
+  const run = unique();
+  await page.clock.install();
+  await createAccount(page, `Modal ${run}`, `modal${run}@example.com`, "Coordinador de despacho");
+  const notification = page.getByText(`Cuenta de Modal ${run} creada`, { exact: true });
+  await expect(notification).toBeVisible();
+  await page.getByRole("button", { name: "Nueva cuenta" }).click();
+  const dialog = page.getByRole("dialog");
+  const input = dialog.getByLabel("Nombre");
+  await input.fill("Borrador sin guardar");
+  await expect(input).toBeFocused();
+  let scanned = false;
+  expect(
+    await accessibilityViolations(page, async () => {
+      scanned = true;
+      await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+      try {
+        // T154: the real notification must stay readable throughout a modal audit.
+        await page.clock.runFor(5_000);
+        await expect(notification).toBeVisible();
+        await expect(dialog).toBeVisible();
+        await expect(input).toBeFocused();
+        await expect(input).toHaveValue("Borrador sin guardar");
+      } finally {
+        await page.clock.resume();
+      }
+    }),
+  ).toEqual([]);
+  expect(scanned).toBe(true);
+  await expect(dialog).toBeVisible();
+  await expect(input).toBeFocused();
+  // Cleanup must not close the modal or leave the real notification paused forever.
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  try {
+    await page.clock.runFor(5_000);
+    await expect(notification).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue("Borrador sin guardar");
+  } finally {
+    await page.clock.resume();
+  }
+});
+
+test("restores a collapsed notification stack when focus was already inside it (T154)", async ({
+  ownerPage: page,
+}) => {
+  const run = unique();
+  await page.clock.install();
+  await createAccount(page, `Foco ${run}`, `foco${run}@example.com`, "Coordinador de despacho");
+  const notification = page.getByText(`Cuenta de Foco ${run} creada`, { exact: true });
+  const toast = page.locator("[data-sonner-toast]");
+  const stack = page.locator("[data-sonner-toaster]");
+  await expect(notification).toBeVisible();
+  await stack.focus();
+  await expect(stack).toBeFocused();
+  await expect(toast).toHaveAttribute("data-expanded", "false");
+  expect(await accessibilityViolations(page)).toEqual([]);
+  await expect(stack).toBeFocused();
+  await expect(toast).toHaveAttribute("data-expanded", "false");
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  try {
+    await page.clock.runFor(5_000);
+    await expect(notification).toHaveCount(0);
+  } finally {
+    await page.clock.resume();
+  }
+});
+
+test("restores modal focus and expiry when scan preparation fails (T154)", async ({
+  ownerPage: page,
+}) => {
+  const run = unique();
+  await page.clock.install();
+  await createAccount(
+    page,
+    `Limpieza ${run}`,
+    `limpieza${run}@example.com`,
+    "Coordinador de despacho",
+  );
+  const notification = page.getByText(`Cuenta de Limpieza ${run} creada`, { exact: true });
+  await expect(notification).toBeVisible();
+  await page.getByRole("button", { name: "Nueva cuenta" }).click();
+  const dialog = page.getByRole("dialog");
+  const input = dialog.getByLabel("Nombre");
+  await input.fill("Borrador conservado");
+  await expect(
+    accessibilityViolations(page, () =>
+      Promise.reject(new Error("Synthetic scanner interruption")),
+    ),
+  ).rejects.toThrow("Synthetic scanner interruption");
+  await expect(dialog).toBeVisible();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("Borrador conservado");
+  await expect(page.locator("[data-sonner-toast][data-expanded=true]")).toHaveCount(0);
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  try {
+    await page.clock.runFor(5_000);
+    await expect(notification).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await expect(input).toBeFocused();
+  } finally {
+    await page.clock.resume();
+  }
+});
+
+test("keeps alertdialog focus during a notification scan and normal expiry afterward (T154)", async ({
+  ownerPage: page,
+}) => {
+  const run = unique();
+  const email = `confirmacion${run}@example.com`;
+  await page.clock.install();
+  await createAccount(page, `Confirmación ${run}`, email, "Coordinador de despacho");
+  const notification = page.getByText(`Cuenta de Confirmación ${run} creada`, { exact: true });
+  await expect(notification).toBeVisible();
+  await page
+    .getByRole("row")
+    .filter({ hasText: email })
+    .getByRole("button", { name: "Desactivar", exact: true })
+    .click();
+  const dialog = page.getByRole("alertdialog");
+  const cancel = dialog.getByRole("button", { name: "Volver", exact: true });
+  await cancel.focus();
+  expect(
+    await accessibilityViolations(page, async () => {
+      await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+      try {
+        await page.clock.runFor(5_000);
+        await expect(notification).toBeVisible();
+        await expect(dialog).toBeVisible();
+        await expect(cancel).toBeFocused();
+      } finally {
+        await page.clock.resume();
+      }
+    }),
+  ).toEqual([]);
+  await expect(dialog).toBeVisible();
+  await expect(cancel).toBeFocused();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  try {
+    await page.clock.runFor(5_000);
+    await expect(notification).toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await expect(cancel).toBeFocused();
+  } finally {
+    await page.clock.resume();
+  }
+});
+
+test("handles native notification expiry before a modal scan can pause it (T154)", async ({
+  ownerPage: page,
+}) => {
+  const run = unique();
+  await page.clock.install();
+  await createAccount(
+    page,
+    `Caduca modal ${run}`,
+    `caducamodal${run}@example.com`,
+    "Coordinador de despacho",
+  );
+  const notification = page.getByText(`Cuenta de Caduca modal ${run} creada`, { exact: true });
+  await expect(notification).toBeVisible();
+  await page.getByRole("button", { name: "Nueva cuenta" }).click();
+  const dialog = page.getByRole("dialog");
+  const input = dialog.getByLabel("Nombre");
+  await input.fill("Borrador vigente");
+  let expired = false;
+  expect(
+    await accessibilityViolations(
+      page,
+      async () => {
+        expect(expired).toBe(true);
+        await expect(notification).toHaveCount(0);
+        await expect(input).toBeFocused();
+      },
+      async () => {
+        await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+        try {
+          await page.clock.runFor(5_000);
+          await expect(notification).toHaveCount(0);
+          expired = true;
+        } finally {
+          await page.clock.resume();
+        }
+      },
+    ),
+  ).toEqual([]);
+  await expect(dialog).toBeVisible();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("Borrador vigente");
+});
+
 test("locks sign-in after five failures and says when to retry (scenario 14)", async ({
   ownerPage,
   browser,
+  setServerNow,
 }) => {
+  const timeFormat = new Intl.DateTimeFormat("es-CO", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Bogota",
+  });
+
+  const baselineInstant = "2026-10-01T15:00:00.000Z";
+  await setServerNow(baselineInstant);
+
   const run = unique();
   await createAccount(
     ownerPage,
@@ -222,12 +431,74 @@ test("locks sign-in after five failures and says when to retry (scenario 14)", a
     "Coordinador de despacho",
   );
   const page = await signInAs(browser, `bloqueo${run}@example.com`, "equivocada");
-  for (let i = 1; i < 5; i++) {
+  for (let i = 1; i < 4; i++) {
     await expect(page.getByText("El correo o la contraseña no son correctos.")).toBeVisible();
     await page.getByRole("button", { name: "Ingresar" }).click();
   }
-  // The server clock is 10:00 a. m. in Bogotá.
-  await expect(page.getByText(/Podrás ingresar de nuevo a las 10:15 a\. m\./)).toBeVisible();
+  await expect(page.getByText("El correo o la contraseña no son correctos.")).toBeVisible();
+
+  const lockResponsePromise = page.waitForResponse(
+    (response) => response.url().includes("/api/auth/sign-in/email") && response.status() === 423,
+  );
+  await page.getByRole("button", { name: "Ingresar" }).click();
+  const lockResponse = await lockResponsePromise;
+  const lockBody = (await lockResponse.json()) as {
+    error: { code: string; retryAt: string; message: string };
+  };
+  expect(lockBody.error.code).toBe("account_locked");
+
+  const retryAt = new Date(lockBody.error.retryAt);
+  const lockDurationMs = retryAt.getTime() - Date.parse(baselineInstant);
+  expect(lockDurationMs).toBeGreaterThanOrEqual(15 * 60 * 1000);
+  expect(lockDurationMs).toBeLessThanOrEqual(15 * 60 * 1000 + 10_000);
+
+  const formattedTime = timeFormat.format(retryAt);
+  await expect(
+    page.getByText(
+      new RegExp(`Podrás ingresar de nuevo a las ${formattedTime.replace(".", "\\.")}`),
+    ),
+  ).toBeVisible();
+
+  // Rollover across minute boundaries: baseline at 10:01 calculates retry at 10:16.
+  const rolloverInstant = "2026-10-01T15:01:15.000Z";
+  await setServerNow(rolloverInstant);
+
+  const run2 = `${unique()}b`;
+  await createAccount(
+    ownerPage,
+    `Bloqueo Rollover ${run2}`,
+    `bloqueo${run2}@example.com`,
+    "Coordinador de despacho",
+  );
+  const page2 = await signInAs(browser, `bloqueo${run2}@example.com`, "equivocada");
+  for (let i = 1; i < 4; i++) {
+    await expect(page2.getByText("El correo o la contraseña no son correctos.")).toBeVisible();
+    await page2.getByRole("button", { name: "Ingresar" }).click();
+  }
+  await expect(page2.getByText("El correo o la contraseña no son correctos.")).toBeVisible();
+
+  const rolloverResponsePromise = page2.waitForResponse(
+    (response) => response.url().includes("/api/auth/sign-in/email") && response.status() === 423,
+  );
+  await page2.getByRole("button", { name: "Ingresar" }).click();
+  const rolloverResponse = await rolloverResponsePromise;
+  const rolloverBody = (await rolloverResponse.json()) as {
+    error: { code: string; retryAt: string; message: string };
+  };
+  expect(rolloverBody.error.code).toBe("account_locked");
+
+  const rolloverRetryAt = new Date(rolloverBody.error.retryAt);
+  const rolloverDurationMs = rolloverRetryAt.getTime() - Date.parse(rolloverInstant);
+  expect(rolloverDurationMs).toBeGreaterThanOrEqual(15 * 60 * 1000);
+  expect(rolloverDurationMs).toBeLessThanOrEqual(15 * 60 * 1000 + 10_000);
+
+  const rolloverFormattedTime = timeFormat.format(rolloverRetryAt);
+  expect(rolloverFormattedTime).toMatch(/10:16/);
+  await expect(
+    page2.getByText(
+      new RegExp(`Podrás ingresar de nuevo a las ${rolloverFormattedTime.replace(".", "\\.")}`),
+    ),
+  ).toBeVisible();
 });
 
 test("refuses to deactivate the only owner (scenario 17)", async ({ ownerPage: page }) => {
