@@ -1,5 +1,42 @@
 # Integral Verification and Completion
 
+Current execution details and task-by-task closure criteria are in
+[integral-execution-backlog.md](integral-execution-backlog.md). It preserves the81-task
+snapshot and the latest held CI failures; baseline sections below remain dated evidence.
+
+## T153 execution and additional privacy finding — 2026-10-19 UTC
+
+Current narrow branch: `001-fix-error-diagnostics`, based on `321ef93` (T141 merged).
+Historical sections below retain their original baseline/authority. Publication is now
+conditionally authorized per slice, not production deployment. T150–T154 are reserved
+task IDs from preserved auth/session/accessibility work; this branch does not falsely
+mark their absent implementations complete. PR #30/#31 require reconciliation; #32's
+latest-head CI39285191879 failed(95 passed/one failed/one flaky; build skipped).
+No flaky nominal-green run is merge evidence.
+
+**IV-39 / T153, CRITICAL, contradicts FR-041/R14/Constitution IX:** real driver `22P02`
+contains a request value in its message; current fallback logs/reports preserve it.
+Permanent actual-monolith/PG-trigger RED passes generic HTTP500 and transaction rollback
+but fails log privacy. An ordinary exception also fails privacy. The scoped correction
+uses fixed classes/messages, native validated SQLSTATE and bounded verified source
+locations;21 focused tests pass. Full local check,967 tests,91 first-attempt e2e and
+build pass; final review/convergence/publication remain, so T153 is still unchecked.
+This is not evidence about automatic Sentry context(T152).
+
+**IV-41 / T155, CRITICAL, contradicts FR-030/R5/R14/Constitution IX:** native Better Auth
+with a disposable migrated PostgreSQL and the actual development `createMailer`, without
+an API key, successfully requests recovery and logs the actual URL with its nonempty
+bearer. Captured results were reduced to booleans, not printed tokens; no customer data,
+external delivery or provider account was involved. The source logs `{ url: message.url }`.
+No approved development exception permits secrets in logs. This is distinct from the
+request-path (T151), error fallback (T153) and SDK context (T152) surfaces.
+
+Scoped mail convergence inspected FR-030, FR-041, US7/AC2, R5/R14 and all nine principles:
+one new contradiction/CRITICAL, no duplicate existing task. Outcome `tasks_appended`:
+only T155 appended in Phase19, no existing checkbox changed by that assessment.
+Permanent RED, design alignment, implementation and all gates remain future work.
+This checkpoint is not whole-feature/global convergence or certification.
+
 ## Status and authority
 
 **Status: NOT READY FOR GLOBAL SIGN-OFF.** Baseline source is

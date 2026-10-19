@@ -2,6 +2,11 @@ import type { Context } from "hono";
 import type { AppEnv } from "../app.ts";
 import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { lstatSync, readFileSync } from "node:fs";
+import { isAbsolute, join, relative, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+import { DrizzleQueryError } from "drizzle-orm";
+import postgres from "postgres";
 
 /** Error codes of the API contract, each with its HTTP status and default Spanish message. */
 const errorCatalog = {
@@ -75,34 +80,120 @@ export class AppError extends Error {
   }
 }
 
-/**
- * An error as it may be logged (FR-041): a failed database query keeps only the database's
- * code and message, never the statement or its parameters, which hold recipients' data.
+const repositoryRoot = fileURLToPath(new URL("../../../../", import.meta.url));
+
+/** R14/T153: locations bound disclosure, not the authenticity of a supplied stack.
+ * Sources below this trusted root are immutable deployment artifacts, never uploads.
  */
+function sourceLocations(stack: unknown): string[] {
+  if (typeof stack !== "string") return [];
+  const sources = new Map<string, string[]>();
+  const locations: string[] = [];
+  for (const frame of stack.slice(0, 65_536).split("\n").slice(1, 33)) {
+    const match = /^\s+at (?:[^()\n]*\()?([^()\n]+):(\d+):(\d+)\)?$/.exec(frame);
+    const candidate = match?.[1];
+    if (!candidate || candidate.split(/[\\/]/).some((part) => part === "." || part === ".."))
+      continue;
+    try {
+      let path = candidate;
+      if (candidate.startsWith("file:")) {
+        const url = new URL(candidate);
+        if (url.username || url.password || url.host || url.search || url.hash) continue;
+        path = fileURLToPath(url);
+      }
+      if (!isAbsolute(path) || path.includes("?") || path.includes("#")) continue;
+      const local = relative(repositoryRoot, path).split(sep).join("/");
+      if (!/^(?:apps\/server\/src|packages\/domain\/src)\/[a-zA-Z0-9_./-]+\.ts$/.test(local))
+        continue;
+      const parts = local.split("/");
+      if (parts.some((part) => part === "." || part === "..")) continue;
+      const line = Number(match[2]);
+      const column = Number(match[3]);
+      if (!Number.isSafeInteger(line) || !Number.isSafeInteger(column) || line < 1 || column < 1)
+        continue;
+      let lines = sources.get(local);
+      if (!lines) {
+        let current = repositoryRoot;
+        let valid = true;
+        for (const [index, part] of parts.entries()) {
+          current = join(current, part);
+          const stat = lstatSync(current);
+          const last = index === parts.length - 1;
+          if (
+            stat.isSymbolicLink() ||
+            (last ? !stat.isFile() || stat.size > 1_048_576 : !stat.isDirectory())
+          ) {
+            valid = false;
+            break;
+          }
+        }
+        if (!valid) continue;
+        lines = readFileSync(current, "utf8").split(/\r?\n/);
+        sources.set(local, lines);
+      }
+      const text = lines[line - 1];
+      if (text === undefined || column > text.length + 1) continue;
+      const location = `${local}:${String(line)}:${String(column)}`;
+      if (!locations.includes(location)) locations.push(location);
+    } catch {
+      // Missing/unreadable/untrusted locations never replace the original error.
+    }
+  }
+  return locations;
+}
+
+/** FR-041/R14: arbitrary error text (including driver messages) can contain PII. */
 export function errorForLog(error: Error): {
   type: string;
   message: string;
-  code?: unknown;
-  constraint?: unknown;
-  stack?: string | undefined;
+  code?: string;
+  stack: string;
 } {
-  const cause: unknown = error.cause;
-  if (typeof cause === "object" && cause !== null && "code" in cause) {
-    const database = cause as { code: unknown; message?: unknown; constraint_name?: unknown };
-    return {
-      type: "DatabaseError",
-      code: database.code,
-      message: typeof database.message === "string" ? database.message : "Database error",
-      constraint: database.constraint_name,
-    };
+  let database: postgres.PostgresError | undefined;
+  let code: string | undefined;
+  let originalStack: unknown;
+  try {
+    const candidate = error instanceof DrizzleQueryError ? error.cause : error;
+    if (candidate instanceof postgres.PostgresError) {
+      database = candidate;
+      const nativeCode: unknown = candidate.code;
+      if (typeof nativeCode === "string" && /^[0-9A-Z]{5}$/.test(nativeCode)) code = nativeCode;
+    }
+    originalStack = error.stack;
+  } catch {
+    // A mutable exception accessor is not diagnostic data.
   }
-  return { type: error.name, message: error.message, stack: error.stack };
+  const type = database
+    ? "DatabaseError"
+    : error instanceof TypeError
+      ? "TypeError"
+      : error instanceof RangeError
+        ? "RangeError"
+        : error instanceof SyntaxError
+          ? "SyntaxError"
+          : error instanceof ReferenceError
+            ? "ReferenceError"
+            : error instanceof URIError
+              ? "URIError"
+              : error instanceof EvalError
+                ? "EvalError"
+                : error instanceof AggregateError
+                  ? "AggregateError"
+                  : "Error";
+  const message = database
+    ? `Database operation failed${code ? ` (SQLSTATE ${code})` : ""}.`
+    : "Unexpected application error.";
+  let locations = sourceLocations(originalStack);
+  const site = locations.length ? "source" : "reporting_site";
+  if (!locations.length) locations = sourceLocations(new Error("Diagnostic reporting site").stack);
+  const stack = `${type}: ${message}\n${locations.map((location) => `    at ${site} (${location})`).join("\n")}`;
+  return { type, message, ...(code && { code }), stack };
 }
 
 let reportError: ((error: Error) => void) | null = null;
 
 /** Sends unexpected errors to error reporting (Sentry), already stripped of personal data. */
-export function setErrorReporter(reporter: (error: Error) => void): void {
+export function setErrorReporter(reporter: ((error: Error) => void) | null): void {
   reportError = reporter;
 }
 

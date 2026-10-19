@@ -189,6 +189,38 @@ this research also fixes the project foundation that features 002–004 build on
   (Constitution IX).
 - **Alternatives considered**: OpenTelemetry collector (unjustified extra process).
 
+### T153 refinement — fallback diagnostic privacy
+
+- **Decision**: replace arbitrary exception text with fixed diagnostic messages and
+  built-in class labels. Recognize database errors with the installed native
+  `DrizzleQueryError`/`postgres.PostgresError` constructors; retain only a validated
+  five-character SQLSTATE, never driver messages, queries, parameters, constraints or
+  original causes. Construct an independent Error for the existing reporter.
+- **Original locations**: accept only bounded V8 frame candidates referring to existing
+  `.ts` files in `apps/server/src` or `packages/domain/src`, rooted from `import.meta.url`.
+  Reject URL credentials/host/query/fragment, traversal, symlinks (including ancestor
+  components), nonexistent files and out-of-bounds line/column positions. Emit only
+  project-relative source paths and numeric positions, without function names or stack
+  headers. A valid location bounds disclosure; it does not authenticate a supplied stack.
+- **Fallback**: if no original frame survives, filter a freshly captured native Error
+  stack using the same rules and label it `reporting_site`, not the original fault.
+  No global `Error.prepareStackTrace` change, experimental stack API, dependency,
+  persistent cache or logging wrapper is needed. Fail closed when source validation fails.
+- **Boundaries**: inspect at most 32 frames from 64 KiB of stack and source files up to
+  1 MiB, with per-call reuse only. Measure this rare error-path cost. Source deployment
+  is immutable and runs `.ts` directly; this is not isolation against hostile replacement
+  of source directories during validation. Revalidate if the deployment artifact changes.
+- **Evidence**: real PostgreSQL 18 `22P02` includes a synthetic input in the driver message;
+  the current handler logs/reports it. A native ordinary TypeError also leaks its message
+  and stack header. No actual customer data or external reporting was used. Phase-0
+  research verified native constructors and runtime APIs; integration/performance tests
+  remain required before adopting the implementation.
+- **Alternatives rejected**: trusting driver messages or mutable names, secret-pattern
+  regexes, suppressing errors, arbitrary stack passthrough, scanning all source files,
+  and confusing a newly captured handler stack with the original fault. SDK-added
+  context (T152), native auth logs (T150), reset request paths (T151) and development
+  recovery-email logging remain separately owned; this change cannot certify them safe.
+
 ## R15. Personal data retention (Ley 1581 de 2012)
 
 - **Decision**: shipment records, including recipient name, phone, and address, are kept for

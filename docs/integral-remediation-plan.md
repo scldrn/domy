@@ -1,5 +1,26 @@
 # Integral Remediation and Completion Plan
 
+**Detailed execution companion:** [integral-execution-backlog.md](integral-execution-backlog.md)
+records the current 81-task snapshot, each task's work/RED/dependencies/exit, held branches,
+the two latest PR #32 failures and operational obligations beyond the checkbox count.
+It supplements, not replaces, the canonical feature artifacts and task IDs.
+
+## Current diagnostic slice and reserved follow-up — 2026-10-19 UTC
+
+T141 is merged on `321ef93`. T153 now has native research, aligned R14/plan/quickstart,
+scoped pre-implementation analysis, actual-monolith/PG-trigger and ordinary-error RED,
+and 21 focused green tests. Full local check, 967 tests (242/531/194), 91 first-attempt
+e2e (5.1 minutes) and build pass. Final review/convergence/publication remain; do not check it yet.
+Keep it separate from preserved account integrity, T152 SDK context and the held
+session/transport PRs. Accessibility PR #32's latest CI `39285191879` failed:
+95 passed/one failed/one flaky, build skipped. Preserve both failures and keep the PR held.
+
+The additional proven development recovery-link log is IV-41, owned by new T155,
+Phase19 of 001. It remains open and requires its own test-first design/implementation
+slice after the diagnostic boundary is verified. This is not an extra product feature
+or permission for a public development mailbox. Existing owner CSV/photo decisions
+and physical/infrastructure obligations remain authoritative, not reopened here.
+
 **Baseline:** `9006db32270338670e51c609c6b67ba2750fec83`.
 **Prepared:** 2026-10-18 UTC. **Authority:** Samuel requested the plan and then
 authorized starting the recommended local work. On 2026-10-19 UTC he explicitly
@@ -13,7 +34,9 @@ Resolve every actionable finding IV-01–IV-34 in
 [the consolidated audit](integral-verification.md), finish the approved 001–004 scope,
 retain historical regressions and prove operational readiness. The planning baseline
 had **76 open Spec Kit tasks**: 22 in 001, 2 in 002, 17 in 003 and 35 in 004.
-After local T141 completion (2026-10-19 UTC), **75 remain open**: 21/2/17/35.
+Historical planning checkpoint: after local T141 completion (2026-10-19 UTC),
+**75 remained open**: 21/2/17/35. The current count is 81 in the execution companion;
+the following unpublished-T141 sentence is preserved as that checkpoint's history.
 T141 is verified locally, not yet committed or published; the mapping below preserves
 the full original queue, including this completed first task.
 Checked historical tasks are regression obligations, not work to delete or rebuild.
@@ -48,16 +71,16 @@ Capacity tests retain the approved native isolated execution phase.
 
 | Gate | Recommendation / required evidence | Blocks only |
 | --- | --- | --- |
-| D1 CSV contract | Recommend spreadsheet-safe CSV, with documented text transformations and intact numeric COP values; confirm versus exact-text CSV plus XLSX for viewing. Test all formula-leading/control/quote/newline cases and actual supported spreadsheet behavior | Export serialization and final operational exports |
-| D2 Courier photo access | Recommend honoring current 003 FR-036: own photos of work still present in the courier app. Define an enforceable server rule for active route/held packages and expiring access; no claim of a reproduced cache leak | Access-lifecycle correction and final photo/security acceptance, not immutable upload research |
+| D1 CSV contract | RESOLVED by owner: spreadsheet-safe CSV, documented text transformations and intact numeric COP/date semantics. Test all formula-leading/control/quote/newline cases and actual supported spreadsheet behavior; do not reopen the product choice | Export implementation/verification remains |
+| D2 Courier photo access | RESOLVED by owner: current 003 FR-036, own photos of work still present in the app. Define/test the enforceable active-route/held-work and pending-upload boundaries; no reproduced cache leak is claimed | Technical lifecycle/cache verification and final photo acceptance remain |
 | D3 Numeric representation | Decide explicit representable per-field and aggregate bounds across SQL/domain/JSON/UI. Compare retaining int32 fields with validated limits and wider sums against an additive integer-storage migration. No arbitrary business cap, silent truncation or unsafe Number conversion | Monetary implementation and related response contract changes |
 | D4 Auth transaction spike | Prove a native transaction-scoped Better Auth/Drizzle path containing guards, credentials/sessions, audit and replay receipt. `transaction:true` or an ordinary after-hook alone is not proof. Error Responses must cause rollback when appropriate | Implementation-ready auth atomicity/replay design |
 | D5 Immutable upload spike | Prove conditional object creation capability on test storage and the selected provider, or a DB-row-serialized sole writer with recoverable finalization. Test object-success/DB-failure and interruption. PostgreSQL and S3 do not share a transaction | Upload implementation design and any justified schema additions |
 | D6 Existing data | Determine whether any real operational data exists before deployment migration/backfill/repair. Audit proved failure mechanisms, not that production rows are corrupted. Reconciliation is read-only first; never fabricate old events or silently “repair” history | Data-changing migration/backfill/repair execution |
 | D7 004 alignment | Reconcile finalized 003 custody/reverts/photos, safe money, settings/replay, token backfill, public worker/cache behavior and trusted proxy topology. Private merchant URLs included in messages must actually work before notification UI is released | 004 implementation after artifact alignment/analyze |
 
-D1/D2 were asked explicitly; an approval to start work is not treated as choosing an
-unanswered alternative. D3–D7 have proposed investigations, not certified solutions.
+D1/D2 were answered explicitly after the planning snapshot; implementation approval alone
+was not treated as choosing them. D3–D7 retain proposed investigations, not certified solutions.
 Independent read-only research, regression preparation and unaffected fixes continue.
 An unresolved gate prevents implementation of that design, not the whole program.
 
