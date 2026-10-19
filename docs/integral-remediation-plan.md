@@ -9,16 +9,21 @@ started; not a readiness certificate.
 
 ## Objective and scope
 
-Resolve every actionable finding IV-01–IV-37 in
+Resolve every actionable finding IV-01–IV-38 in
 [the consolidated audit](integral-verification.md), finish the approved 001–004 scope,
 retain historical regressions and prove operational readiness. The planning baseline
 had **76 open Spec Kit tasks**: 22 in 001, 2 in 002, 17 in 003 and 35 in 004.
 T141 merged via PR #29 as `321ef93`, with clean prior/post-merge CI, leaving 75.
-New 003 T136 adds one transport-verification task: this branch tracks **76 open**
-(21/2/18/35). The separate unmerged account checkpoint `0504631` preserves two
-additional security findings IV-35/T150 and IV-36/T151, so **78 known program tasks**
-remain open across the current branch and that preserved checkpoint. No account task
-was checked off after its failed full browser gate. The mapping preserves the queue.
+New 003 T136 adds transport verification; preserved IV-35/T150 and IV-36/T151
+plus newly reproduced IV-38/T152 add security obligations. All are now included
+in the common task inventory. T136 is now closed after source CI `39194996267`
+at `b3477f2` passes check, 948 tests, 92 first-attempt e2e, build and post-actions;
+there are **78 open (24/2/17/35)**. The documentation closure still requires
+latest-head CI before PR #30 can merge; no merge is claimed.
+Account runtime corrections remain separately preserved as unmerged `0504631`;
+no account task was checked off after its failed full browser gate. T152 still
+requires reviewed design and permanent application/browser RED before correction.
+The mapping preserves the complete queue, not just the original count.
 Checked historical tasks are regression obligations, not work to delete or rebuild.
 
 This is the project-level execution/dependency plan, not a new feature or a substitute
@@ -74,8 +79,8 @@ an order in which every intermediate head is compatible and passes all gates.
 | Slice | Owning tasks | Dependency and deliverable | Exit evidence |
 | --- | --- | --- | --- |
 | S00 Baseline reliability and traceability | 001 T141; 002 T064; 003 T131/T136 | T141 is merged. T136 isolates the newly observed summary-poll transport failure before resuming account publication; retain T131's distinct navigation investigation until causal evidence exists. Phase-qualify duplicate historical IDs and correct present-tense summaries | Deterministic RED/mechanism before any fix; exact keyboard/offline/axe journeys retained. A later pass alone cannot close an investigation |
-| S01 Auth surface and input/lockout | 001 T130/T139/T146 | Inventory every delegated plugin mutation, deny or constrain unused bypass paths without inventing permissions. Validate unknown auth/cursor input. Serialize last-owner invariant across different target owners and lockout counters | Real PG: sole owner, two-owner/mixed ban-demotion, link-role races, five simultaneous failures, malformed inputs, same-origin/CSRF and role matrix |
-| S02 Atomic account actions and link intent | 001 T131/T132; 003 T135 | D4 then auth transaction/receipt design, including client-generated creation identity and all credential/session consequences. Bound receipts to actor/operation/target and define changed-body replay. Fix account dialog authoritative initialization and inactive existing links | Audit/credential/session failure rolls back the defined mutation; A→B→A and concurrent retries are exactly once; held-GET browser save preserves untouched link |
+| S01 Auth surface, atomicity, privacy and input/lockout | 001 T130/T131/T139/T146/T150/T151/T152 | T130/T131 share the native transaction boundary; T150/T151 protect native failures/request-path logs, T152 protects SDK-added error context. Then complete remaining input/lockout work. Account corrections remain unmerged until their own clean gates | Real PG: bypass/races, credential/session/audit rollback; no raw credentials, bearer URLs or recipient data in logs/reporting; preserve useful diagnostics, native auth/recovery and fixed sessions |
+| S02 Exactly-once account actions and link intent | 001 T132; 003 T135 | D4 then transaction/receipt lifecycle, client-generated identity and credential/session consequences. Bind receipts to actor/operation/target and define changed-body replay. Fix authoritative initialization and inactive existing links | A→B→A and concurrent retries are exactly once; uncertain responses preserve intent/identity; held-GET browser save preserves untouched link |
 | S03 Master-data concurrency/replay | 001 T134/T135/T142/T148 | Shared transactional locking/diff/replay rules, not six divergent endpoint patches. Serialize cross-table name/alias identity checks and related pickup defaults. Replay accepted creations before later validity guards | Explicit lock-barrier PG tests: same-ID 201/200, truthful before/after chain, cross-table clashes rejected, day rollover replay and no false visible no-op edits |
 | S04 Atomic bulk identity | 001 T133 | Align duplicate-row and mixed-existing-ID semantics before code. Prefer refusal of ambiguous duplicate row IDs; preserve legitimate batch replay and one event per actual creation | Existing+new and repeated-row-ID RED cases; all-or-none on invalid input; concurrent batch/individual registration and original-result replay |
 | S05 Financial correctness | 001 T138/T147; 002 T063 | D3, then storage/schema/domain/JSON and wider route aggregates as one compatible change. Preserve registered fee/zone unless the actual pricing inputs change | Boundary sums never wrap/truncate; route creation cannot commit then fail serialization; catalog/rate update plus instructions-only edit preserves fee; all payment modes remain consistent |

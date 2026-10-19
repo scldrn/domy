@@ -19,7 +19,7 @@ a short-lived branch, so the specification and implementation of every feature l
 
 ## Next step
 
-### Local transport verification — current checkpoint
+### Transport verification — current checkpoint
 
 PR #29 merged as `321ef93adffae9fd4e6fead0aea18fc5fd81664b`, with the exact
 reviewed source tree. Prior CI `39186366408` and post-merge `39189769655` are clean:
@@ -51,15 +51,25 @@ native-overload return type; direct rejecting `Promise<never>` fixes both withou
 casts or disabled rules. Full e2e passes **92/92 first attempt, 5.2 minutes** and
 build passes. Scoped convergence checks 3 FRs, 3 US7 scenarios, 4 plan decisions,
 related regression obligations and all 9 principles: zero additional findings.
-Checklists remain byte-identical at 16/16 and 48/48. T136 stays unchecked pending
-actual latest-head CI. Publication is authorized and next; no remote result is
-claimed before it exists. No deadline/retry/worker/workflow/dependency/migration or
+Checklists remain byte-identical at 16/16 and 48/48. Source commit `b3477f2`
+is published in [PR #30](https://github.com/scldrn/domy/pull/30). Its actual
+[CI 39194996267](https://github.com/scldrn/domy/actions/runs/39194996267) passes
+check, 948 tests (242/512/194), 92 first-attempt e2e (13.0 minutes), build and
+all post-actions; full logs show no flaky/retried/failed outcomes or workflow
+warning/error annotations. T136 is complete. This documentation-only closure still
+requires its own latest-head CI before squash. No merge is claimed yet.
+No deadline/retry/worker/workflow/dependency/migration or
 production listener change. Preserve both original failure and permanent RED.
 Historical 003 T131's different navigation timeout remains open.
 
-This branch tracks 76 open tasks (21/2/18/35); the preserved account checkpoint
-contains two additional security tasks, giving **78 known open program tasks**.
-No task is silently removed because its implementation lives on another branch.
+Documentation prepared after source publication incorporates preserved T150/T151
+and new T152 into the common task inventory. With T136 closed, there are
+**78 open tasks (24/2/17/35)**. IV-38's native SDK/in-memory transport probe demonstrates
+that Sentry independently adds a synthetic bearer path and phone query to a safe
+exception's transaction/request metadata. No external report or operational data
+is involved. Application/browser regressions and correction remain T152, not a
+claimed fix. No application change is included in this verification PR.
+No task is silently removed because its runtime implementation lives on another branch.
 After this verification slice is merged cleanly, rebase/resume the account checkpoint
 and repeat its full gates/convergence before its own PR. Do not combine the slices.
 

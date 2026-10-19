@@ -15,6 +15,7 @@ findings remain explicitly tracked on that checkpoint:
 | IV-35 | Native credential-write failure logs raw SQL/parameters and leaves an orphan user. Reproduced with a disposable CHECK failure; 001 T150 and atomicity T131. Captured sensitive values are not printed by the permanent privacy assertion. |
 | IV-36 | The real native recovery callback returns 302 but its request-path log includes its bearer token. Permanent boolean privacy assertion fails before correction; 001 T151. The local checkpoint masks only the logged callback segment and preserves native recovery. |
 | IV-37 | Fresh full browser gate on that checkpoint: 90 pass / 1 fail in 5.2 minutes, `courier-day.spec.ts:123`. Its first APIRequestContext summary GET consumes the unchanged five-second poll; trace reports about 5,003 ms lookup/connect setup, then 18 ms response wait. Browser records/snapshot succeed. Private trace/context: `.git/account-integrity-e2e-failure/`. Fast later DNS samples are not a reproduction or fix. New 003 T136 is distinct from T131's older navigation timeout. |
+| IV-38 | CRITICAL, Constitution IX/R14: the actual installed Sentry SDK, configured with the same default DSN/environment behavior and an in-memory transport, independently adds request metadata to a fixed safe exception. A native local HTTP probe with runtime-generated synthetic values captures the bearer path and phone query in `event.transaction`, `request.url` and `request.query_string`. No values/envelopes are printed or delivered externally. Application source initializes both SDKs without a privacy policy; full application/browser regressions and a reviewed correction are new 001 T152, not completed by the SDK probe. |
 
 Current branch `003-fix-e2e-loopback` addresses T136 alone. A controlled native
 resolver barrier demonstrates that the hostname request remains blocked while literal
@@ -24,9 +25,14 @@ regression fails before the configuration change (18 ms) and subsequently passes
 (54.5 seconds). This removes the proven avoidable transport dependency, not a claim
 of exact historical OS scheduling. Fresh full gates pass: check, 948 tests,
 92 first-attempt e2e (5.2 minutes) and build. Scoped convergence has zero additional
-findings; latest-head CI remains required.
-The program has 78 known open tasks: 76 in this branch plus T150/T151 preserved on
-the separate account checkpoint. Samuel confirmed safe CSV and current-work-only
+findings. Source CI [39194996267](https://github.com/scldrn/domy/actions/runs/39194996267)
+at `b3477f2` passes check, 948 tests, 92 first-attempt e2e (13.0 minutes), build
+and all post-actions, with no flaky/retried/failed outcomes or workflow warning/error
+annotations. T136 is closed; this documentation-only closure still requires clean
+latest-head CI before PR #30 can merge.
+The common task inventory now includes the preserved T150/T151 plus new T152:
+**78 open tasks (24/2/17/35)** after T136's remote closure. The account runtime
+corrections remain only on their unmerged checkpoint. Samuel confirmed safe CSV and current-work-only
 photos; deployment/production infrastructure remain outside publication authority.
 Historical baseline findings and metrics below are preserved, not overwritten.
 

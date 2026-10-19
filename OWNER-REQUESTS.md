@@ -16,10 +16,16 @@ Se conserva su traza; no se declara una compuerta limpia ni se cierran esas tare
 La rama actual `003-fix-e2e-loopback` investiga/corrige solo ese transporte local,
 con regresión antes del cambio, sin ampliar plazos ni cambiar reintentos/escenarios.
 Su verificación local ya pasa: check, 948 pruebas, 92 e2e al primer intento y build;
-convergencia de la porción sin hallazgos nuevos. Falta verificar el CI remoto antes
-de cerrar T136 y fusionar; no se da por aprobado por anticipado.
-Hay 78 tareas conocidas pendientes, incluidas las nuevas de seguridad y verificación;
-el desglose entre esta rama y el checkpoint está en `docs/status.md`.
+convergencia de la porción sin hallazgos nuevos. El CI remoto `39194996267` del
+commit `b3477f2` (PR #30) también pasa: 948 pruebas, 92 e2e al primer intento,
+check/build y tareas posteriores; sin casos inestables ni reintentos. T136 queda
+cerrada. Este cierre documental debe pasar su propio CI antes de fusionar la PR;
+todavía no se declara fusionada.
+La revisión adicional reprodujo IV-38: al habilitar Sentry, su contexto automático
+incluye URL y parámetros aunque el error esté saneado. Se capturó solo en memoria,
+con datos sintéticos y sin envío externo. T152 exige su corrección y pruebas de app/
+navegador. T150/T151 también se incorporan al listado común sin dar por publicada
+su implementación local. Con T136 cerrada, hay 78 tareas abiertas.
 
 Confirmaste CSV seguro para Excel y fotos propias solo del trabajo vigente en la app.
 No falta otra decisión de alcance; sí su implementación/verificación. La autorización

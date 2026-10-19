@@ -1170,7 +1170,7 @@ no causal patch, feature-wide polish or physical-validation completion is author
 
 ## Phase 44: Convergence
 
-- [ ] T136 HIGH Diagnose and deterministically reproduce the fresh full-gate `courier-day.spec.ts:123` timeout retained in ignored `.git/account-integrity-e2e-failure/`: 90 passed / 1 failed, 5.2 minutes. The APIRequestContext's first summary GET records roughly 5,003 ms of DNS lookup before an 18 ms response wait; browser records/snapshot requests succeed on reconnection. Establish the transport-versus-application cause with controlled native resolution/connection evidence before correction, preserving the same real built app, PostgreSQL, service worker, summary/offline/correction/axe checks and all deadlines/retries/workers. Do not equate this with unresolved T131's different navigation timeout, infer a fix from later fast DNS samples, print trace cookies/tokens or replace the failure with an unexplained green rerun. Align the plan before implementation and verify all gates/latest-head CI (FR-020/FR-022, US7/AC1–AC3, Constitution VI; partial).
+- [X] T136 HIGH Diagnose and deterministically reproduce the fresh full-gate `courier-day.spec.ts:123` timeout retained in ignored `.git/account-integrity-e2e-failure/`: 90 passed / 1 failed, 5.2 minutes. The APIRequestContext's first summary GET records roughly 5,003 ms of DNS lookup before an 18 ms response wait; browser records/snapshot requests succeed on reconnection. Establish the transport-versus-application cause with controlled native resolution/connection evidence before correction, preserving the same real built app, PostgreSQL, service worker, summary/offline/correction/axe checks and all deadlines/retries/workers. Do not equate this with unresolved T131's different navigation timeout, infer a fix from later fast DNS samples, print trace cookies/tokens or replace the failure with an unexplained green rerun. Align the plan before implementation and verify all gates/latest-head CI (FR-020/FR-022, US7/AC1–AC3, Constitution VI; partial).
 
 T136 local verification (2026-10-19 UTC, remote verification still required): the
 permanent native DNS-refusal control passes while the configured localhost request
@@ -1196,3 +1196,16 @@ at 16/16 and 48/48. No convergence hooks exist; optional commit hooks are not ex
 (autocommit disabled). T136 remains unchecked until authorized publication and actual
 latest-head CI inspection. Its PR timeline must preserve source/tree/base, clean
 first-attempt outcomes and post-actions before squash; no global sign-off is claimed.
+
+T136 remote verification closure (2026-10-19 UTC): [PR #30 source CI
+39194996267](https://github.com/scldrn/domy/actions/runs/39194996267) at
+`b3477f294e19809bccb5f6feccd52e71ef21e4cb`, tree
+`a3eb0c488de402b6b6d92dc005fca0971a1d8a3a`, base `321ef93`, passes check,
+948 tests (242/512/194), 92 first-attempt e2e (13.0 minutes), build and all
+post-actions. Full logs contain no flaky/retried/failed test outcomes or workflow
+warning/error annotations. Expected native negative-auth diagnostics remain visible.
+The retention step finds no failed traces, consistent with first-attempt success;
+it does not certify a failed-trace upload. T136 is complete; original IV-37 failure
+and permanent RED stay preserved. This documentation-only closure and audit queue
+update must receive its own latest-head CI before the authorized squash. T131 and
+account/global readiness remain open.
