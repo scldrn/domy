@@ -8,18 +8,18 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
-**Avance actual (2026-10-19 UTC):** T141 ya está fusionada. T153 tiene pruebas que
-reproducen la filtración en diagnósticos y21 casos focalizados aprobados; pasan check,
-967 pruebas,91 e2e al primer intento y build. Falta revisión/convergencia y publicación.
-La PR #32 falló en CI:95 aprobadas, una fallida y una intermitente; sigue sin fusionarse.
-#30/#31 siguen retenidas y la corrección de cuentas está preservada aparte.
-También confirmé en un entorno desechable que el correo de desarrollo registra su
-enlace con token: se añadió T155, pendiente, sin afirmar un incidente de datos reales.
-No se requiere una nueva decisión de alcance para cumplir la prohibición de registrar
-secretos. El documento `docs/integral-execution-backlog.md` detalla las81 tareas abiertas,
-dependencias, pruebas y condiciones de cierre, además de los pendientes operativos.
-Ya aprobaste CSV seguro para Excel y fotos propias del trabajo aún disponible en la app;
-no son preguntas pendientes. Los demás párrafos de ejecución conservan evidencia histórica.
+**Avance actual (2026-10-19 UTC):** T141 y T153 ya están fusionadas en `main` (`fedbb63`, PR #29 y #33).
+La rama `001-fix-modal-notification-audit` (PR #32) completa localmente IV-40/T154 y resuelve las causas de
+fallo e intermitencia observadas en CI (bloqueo por tiempo fijo CI-LOCK y botón de liquidación tapado por
+notificaciones CI-POINTER). PR #30/#31 continúan retenidas hasta contar con compuertas limpias y rebase
+sobre `main`. El commit de integridad de cuentas `0504631` permanece preservado por separado.
+También se confirmó en entorno desechable que el correo de desarrollo registra su enlace con token:
+se añadió T155 como tarea pendiente en Phase 19, sin suponer incidente con datos reales.
+El documento `docs/integral-execution-backlog.md` detalla las 81 tareas canónicas abiertas, dependencias,
+pruebas y condiciones de cierre, además de los pendientes operativos.
+Ya aprobaste CSV seguro para Excel y fotos propias del trabajo aún disponible en la app; no son preguntas pendientes.
+Continúa vigente tu autorización por porción con revisión y todas las compuertas/CI limpios, sin despliegues
+ni infraestructura de producción. Los demás párrafos de ejecución conservan evidencia histórica.
 
 **Objetivo continuo autorizado (2026-10-19 UTC):** con «autorizo» aprobaste commit,
 push, PR y fusión squash de cada porción, únicamente con revisión, compuertas locales
@@ -156,8 +156,8 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
-| 2026-10-19 | ¿Priorizar CSV seguro para Excel, neutralizando fórmulas y documentando la transformación? | «Sí, CSV seguro para Excel». Mantener los valores monetarios/fechas correctos y documentar la transformación del texto; decisión incorporada al documento de ejecución |
-| 2026-10-19 | ¿Mantener fotos del mensajero solo de su propio trabajo aún disponible en la app? | «Sí, solo trabajo vigente en la app». Conservar003 FR-036; falta definir/probar la frontera técnica sin impedir subir pruebas offline pendientes |
+| 2026-10-19 | ¿Priorizar CSV seguro para Excel o texto exacto con XLSX para consulta? | «Sí, CSV seguro para Excel». Neutralizar texto ejecutable como fórmula y documentar la transformación, conservando valores numéricos y fechas; decisión incorporada al backlog de ejecución (T128 pendiente de implementar/verificar) |
+| 2026-10-19 | ¿Mantener fotos del mensajero solo de su propio trabajo aún disponible en la app o todo el historial propio? | «Sí, solo trabajo vigente en la app». Conservar 003 FR-036 y definir/probar la frontera técnica aplicable en servidor (T133 pendiente de implementar/verificar) |
 | 2026-10-19 | ¿Autorizar commit, push, PR y squash por porción del plan integral, con revisión y compuertas locales/CI limpias? | «autorizo». Incluye cerrar T141 y continuar las 75 tareas por ramas pequeñas; excluye despliegues e infraestructura de producción y no resuelve las decisiones de CSV/fotos |
 | 2026-10-17 | ¿Incluir en la etapa integral terminar la 004 o cerrar solo lo desarrollado en 001–003? | «Incluir también la implementación de 004». La verificación/cierre abarca las cuatro funcionalidades; no equivale a una certificación de calidad ni a autorización de commit, push o fusión |
 | 2026-10-17 | ¿Fusionar la PR #28 diagnóstica mediante squash y verificar después el CI de main? | «Si». Autorizada fusión solo con CI limpio del último commit y verificación posterior; sin cerrar T131 ni comenzar el pulido |

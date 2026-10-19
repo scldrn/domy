@@ -48,6 +48,17 @@ outside/missing/symlink paths and invalid positions, with a labelled reporting-s
 Retain the original RED and measured bounded error-path cost, then execute all four gates.
 This does not validate SDK-added context or the separately tracked auth/mail surfaces.
 
+### T154 modal notification accessibility scan stabilization
+
+For T154, retain the master-data scenario16 and existing visible/expired-notification
+cases. The controlled case creates a real notification and opens a real modal,
+advances native expiry during the pre-axe gate and checks stable notification/full
+axe plus the original modal input/focus. Also verify the helper leaves the modal
+open and normal expiry resumes afterward. A retry-green CI is not a clean gate.
+Preserve a stack the user already expanded, but restore an initially collapsed stack
+even if its focus was already inside; focus and expansion are independent states.
+
+
 ## Manual validation scenarios
 
 | # | Story | Steps | Expected |

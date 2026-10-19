@@ -477,17 +477,50 @@ plan, tasks, and analysis (decision #35 in the business master).
 
 ## Phase 18: Convergence
 
-- [ ] T154 CRITICAL Diagnose and deterministically stabilize the shared accessibility scan with a real notification and an open modal. Preserve IV-40's retained first-failure trace from PR #31 CI `39273068925`: `master-data.spec.ts:48` passes its journey but the final dispatcher-page axe scan reports notification contrast 1.69, then its retry passes (91 first-attempt passes/one flaky). The helper in `apps/web/tests/e2e/fixtures.ts` skips stabilization for dialogs, while Base UI excludes live regions from background hiding; the trace marks the toast removed during axe. Add a controlled built-app/real-PG regression in `access.spec.ts` before correction, distinguishing native expiry/animation from stable production contrast. Align plan/research/quickstart and analyze first; retain modal input/focus, visible notifications, existing 003 T100/T112 timing cases, all complete axe scans and every deadline/retry/worker. Do not close dialogs, dismiss/hide/exclude notifications, freeze production lifetime, alter colors to mask timing, force interaction or rerun CI until green. Verify focused repetitions, all four gates and convergence before closure; both PR #30/#31 remain held pending reconciliation and their own clean latest-head gates (FR-034, plan: R12/R13, Constitution VI/VII; partial).
+- [X] T154 CRITICAL Diagnose and deterministically stabilize the shared accessibility scan with a real notification and an open modal. Preserve IV-40's retained first-failure trace from PR #31 CI `39273068925`: `master-data.spec.ts:48` passes its journey but the final dispatcher-page axe scan reports notification contrast 1.69, then its retry passes (91 first-attempt passes/one flaky). The helper in `apps/web/tests/e2e/fixtures.ts` skips stabilization for dialogs, while Base UI excludes live regions from background hiding; the trace marks the toast removed during axe. Add a controlled built-app/real-PG regression in `access.spec.ts` before correction, distinguishing native expiry/animation from stable production contrast. Align plan/research/quickstart and analyze first; retain modal input/focus, visible notifications, existing 003 T100/T112 timing cases, all complete axe scans and every deadline/retry/worker. Do not close dialogs, dismiss/hide/exclude notifications, freeze production lifetime, alter colors to mask timing, force interaction or rerun CI until green. Verify focused repetitions, all four gates and convergence before closure; both PR #30/#31 remain held pending reconciliation and their own clean latest-head gates (FR-034, plan: R12/R13, Constitution VI/VII; partial).
 
 T154 implementation note: its plan explicitly distinguishes one synthetic DOM mouseout
 used ONLY to release scanner-owned modal pause from real product interactions. The
 latter remain unforced/unsimulated. Preserve an already expanded user stack and prove
 focus, modal-open, normal-expiry and failure-cleanup behavior; this is not hover proof.
 
-T154's completed code/evidence is separately preserved on PR #32 (`f4feb8c`), whose
-CI is queued during GitHub's Actions incident. This main-based branch does not yet
-contain that scanner correction; reconcile its checked marker after importing the
-actual implementation. Do not duplicate or renumber the reserved task.
+T154 local closure (2026-10-19 UTC): preserve PR #31's nominal-green/flaky
+CI `39273068925` and restricted artifact `12196664566`; no CI rerun or merge.
+Real-modal/native-clock RED fails at expiry (6.3 seconds), and the focused-but-
+collapsed stack RED retains scanner pause (6.6 seconds). Both remain private under
+`.git/t154-modal-notification-red/` and `.git/t154-focused-stack-red/`.
+The initial second-pause test uses the wrong wall clock after browser time advances;
+the corrected case reads browser time. An initial courier clock/offline setup fails
+before the helper, not application RED. Its corrected real online pickup/sheet case
+proves physical occlusion, input/focus preservation and normal expiry. The existing
+offline/preexpanded two-toast/photo/save hit tests remain unchanged.
+
+The final helper preserves native keyboard pause and full axe, restores modal focus
+before scanning, distinguishes initial expansion from focus, and releases only its
+own pause. Modal cleanup is one explicitly synthetic native-constructed mouseout,
+not hover/hit-test proof or a product-action bypass; Escape would close the modal.
+Six permanent cases cover modal, alertdialog, focused collapsed stack, failure cleanup,
+expiry-before-pause and the lower courier sheet. User-expanded state stays untouched.
+
+Ten selected current/historical cases pass three repetitions: 30/30 (1.2 minutes).
+An intermediate 96-case pass is not the final gate. Final sequential gates all pass
+after the last correction: check (zero warnings/errors), 948 tests (242/512/194;
+server 95.56 seconds), 97 first-attempt e2e (6.1 minutes), build/actual service worker.
+Expected negative-password diagnostics remain visible. No production source, CSS,
+lifetime, dependency, migration, workflow, deadline, retry or worker change.
+
+Scoped convergence checks three requirement references, two acceptance scenarios,
+four decisions, nine related task obligations and all nine principles: zero new
+slice findings. The assessment leaves tasks byte-identical at SHA-256
+`fd3547d06cd4b5edd517e4a8366a5fad2f5373a0230fbfdeeb5d6ad769c0c8db`;
+this subsequent tracking marks local completion. Reviewer checklists stay read-only
+16/16 and 47/47. No converge hooks; optional commit hooks disabled/not executed.
+
+The main-based branch now has 79 unchecked tasks (25/2/17/35); T131's separate local
+closure is preserved on held #31. Do not subtract the new checked T136 twice when
+importing #30. Publication/review/actual latest-head CI receipts belong to the PR
+timeline; no squash until that head is clean. Then verify actual main and reconcile
+each held PR with its own new clean gates. No privacy/account/physical/global sign-off.
 
 ## Phase 19: Convergence
 

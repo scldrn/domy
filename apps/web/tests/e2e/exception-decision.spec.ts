@@ -379,10 +379,10 @@ test("reschedules into office custody and completes an office pickup and return 
   await dialog.getByRole("button", { name: "Guardar decisión" }).click();
   await expect(dialog).not.toBeVisible();
   await office.getByRole("button", { name: "Recibido en oficina", exact: true }).click();
-  await office
-    .getByRole("alertdialog")
-    .getByRole("button", { name: "Confirmar recepción" })
-    .click();
+  const receptionDialog = office.getByRole("alertdialog");
+  await receptionDialog.getByRole("button", { name: "Confirmar recepción" }).click();
+  await expect(receptionDialog).not.toBeVisible();
+  await expect(office.getByText("En oficina", { exact: true })).toBeVisible();
   await phone.goto("/mensajero");
   await phone.reload();
   await expect(

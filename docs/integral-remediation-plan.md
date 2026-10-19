@@ -30,7 +30,21 @@ started; not a readiness certificate.
 
 ## Objective and scope
 
-Resolve every actionable finding IV-01–IV-34 in
+Current gate addendum (2026-10-19 UTC): T141 is merged (`321ef93`, PR #29).
+PR #31's local session correction is published at `b4c83f3` but held: latest CI
+`39273068925` has a distinct modal-notification axe flake, recorded as IV-40/T154.
+PR #30 remains held at `682bc97` for its different recovery flake. T154 is now
+locally complete after controlled RED, 30 focused passes, all four final gates
+(948 tests/97 first-attempt e2e) and scoped convergence; not merged/global readiness.
+Preserve full axe/modal focus/expiry and every budget; no retry-green merger.
+T150–T153 remain OPEN privacy obligations, imported from the preserved checkpoints.
+The current independent main-based branch has **79 unchecked tasks (25/2/17/35)**;
+T131's local closure remains separately preserved on #31 until clean reconciliation.
+The following baseline counts/mapping are historical, not present completion claims.
+Samuel resolved D1 (CSV safe for Excel) and D2 (own/current-work courier photos);
+implementation and validation remain required. Production deployment is not authorized.
+
+Resolve every actionable finding IV-01–IV-40 in
 [the consolidated audit](integral-verification.md), finish the approved 001–004 scope,
 retain historical regressions and prove operational readiness. The planning baseline
 had **76 open Spec Kit tasks**: 22 in 001, 2 in 002, 17 in 003 and 35 in 004.
@@ -93,7 +107,7 @@ an order in which every intermediate head is compatible and passes all gates.
 
 | Slice | Owning tasks | Dependency and deliverable | Exit evidence |
 | --- | --- | --- | --- |
-| S00 Baseline reliability and traceability | 001 T141; 002 T064; 003 T131 | Start here: preserve both distinct failure records, diagnose keyboard highlight with retained trace and controlled real responses; retain T131 as unresolved until causal evidence exists. Phase-qualify duplicate historical IDs, correct present-tense summaries | Deterministic RED/mechanism before any fix; exact keyboard/offline/axe journeys retained. A later pass alone cannot close either investigation |
+| S00 Baseline reliability and traceability | 001 T141/T154; 002 T064; 003 T131/T136 | T141 merged; recovery T131 is held in #31 and transport T136 in #30. Current T154 resolves the distinct retained modal-notification scan race before reconciling either held PR. Preserve causal evidence, normal lifecycle/focus, every axe rule and all budgets; phase-qualify duplicate historical IDs | Controlled RED before correction, all local gates/convergence and clean latest-head CI, not a flaky nominal green |
 | S01 Auth surface and input/lockout | 001 T130/T139/T146 | Inventory every delegated plugin mutation, deny or constrain unused bypass paths without inventing permissions. Validate unknown auth/cursor input. Serialize last-owner invariant across different target owners and lockout counters | Real PG: sole owner, two-owner/mixed ban-demotion, link-role races, five simultaneous failures, malformed inputs, same-origin/CSRF and role matrix |
 | S02 Atomic account actions and link intent | 001 T131/T132; 003 T135 | D4 then auth transaction/receipt design, including client-generated creation identity and all credential/session consequences. Bound receipts to actor/operation/target and define changed-body replay. Fix account dialog authoritative initialization and inactive existing links | Audit/credential/session failure rolls back the defined mutation; A→B→A and concurrent retries are exactly once; held-GET browser save preserves untouched link |
 | S03 Master-data concurrency/replay | 001 T134/T135/T142/T148 | Shared transactional locking/diff/replay rules, not six divergent endpoint patches. Serialize cross-table name/alias identity checks and related pickup defaults. Replay accepted creations before later validity guards | Explicit lock-barrier PG tests: same-ID 201/200, truthful before/after chain, cross-table clashes rejected, day rollover replay and no false visible no-op edits |

@@ -39,6 +39,36 @@ This checkpoint is not whole-feature/global convergence or certification.
 
 ## Status and authority
 
+**Current execution addendum (2026-10-19 UTC):** PR #31 `b4c83f3` remains held:
+CI `39273068925` is nominal green but has 91 first-attempt e2e passes/one flaky
+master-data scenario16; check, 955 tests, build and post-actions pass. Restricted
+artifact `12196664566` is privately retained. PR #30's distinct recovery failure
+also remains held; no rerun or merge. Current main-based T154 investigation imports
+preserved T150–T153 OPEN. T154 is locally complete after causal RED, 30 focused
+passes, final check/948 tests/97 first-attempt e2e/build and scoped convergence;
+actual latest-head publication/review/CI is required before merge. This does not
+implement those privacy tasks or certify stable production contrast/global readiness.
+
+**IV-40 — modal notification scan race (T154):** at the retained CI head, `fixtures.ts`
+skipped stabilization when a dialog existed, assuming background notifications were hidden. Installed
+Base UI excludes aria-live regions from background hiding; Sonner is such a region.
+The actual retained trace starts axe before toast expiry and marks it removed during
+the scan; the failure reports contrast1.69. Reproduce with controlled native timing,
+then distinguish scan readiness from stable application contrast before correction.
+Preserve visible notifications, modal input/focus, full axe and normal timer cleanup.
+No production contrast correction or completed task is claimed by this finding.
+
+Preserved unmerged findings remain open in the same inventory:
+
+| ID | Finding and owning task |
+| --- | --- |
+| IV-35 | Native credential-write failure logs SQL/parameters and can leave an orphan user; actual trusted app/disposable PG RED remains preserved on account checkpoint `0504631`, T150 and atomicity T131. |
+| IV-36 | Native emailed recovery GET logs its bearer path despite a successful redirect; preserved T151. |
+| IV-37 | Separate full-gate day-summary transport timeout led to held PR #30/T136; no claim it shares the recovery/modal causes. |
+| IV-38 | Actual native SDK probes recapture synthetic bearer/query data in automatic context; browser messages/causes/stack URLs also require handling, T152. These are local/in-memory SDK probes, not an application fix or external delivery. |
+| IV-39 | A real PostgreSQL 22P02 message retains its synthetic input through `errorForLog`; actual handler probe also retains it in log/reporter message/stack, T153. No customer leak or completed privacy correction is claimed. |
+
+
 **Status: NOT READY FOR GLOBAL SIGN-OFF.** Baseline source is
 `9006db32270338670e51c609c6b67ba2750fec83` (2026-10-17 in America/Bogota).
 This is one project-level verification/completion stage, not a claim that everything
