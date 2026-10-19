@@ -4,9 +4,52 @@ Preguntas y pendientes para Samuel (propietario de Domy) y, a través de él, pa
 lo mantiene al día: agrega cada pregunta cuando surge y la mueve a «Resueltas» con tu respuesta
 y la fecha. Responde aquí mismo o en la conversación.
 
-Última actualización: 2026-10-17.
+Última actualización: 2026-10-19 UTC.
 
 ## Bloquean algo ahora
+
+**Objetivo continuo autorizado (2026-10-19 UTC):** con «autorizo» aprobaste commit,
+push, PR y fusión squash de cada porción, únicamente con revisión, compuertas locales
+y CI limpio del último commit. Se retoma el objetivo de las 75 tareas; no incluye
+desplegar ni modificar infraestructura de producción. Primero se publica/cierra T141,
+después se abre la siguiente rama. La investigación D4 aporta seis casos exploratorios
+con PostgreSQL real, no una implementación ni una tarea adicional completada.
+
+**Ejecución autorizada:** con «Empieza, todo lo recomendado» y «continúa» aprobaste
+iniciar las correcciones locales. El plan está en `docs/integral-remediation-plan.md`:
+76 tareas pendientes al iniciar, ordenadas por dependencias y riesgo. La rama actual
+es `001-fix-keyboard-readiness`; el primer alcance es T141, no todos los arreglos en
+una sola rama. La prueba controlada reprodujo el fallo y la corrección de navegación
+por teclado pasa 20 ejecuciones. Pasan check, 948 pruebas, 91 e2e al primer intento y
+build; T141 queda completada localmente y siguen abiertas 75 tareas. Ya está autorizada
+su publicación y fusión condicionada a CI limpio. No se ha publicado ni se cambió la
+aplicación. Las decisiones de CSV y fotos siguientes siguen
+pendientes. Los párrafos de revisión conservan el estado histórico anterior al arreglo.
+
+**Revisión profunda consolidada:** hay 34 entradas en el informe: 9 críticas, 16
+altas, 7 medias y 2 brechas de verificación/preparación. Se reprodujeron, entre otros,
+cambios administrativos sin las protecciones necesarias, auditoría incorrecta bajo
+concurrencia, reintentos con efectos tardíos, sustitución de fotos y cambios de datos
+no elegidos desde formularios. Se añadieron 24 tareas nuevas sin modificar las
+históricas. Check, 948 pruebas y build pasan; la corrida completa de navegador da
+89 aprobadas y 1 fallida en el registro por teclado. La traza se conserva y no se
+sustituyó por otra corrida. No hay arreglos de aplicación ni publicación en esta revisión.
+
+**Etapa integral actual:** pediste verificar el proyecto completo, incluidas las ideas
+aprobadas, incidencias históricas, conexiones y deuda técnica, y confirmaste incluir
+también terminar la 004. El informe local está en `docs/integral-verification.md`, rama
+`chore/integral-verification`. No está declarado todo listo ni hay cambios de aplicación
+o publicación en esta revisión. La PR #28 ya fue fusionada como `9006db3` y su CI de
+main pasó limpio; los párrafos siguientes conservan el contexto histórico.
+
+Antes de elegir correcciones que cambien el contrato, quedan planteadas estas dos
+decisiones: si el mensajero accede solo a fotos propias del trabajo aún en su app o
+también a todo su historial, y si el CSV prioriza apertura segura en Excel o texto
+exacto para importación con XLSX para consulta. No se ha reproducido una filtración
+de caché ni un ataque real en Excel; sí hay una inconsistencia de alcance de fotos
+y una celda de fórmula sin neutralizar. La aceptación física T087/T093 sigue pendiente.
+
+### Contexto previo de la PR diagnóstica
 
 La [PR #27](https://github.com/scldrn/domy/pull/27) ya está fusionada como `f4f124d`,
 con árbol idéntico al head aprobado y CI previo limpio `39059903192` (948 pruebas/90 e2e
@@ -100,6 +143,8 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-19 | ¿Autorizar commit, push, PR y squash por porción del plan integral, con revisión y compuertas locales/CI limpias? | «autorizo». Incluye cerrar T141 y continuar las 75 tareas por ramas pequeñas; excluye despliegues e infraestructura de producción y no resuelve las decisiones de CSV/fotos |
+| 2026-10-17 | ¿Incluir en la etapa integral terminar la 004 o cerrar solo lo desarrollado en 001–003? | «Incluir también la implementación de 004». La verificación/cierre abarca las cuatro funcionalidades; no equivale a una certificación de calidad ni a autorización de commit, push o fusión |
 | 2026-10-17 | ¿Fusionar la PR #28 diagnóstica mediante squash y verificar después el CI de main? | «Si». Autorizada fusión solo con CI limpio del último commit y verificación posterior; sin cerrar T131 ni comenzar el pulido |
 | 2026-10-17 | ¿Preparar y publicar una PR diagnóstica que conserve las trazas de CI incluso tras un reintento exitoso? | «Si». Autorizados preparación, commit, push, PR y revisión del CI del último commit para T132; sin cambiar límites/cobertura, fusionar, cerrar T131 ni comenzar el pulido |
 | 2026-10-17 | ¿Investigar y corregir localmente la nueva inestabilidad offline posterior a la PR #27, antes del pulido? | «Si». Autorizada investigación/corrección local T131 con metodología estricta y pruebas primero; sin publicación, fusión ni pulido |

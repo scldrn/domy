@@ -1,5 +1,34 @@
 # Implementation Plan: Shipment Registration and Dispatch Board
 
+## Integral remediation execution alignment — 2026-10-18 UTC
+
+The project-wide dependency/closure plan is
+[`docs/integral-remediation-plan.md`](../../docs/integral-remediation-plan.md).
+Existing task IDs and historical evidence remain authoritative; this adds no product
+scope or permission to publish. Samuel authorized starting the recommended local work.
+Start with the narrow T141 filter to repair the currently red verification boundary,
+then execute the critical auth/data-integrity slices. Other findings remain open.
+
+T141 demonstrated design (before correction): a held real initial merchant response
+keeps the list empty through keyboard typing. Releasing the real search response then
+shows the sole intended option but leaves it without `data-highlighted`, reproducing
+the unchanged five-second failure deterministically. Installed Base UI's ordinary
+`autoHighlight=true` mode is input-change driven; an empty list clears its active
+index, whereas late items restore a highlight only in its different `always` mode.
+Do not change application selection policy or dependency versions to satisfy a test
+that never navigates the available choices. This proves the local mechanism, not the
+exact historical scheduling of the earlier full-suite failure.
+
+Correct the keyboard-only test by waiting for its fixture's sole matching result,
+pressing native ArrowDown, retaining the exact intended-option highlight assertion,
+then Enter and the existing selected merchant/pickup/neighborhood, fee, success and
+full axe checks. Apply the same actual-keyboard precondition to the neighborhood.
+Keep the original normal, delayed-search and delayed-quote variants and the new
+initial-response regression. No mocked successful responses, sleeps, forced input,
+longer deadlines, retries or worker changes. Retain RED traces privately, run focused
+repetitions followed by all four gates and scoped convergence before marking T141 done.
+No closure of 003 T131 or other integral tasks is implied by this correction.
+
 **Branch**: `001-shipment-registration` | **Date**: 2026-09-30 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/001-shipment-registration/spec.md`
