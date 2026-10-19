@@ -224,3 +224,79 @@ test("keeps its cached route and pending work when the server is temporarily una
   await page.getByRole("link", { name: "Mi ruta", exact: true }).first().click();
   await expect(page.getByText("No tienes una ruta despachada")).toBeVisible();
 });
+
+test("keeps cached work navigable when reconnection interrupts a pending session check (T131)", async ({
+  courierPage: page,
+  dispatcherPage: office,
+  ownerPage: owner,
+}) => {
+  const account = await ownSession(page, owner);
+  const shipment = await register(office, {
+    recipientAddress: "Calle 16 # 40-07",
+    paymentMode: "merchant_account",
+    codAmount: 0,
+  });
+  const route = await dispatch(office, shipment, account.courierId);
+  await page.goto("/mensajero");
+  await expect(page.getByRole("heading", { name: `Ruta ${String(route.number)}` })).toBeVisible();
+  await workerControls(page);
+  await page.route("**/api/**", (request) =>
+    request.fulfill({ status: 503, json: { error: { message: "Servicio no disponible." } } }),
+  );
+  await page.reload();
+  await expect(page.getByRole("heading", { name: `Ruta ${String(route.number)}` })).toBeVisible();
+  await page.getByRole("list", { name: "Paradas" }).getByRole("link").first().click();
+  await page.getByRole("button", { name: "Confirmar recogida" }).click();
+  await expect(page.getByText("Recogido", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: /Pendientes/ }).click();
+  await expect(
+    page.getByRole("list", { name: "Registros pendientes" }).getByRole("listitem"),
+  ).toHaveCount(1);
+  const entered = Promise.withResolvers<undefined>();
+  const release = Promise.withResolvers<undefined>();
+  let held = false;
+  let interrupted = false;
+  await page.route("**/api/auth/get-session", async (request) => {
+    if (held) return request.continue();
+    held = true;
+    // Hold an actual successful native response, not a fabricated session or a delay.
+    const response = await request.fetch();
+    expect(response.status()).toBe(200);
+    page.on("requestfailed", (failed) => {
+      if (failed === request.request()) interrupted = true;
+    });
+    entered.resolve(undefined);
+    await release.promise;
+    if (!interrupted && !page.isClosed()) await request.fulfill({ response });
+  });
+  try {
+    // Install the session gate before allowing any recovered request to populate Query.
+    await page.unroute("**/api/**");
+    await page.getByRole("link", { name: "Mi ruta", exact: true }).first().click();
+    await entered.promise;
+    const offline = page.waitForEvent("console", (message) => message.text() === "T131 offline");
+    await page.evaluate(() => {
+      window.addEventListener(
+        "offline",
+        () => {
+          console.info("T131 offline");
+        },
+        { once: true },
+      );
+    });
+    await page.context().setOffline(true);
+    await offline;
+    await page.context().setOffline(false);
+    await expect(page.getByRole("heading", { name: `Ruta ${String(route.number)}` })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Paradas" })).toBeVisible();
+    await openStop(page, "Calle 16 # 40-07");
+    await deliver(page, false);
+    release.resolve(undefined);
+    await page.getByRole("link", { name: /Pendientes/ }).click();
+    await expect(page.getByText("No tienes registros pendientes")).toBeVisible();
+    await page.getByRole("link", { name: "Mi ruta", exact: true }).first().click();
+    await expect(page.getByText("No tienes una ruta despachada")).toBeVisible();
+  } finally {
+    release.resolve(undefined);
+  }
+});

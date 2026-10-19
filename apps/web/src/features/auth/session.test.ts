@@ -23,6 +23,8 @@ const record = {
 
 beforeEach(() => {
   vi.resetModules();
+  vi.stubGlobal("window", new EventTarget());
+  vi.stubGlobal("navigator", { onLine: true });
 });
 afterEach(async () => {
   const { courierDatabase } = await import("@/features/courier/courier-store");
@@ -52,6 +54,166 @@ async function seed(pending = true) {
 
 /** US2 follows the shared auth consumers too: no cookie change can take over pending data. */
 describe("authentication with courier data", () => {
+  it("interrupts an in-flight session check when the phone loses connectivity (T131)", async () => {
+    await seed();
+    const entered = Promise.withResolvers<undefined>();
+    const signals: AbortSignal[] = [];
+    const fetcher = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      const requestSignal = init?.signal;
+      if (requestSignal) signals.push(requestSignal);
+      entered.resolve(undefined);
+      return new Promise<Response>((_resolve, reject) => {
+        requestSignal?.addEventListener(
+          "abort",
+          () => {
+            reject(new DOMException("The connection was interrupted", "AbortError"));
+          },
+          { once: true },
+        );
+      });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    const { QueryClient } = await import("@tanstack/react-query");
+    const { sessionQuery } = await import("./session");
+    const client = new QueryClient();
+    const check = client.query({ ...sessionQuery, retry: false });
+    try {
+      await entered.promise;
+      expect(signals[0]).toBeInstanceOf(AbortSignal);
+      const interruptedSignal = signals[0];
+      const refused = expect(check).rejects.toMatchObject({ status: 0, code: "network_error" });
+      window.dispatchEvent(new Event("offline"));
+      await refused;
+      expect(interruptedSignal?.aborted).toBe(true);
+      const { courierDatabase } = await import("@/features/courier/courier-store");
+      expect(await (await courierDatabase()).count("outbox")).toBe(1);
+      fetcher.mockImplementationOnce((_input, init) => {
+        if (init?.signal) signals.push(init.signal);
+        return Promise.resolve(Response.json({ user: user(700) }));
+      });
+      await expect(client.query({ ...sessionQuery, retry: false })).resolves.toEqual(user(700));
+      const completedSignal = signals[1];
+      expect(signals).toHaveLength(2);
+      expect(completedSignal?.aborted).toBe(false);
+      window.dispatchEvent(new Event("offline"));
+      expect(completedSignal?.aborted).toBe(false);
+    } finally {
+      client.clear();
+      await check.catch(() => undefined);
+    }
+  });
+
+  it("keeps offline interruption during the session response body a network error", async () => {
+    const entered = Promise.withResolvers<undefined>();
+    const signals: AbortSignal[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        const requestSignal = init?.signal;
+        if (requestSignal) signals.push(requestSignal);
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            requestSignal?.addEventListener("abort", () => {
+              controller.error(new DOMException("The response was interrupted", "AbortError"));
+            });
+          },
+        });
+        entered.resolve(undefined);
+        return Promise.resolve(new Response(body));
+      }),
+    );
+    const { QueryClient } = await import("@tanstack/react-query");
+    const { sessionQuery } = await import("./session");
+    const client = new QueryClient();
+    const check = client.query({ ...sessionQuery, retry: false });
+    try {
+      await entered.promise;
+      expect(signals[0]).toBeInstanceOf(AbortSignal);
+      const refused = expect(check).rejects.toMatchObject({ status: 0, code: "network_error" });
+      window.dispatchEvent(new Event("offline"));
+      await refused;
+    } finally {
+      client.clear();
+      await check.catch(() => undefined);
+    }
+  });
+
+  it("does not start an uninterruptible session read if connectivity was already lost", async () => {
+    vi.stubGlobal("navigator", { onLine: false });
+    const fetcher = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      init?.signal?.aborted
+        ? Promise.reject(new DOMException("Already offline", "AbortError"))
+        : Promise.resolve(Response.json({ user: user(700) })),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    const { QueryClient } = await import("@tanstack/react-query");
+    const { sessionQuery } = await import("./session");
+    const client = new QueryClient();
+    try {
+      await expect(client.query({ ...sessionQuery, retry: false })).rejects.toMatchObject({
+        status: 0,
+        code: "network_error",
+      });
+      expect(fetcher.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
+    } finally {
+      client.clear();
+    }
+  });
+
+  it("forwards native Query cancellation to the session transport", async () => {
+    const entered = Promise.withResolvers<undefined>();
+    const signals: AbortSignal[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        const signal = init?.signal;
+        if (signal) signals.push(signal);
+        entered.resolve(undefined);
+        return new Promise<Response>((_resolve, reject) => {
+          signal?.addEventListener("abort", () => {
+            reject(new DOMException("Cancelled", "AbortError"));
+          });
+        });
+      }),
+    );
+    const { QueryClient, CancelledError } = await import("@tanstack/react-query");
+    const { sessionQuery } = await import("./session");
+    const client = new QueryClient();
+    const check = client.query({ ...sessionQuery, retry: false });
+    const cancelled = check.catch((error: unknown) => error);
+    try {
+      await entered.promise;
+      expect(signals[0]).toBeInstanceOf(AbortSignal);
+      await client.cancelQueries({ queryKey: sessionQuery.queryKey });
+      expect(await cancelled).toBeInstanceOf(CancelledError);
+      expect(signals[0]?.aborted).toBe(true);
+    } finally {
+      client.clear();
+      await cancelled;
+    }
+  });
+
+  it.each([
+    { status: 401, body: null, outcome: null },
+    { status: 403, body: {}, outcome: { status: 403, code: "session_refused" } },
+    { status: 200, body: {}, outcome: { status: 502, code: "invalid_session" } },
+  ])("preserves authoritative session refusal at $status", async ({ status, body, outcome }) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json(body, { status }))),
+    );
+    const { QueryClient } = await import("@tanstack/react-query");
+    const { sessionQuery } = await import("./session");
+    const client = new QueryClient();
+    try {
+      const check = client.query({ ...sessionQuery, retry: false });
+      if (outcome === null) await expect(check).resolves.toBeNull();
+      else await expect(check).rejects.toMatchObject(outcome);
+    } finally {
+      client.clear();
+    }
+  });
+
   it("distinguishes server unavailability from an absent session", async () => {
     await seed();
     vi.stubGlobal(

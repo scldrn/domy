@@ -75,6 +75,7 @@ export function SearchCombobox<T>({
         aria-invalid={invalid}
         autoFocus={autoFocus}
         className="w-full"
+        data-ready={!results.isFetching && results.data !== undefined ? "" : undefined}
       />
       <ComboboxContent>
         <ComboboxEmpty>{results.isFetching ? "Buscando…" : emptyText}</ComboboxEmpty>

@@ -1093,7 +1093,7 @@ remain separate and unauthorized/pending.
 
 ## Phase 40: Convergence
 
-- [ ] T131 HIGH Investigate and deterministically reproduce the distinct first-attempt server-recovery failure in `apps/web/tests/e2e/courier-offline.spec.ts:191`, post-merge CI 39071328672 at `f4f124d`: `openStop` waits for the delivery-stop link at caller line 222 until the unchanged 30-second timeout (89 first-attempt passes/one flaky). Establish test navigation readiness versus an application/session/synchronization defect with controlled real transport ordering, built app, PostgreSQL and service worker before selecting the smallest correction. Align the plan with demonstrated evidence; preserve the unavailable-server scenario, cached route, saved pickup, automatic recovery, pending-count assertions, subsequent delivery, full axe scan and every deadline/retry/worker policy. Retain RED evidence, repeat focused cases, all four gates and scoped convergence. Do not infer T130's overlay cause, force clicks, hide notifications, mock successful responses or rerun until green. Historical CI uploaded no trace artifact; its exact scheduling and a browser crash are not proven. Only local investigation/correction is authorized; commit/push/PR, merge and feature-wide polish require separate approval (FR-018/FR-020/FR-022, US2/AC4, T043/T044, Constitution VI/VII and quality gates; partial).
+- [X] T131 HIGH Investigate and deterministically reproduce the distinct first-attempt server-recovery failure in `apps/web/tests/e2e/courier-offline.spec.ts:191`, post-merge CI 39071328672 at `f4f124d`: `openStop` waits for the delivery-stop link at caller line 222 until the unchanged 30-second timeout (89 first-attempt passes/one flaky). Establish test navigation readiness versus an application/session/synchronization defect with controlled real transport ordering, built app, PostgreSQL and service worker before selecting the smallest correction. Align the plan with demonstrated evidence; preserve the unavailable-server scenario, cached route, saved pickup, automatic recovery, pending-count assertions, subsequent delivery, full axe scan and every deadline/retry/worker policy. Retain RED evidence, repeat focused cases, all four gates and scoped convergence. Do not infer T130's overlay cause, force clicks, hide notifications, mock successful responses or rerun until green. Historical CI uploaded no trace artifact; its exact scheduling and a browser crash are not proven. Only local investigation/correction is authorized; commit/push/PR, merge and feature-wide polish require separate approval (FR-018/FR-020/FR-022, US2/AC4, T043/T044, Constitution VI/VII and quality gates; partial).
 
 T131 investigation checkpoint (2026-10-17, NOT completion): original case passes ten
 repetitions (39.8 seconds) and ten under temporary 4× Chromium CPU throttling (48.8
@@ -1167,3 +1167,54 @@ no causal patch, feature-wide polish or physical-validation completion is author
 
 - [ ] T134 CRITICAL Preserve first-acknowledged proof-photo evidence on retry. Reproduce IV-31 with PostgreSQL and private S3 storage: a different body under an already uploaded UUID currently overwrites bytes and arrival metadata. Align the immutable upload/replay contract, then add same/different-body, concurrent-upload, lost-response, storage/metadata failure and retention regressions before implementation. Preserve upload-after-record ordering and authorization; do not confuse this reproduced overwrite with T133's separate access-lifecycle question (FR-023, Constitution II/IV; contradicts).
 - [ ] T135 HIGH Keep an existing courier-account link when the owner edits an account before courier query readiness or while its linked courier is inactive. Reproduce IV-26 first in the browser with a held real GET: opening before load and saving afterward currently unlinks it (200). Wait for authoritative initialization or preserve untouched link intent, show failed loads, and distinguish deliberate unlink/relink from missing list data. Cover lost responses with 001 T132 without duplicating its account-action work (FR-002, T094; contradicts).
+
+T131 local closure (2026-10-19 UTC): PR #30 final-head CI `39197282004` at
+`682bc97` reproduces the recovery failure (91 first-attempt passes/one flaky);
+it is NOT a clean merge gate. Official restricted artifact `12163321382` retains
+the first-failure trace, privately downloaded under `.git/t131-ci-39197282004/`.
+No repeated CI replaces it. A session GET stays unfinished across the native
+offline/online transition while records/snapshot recover. Main remains `321ef93`;
+the correction starts independently on `003-fix-session-recovery-readiness`.
+
+A controlled actual-response gate demonstrates the navigation dependency. The first
+probe passed after releasing the session before delivery; it was not a correction.
+Holding it through cached work produces a missing-route RED (6.3 seconds) and three
+delivery-navigation failures at the unchanged 30-second test limit. All three
+repetitions reached the held request: an intermediate suspicion of a setup timeout
+was corrected after inspecting the complete report. Evidence remains privately in
+`.git/t131-session-navigation-red/` and `.git/t131-session-interrupt-reproduction/`.
+Unit RED: three failed/11 passed (110 ms), before runtime changes.
+
+The shared session read uses native AbortController with Query cancellation/offline,
+handles interrupted response bodies and removes listeners in finally. This activates
+the existing validated cached fallback, not a new timeout, expiry or permission rule.
+The original browser's underlying reason for leaving HTTP pending is not claimed
+reconstructed. The permanent browser regression keeps a real native response held
+through cached route/stop/delivery navigation, then releases it and verifies empty
+pending/final completed-route state; the original 503 case and all axe scans remain.
+Install its session gate before removing the 503 interception to exclude an
+uncontrolled recovered request from the fixture's registration gap.
+
+The first implementation passes 13/14 auth cases; a fresh-signal assertion initially
+reads the previous mock signal because mockResolvedValueOnce bypasses its recorder.
+Recording the actual next signal corrects that setup without weakening cleanup.
+Native Query cancellation adds another case. Focused auth/sync/store: 44 passed;
+original/new recovery journeys: 6/6 (25.1 seconds). Check catches void/callback
+conventions and a deprecated predicate; public CancelledError and established
+undefined resolvers correct them, without rule suppression.
+
+Final local gates pass: check (zero warnings/errors), 955 tests (242/512/201;
+server 101.91 seconds), 92 first-attempt e2e (5.1 minutes), build and actual service
+worker. Expected negative-auth diagnostics remain visible. No workflow, deadline,
+retry, worker, dependency, migration, server or synchronization-queue change.
+
+Scoped convergence covers eight requirement/SC references, six US2 scenarios, four
+decisions, T131/T043/T044/T121/T132 regression obligations and all nine principles:
+zero new findings in the corrected slice, not global convergence. Assessment leaves
+tasks byte-identical at SHA-256
+`2d6a2cde7b194140ef1a80b9d9dc4719d7e038c41274e8bda7d6f77c96e9ac71`;
+this subsequent tracking closes T131 locally. Reviewer checklists stay read-only,
+16/16 and 48/48. No converge hooks; optional commit hooks remain disabled.
+Publication is authorized; actual clean latest-head CI/review remain required before
+squash. PR #30 stays held until this correction merges, its branch is reconciled
+and its own final head passes cleanly. No physical/privacy/account/global sign-off.

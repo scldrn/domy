@@ -1,5 +1,5 @@
 import { userRole } from "@domy/domain";
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, type QueryFunctionContext } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   courierDatabase,
@@ -24,11 +24,12 @@ const networkError = new ApiError(0, {
   message: "No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.",
 });
 
-async function authRequest(path: string, body?: unknown): Promise<Response> {
+async function authRequest(path: string, body?: unknown, signal?: AbortSignal): Promise<Response> {
   try {
     const response = await fetch(`/api/auth/${path}`, {
       method: body === undefined ? "GET" : "POST",
       credentials: "include",
+      ...(signal && { signal }),
       ...(body !== undefined && {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
@@ -42,41 +43,60 @@ async function authRequest(path: string, body?: unknown): Promise<Response> {
 }
 
 /** The signed-in user, or null. */
-async function getSession(): Promise<SessionUser | null> {
-  const response = await authRequest("get-session");
-  if (response.status === 401) return null;
-  if (!response.ok)
-    throw new ApiError(response.status, {
-      code:
-        response.status >= 500 || [408, 429].includes(response.status)
-          ? "session_unavailable"
-          : "session_refused",
-      message:
-        "No pudimos verificar tu sesión con el servidor. Tus datos siguen guardados; intenta de nuevo.",
-    });
-  const json: unknown = await response.json();
-  if (json === null) return null;
-  const parsed = sessionBody.safeParse(json);
-  if (!parsed.success)
-    throw new ApiError(502, {
-      code: "invalid_session",
-      message: "No pudimos verificar tu sesión. Intenta de nuevo.",
-    });
-  const { user, session } = parsed.data;
-  if (user.role === "courier" && session) {
-    const db = await courierDatabase();
-    const tx = db.transaction("meta", "readwrite");
-    const value = await tx.store.get("current");
-    const parsedMeta = value ? courierMeta.safeParse(value) : null;
-    const meta = parsedMeta?.success ? parsedMeta.data : null;
-    if (meta?.userId === user.id)
-      await tx.store.put(
-        { ...meta, sessionStatus: "active", sessionExpiresAt: session.expiresAt },
-        "current",
-      );
-    await tx.done;
+async function getSession({ signal }: QueryFunctionContext): Promise<SessionUser | null> {
+  // 003 T131/R13: a connection lost during verification must release cached navigation,
+  // not leave every loader awaiting the same unresolved Query promise. Mutations are untouched.
+  const controller = new AbortController();
+  const abort = () => {
+    controller.abort();
+  };
+  signal.addEventListener("abort", abort, { once: true });
+  window.addEventListener("offline", abort, { once: true });
+  if (signal.aborted || !navigator.onLine) abort();
+  try {
+    const response = await authRequest("get-session", undefined, controller.signal);
+    if (response.status === 401) return null;
+    if (!response.ok)
+      throw new ApiError(response.status, {
+        code:
+          response.status >= 500 || [408, 429].includes(response.status)
+            ? "session_unavailable"
+            : "session_refused",
+        message:
+          "No pudimos verificar tu sesión con el servidor. Tus datos siguen guardados; intenta de nuevo.",
+      });
+    const json: unknown = await response.json();
+    if (json === null) return null;
+    const parsed = sessionBody.safeParse(json);
+    if (!parsed.success)
+      throw new ApiError(502, {
+        code: "invalid_session",
+        message: "No pudimos verificar tu sesión. Intenta de nuevo.",
+      });
+    const { user, session } = parsed.data;
+    if (user.role === "courier" && session) {
+      const db = await courierDatabase();
+      const tx = db.transaction("meta", "readwrite");
+      const value = await tx.store.get("current");
+      const parsedMeta = value ? courierMeta.safeParse(value) : null;
+      const meta = parsedMeta?.success ? parsedMeta.data : null;
+      if (meta?.userId === user.id)
+        await tx.store.put(
+          { ...meta, sessionStatus: "active", sessionExpiresAt: session.expiresAt },
+          "current",
+        );
+      await tx.done;
+    }
+    return user;
+  } catch (error) {
+    // Fetch may already have returned headers when its body is interrupted.
+    if (controller.signal.aborted && error instanceof DOMException && error.name === "AbortError")
+      throw networkError;
+    throw error;
+  } finally {
+    signal.removeEventListener("abort", abort);
+    window.removeEventListener("offline", abort);
   }
-  return user;
 }
 
 export const sessionQuery = queryOptions({
