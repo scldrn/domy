@@ -263,6 +263,17 @@ npm registry on 2026-09-30 and again on 2026-10-14, after feature 002 shipped (R
 
 ## R15. Testing
 
+- **T136 local-transport refinement (2026-10-19 UTC)**: use literal IPv4 loopback
+  consistently for the local browser/API harness, including cookie and native auth
+  origins, rather than allowing OS hostname/address-family delays to consume an
+  application assertion's budget. The retained trace and controlled native resolver
+  probe establish a transport vulnerability and a resolver-independent path, not the
+  exact historical native event. A permanent hostname-refusal control and configured
+  APIRequestContext regression precede the configuration edit. Retain the built app,
+  real PostgreSQL/storage, service worker, every scenario/limit and latest-head CI.
+  Alternatives rejected: longer polls/retries, hostname exceptions in auth, replacing
+  real responses, custom DNS/HTTP agents, dependency upgrades without causal evidence.
+
 - **Decision**:
   - unit tests for `resolveCourierRecord`, the day summary, and the extended route and flag
     rules (domain, test-first);

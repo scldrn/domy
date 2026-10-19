@@ -66,7 +66,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api": `http://localhost:${process.env["API_PORT"] ?? "3000"}`,
+      // T136: local API transport must not consume assertion budgets resolving a hostname.
+      "/api": `http://127.0.0.1:${process.env["API_PORT"] ?? "3000"}`,
     },
   },
 });

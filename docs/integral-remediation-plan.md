@@ -9,13 +9,16 @@ started; not a readiness certificate.
 
 ## Objective and scope
 
-Resolve every actionable finding IV-01–IV-34 in
+Resolve every actionable finding IV-01–IV-37 in
 [the consolidated audit](integral-verification.md), finish the approved 001–004 scope,
 retain historical regressions and prove operational readiness. The planning baseline
 had **76 open Spec Kit tasks**: 22 in 001, 2 in 002, 17 in 003 and 35 in 004.
-After local T141 completion (2026-10-19 UTC), **75 remain open**: 21/2/17/35.
-T141 is verified locally, not yet committed or published; the mapping below preserves
-the full original queue, including this completed first task.
+T141 merged via PR #29 as `321ef93`, with clean prior/post-merge CI, leaving 75.
+New 003 T136 adds one transport-verification task: this branch tracks **76 open**
+(21/2/18/35). The separate unmerged account checkpoint `0504631` preserves two
+additional security findings IV-35/T150 and IV-36/T151, so **78 known program tasks**
+remain open across the current branch and that preserved checkpoint. No account task
+was checked off after its failed full browser gate. The mapping preserves the queue.
 Checked historical tasks are regression obligations, not work to delete or rebuild.
 
 This is the project-level execution/dependency plan, not a new feature or a substitute
@@ -48,16 +51,16 @@ Capacity tests retain the approved native isolated execution phase.
 
 | Gate | Recommendation / required evidence | Blocks only |
 | --- | --- | --- |
-| D1 CSV contract | Recommend spreadsheet-safe CSV, with documented text transformations and intact numeric COP values; confirm versus exact-text CSV plus XLSX for viewing. Test all formula-leading/control/quote/newline cases and actual supported spreadsheet behavior | Export serialization and final operational exports |
-| D2 Courier photo access | Recommend honoring current 003 FR-036: own photos of work still present in the courier app. Define an enforceable server rule for active route/held packages and expiring access; no claim of a reproduced cache leak | Access-lifecycle correction and final photo/security acceptance, not immutable upload research |
+| D1 CSV contract | Owner confirmed spreadsheet-safe CSV (2026-10-19): neutralize formula-capable text and document the transformation, keeping numeric COP/date semantics. Test formula-leading/control/quote/newline cases and actual supported spreadsheet behavior | Implementation/verification of exports, not another scope choice |
+| D2 Courier photo access | Owner confirmed current 003 FR-036 (2026-10-19): own photos of work still present in the app. Define its enforceable server boundary and test expiry/current route/held work; no reproduced cache leak is claimed | Implementation/verification of access lifecycle, not another scope choice or immutable-upload research |
 | D3 Numeric representation | Decide explicit representable per-field and aggregate bounds across SQL/domain/JSON/UI. Compare retaining int32 fields with validated limits and wider sums against an additive integer-storage migration. No arbitrary business cap, silent truncation or unsafe Number conversion | Monetary implementation and related response contract changes |
 | D4 Auth transaction spike | Prove a native transaction-scoped Better Auth/Drizzle path containing guards, credentials/sessions, audit and replay receipt. `transaction:true` or an ordinary after-hook alone is not proof. Error Responses must cause rollback when appropriate | Implementation-ready auth atomicity/replay design |
 | D5 Immutable upload spike | Prove conditional object creation capability on test storage and the selected provider, or a DB-row-serialized sole writer with recoverable finalization. Test object-success/DB-failure and interruption. PostgreSQL and S3 do not share a transaction | Upload implementation design and any justified schema additions |
 | D6 Existing data | Determine whether any real operational data exists before deployment migration/backfill/repair. Audit proved failure mechanisms, not that production rows are corrupted. Reconciliation is read-only first; never fabricate old events or silently “repair” history | Data-changing migration/backfill/repair execution |
 | D7 004 alignment | Reconcile finalized 003 custody/reverts/photos, safe money, settings/replay, token backfill, public worker/cache behavior and trusted proxy topology. Private merchant URLs included in messages must actually work before notification UI is released | 004 implementation after artifact alignment/analyze |
 
-D1/D2 were asked explicitly; an approval to start work is not treated as choosing an
-unanswered alternative. D3–D7 have proposed investigations, not certified solutions.
+D1/D2 are explicitly resolved by the owner's answers, not inferred from approval to
+start. Their implementation/verification remains open. D3–D7 have proposed investigations, not certified solutions.
 Independent read-only research, regression preparation and unaffected fixes continue.
 An unresolved gate prevents implementation of that design, not the whole program.
 
@@ -70,7 +73,7 @@ an order in which every intermediate head is compatible and passes all gates.
 
 | Slice | Owning tasks | Dependency and deliverable | Exit evidence |
 | --- | --- | --- | --- |
-| S00 Baseline reliability and traceability | 001 T141; 002 T064; 003 T131 | Start here: preserve both distinct failure records, diagnose keyboard highlight with retained trace and controlled real responses; retain T131 as unresolved until causal evidence exists. Phase-qualify duplicate historical IDs, correct present-tense summaries | Deterministic RED/mechanism before any fix; exact keyboard/offline/axe journeys retained. A later pass alone cannot close either investigation |
+| S00 Baseline reliability and traceability | 001 T141; 002 T064; 003 T131/T136 | T141 is merged. T136 isolates the newly observed summary-poll transport failure before resuming account publication; retain T131's distinct navigation investigation until causal evidence exists. Phase-qualify duplicate historical IDs and correct present-tense summaries | Deterministic RED/mechanism before any fix; exact keyboard/offline/axe journeys retained. A later pass alone cannot close an investigation |
 | S01 Auth surface and input/lockout | 001 T130/T139/T146 | Inventory every delegated plugin mutation, deny or constrain unused bypass paths without inventing permissions. Validate unknown auth/cursor input. Serialize last-owner invariant across different target owners and lockout counters | Real PG: sole owner, two-owner/mixed ban-demotion, link-role races, five simultaneous failures, malformed inputs, same-origin/CSRF and role matrix |
 | S02 Atomic account actions and link intent | 001 T131/T132; 003 T135 | D4 then auth transaction/receipt design, including client-generated creation identity and all credential/session consequences. Bound receipts to actor/operation/target and define changed-body replay. Fix account dialog authoritative initialization and inactive existing links | Audit/credential/session failure rolls back the defined mutation; A→B→A and concurrent retries are exactly once; held-GET browser save preserves untouched link |
 | S03 Master-data concurrency/replay | 001 T134/T135/T142/T148 | Shared transactional locking/diff/replay rules, not six divergent endpoint patches. Serialize cross-table name/alias identity checks and related pickup defaults. Replay accepted creations before later validity guards | Explicit lock-barrier PG tests: same-ID 201/200, truthful before/after chain, cross-table clashes rejected, day rollover replay and no false visible no-op edits |

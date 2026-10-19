@@ -126,7 +126,7 @@ export const test = base.extend<{
   // eslint-disable-next-line no-empty-pattern -- Playwright fixtures destructure their dependencies.
   setServerNow: async ({}, use) => {
     await use(async (instant) => {
-      await fetch(`http://localhost:${String(apiPort)}/api/test/clock`, {
+      await fetch(`http://127.0.0.1:${String(apiPort)}/api/test/clock`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ now: instant }),

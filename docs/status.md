@@ -11,13 +11,61 @@ a short-lived branch, so the specification and implementation of every feature l
 
 | Feature | State |
 | --- | --- |
-| 001 Shipment registration | Implemented on `main`; integral audit identifies additional conformance defects. T141 corrected/verified locally, not published; other T128–T149 remain open; historical convergence is not current global sign-off |
+| 001 Shipment registration | T141 merged via PR #29 as `321ef93`, with clean prior/post-merge CI. Account integrity corrections are preserved locally on `001-fix-account-integrity` (`0504631`), not merged or certified; no global sign-off |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Implemented on `main` (#4–#11), with 003 custody extensions; audit adds T063/T064 for aggregate overflow and traceability. Earlier test/review evidence remains in `specs/002-routes-dispatch/quickstart-results.md` |
 | 003 Courier app | Setup, foundations and US1–US7 are on `main`. [PR #28](https://github.com/scldrn/domy/pull/28) merged as `9006db3`; post-merge CI 39081231438 is clean (948 tests/90 first-attempt e2e). T131, final closure and physical T087/T093 remain pending; audit adds T133–T135 for photo lifecycle, immutable upload and account-link form readiness |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
+
+### Local transport verification — current checkpoint
+
+PR #29 merged as `321ef93adffae9fd4e6fead0aea18fc5fd81664b`, with the exact
+reviewed source tree. Prior CI `39186366408` and post-merge `39189769655` are clean:
+948 unit/integration tests, 91 first-attempt e2e, check/build and post-actions.
+[Post-merge receipt](https://github.com/scldrn/domy/pull/29#issuecomment-6258702861).
+Do not repeat the merge. Subsequent per-slice publication/conditional squash is
+authorized; production infrastructure/deployment remain excluded.
+
+Account work is preserved as **local, unpushed/unmerged** commit `0504631` on
+`001-fix-account-integrity`: T130/T131 plus newly reproduced native sensitive-log
+IV-35/T150 and recovery-path token IV-36/T151. It passed check/build and 1,027
+tests (271/562/194), but its full browser gate **failed: 90 passed / 1 failed,
+5.2 minutes** at `courier-day.spec.ts:123`. No account task is checked off. Its
+full receipts/artifacts remain on that branch; do not discard or call it verified.
+
+Current branch `003-fix-e2e-loopback` starts independently from clean main `321ef93`.
+New T136 preserves that distinct browser failure, privately retained in
+`.git/account-integrity-e2e-failure/`. Trace reports about 5,003 ms lookup/connect
+setup before an 18 ms response wait; browser sync succeeds. The installed native
+client and controlled resolver probe demonstrate an avoidable hostname dependency,
+not the exact historical OS scheduling. T136 aligns the real harness to literal
+loopback without changing app behavior or any scenario/deadline/retry/worker.
+The permanent native configured-transport regression first fails with localhost
+(18 ms; its hostname control correctly refuses), then configuration is corrected.
+Focused verification passes 23/23 (54.5 seconds); five repetitions of the two day
+and three harness cases pass 25/25 (39.4 seconds). Check and all 948 tests
+(242/512/194) pass. Check caught a needless async callback and then its contextual
+native-overload return type; direct rejecting `Promise<never>` fixes both without
+casts or disabled rules. Full e2e passes **92/92 first attempt, 5.2 minutes** and
+build passes. Scoped convergence checks 3 FRs, 3 US7 scenarios, 4 plan decisions,
+related regression obligations and all 9 principles: zero additional findings.
+Checklists remain byte-identical at 16/16 and 48/48. T136 stays unchecked pending
+actual latest-head CI. Publication is authorized and next; no remote result is
+claimed before it exists. No deadline/retry/worker/workflow/dependency/migration or
+production listener change. Preserve both original failure and permanent RED.
+Historical 003 T131's different navigation timeout remains open.
+
+This branch tracks 76 open tasks (21/2/18/35); the preserved account checkpoint
+contains two additional security tasks, giving **78 known open program tasks**.
+No task is silently removed because its implementation lives on another branch.
+After this verification slice is merged cleanly, rebase/resume the account checkpoint
+and repeat its full gates/convergence before its own PR. Do not combine the slices.
+
+Samuel confirmed spreadsheet-safe CSV and own/current-work-only courier photos.
+Those are resolved scope decisions, not further blockers or authorization to deploy.
+All checkpoints below are historical where they differ from this current section.
 
 ### Authorized remediation — execution checkpoint
 

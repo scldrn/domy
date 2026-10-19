@@ -8,6 +8,24 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
+**Estado actual (2026-10-19 UTC):** T141 está fusionada como `321ef93` (PR #29),
+con CI previo y posterior de main limpios: 948 pruebas y 91 e2e al primer intento.
+La corrección de cuentas quedó conservada en el commit local `0504631`, sin push ni
+fusión: pasan check/build y 1.027 pruebas, pero falló un e2e de «Mi día» (90/91).
+Se conserva su traza; no se declara una compuerta limpia ni se cierran esas tareas.
+La rama actual `003-fix-e2e-loopback` investiga/corrige solo ese transporte local,
+con regresión antes del cambio, sin ampliar plazos ni cambiar reintentos/escenarios.
+Su verificación local ya pasa: check, 948 pruebas, 92 e2e al primer intento y build;
+convergencia de la porción sin hallazgos nuevos. Falta verificar el CI remoto antes
+de cerrar T136 y fusionar; no se da por aprobado por anticipado.
+Hay 78 tareas conocidas pendientes, incluidas las nuevas de seguridad y verificación;
+el desglose entre esta rama y el checkpoint está en `docs/status.md`.
+
+Confirmaste CSV seguro para Excel y fotos propias solo del trabajo vigente en la app.
+No falta otra decisión de alcance; sí su implementación/verificación. La autorización
+de publicación por porción sigue condicionada a revisión y compuertas/CI limpios,
+sin despliegues ni cambios de infraestructura. Los párrafos siguientes son históricos.
+
 **Objetivo continuo autorizado (2026-10-19 UTC):** con «autorizo» aprobaste commit,
 push, PR y fusión squash de cada porción, únicamente con revisión, compuertas locales
 y CI limpio del último commit. Se retoma el objetivo de las 75 tareas; no incluye
@@ -143,6 +161,8 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-10-19 | ¿CSV seguro para Excel o texto exacto con XLSX para consulta? | «Sí, CSV seguro para Excel». Neutralizar texto ejecutable como fórmula y documentar la transformación, conservando valores numéricos y fechas; T128 sigue pendiente de implementar/verificar |
+| 2026-10-19 | ¿Fotos propias del trabajo vigente en la app o también todo el historial propio? | «Sí, solo trabajo vigente en la app». Mantener 003 FR-036 y definir su frontera aplicable en servidor; T133 sigue pendiente de implementar/verificar |
 | 2026-10-19 | ¿Autorizar commit, push, PR y squash por porción del plan integral, con revisión y compuertas locales/CI limpias? | «autorizo». Incluye cerrar T141 y continuar las 75 tareas por ramas pequeñas; excluye despliegues e infraestructura de producción y no resuelve las decisiones de CSV/fotos |
 | 2026-10-17 | ¿Incluir en la etapa integral terminar la 004 o cerrar solo lo desarrollado en 001–003? | «Incluir también la implementación de 004». La verificación/cierre abarca las cuatro funcionalidades; no equivale a una certificación de calidad ni a autorización de commit, push o fusión |
 | 2026-10-17 | ¿Fusionar la PR #28 diagnóstica mediante squash y verificar después el CI de main? | «Si». Autorizada fusión solo con CI limpio del último commit y verificación posterior; sin cerrar T131 ni comenzar el pulido |

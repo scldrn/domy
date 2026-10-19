@@ -273,6 +273,53 @@ screen.
 
 ## Cross-feature alignment
 
+### T136 local transport verification — 2026-10-19 UTC
+
+Branch `003-fix-e2e-loopback` starts from verified main `321ef93`. The separate
+account-integrity work is preserved as unmerged local commit `0504631`, not bundled
+here. Its complete browser gate retained 90 passes / one failure at
+`courier-day.spec.ts:123`, exhausting the unchanged five-second poll on its initial
+APIRequestContext summary GET. Trace timing reports approximately 5,003 ms in lookup/
+connection setup, then 18 ms waiting for the response; browser records/snapshot
+requests succeed on reconnection. Labels alone do not establish the precise native
+resolver/address-family event. Fast later lookup samples are not a correction.
+
+A disposable native Playwright APIRequestContext probe explicitly holds hostname
+resolution. While that request remains blocked, a literal loopback request completes
+in 3 ms without calling the resolver; releasing the barrier completes the hostname
+request. Installed Playwright uses dual-family lookup and at least a five-second
+address-family attempt timeout. Remove this avoidable local harness dependency, not
+the deadline or application's synchronization behavior.
+
+Keep the existing ports and replace only local harness hostnames with `127.0.0.1`:
+Playwright baseURL, setup APP_URL/cookie domain/readiness/authentication, direct clock
+and email-outbox requests, and Vite's API proxy. Bind Vite preview explicitly with its
+native `--host 127.0.0.1` arguments. The existing Hono listener already accepts IPv4
+loopback; do not change production/LAN binding or in-memory server unit-test origins.
+Do not rewrite Testcontainers-provided hosts. Cookies, native trusted-origin/recovery
+and browser calls keep the same web origin and API proxy; no origin exception,
+`changeOrigin`, security flag, service, dependency or new URL abstraction is needed.
+
+Before changing those configurations, add a permanent case to existing
+`apps/web/tests/e2e/harness.spec.ts`: temporarily refuse native hostname resolution
+in the test worker, first prove the refusal on a hostname control request, then fetch
+the actual configured app's anonymous session endpoint through native Playwright
+APIRequestContext. It must succeed without consulting the resolver. Restore the
+native function in `finally`. This is a transport fault regression, not a mocked
+successful API response. Retain its RED and the original full-gate trace privately.
+Repeat the day-summary journey and recovery/offline/native-push coverage, then all
+four gates and latest-head CI before merge. Preserve all scenarios, deadlines,
+workers, retries, timing/axe/custody/exactly-once assertions and trace retention.
+
+Clarify result: no new product ambiguity or owner choice; approved FR-020/FR-022/
+FR-037 and US7/AC1–AC3 remain unchanged. No data-model or external HTTP contract
+change/migration. Constitution check: I existing primitives/no abstraction; II–IV
+unchanged records/domain/transactions; V validated existing contracts; VI controlled
+RED and real infrastructure, unchanged limits; VII existing Spanish/mobile/axe;
+VIII one isolated branch, retained historical failures; IX native origins/cookies,
+private traces, no operational data. No complexity exception. T131's unrelated
+historical navigation failure and physical T087/T093 remain open.
+
 ### T131 unavailable-server recovery investigation — 2026-10-17
 
 Samuel authorized local investigation/correction after PR #27 merged as `f4f124d`.

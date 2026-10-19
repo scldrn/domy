@@ -28,6 +28,13 @@ competition. `pnpm test` and CI still collect every case; deadlines, performance
 all three invariant seeds and their 90 steps are unchanged. Do not use an isolated pass
 or cached ordering as a substitute for the complete gate.
 
+T136's local browser harness uses `127.0.0.1` consistently for web/API origins and
+cookies; global setup regenerates its disposable sessions. Its native transport
+regression first refuses a hostname lookup as a control, then requires the configured
+web/API request to succeed without resolution. The ordinary day-summary, emailed
+recovery, real worker/push and offline journeys retain all original assertions and
+budgets. This does not prove or close T131's distinct historical navigation timeout.
+
 US3's automated slice covers scenario 11 and completes scenario 8's exception journey in
 `apps/web/tests/e2e/courier-exceptions.spec.ts`, using the built service worker, actual
 PostgreSQL and private photo storage. The board projects `returnDecided` and uses one

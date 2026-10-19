@@ -43,7 +43,7 @@ async function waitFor(url: string): Promise<void> {
 }
 
 async function signIn(email: string): Promise<string> {
-  const response = await fetch(`http://localhost:${String(apiPort)}/api/auth/sign-in/email`, {
+  const response = await fetch(`http://127.0.0.1:${String(apiPort)}/api/auth/sign-in/email`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -61,7 +61,7 @@ async function saveStorageState(role: string, cookieHeader: string): Promise<voi
     return {
       name,
       value: value.join("="),
-      domain: "localhost",
+      domain: "127.0.0.1",
       path: "/",
       expires: -1,
       httpOnly: true,
@@ -104,7 +104,7 @@ export default async function globalSetup() {
     NODE_ENV: "test",
     DATABASE_URL: container.getConnectionUri(),
     BETTER_AUTH_SECRET: "e2e-secret-with-at-least-thirty-two-characters",
-    APP_URL: `http://localhost:${String(webPort)}`,
+    APP_URL: `http://127.0.0.1:${String(webPort)}`,
     API_PORT: String(apiPort),
     EMAIL_FROM: "Domy <no-reply@example.com>",
     DOMY_FAKE_NOW: "2026-10-01T15:00:00Z",
@@ -154,17 +154,21 @@ export default async function globalSetup() {
       cwd: serverDir,
       env: { ...process.env, ...env },
     }),
-    spawn("pnpm", ["exec", "vite", "preview", "--port", String(webPort), "--strictPort"], {
-      ...options,
-      cwd: webDir,
-      env: { ...process.env, API_PORT: String(apiPort) },
-    }),
+    spawn(
+      "pnpm",
+      ["exec", "vite", "preview", "--host", "127.0.0.1", "--port", String(webPort), "--strictPort"],
+      {
+        ...options,
+        cwd: webDir,
+        env: { ...process.env, API_PORT: String(apiPort) },
+      },
+    ),
   ];
-  await waitFor(`http://localhost:${String(apiPort)}/api/auth/get-session`);
-  await waitFor(`http://localhost:${String(webPort)}/`);
+  await waitFor(`http://127.0.0.1:${String(apiPort)}/api/auth/get-session`);
+  await waitFor(`http://127.0.0.1:${String(webPort)}/`);
 
   // The seeded owner sets a known password; then one account per role is created.
-  const api = `http://localhost:${String(apiPort)}/api/auth`;
+  const api = `http://127.0.0.1:${String(apiPort)}/api/auth`;
   const ownerSignIn = await fetch(`${api}/sign-in/email`, {
     method: "POST",
     headers: { "content-type": "application/json" },

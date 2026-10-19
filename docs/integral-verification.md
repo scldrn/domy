@@ -2,6 +2,34 @@
 
 ## Status and authority
 
+**Execution addendum (2026-10-19 UTC):** T141 merged via PR #29 as `321ef93`,
+with clean prior CI `39186366408` and post-merge `39189769655` (948 tests,
+91 first-attempt e2e, check/build/post-actions). The account-integrity work is
+preserved separately as local unmerged `0504631`: permanent RED→GREEN regressions,
+check/build and 1,027 passing tests, but a retained **90/91 failed browser gate**.
+No account task is closed and no global readiness is implied. Its two new security
+findings remain explicitly tracked on that checkpoint:
+
+| ID | Finding and owning task |
+| --- | --- |
+| IV-35 | Native credential-write failure logs raw SQL/parameters and leaves an orphan user. Reproduced with a disposable CHECK failure; 001 T150 and atomicity T131. Captured sensitive values are not printed by the permanent privacy assertion. |
+| IV-36 | The real native recovery callback returns 302 but its request-path log includes its bearer token. Permanent boolean privacy assertion fails before correction; 001 T151. The local checkpoint masks only the logged callback segment and preserves native recovery. |
+| IV-37 | Fresh full browser gate on that checkpoint: 90 pass / 1 fail in 5.2 minutes, `courier-day.spec.ts:123`. Its first APIRequestContext summary GET consumes the unchanged five-second poll; trace reports about 5,003 ms lookup/connect setup, then 18 ms response wait. Browser records/snapshot succeed. Private trace/context: `.git/account-integrity-e2e-failure/`. Fast later DNS samples are not a reproduction or fix. New 003 T136 is distinct from T131's older navigation timeout. |
+
+Current branch `003-fix-e2e-loopback` addresses T136 alone. A controlled native
+resolver barrier demonstrates that the hostname request remains blocked while literal
+loopback succeeds in 3 ms without resolution. The permanent configured-harness
+regression fails before the configuration change (18 ms) and subsequently passes
+(12 ms); all 23 selected auth/recovery/day/offline/native-push/harness tests pass
+(54.5 seconds). This removes the proven avoidable transport dependency, not a claim
+of exact historical OS scheduling. Fresh full gates pass: check, 948 tests,
+92 first-attempt e2e (5.2 minutes) and build. Scoped convergence has zero additional
+findings; latest-head CI remains required.
+The program has 78 known open tasks: 76 in this branch plus T150/T151 preserved on
+the separate account checkpoint. Samuel confirmed safe CSV and current-work-only
+photos; deployment/production infrastructure remain outside publication authority.
+Historical baseline findings and metrics below are preserved, not overwritten.
+
 **Status: NOT READY FOR GLOBAL SIGN-OFF.** Baseline source is
 `9006db32270338670e51c609c6b67ba2750fec83` (2026-10-17 in America/Bogota).
 This is one project-level verification/completion stage, not a claim that everything

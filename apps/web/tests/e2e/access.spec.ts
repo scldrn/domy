@@ -254,7 +254,7 @@ test("recovers access with the emailed link", async ({ ownerPage, browser }) => 
   await expect(page.getByText(/Si el correo está registrado, te enviamos un enlace/)).toBeVisible();
 
   const emails = (await (
-    await fetch(`http://localhost:${String(apiPort)}/api/test/emails`)
+    await fetch(`http://127.0.0.1:${String(apiPort)}/api/test/emails`)
   ).json()) as {
     items: { email: string; url: string }[];
   };

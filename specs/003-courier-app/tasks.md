@@ -1167,3 +1167,32 @@ no causal patch, feature-wide polish or physical-validation completion is author
 
 - [ ] T134 CRITICAL Preserve first-acknowledged proof-photo evidence on retry. Reproduce IV-31 with PostgreSQL and private S3 storage: a different body under an already uploaded UUID currently overwrites bytes and arrival metadata. Align the immutable upload/replay contract, then add same/different-body, concurrent-upload, lost-response, storage/metadata failure and retention regressions before implementation. Preserve upload-after-record ordering and authorization; do not confuse this reproduced overwrite with T133's separate access-lifecycle question (FR-023, Constitution II/IV; contradicts).
 - [ ] T135 HIGH Keep an existing courier-account link when the owner edits an account before courier query readiness or while its linked courier is inactive. Reproduce IV-26 first in the browser with a held real GET: opening before load and saving afterward currently unlinks it (200). Wait for authoritative initialization or preserve untouched link intent, show failed loads, and distinguish deliberate unlink/relink from missing list data. Cover lost responses with 001 T132 without duplicating its account-action work (FR-002, T094; contradicts).
+
+## Phase 44: Convergence
+
+- [ ] T136 HIGH Diagnose and deterministically reproduce the fresh full-gate `courier-day.spec.ts:123` timeout retained in ignored `.git/account-integrity-e2e-failure/`: 90 passed / 1 failed, 5.2 minutes. The APIRequestContext's first summary GET records roughly 5,003 ms of DNS lookup before an 18 ms response wait; browser records/snapshot requests succeed on reconnection. Establish the transport-versus-application cause with controlled native resolution/connection evidence before correction, preserving the same real built app, PostgreSQL, service worker, summary/offline/correction/axe checks and all deadlines/retries/workers. Do not equate this with unresolved T131's different navigation timeout, infer a fix from later fast DNS samples, print trace cookies/tokens or replace the failure with an unexplained green rerun. Align the plan before implementation and verify all gates/latest-head CI (FR-020/FR-022, US7/AC1–AC3, Constitution VI; partial).
+
+T136 local verification (2026-10-19 UTC, remote verification still required): the
+permanent native DNS-refusal control passes while the configured localhost request
+fails (one failed, 18 ms); trace/context remain in ignored `.git/t136-loopback-red/`.
+Coherent literal loopback for origins/cookies/preview/proxy fixes that regression;
+23 selected recovery/day/offline/push/harness cases pass in 54.5 seconds. Five
+repetitions of the two day and three harness cases pass 25/25 in 39.4 seconds.
+Check initially catches require-await and then contextual overloaded return inference
+in the fault callback; a directly rejecting `Promise<never>` fixes both without casts
+or rule changes. Fresh check passes; full tests pass 948 (242/512/194; server
+140.33 seconds); full e2e passes 92/92 first attempt in 5.2 minutes; build passes.
+Expected negative-password diagnostics remain visible. No timeout, worker, retry,
+workflow, dependency, migration, production listener or application behavior changes.
+
+Scoped convergence assesses FR-020/FR-022/FR-037, US7/AC1–AC3, four transport/
+native-origin/persistence/unchanged-policy decisions, T136 and related regression
+obligations T043/T044/T078/T121/T131/T132, and all nine principles. Zero new findings;
+existing unresolved T131 and physical/polish tasks are not duplicated or closed.
+The assessment itself leaves this file byte-identical at SHA-256
+`6b6302d8bff2a57695434d7d05ae32820deb335c2fc1a8489445fc63d1246262`;
+this note is subsequent implementation tracking. Reviewer checklists stay unchanged
+at 16/16 and 48/48. No convergence hooks exist; optional commit hooks are not executed
+(autocommit disabled). T136 remains unchecked until authorized publication and actual
+latest-head CI inspection. Its PR timeline must preserve source/tree/base, clean
+first-attempt outcomes and post-actions before squash; no global sign-off is claimed.
