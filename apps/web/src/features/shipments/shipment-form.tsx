@@ -14,7 +14,7 @@ import {
 } from "@domy/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState, type ComponentProps } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentProps } from "react";
 import { Controller, FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { SegmentedControl } from "@/components/segmented-control";
@@ -91,6 +91,14 @@ export function ShipmentForm({ shipment }: { shipment?: Shipment }) {
     saveDraft(values);
   }, [values, saveDraft]);
   const place = pricingNeighborhood(values);
+  const initialPlace = useMemo(
+    () => (shipment ? pricingNeighborhood(fromShipment(shipment)) : null),
+    [shipment],
+  );
+  const pricingInputsChanged =
+    !shipment ||
+    (place?.id ?? null) !== (initialPlace?.id ?? null) ||
+    values.serviceLevel !== shipment.serviceLevel;
 
   const quote = useQuery({
     queryKey: ["fee-quote", values.merchant?.id, values.kind, place?.id, values.serviceLevel],
@@ -108,21 +116,23 @@ export function ShipmentForm({ shipment }: { shipment?: Shipment }) {
   const needsManualFee = values.kind === "errand" || (quote.data?.needsManualFee ?? false);
 
   // Editing: a new rate zone or service level discards an earlier override (US3 scenario 5).
+  // T147: Non-pricing edits (e.g. instructions, phone) preserve historical fee and override.
   const rateZoneId = quote.data?.rateZone?.id;
   useEffect(() => {
-    if (!shipment || rateZoneId === undefined) return;
+    if (!shipment || !pricingInputsChanged || rateZoneId === undefined) return;
     if (rateZoneId !== shipment.rateZone?.id || values.serviceLevel !== shipment.serviceLevel) {
       setValue("feeOverridden", false);
       setValue("feeOverrideReason", "");
     }
-  }, [shipment, rateZoneId, values.serviceLevel, setValue]);
+  }, [shipment, pricingInputsChanged, rateZoneId, values.serviceLevel, setValue]);
 
   // The fee follows the rate card until the dispatcher overrides it.
   useEffect(() => {
+    if (!pricingInputsChanged) return;
     if (!values.feeOverridden && !needsManualFee && calculatedFee !== null) {
       setValue("fee", calculatedFee);
     }
-  }, [calculatedFee, needsManualFee, values.feeOverridden, setValue]);
+  }, [pricingInputsChanged, calculatedFee, needsManualFee, values.feeOverridden, setValue]);
 
   const carriers = useQuery({
     queryKey: ["carriers"],

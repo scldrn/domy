@@ -1,7 +1,7 @@
 import type { Shipment, ShipmentDetail } from "@domy/domain";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { rateCardEntries, shipments } from "../src/db/schema/index.ts";
+import { neighborhoods, rateCardEntries, shipments } from "../src/db/schema/index.ts";
 import { createTestApp } from "./setup/app.ts";
 import { placeOnRoute } from "./setup/routes.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
@@ -155,6 +155,51 @@ describe("PATCH /api/shipments/:id", () => {
     const shipment = await register({ merchantReference: "PED-1" });
     const updated = await edited(shipment, { recipientNeighborhoodId: catalog.place.itagui });
     expect(updated).toMatchObject({ fee: 15000, merchantReference: "PED-1" });
+  });
+
+  it("preserves historical fee and rate-zone snapshots on non-pricing edits (T147)", async () => {
+    const shipment = await register({
+      instructions: "Timbre 101",
+      fee: 12000,
+      feeOverrideReason: "Descuento inicial",
+    });
+    expect(shipment.fee).toBe(12000);
+    expect(shipment.calculatedFee).toBe(13000);
+    expect(shipment.rateZone?.id).toBe(catalog.zone.medellin);
+
+    // 1. Move the neighborhood to another rate zone in the catalog.
+    await database.db
+      .update(neighborhoods)
+      .set({ rateZoneId: catalog.zone.belloItagui })
+      .where(eq(neighborhoods.id, catalog.place.laureles));
+
+    // 2. Also add a new rate card entry with higher rate.
+    await database.db.insert(rateCardEntries).values({
+      id: crypto.randomUUID(),
+      kind: "zone_rate",
+      amount: 19000,
+      rateZoneId: catalog.zone.belloItagui,
+      effectiveFrom: new Date("2026-10-01T14:00:00Z"),
+      createdBy: owner.user.id,
+    });
+
+    // 3. Edit ONLY instructions.
+    const updated = await edited(shipment, { instructions: "Dejar en portería" });
+
+    // Assert: snapshots must remain completely intact.
+    expect(updated.instructions).toBe("Dejar en portería");
+    expect(updated.fee).toBe(12000);
+    expect(updated.calculatedFee).toBe(13000);
+    expect(updated.feeOverrideReason).toBe("Descuento inicial");
+    expect(updated.rateZone?.id).toBe(catalog.zone.medellin);
+
+    // Assert audit: only instructions changed!
+    const { events } = await detail(shipment);
+    const event = events.find((e) => e.type === "updated");
+    expect(event).toBeDefined();
+    expect(event?.changes).toEqual({
+      instructions: ["Timbre 101", "Dejar en portería"],
+    });
   });
 
   it("refuses to edit or void a picked-up shipment (scenario 2)", async () => {

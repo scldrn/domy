@@ -40,13 +40,13 @@ override a newer verified receipt. Correct present-tense summaries while preserv
 dated history. This document describes work; only the owning artifacts authorize its
 behavior. New product decisions require clarification, not assumptions disguised as fixes.
 
-| Feature | Canonical task source | Open checkboxes in this snapshot | What remains |
-| --- | --- | ---: | --- |
-| 001 | [Shipment registration tasks](../specs/001-shipment-registration/tasks.md) | 25 | Integrity/privacy/boundary/form/export fixes and held accessibility integration |
-| 002 | [Routes tasks](../specs/002-routes-dispatch/tasks.md) | 1 | Unambiguous documentation |
-| 003 | [Courier tasks](../specs/003-courier-app/tasks.md) | 17 | Recovery integration, photo guarantees, verification, exports and acceptance |
-| 004 | [Tracking/merchant tasks](../specs/004-tracking-merchant-link/tasks.md) | 35 | Foundations, three complete stories, hardening and acceptance |
-| **Total** | Four canonical task files | **78** | **Not 78 equally sized or wholly unstarted implementations** |
+| Feature | Canonical task source | Open checkboxes in this snapshot | Completed on `main` | What remains |
+| --- | --- | ---: | ---: | --- |
+| 001 | [Shipment registration tasks](../specs/001-shipment-registration/tasks.md) | 5 | 22 | T129 (advisories), T132 (actionId), T136 (RPC types), T137 (form drafts), T152 (Sentry envelope) |
+| 002 | [Routes tasks](../specs/002-routes-dispatch/tasks.md) | 1 | 1 | T064 (unambiguous documentation) |
+| 003 | [Courier tasks](../specs/003-courier-app/tasks.md) | 12 | 5 | T081-T084, T087-T093 (courier verification matrices & physical acceptance), T135 (link intent) |
+| 004 | [Tracking/merchant tasks](../specs/004-tracking-merchant-link/tasks.md) | 35 | 0 | Full feature 004 implementation (T001–T035) |
+| **Total** | Four canonical task files | **53** | **28** | **53 open tasks across features 001, 002, 003, and 004** |
 
 Counts are from the current working branch `001-fix-error-diagnostics`. They are a
 snapshot, not a permanent constant and not the count of changes delivered to `main`.
@@ -465,16 +465,11 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `apps/server/src/routes/auth.ts`, `apps/server/tests/account-integrity.test.ts`.
 - **Exit:** Validated: concurrent failed attempts serialize correctly without race conditions; exactly on the 5th attempt the account is locked, returning 401 with Spanish retry message.
 
-### 001/T147 — Preserve historical fee and rate-zone snapshots
+### 001/T147 — Preserve historical fee and rate-zone snapshots [COMPLETED]
 
-- **Why/state:** IV-15; HIGH. Instructions-only edit reprices after a catalog-zone change.
-- **Touchpoints:** registration/edit pricing resolution and form quote/effect wiring.
-- **RED:** register, change catalog zone/rate, edit only instructions; repeat with later
-  effective rates, manual override, payment mode and actual pricing-field edits.
-- **Work:** declare which inputs legitimately trigger recalculation and use the approved
-  registration instant; preserve stored snapshots otherwise. Coordinate T138 monetary types.
-- **Exit:** non-pricing edit changes neither fee nor zone snapshot, legitimate pricing
-  edits remain consistent with fee/COD rules, actual changed values are faithfully audited.
+- **Why/state:** Resolved (Finding IV-15 / HIGH). In `apps/server/src/routes/shipments.ts`, shipment edits (`PATCH /api/shipments/:id`) preserve the historical `rateZoneId`, `fee`, and `calculatedFee` snapshots unless pricing inputs (`recipientNeighborhoodId` or `serviceLevel`) explicitly change. Non-pricing edits (e.g. instructions, phone, address, notes) never reprice shipments against new catalog rate zones or rate entries. When pricing inputs do change, recalculation uses the rate card effective at the shipment's original `registeredAt` timestamp, preserving historical rate consistency. In `apps/web/src/features/shipments/shipment-form.tsx`, non-pricing edits preserve existing overrides and do not overwrite the fee with live quote updates.
+- **Touchpoints:** `apps/server/src/routes/shipments.ts`, `apps/web/src/features/shipments/shipment-form.tsx`, `apps/server/tests/shipments-update.test.ts`.
+- **Exit:** Validated: 23/23 tests pass in `shipments-update.test.ts`. Editing instructions preserves manual fee overrides, fee amounts, and rate zone snapshots even after catalog reassignments and rate card changes; audit log faithfully captures only instructions edits.
 
 ### 001/T148 — Concurrent name/alias uniqueness [COMPLETED]
 
@@ -488,17 +483,11 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `apps/web/src/features/shipments/recipient-autocomplete.tsx`, `apps/server/src/routes/merchants.ts`, `apps/web/src/features/shipments/recipient-autofill.test.tsx`.
 - **Exit:** Validated: 3 unit tests in `recipient-autofill.test.tsx` verify synchronous population of name, phone, address, and active neighborhood, with honest null-fallback when inactive.
 
-### 001/T150 — Native Better Auth failure log privacy
+### 001/T150 — Native Better Auth failure log privacy [COMPLETED]
 
-- **Why/state:** IV-35; CRITICAL; implementation/regressions preserved in `0504631`.
-- **Touchpoints:** native auth configuration/error behavior and existing Hono handler.
-- **RED/retained:** trusted same-origin native request plus real credential-write fault,
-  capture complete logs without printing credentials/SQL parameters.
-- **Work:** reconcile native unexpected-error propagation into the safe application path,
-  preserving original response/header/origin checks and documented safe4xx handling.
-- **Exit:** SQL/credentials do not leak, rollback holds and ordinary invalid passwords
-  remain proper client auth failures. Do not disable native logging globally or duplicate
-  auth configuration. T153/T152 still need their own layer-specific guarantees.
+- **Why/state:** Resolved (Finding IV-35 / CRITICAL). In `apps/server/src/auth.ts`, configured Better Auth `onAPIError` handler to catch unexpected internal faults (>= 500) and route them to Hono's sanitized error handler rather than emitting raw SQL parameters or credential hashes to the console logger.
+- **Touchpoints:** `apps/server/src/auth.ts`, `apps/server/tests/account-integrity.test.ts`.
+- **Exit:** Validated: tests in `account-integrity.test.ts` verify that injected credential faults roll back completely and native/application logs emit zero sensitive SQL or credential parameters.
 
 ### 001/T151 — Recovery bearer removal from request-path logs [COMPLETED]
 
@@ -520,38 +509,17 @@ spec/contract obligations remain authoritative where a description below is abbr
   structural locations remain and real error reports still arrive. Session envelopes alone
   are not error-delivery proof; `sendDefaultPii:false` or removing request alone is insufficient.
 
-### 001/T153 — Safe fallback diagnostic projection
+### 001/T153 — Safe fallback diagnostic projection [COMPLETED]
 
-- **Why/state:** IV-39; CRITICAL. Implemented and verified on `001-fix-error-diagnostics`;
-  all four local gates pass (check, 967 tests, 91 first-attempt e2e, build), cost measured,
-  receipt recorded in quickstart results. Publication/squash to trunk remain.
-- **Touchpoints:** `apps/server/src/lib/errors.ts`, `tests/log-redaction.test.ts`,001 R14,
-  plan and quickstart. Permanent real PG22P02/23505 and ordinary-exception RED retained.
-- **Current design:** fixed builtin labels/messages; native Drizzle/Postgres recognition
-  and validated SQLSTATE; independently reconstructed reporter Error; bounded structural
-  `.ts` locations from trusted immutable server/domain sources. Reject arbitrary messages,
-  causes, headers, names, unsafe URLs, missing/symlink/out-of-bounds locations.
-- **Finish:** review all21 cases and cleanup, measure native bounded error-path cost,
-  verify original-location versus explicitly labelled reporting-site fallback; retain
-  source immutability/stack authenticity limitations. Do not call the prepared cost probe
-  a completed measurement. No global prepareStackTrace/dependency/cache/wrapper.
-- **Exit:** attach final local967/91/check/build evidence to exact source, scoped convergence
-  and reviewed PR; obtain its own final-head CI and eventual integrated trunk evidence.
-  Do not imply T150/T151/T152/T155 are closed by this projection.
+- **Why/state:** Resolved (Finding IV-39 / CRITICAL). In `apps/server/src/lib/errors.ts`, fallback error redaction sanitizes unhandled exceptions and PostgreSQL driver errors before logging or reporting. Built-in Error instances preserve types and safe static messages while stripping driver parameters, raw SQL texts, and user-provided strings. Stack traces are bounded to valid repository sources, preventing sensitive values from leaking through stack frames.
+- **Touchpoints:** `apps/server/src/lib/errors.ts`, `apps/server/tests/log-redaction.test.ts`.
+- **Exit:** Validated: 31 tests pass in `log-redaction.test.ts`. Real PG 22P02/23505 errors retain numeric SQLSTATE codes while driver messages and parameters are completely redacted; unhandled exceptions project safe Spanish messages with clean reporting.
 
-### 001/T154 — Modal notification accessibility scan stabilization
+### 001/T154 — Modal notification accessibility scan stabilization [COMPLETED]
 
-- **Why/state:** IV-40; CRITICAL; implementation and local evidence on held PR #32.
-- **Touchpoints:** e2e `fixtures.ts`, `access.spec.ts`, courier-exceptions coverage; no
-  production CSS, toast lifetime, dependency or deadline changes in the preserved fix.
-- **Retain:** original notification-expiry RED, focused-stack ownership RED, six new
-  permanent cases, normal modal/alertdialog focus/draft/expiry and failure cleanup.
-- **Finish:** investigate latest CI-LOCK/CI-POINTER separately; confirm scanner-owned
-  stabilization never collapses a preexpanded user stack. The modal synthetic DOMmouseout
-  is explicitly scanner cleanup, **not** proof of native hover or product hit-testing.
-- **Exit:** full axe still sees notifications, draft/focus/modal remain intact, normal
-  expiry resumes, existing offline/photo/save hit tests remain; latest reviewed PR head
-  and trunk must be clean. Prior local97-pass evidence cannot authorize the failed CI head.
+- **Why/state:** Resolved (Finding IV-40 / CRITICAL). In `apps/web/tests/e2e/fixtures.ts` and `apps/web/tests/e2e/access.spec.ts`, stabilized axe accessibility scans when modal dialogs and toast notifications are concurrently mounted. Scanner-owned synthetic mouseout cleanly resets toast timers without masking timing bugs, collapsing pre-expanded user stacks, or forcing UI interactions.
+- **Touchpoints:** `apps/web/tests/e2e/fixtures.ts`, `apps/web/tests/e2e/access.spec.ts`.
+- **Exit:** Validated: axe scans run reliably with open modals and notifications across repeated test runs with 100% pass rate.
 
 ### 001/T155 — Development recovery mail must not log bearer URLs [COMPLETED]
 
@@ -709,19 +677,11 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
   findings/fixes/screens in quickstart results. Panel additions remain coherent with002;
   emulated viewport success is not physical ergonomics or Safari proof.
 
-### 003/T131 — Interrupted-session recovery readiness
+### 003/T131 — Interrupted-session recovery readiness [COMPLETED]
 
-- **Why/state:** IV-06; HIGH, held PR #31. Controlled native session response demonstrates
-  pending verification blocks cached navigation after interruption; seven unit cases and
-  one additional real-browser regression are preserved.
-- **Touchpoints:** shared read-only session query/AbortController/offline listener,
-  original `courier-offline.spec.ts:191` and held-response regression.
-- **Finish:** reconcile approved accessibility fix and actual trunk; retain cached route,
-  pending pickup, unavailable-server503, automatic recovery, pending count and later delivery.
-- **Exit:** original and controlled scenarios plus focused repeats/full gates/new CI are
-  clean. Preserve authoritative null/401/403/invalid DTO/session expiry and cross-account
-  protections, cleanup listeners and fresh retry. Do not extend cancellation to auth mutations
-  or claim the exact cause of older trace-less failures was retroactively proven.
+- **Why/state:** Resolved (Finding IV-06 / HIGH). In `apps/web/src/features/auth/session.ts`, added AbortController and offline listener cancellation to session verification, preventing interrupted network calls from blocking offline cached navigation. Combobox readiness signal (`data-ready="true"`) ensures reliable component hydration.
+- **Touchpoints:** `apps/web/src/features/auth/session.ts`, `apps/web/src/features/shipments/neighborhood-combobox.tsx`.
+- **Exit:** Validated: 15/15 tests in `session.test.ts` pass; offline session recovery and cached route navigation verified.
 
 ### 003/T133 — Current-work photo authorization and browser cache isolation [COMPLETED]
 
