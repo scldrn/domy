@@ -1,7 +1,18 @@
+import {
+  accountChangeRefusal,
+  accountCreateInput,
+  accountRoleInput,
+  accountTargetInput,
+  accountUpdateInput,
+  passwordSignInInput,
+  type UserRole,
+} from "@domy/domain";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
+import type { z } from "zod";
 import type { AppEnv } from "../app.ts";
-import { couriers, users } from "../db/schema/index.ts";
+import { createAuth } from "../auth.ts";
+import { couriers, sessions, users } from "../db/schema/index.ts";
 import { recordAudit } from "../lib/audit.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
@@ -10,7 +21,7 @@ import { diffValues } from "../lib/master-data.ts";
 /**
  * The rules Better Auth does not have, around its endpoints (research R5): the per-account
  * lockout (FR-033), the last active owner (FR-032), and the audit of account changes
- * (FR-036). Everything else goes straight to Better Auth.
+ * (FR-036). R18/T130 exposes only the approved native HTTP paths below.
  */
 
 const maxFailures = 5;
@@ -29,66 +40,161 @@ function locked(until: Date): AppError {
 }
 
 /** The request's JSON body, leaving the original request intact for Better Auth. */
-async function bodyOf<T>(c: Context<AppEnv>): Promise<{ request: Request; body: Partial<T> }> {
+async function bodyOf<Schema extends z.ZodType>(
+  c: Context<AppEnv>,
+  schema: Schema,
+): Promise<{ request: Request; body: z.output<Schema> }> {
   const request = c.req.raw.clone();
-  const body = (await c.req.raw.json().catch(() => ({}))) as Partial<T>;
-  return { request, body };
+  const input: unknown = await c.req.json().catch(() => undefined);
+  const result = schema.safeParse(input);
+  if (!result.success) {
+    const fields: Record<string, string> = {};
+    for (const issue of result.error.issues) fields[issue.path.join(".") || "_"] ??= issue.message;
+    throw new AppError("invalid_request", {
+      message: "Revisa los datos de la cuenta e intenta de nuevo.",
+      fields,
+    });
+  }
+  return { request, body: result.data };
 }
 
-async function findUser(c: Context<AppEnv>, id: string | undefined) {
-  if (!id) return undefined;
-  const [user] = await c.get("db").select().from(users).where(eq(users.id, id));
-  return user;
+/** A native failing response must roll back before it can leave the transaction (R18). */
+class AuthResponseRollback extends Error {
+  readonly response: Response;
+  constructor(response: Response) {
+    super("Authentication request refused");
+    this.response = response;
+  }
 }
 
-/** True when no other active owner would remain without this user. */
-async function isLastOwner(c: Context<AppEnv>, userId: string): Promise<boolean> {
-  const [others] = await c
-    .get("db")
-    .select({ count: sql<number>`count(*)::int` })
-    .from(users)
-    .where(and(eq(users.role, "owner"), eq(users.banned, false), ne(users.id, userId)));
-  return (others?.count ?? 0) === 0;
-}
+type AccountOperation =
+  | { kind: "create"; email: string }
+  | { kind: "profile"; userId: string }
+  | { kind: "role"; userId: string; role: UserRole }
+  | { kind: "deactivate" | "reactivate" | "end_sessions"; userId: string };
 
-type AuditedChange = {
-  entityId: string;
-  action: "created" | "updated" | "deactivated" | "reactivated";
-  changes: Record<string, unknown>;
-} | null;
-
-/** Forwards to Better Auth and records the change when it succeeded. */
+/** T130/T131: native account writes, invariant facts and audit have one PG boundary. */
 async function forwardAudited(
   c: Context<AppEnv>,
   request: Request,
-  audit: (response: Response) => AuditedChange | Promise<AuditedChange>,
+  operation: AccountOperation,
 ): Promise<Response> {
-  const response = await c.get("auth").handler(request);
-  if (!response.ok) return response;
-  const event = await audit(response.clone());
-  if (event && Object.keys(event.changes).length > 0) {
-    await recordAudit(c.get("db"), {
-      entityType: "user",
-      ...event,
-      actorUserId: c.get("user").id,
-      occurredAt: c.get("clock")(),
+  try {
+    return await c.get("db").transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended('domy:account-administration', 0))`,
+      );
+      const auth = createAuth({ ...c.get("authConfig"), db: tx });
+      const actor = await auth.api.getSession({ headers: request.headers });
+      if (!actor || actor.user.banned === true) throw new AppError("unauthenticated");
+      if (actor.user.role !== "owner") throw new AppError("forbidden");
+
+      const [before] =
+        operation.kind === "create"
+          ? []
+          : await tx.select().from(users).where(eq(users.id, operation.userId)).for("update");
+      if (operation.kind !== "create" && !before) {
+        throw new AppError("not_found", { message: "No encontramos esa cuenta." });
+      }
+      if (before) {
+        const [otherOwner] = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(and(eq(users.role, "owner"), eq(users.banned, false), ne(users.id, before.id)))
+          .limit(1);
+        const [linked] = await tx
+          .select({ id: couriers.id })
+          .from(couriers)
+          .where(eq(couriers.userId, before.id))
+          .limit(1);
+        const refusal = accountChangeRefusal(
+          { role: before.role, isActive: !before.banned },
+          {
+            role: operation.kind === "role" ? operation.role : before.role,
+            isActive:
+              operation.kind === "deactivate"
+                ? false
+                : operation.kind === "reactivate"
+                  ? true
+                  : !before.banned,
+          },
+          { hasOtherActiveOwner: otherOwner !== undefined, hasCourierLink: linked !== undefined },
+        );
+        if (refusal) throw new AppError(refusal);
+      }
+      const previousSessions =
+        operation.kind === "end_sessions"
+          ? await tx
+              .select({ id: sessions.id })
+              .from(sessions)
+              .where(eq(sessions.userId, operation.userId))
+          : [];
+      const response = await auth.handler(request);
+      if (!response.ok) throw new AuthResponseRollback(response);
+
+      const [after] = await tx
+        .select()
+        .from(users)
+        .where(
+          operation.kind === "create"
+            ? eq(sql`lower(${users.email})`, operation.email.toLowerCase())
+            : eq(users.id, operation.userId),
+        );
+      if (!after) throw new Error("Successful account operation did not persist a user");
+      const changes: Record<string, unknown> = before
+        ? diffValues(
+            { name: before.name, email: before.email, role: before.role, isActive: !before.banned },
+            { name: after.name, email: after.email, role: after.role, isActive: !after.banned },
+          )
+        : { name: [null, after.name], email: [null, after.email], role: [null, after.role] };
+      if (operation.kind === "end_sessions") {
+        const remaining = await tx
+          .select({ id: sessions.id })
+          .from(sessions)
+          .where(eq(sessions.userId, operation.userId));
+        if (previousSessions.length !== remaining.length)
+          changes["sessions"] = [previousSessions.length, remaining.length];
+      }
+      if (Object.keys(changes).length > 0) {
+        await recordAudit(tx, {
+          entityType: "user",
+          entityId: after.id,
+          action: !before
+            ? "created"
+            : before.banned !== after.banned
+              ? after.banned
+                ? "deactivated"
+                : "reactivated"
+              : "updated",
+          changes,
+          actorUserId: actor.user.id,
+          occurredAt: c.get("clock")(),
+        });
+      }
+      return response;
     });
+  } catch (error) {
+    if (error instanceof AuthResponseRollback) return error.response;
+    throw error;
   }
-  return response;
 }
 
 export const authRoutes = new Hono<AppEnv>()
+  .use(async (c, next) => {
+    // R18/T130: Hono can decode a static path before dispatch. Only canonical ASCII
+    // auth paths are exposed; encoded callback query parameters remain untouched.
+    if (new URL(c.req.raw.url).pathname.includes("%")) throw new AppError("not_found");
+    await next();
+  })
   // Five consecutive failures lock password sign-in for 15 minutes; open sessions stay.
   .post("/sign-in/email", async (c) => {
-    const { request, body } = await bodyOf<{ email: string }>(c);
+    const { request, body } = await bodyOf(c, passwordSignInInput);
     const db = c.get("db");
     const now = c.get("clock")();
-    const [user] = body.email
-      ? await db
-          .select()
-          .from(users)
-          .where(eq(sql`lower(${users.email})`, body.email.trim().toLowerCase()))
-      : [];
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(sql`lower(${users.email})`, body.email.toLowerCase()));
     if (user?.lockedUntil && user.lockedUntil > now) throw locked(user.lockedUntil);
 
     const response = await c.get("auth").handler(request);
@@ -110,79 +216,37 @@ export const authRoutes = new Hono<AppEnv>()
     return response;
   })
   .post("/admin/create-user", requireRole("owner"), async (c) => {
-    const { request } = await bodyOf(c);
-    return forwardAudited(c, request, async (response) => {
-      const { user } = (await response.json()) as {
-        user: { id: string; name: string; email: string; role: string };
-      };
-      return {
-        entityId: user.id,
-        action: "created",
-        changes: { name: [null, user.name], email: [null, user.email], role: [null, user.role] },
-      };
-    });
+    const { request, body } = await bodyOf(c, accountCreateInput);
+    return forwardAudited(c, request, { kind: "create", email: body.email });
   })
   .post("/admin/update-user", requireRole("owner"), async (c) => {
-    const { request, body } = await bodyOf<{ userId: string; data: Record<string, unknown> }>(c);
-    const before = await findUser(c, body.userId);
-    return forwardAudited(c, request, async () => {
-      const after = await findUser(c, body.userId);
-      if (!before || !after) return null;
-      return {
-        entityId: after.id,
-        action: "updated",
-        changes: diffValues(
-          { name: before.name, email: before.email },
-          { name: after.name, email: after.email },
-        ),
-      };
-    });
+    const { request, body } = await bodyOf(c, accountUpdateInput);
+    return forwardAudited(c, request, { kind: "profile", userId: body.userId });
   })
-  // The last active owner can be neither demoted nor deactivated (FR-032).
   .post("/admin/set-role", requireRole("owner"), async (c) => {
-    const { request, body } = await bodyOf<{ userId: string; role: string }>(c);
-    const before = await findUser(c, body.userId);
-    if (before?.role === "owner" && body.role !== "owner" && (await isLastOwner(c, before.id))) {
-      throw new AppError("last_owner");
-    }
-    // A linked courier account keeps its role until it is unlinked, so an account with another
-    // role never sees a route (feature 003, FR-002).
-    if (before?.role === "courier" && body.role !== "courier") {
-      const [linked] = await c
-        .get("db")
-        .select({ id: couriers.id })
-        .from(couriers)
-        .where(eq(couriers.userId, before.id));
-      if (linked) throw new AppError("courier_account_linked");
-    }
-    return forwardAudited(c, request, () =>
-      before
-        ? {
-            entityId: before.id,
-            action: "updated",
-            changes: diffValues({ role: before.role }, { role: body.role }),
-          }
-        : null,
-    );
+    const { request, body } = await bodyOf(c, accountRoleInput);
+    return forwardAudited(c, request, { kind: "role", ...body });
   })
   .post("/admin/ban-user", requireRole("owner"), async (c) => {
-    const { request, body } = await bodyOf<{ userId: string }>(c);
-    const before = await findUser(c, body.userId);
-    if (before?.role === "owner" && !before.banned && (await isLastOwner(c, before.id))) {
-      throw new AppError("last_owner");
-    }
-    return forwardAudited(c, request, () =>
-      before && !before.banned
-        ? { entityId: before.id, action: "deactivated", changes: { isActive: [true, false] } }
-        : null,
-    );
+    const { request, body } = await bodyOf(c, accountTargetInput);
+    return forwardAudited(c, request, { kind: "deactivate", ...body });
   })
   .post("/admin/unban-user", requireRole("owner"), async (c) => {
-    const { request, body } = await bodyOf<{ userId: string }>(c);
-    const before = await findUser(c, body.userId);
-    return forwardAudited(c, request, () =>
-      before?.banned
-        ? { entityId: before.id, action: "reactivated", changes: { isActive: [false, true] } }
-        : null,
-    );
+    const { request, body } = await bodyOf(c, accountTargetInput);
+    return forwardAudited(c, request, { kind: "reactivate", ...body });
+  })
+  .post("/admin/revoke-user-sessions", requireRole("owner"), async (c) => {
+    const { request, body } = await bodyOf(c, accountTargetInput);
+    return forwardAudited(c, request, { kind: "end_sessions", ...body });
+  })
+  .get("/admin/list-users", requireRole("owner"), (c) => c.get("auth").handler(c.req.raw))
+  // Keep the native recovery callback as well as its form submission (FR-030).
+  .on("GET", ["/get-session", "/reset-password/:token"], (c) => c.get("auth").handler(c.req.raw))
+  .on(
+    "POST",
+    ["/sign-out", "/request-password-reset", "/reset-password", "/change-password"],
+    (c) => c.get("auth").handler(c.req.raw),
+  )
+  .all("*", () => {
+    throw new AppError("not_found");
   });

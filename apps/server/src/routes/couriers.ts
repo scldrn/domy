@@ -81,7 +81,8 @@ async function linkAccount(
   input: { userId: string; courierId: string | null },
   now: Date,
 ): Promise<AuditChange[]> {
-  const [user] = await tx.select().from(users).where(eq(users.id, input.userId));
+  // R18/T130: role changes lock this user too, before inspecting its courier link.
+  const [user] = await tx.select().from(users).where(eq(users.id, input.userId)).for("update");
   if (!user) throw new AppError("not_found", { message: "No encontramos esa cuenta." });
   // Couriers in a fixed order, as every action locks them, so two links never deadlock.
   const involved = await tx

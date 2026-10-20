@@ -5,7 +5,7 @@ import { requestId, type RequestIdVariables } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 import type { Logger } from "pino";
 import type { UserRole } from "@domy/domain";
-import type { Auth } from "./auth.ts";
+import { createAuth, type Auth, type AuthConfig } from "./auth.ts";
 import type { Db } from "./db/client.ts";
 import type { Clock } from "./lib/clock.ts";
 import type { PhotoStorage } from "./lib/storage.ts";
@@ -31,7 +31,7 @@ import { shipmentRoutes } from "./routes/shipments.ts";
 
 export type AppDeps = {
   db: Db;
-  auth: Auth;
+  authConfig: AuthConfig;
   clock: Clock;
   logger: Logger;
   /** The private bucket of the courier's photos (feature 003, research R6). */
@@ -48,6 +48,7 @@ export type AppDeps = {
 export type AppEnv = {
   Variables: RequestIdVariables &
     Omit<AppDeps, "webDist" | "setNow"> & {
+      auth: Auth;
       user: { id: string; name: string; role: UserRole };
       /** When the signed-in session ends; the courier app warns before it (feature 003, FR-003). */
       sessionExpiresAt: Date;
@@ -56,11 +57,13 @@ export type AppEnv = {
 };
 
 export function createApp(deps: AppDeps) {
+  const auth = createAuth({ ...deps.authConfig, db: deps.db });
   const app = new Hono<AppEnv>()
     .use(requestId())
     .use(async (c, next) => {
       c.set("db", deps.db);
-      c.set("auth", deps.auth);
+      c.set("auth", auth);
+      c.set("authConfig", deps.authConfig);
       c.set("clock", deps.clock);
       c.set("storage", deps.storage);
       c.set("push", deps.push ?? null);
@@ -117,7 +120,6 @@ export function createApp(deps: AppDeps) {
     )
     .onError(handleError)
     .route("/api/auth", authRoutes)
-    .on(["GET", "POST"], "/api/auth/*", (c) => deps.auth.handler(c.req.raw))
     .route("/api/shipments", shipmentRoutes)
     .route("/api/bulk", bulkRoutes)
     .route("/api/routes", routeRoutes)

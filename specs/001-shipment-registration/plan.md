@@ -1,5 +1,60 @@
 # Implementation Plan: Shipment Registration and Dispatch Board
 
+## Account integrity slice — 2026-10-19 UTC
+
+Branch `001-fix-account-integrity` starts from main `321ef93` after PR #29's verified
+squash tree. Its post-merge CI `39189769655` is verified clean; no next merge may
+bypass its own required clean verification. Filter: T130/T131/T150, research R18. Atomicity
+is a prerequisite of the owner-invariant guard, so T131 moves into the same first
+account slice instead of leaving a check outside its mutation transaction. Scoped
+review additionally reproduced IV-36, tracked separately as T151: request-path logs
+include the native password-recovery bearer token. Before changing the request logger,
+retain the failing real native callback test; log `/api/auth/reset-password/:token`
+for that callback path, matching the token-segment boundary case-insensitively and
+including percent-encoded spellings without logging their original content. Keep
+ordinary paths, request id/status/timing and omission of query strings. Do not mutate
+the request passed to the auth library or its redirect. This uses a local path
+expression in existing middleware, not a new logging wrapper. T132's
+web/server replay lifecycle, T139's remaining boundaries and T146 lockout stay open.
+
+Use `AuthConfig` data, the existing `createAuth` factory accepting `Executor`, and
+native `db.transaction`. `app.ts` creates the root auth once; `index.ts` and
+`tests/setup/app.ts` provide the original config. An administrative handler constructs
+auth from the exact transaction; do not clone closed-over callbacks or inject a new
+factory abstraction. Hold the shared account-admin advisory lock, revalidate actor,
+lock/read the target user, enforce last-owner/link-role invariants, call the native
+handler and audit actual committed values. Linking in `routes/couriers.ts` locks the
+same user before courier rows. Capture failing Responses only outside rollback.
+The pure last-owner/link-role decision lives once in
+`packages/domain/src/account-rules.ts` with unit tests; the server supplies the locked
+current/next role/activity and existence of another active owner/courier link. Use an
+existence query, not an unnecessarily narrowed owner-count aggregate.
+
+Replace generic unchecked auth body assertions with schema-driven input validation
+using shared account schemas in `packages/domain/src/schemas/account.ts`. Preserve
+the original Request for native cookies/origin/CSRF checks. `routes/auth.ts` exposes
+the explicit contract paths; remove `app.ts`'s unbounded native wildcard delegation.
+Preserve GET reset callback, ordinary bad credentials, recovery, fixed sessions and
+all legitimate owner actions. Native 4xx retain native status/body; unexpected faults
+use the existing Spanish generic error and sanitized logging, never raw SQL/credentials.
+Session-ending audit records a non-secret count change, not session tokens.
+
+Test first in `apps/server/tests/account-integrity.test.ts`, account-rule/schema tests and
+the existing auth/browser suites. Use real PG contention/fault barriers for two-owner
+demotion/ban, actor revocation, role/link races, and atomic account/credential/session/
+audit failure. Include unsupported/encoded paths, malformed bodies, allowed actions,
+true recovery callback and redaction. No mocked DB, sleeps, weakened assertions or
+changes to worker/retry/deadline policy. Preserve RED and run all four gates/converge.
+
+Scoped design Constitution Check: I native monolith/primitives, no added dependency or
+wrapper; II preserve existing action behavior, keep missing T132 replay explicitly open;
+III shared input schemas/roles, no duplicated business vocabulary; IV shared transaction
+and truthful audit; V runtime validation/inferred outputs; VI permanent RED before code
+and real PG; VII preserved Spanish feedback/keyboard/axe; VIII one branch, traceable
+tasks and immutable history; IX library-managed credentials and sanitized failures.
+No new constitutional exception, migration or complexity waiver. This checks the slice's
+design, not global implementation conformance; existing defects remain tracked.
+
 ## Integral remediation execution alignment — 2026-10-18 UTC
 
 The project-wide dependency/closure plan is

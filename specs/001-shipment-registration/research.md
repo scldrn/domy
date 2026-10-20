@@ -211,6 +211,11 @@ this research also fixes the project foundation that features 002–004 build on
 - **Decision**: pino structured JSON logs with a request id per request (Hono `requestId`
   middleware); Sentry for server and browser errors when `SENTRY_DSN` is set (decision #27).
   Logs never include secrets, passwords, or full recipient phone numbers.
+  IV-36/T151 additionally reproduces a native password-reset bearer token in the
+  request path. The request logger must use the callback route template instead
+  of that segment (including encoded/case variants), leaving the real native request
+  and redirect untouched. A real emailed callback regression fails before correction;
+  assert log privacy using booleans so failing tests do not print captured tokens.
 - **Rationale**: enough to diagnose production issues on a single VPS; PII kept out of logs
   (Constitution IX).
 - **Alternatives considered**: OpenTelemetry collector (unjustified extra process).
@@ -287,3 +292,44 @@ this research also fixes the project foundation that features 002–004 build on
   dependency for a test precondition; relying on an internal `always` mode not exposed
   by the installed public boolean prop; sleeps, extra time, retries, forced input or
   removing intended-selection assertions. No API/data-model/contract change is needed.
+
+## R18. Native account transaction boundary and sanitized failures (T130/T131/T150)
+
+- **Decision**: keep the existing Better Auth factory as the single policy/configuration
+  definition. Separate its original inputs into `AuthConfig`; accept `Executor` rather
+  than only `Db`. `createApp` constructs its root auth from config, and the admin route
+  constructs another native instance from the same config and its exact Drizzle `Tx`.
+  Do not inject a factory, wrap the auth API, mutate global auth or clone already-bound
+  callbacks from `auth.options`: password recovery closes over its original executor.
+- **Transaction**: acquire one transaction-scoped PostgreSQL advisory lock for account
+  administration, revalidate the owner after waiting, then lock/read the target user.
+  Last-owner/link-role guards, actual native mutation and audit share the transaction.
+  Courier linking locks its target user before courier rows, using the same row boundary
+  as role changes. No remote/user think time occurs inside a transaction.
+  The pure refusal rule is defined once in domain `account-rules.ts`; SQL supplies
+  locked state and existence facts, not a second independently defined business rule.
+- **Failure**: an unsuccessful native HTTP Response must leave the callback through a
+  private sentinel and be returned only after rollback. A selective native error hook
+  rethrows unexpected/5xx faults to Hono's sanitized error path, preserving known native
+  4xx responses. It must not print query parameters or suppress logging globally.
+- **Evidence**: a private disposable real-PostgreSQL spike proves nine capabilities:
+  audit-fault rollback of ban/sessions and user/credential creation; explicit Response
+  rollback; preserved native duplicate-email 400; credential/session-deletion failure
+  rollback; successful commit and real sign-in; nested savepoint rollback; two concurrent
+  auth instances whose writes satisfy distinct transaction-local SQL marker triggers.
+  It uses installed primitives, not database mocks. This is capability evidence, not
+  permanent application coverage or a claim that guards/replay are already corrected.
+- **New RED**: a trusted actual-app credential-write fault leaves an orphan user and
+  sends raw account INSERT/password-column parameters to the native library logger.
+  Captured values were observed in memory, never printed. A first relative probe got
+  `MISSING_OR_NULL_ORIGIN` before writing; it is a harness refusal, not app RED.
+- **Surface**: expose only the contract's native HTTP paths, including the actual emailed
+  GET reset callback. Generic admin update accepts name/email only; unsupported admin
+  and core mutation paths cannot bypass the guards through a wildcard delegate.
+- **Alternatives rejected**: `transaction:true` alone, queued after-hooks, a global auth
+  registry/factory abstraction, duplicated callbacks, raw SQL credentials, longer test
+  deadlines and unconditional error throwing that turns normal 4xx into 500.
+- **Boundaries**: no new table, migration, service or dependency. Native adapter's optional
+  transaction flag remains unnecessary; the outer executor supplies atomicity. T132's
+  complete client/server replay lifecycle and T139/T146's other boundary/lockout work
+  remain separate unfinished work, not silently declared satisfied by this slice.

@@ -70,6 +70,12 @@ const endpoints: [method: string, path: string, allowed: UserRole[]][] = [
   ["GET", "/api/audit-events", owner],
   ["GET", "/api/export/merchants?format=csv", owner],
   ["GET", "/api/auth/admin/list-users", owner],
+  ["POST", "/api/auth/admin/create-user", owner],
+  ["POST", "/api/auth/admin/update-user", owner],
+  ["POST", "/api/auth/admin/set-role", owner],
+  ["POST", "/api/auth/admin/ban-user", owner],
+  ["POST", "/api/auth/admin/unban-user", owner],
+  ["POST", "/api/auth/admin/revoke-user-sessions", owner],
   // Routes and dispatch (feature 002, FR-023): the office only; couriers get their own
   // routes through feature 003.
   ["GET", "/api/shipments/unassigned?date=2026-10-01", office],

@@ -55,6 +55,7 @@ describe("logs (FR-041)", () => {
     // A failed privacy assertion must not print the live token or captured logs.
     expect(output.includes(token), "request logs must omit recovery tokens").toBe(false);
     expect(output).toContain('"msg":"request"');
+    expect(output).toContain('"path":"/api/auth/request-password-reset"');
     expect(output).toContain('"path":"/api/auth/reset-password/:token"');
   });
 

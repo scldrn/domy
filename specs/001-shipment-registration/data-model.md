@@ -56,6 +56,14 @@ user with role `owner` and `banned = false` must always exist (FR-032), enforced
 transaction that deactivates or demotes. **`sessions`**: `expires_at = created_at + 30
 days`, never extended (FR-033a); a completed password recovery deletes the user's sessions.
 
+R18/T130/T131 uses the existing tables, no schema migration: one native transaction
+contains owner revalidation, a shared account-admin invariant lock, target user-row
+lock, native account/credential/session writes and audit. Courier-account linking
+locks its user before courier rows, preventing role/link races. Session-ending audit
+stores only the before/after count; never token/password/hash values. Credentials and
+sessions remain managed by Better Auth, not direct application SQL. T132's complete
+action identity/replay design is separate and is not claimed implemented here.
+
 ## Directories
 
 **`merchants`**

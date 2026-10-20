@@ -1,7 +1,7 @@
 import type { UserRole } from "@domy/domain";
 import pino, { type Logger } from "pino";
 import { createApp } from "../../src/app.ts";
-import { createAuth } from "../../src/auth.ts";
+import { createAuth, type AuthConfig } from "../../src/auth.ts";
 import type { Db } from "../../src/db/client.ts";
 import type { PhotoStorage } from "../../src/lib/storage.ts";
 
@@ -29,8 +29,7 @@ export function createTestApp(
 ) {
   let now = new Date(options.now ?? "2026-10-01T15:00:00Z");
   const emails: SentEmail[] = [];
-  const auth = createAuth({
-    db,
+  const authConfig: AuthConfig = {
     secret: "test-secret-with-at-least-thirty-two-characters",
     baseUrl: "http://localhost:3000",
     sendResetPassword: async (email) => {
@@ -39,10 +38,11 @@ export function createTestApp(
         await options.sendResetPassword(email);
       }
     },
-  });
+  };
+  const auth = createAuth({ db, ...authConfig });
   const app = createApp({
     db,
-    auth,
+    authConfig,
     clock: () => now,
     logger: options.logger ?? pino({ level: "silent" }),
     storage: options.storage ?? noStorage,

@@ -95,6 +95,16 @@ Samuel subsequently answered “autorizo” to per-slice commit/push/PR/squash w
 and clean local/latest-head CI gates (2026-10-19 UTC). This resolves publication authority,
 not the pending CSV/photo choices or production infrastructure/deployment acceptance.
 
+**Latest addendum (2026-10-19 UTC):** PR #29 merged T141 as `321ef93`, reviewed tree
+identical, prior CI `39186366408` clean (948 tests/91 first-attempt e2e); post-merge
+CI `39189769655` is clean (948 tests, 91 first-attempt e2e, build and post-actions).
+Samuel explicitly confirmed spreadsheet-safe CSV and
+own/current-work-only courier photos; those scope choices are no longer unanswered.
+IV-35–IV-37 below are newly reproduced, raising the inventory to 37 entries and
+adding 001 T150/T151 and 003 T136: 78 remaining tasks before their completion.
+Original audit metrics below describe their dated baseline,
+not a claim that this new finding was known or fixed then.
+
 ## Completion contract
 
 A requirement is not complete because its task is checked or because CI is green. Each
@@ -297,6 +307,9 @@ Working diagnostic scripts are ignored under `.git/integral-*.mts`, not producti
 | IV-32 | MEDIUM, traceability/documentation debt | Feature 002 declares T057 and T058 twice in different phases. Its quickstart still describes direct task-status stand-ins already replaced by real records; the status feature table still describes PR #28 as awaiting merge while the newer next-step section correctly says merged. Preserve historical IDs/checkpoints; add unambiguous phase-qualified identity mapping and correct authoritative present-tense summaries, not old evidence. |
 | IV-33 | CRITICAL, Constitution V | `unwrap<T>` accepts a caller-chosen generic response and casts JSON to it; API modules hand-write projections such as `Account`/recipient/neighborhood options. Hono request arguments are checked, but those asserted response types are not inferred from the actual endpoint. This is architectural boundary debt, not a reproduced failure of every response. Retain approved shared domain schemas, infer actual RPC responses, and validate independently persisted/unknown data at runtime. |
 | IV-34 | MEDIUM, plan: design-system §8; Constitution VII | Master-data/users/audit screens render `data ?? []` without an error/loading branch. A failed query can look like an empty directory; users receive no actionable retry/error message there. Search combobox likewise reports no results after a failed search. Source-confirmed; existing final-page axe checks do not exercise transport-failure states. |
+| IV-35 | CRITICAL, Constitution IX; plan R14 | A trusted same-origin actual-app account creation with a disposable credential-write CHECK failure returns 500, leaves an orphan user (additional T131 evidence) and sends raw account INSERT SQL/password-column parameters to Better Auth's native logger. Captured logs were inspected in memory and only booleans printed; no operational data was used. Existing pino redaction coverage does not cover this native error path. New T150 requires a permanent RED, sanitized unexpected-error routing and preserved documented native 4xx behavior. |
+| IV-36 | CRITICAL, Constitution IX; plan R14 | A real native recovery email and GET callback against disposable PostgreSQL return the expected 302, but the request logger includes the bearer token in its `path`. The permanent regression fails with a boolean privacy assertion (1 failed / 2 skipped, 2.71 seconds), never printing the token or captured logs. T151 requires logging the callback route template while preserving recovery and ordinary diagnostics; pino field redaction alone does not sanitize a token embedded in a path string. |
+| IV-37 | HIGH, Constitution VI; 003 FR-020/FR-022, US7/AC1–AC3 | Fresh full e2e on the account-integrity branch: 90 pass / 1 fail in 5.2 minutes at `courier-day.spec.ts:123`. The first APIRequestContext summary GET exhausts the unchanged 5-second poll deadline; trace timing attributes about 5,003 ms to DNS lookup, then about 18 ms response wait. Browser POST records and GET snapshot succeed upon reconnection. The trace/context are retained privately in `.git/account-integrity-e2e-failure/`. Thirty subsequent native localhost DNS samples are fast (max 4 ms), not a reproduction or proof of resolution. New 003 T136 retains the distinct investigation; T131's earlier navigation failure remains unresolved. No corrective transport/application patch or clean browser gate is claimed. |
 
 Negative check: an actual Chromium context fetched a private photo as owner, changed
 to a different courier's real session in that same context, and fetched the same URL.

@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server";
 import * as Sentry from "@sentry/node";
 import { createApp } from "./app.ts";
-import { createAuth } from "./auth.ts";
+import type { AuthConfig } from "./auth.ts";
 import { createDb } from "./db/client.ts";
 import { readEnv } from "./env.ts";
 import { createClock } from "./lib/clock.ts";
@@ -25,12 +25,11 @@ const mailer = createMailer({
   from: env.EMAIL_FROM,
   logger,
 });
-const auth = createAuth({
-  db,
+const authConfig: AuthConfig = {
   secret: env.BETTER_AUTH_SECRET,
   baseUrl: env.APP_URL,
   sendResetPassword: mailer.sendResetPassword,
-});
+};
 
 const storage = createStorage(env.storage);
 if (env.NODE_ENV !== "production") {
@@ -48,7 +47,7 @@ let clock = createClock({
 
 const app = createApp({
   db,
-  auth,
+  authConfig,
   clock: () => clock(),
   logger,
   storage,

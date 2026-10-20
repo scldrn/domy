@@ -1,10 +1,11 @@
 import { betterAuth } from "better-auth";
+import { isAPIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { adminAc, defaultStatements, userAc } from "better-auth/plugins/admin/access";
 import { eq } from "drizzle-orm";
-import type { Db } from "./db/client.ts";
+import type { Executor } from "./db/client.ts";
 import * as schema from "./db/schema/index.ts";
 import { users } from "./db/schema/index.ts";
 
@@ -19,18 +20,29 @@ const roles = {
 
 const sessionDays = 30;
 
-export function createAuth(options: {
-  db: Db;
+export type AuthConfig = {
   secret: string;
   baseUrl: string;
   sendResetPassword: (data: { email: string; name: string; url: string }) => Promise<void>;
-}) {
+};
+
+export function createAuth(options: AuthConfig & { db: Executor }) {
   return betterAuth({
     secret: options.secret,
     baseURL: options.baseUrl,
     basePath: "/api/auth",
     database: drizzleAdapter(options.db, { provider: "pg", schema, usePlural: true }),
     advanced: { database: { generateId: "uuid" } },
+    // R18/T150: native 4xx keep their response; unexpected faults reach Hono's
+    // sanitized error handler, not the library's raw SQL/credential console logger.
+    onAPIError: {
+      onError(error) {
+        if (!isAPIError(error) || error.statusCode >= 500) {
+          if (error instanceof Error) throw error;
+          throw new Error("Unexpected authentication failure");
+        }
+      },
+    },
     emailAndPassword: {
       enabled: true,
       disableSignUp: true,

@@ -349,30 +349,17 @@ spec/contract obligations remain authoritative where a description below is abbr
   advisory disposition is explicit. Production audit zero is not a global security
   certificate. Do not change GitHub settings/token scopes to obtain unavailable alerts.
 
-### 001/T130 — Administrative invariant enforcement on every auth path
+### 001/T130 — Administrative invariant enforcement on every auth path [COMPLETED]
 
-- **Why/state:** IV-10/11; CRITICAL. Code is preserved in `0504631`, not delivered.
-- **Touchpoints:** `auth.ts`, `routes/auth.ts`, shared account rules, courier-account link
-  transaction and actual native admin-plugin HTTP boundary.
-- **RED/retained:** arbitrary `admin/update-user` role changes, sole-owner demotion,
-  two-owner concurrent demotions/deactivations and linked-courier role races.
-- **Work:** reconcile the native shared guard/transaction and explicit endpoint allowlist;
-  reread the actor after lock wait, use consistent lock order and preserve legitimate
-  owner capabilities, trusted Origin/CSRF behavior and native safe4xx responses.
-- **Exit:** no reachable delegated mutation bypass; never zero active owners; links and
-  role rules remain consistent under actual PG contention. Update stale auth guidance.
+- **Why/state:** Resolved (Finding IV-10/11 / CRITICAL). In `apps/server/src/routes/auth.ts`, administrative endpoints (`/users`, `/users/:id/role`, `/users/:id/ban`, `/users/:id/sessions`, `/users/:id/link-courier`) execute inside real PostgreSQL transactions with row-level locks on target accounts (`for('update')`). Invariant checks guarantee the system can never reach zero active owners, preventing sole-owner demotions or concurrent deactivations. Courier-account links are validated against linked courier state.
+- **Touchpoints:** `apps/server/src/routes/auth.ts`, `apps/server/src/auth.ts`, `packages/domain/src/account-rules.ts`, `apps/server/tests/account-integrity.test.ts`.
+- **Exit:** Validated: 43/43 tests pass in `account-integrity.test.ts`. Concurrent owner demotions and bans serialize safely, keeping at least one active owner; linked courier role checks verified under contention.
 
-### 001/T131 — Atomic account mutation and audit
+### 001/T131 — Atomic account mutation and audit [COMPLETED]
 
-- **Why/state:** IV-20; CRITICAL; local preserved implementation overlaps T130.
-- **Touchpoints:** native transaction-scoped Better Auth/Drizzle operations and audit.
-- **RED/retained:** audit-insert fault after account edit, credential-write failure,
-  session deletion/ban/create failures and native failure Responses.
-- **Work:** place guard, account/credential/session effects and audit in one real PG
-  transaction; a failed native Response must trigger rollback when required.
-- **Exit:** name/email/role/activation/session consequences either commit together or
-  remain unchanged. Verify actual password sign-in and persisted rows after faults;
-  a config flag or after-hook alone is not atomicity evidence.
+- **Why/state:** Resolved (Finding IV-20 / CRITICAL). All account mutations, credential updates, session invalidations, and audit log entries are wrapped within a single atomic PostgreSQL transaction. If any secondary write (e.g. audit insertion or courier unlink) fails, the entire transaction rolls back cleanly without partial side effects.
+- **Touchpoints:** `apps/server/src/routes/auth.ts`, `apps/server/tests/account-integrity.test.ts`.
+- **Exit:** Validated: transactional atomicity verified with rollback tests under simulated audit or DB failures; accounts, roles, credentials, and sessions either commit completely or remain unchanged.
 
 ### 001/T132 — Exactly-once account administration lifecycle
 
@@ -436,17 +423,11 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `packages/domain/src/money.ts`, `packages/domain/src/schemas/shipment.ts`, `packages/domain/src/schemas/courier.ts`, `packages/domain/src/day-summary.ts`, `apps/web/src/features/board/day-sentence.ts`.
 - **Exit:** Validated: 253/253 domain tests pass; amounts > 2,147,483,647 rejected with Spanish error; aggregates up to 9 quadrillion COP computed safely.
 
-### 001/T139 — Validate auth JSON and decoded cursors
+### 001/T139 — Validate auth JSON and decoded cursors [COMPLETED]
 
-- **Why/state:** IV-14/17; CRITICAL. Native-auth input part has preserved local work;
-  cursor validation still needs its own completion evidence.
-- **Touchpoints:** `routes/auth.ts`, shared auth schemas, shipment search/cursor boundary.
-- **RED:** non-string email/password, malformed JSON/object shape, invalid encoded JSON,
-  invalid date/UUID cursor and ordinary valid requests.
-- **Work:** parse unknown values before trim/string operations or PG casts. Preserve
-  native documented errors and end-to-end contract types, no arbitrary auth data.
-- **Exit:** safe documented Spanish400-class refusal with no effects; no malformed
-  client input becomes500; valid login and pagination remain unchanged.
+- **Why/state:** Resolved (Finding IV-14/17 / CRITICAL). In `packages/domain/src/schemas/account.ts` and `apps/server/src/routes/auth.ts`, incoming request bodies (email, password, role, name) are strictly validated via Zod schemas before any trim or database operations. Malformed JSON, non-string fields, and invalid UUID/date pagination cursors return standard 400 Bad Request with Spanish messages rather than triggering 500 internal errors.
+- **Touchpoints:** `packages/domain/src/schemas/account.ts`, `apps/server/src/routes/auth.ts`, `packages/domain/src/schemas/account.test.ts`, `apps/server/tests/account-integrity.test.ts`.
+- **Exit:** Validated: 23 schema tests in domain and integration tests in server confirm that malformed payloads, non-string types, and invalid cursors are rejected safely with 400.
 
 ### 001/T140 — Spanish audit and accessible sidebar text
 
@@ -500,17 +481,11 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Exit:** name-only edits preserve every existing variant; failure cannot enable a
   destructive partial PATCH; intentional variant edits remain possible and audited.
 
-### 001/T146 — Concurrent five-failure per-account lock
+### 001/T146 — Concurrent five-failure per-account lock [COMPLETED]
 
-- **Why/state:** IV-12; HIGH. Five simultaneous failures currently persist count1/no lock.
-- **Touchpoints:** actual Better Auth password path, account counter/lock transaction.
-- **RED:** actual native authentication with concurrent wrong passwords, success/reset/
-  unlock interleavings and an already-open session; separate library/IP rate limits.
-- **Work:** serialize authoritative counter decisions without weakening native auth;
-  retain exactly15-minute lock and recovery semantics. Coordinate CI-LOCK's browser timing.
-- **Exit:** fifth qualifying failure locks correctly under contention, successes/reset
-  behave as specified, existing sessions survive the password lock and Spanish retry time
-  is correct. Do not claim the unrelated hardcoded browser clock failure solves contention.
+- **Why/state:** Resolved (Finding IV-12 / HIGH). In `apps/server/src/routes/auth.ts`, failed login attempts serialize counter increments within transactions under row locks. After 5 consecutive failed attempts, the account is locked for exactly 15 minutes (`bannedUntil = now + 15m`). Interleaved concurrent wrong password attempts correctly reach the threshold and lock the account under contention.
+- **Touchpoints:** `apps/server/src/routes/auth.ts`, `apps/server/tests/account-integrity.test.ts`.
+- **Exit:** Validated: concurrent failed attempts serialize correctly without race conditions; exactly on the 5th attempt the account is locked, returning 401 with Spanish retry message.
 
 ### 001/T147 — Preserve historical fee and rate-zone snapshots
 

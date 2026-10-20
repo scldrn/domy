@@ -40,6 +40,7 @@ const actionLabels: Record<AuditEvent["action"], string> = {
   reactivated: "Reactivado",
 };
 const fieldLabels: Record<string, string> = {
+  sessions: "Sesiones",
   officeAddress: "Dirección de la oficina",
   officeNeighborhoodId: "Barrio de la oficina",
 };

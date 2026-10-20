@@ -42,6 +42,7 @@ are `camelCase`.
 | `POST /api/auth/sign-out` | Any | Sign out |
 | `POST /api/auth/request-password-reset` | Public | Send the single-use reset link (60 minutes); same response whether or not the email exists |
 | `POST /api/auth/reset-password` | Public | Set a new password with the token; ends the user's sessions and lifts the lock |
+| `GET /api/auth/reset-password/:token?callbackURL=…` | Public | Native emailed-link callback, validating the token and trusted redirect before opening the reset form |
 | `POST /api/auth/change-password` | Any | Change own password |
 | `GET /api/auth/get-session` | Any | Current user and role |
 | `POST /api/auth/admin/create-user` | Owner | Create an account with a role |
@@ -50,6 +51,33 @@ are `camelCase`.
 | `POST /api/auth/admin/ban-user` / `unban-user` | Owner | Deactivate / reactivate (ends sessions) |
 | `POST /api/auth/admin/revoke-user-sessions` | Owner | End all sessions of a user (FR-033a) |
 | `GET /api/auth/admin/list-users` | Owner | List accounts |
+
+This is the complete HTTP auth surface (R18, T130). Other native plugin capabilities
+(hard deletion, impersonation, administrative password setting, arbitrary generic
+profile changes) are not exposed; unsupported method/path variants return `404`.
+Only canonical ASCII auth path segments are exposed, including the native random
+reset token; encoded path variants are refused before router decoding. Encoding in
+query parameters such as `callbackURL` is preserved.
+Owner update accepts only nonempty `data.name` and/or valid `data.email`; role changes
+use the dedicated endpoint with one declared role. Creation accepts name, email, role
+(default courier) and the required 8–128 character password, not arbitrary plugin data.
+Administrative target identifiers are UUIDs. Ban/unban/revoke-all accept `userId`, not
+arbitrary temporary-ban or internal fields. Invalid wrapper input returns safe
+`400 invalid_request` without effects; no arbitrary account-name business cap is added.
+
+Last-owner decisions serialize across different targets; authorization is revalidated
+after waiting. A linked courier keeps its role until deliberately unlinked; account
+linking and role edits use the same user-row boundary. Account/credential/session
+changes and their audit commit together or none do. A successful user-session revocation
+records `sessions: [previousCount, 0]` when nonempty, never token/credential values.
+
+Native authentication is an explicit exception to the general error *shape*, not to
+safe UI behavior: documented native 4xx retain Better Auth's `{ code, message }` and
+status/headers, translated by the existing web auth adapter. Domy validation/invariant
+errors use its Spanish `{ error: … }` envelope; unexpected native/SQL faults propagate
+to the same sanitized generic 500 path. Origin/CSRF/cookie rules remain native.
+These are target guarantees for T130/T131/T150, not evidence of current implementation;
+account action-id/client identity conformance remains tracked separately by T132.
 
 ## Shipments
 

@@ -26,6 +26,10 @@ document appear in Spanish between quotes.
 
 - Q: Can a rate card entry take effect on a past date? → A: No; it starts today or later (owner decision during convergence, T127).
 
+### Session 2026-10-19
+
+- Q: Should CSV preserve exact machine-readable text or prioritize safe spreadsheet opening? → A: Samuel confirmed spreadsheet-safe CSV for Excel, neutralizing formula-capable text and documenting the transformation while preserving numeric/date semantics (T128; implementation/acceptance still pending).
+
 ### Checklist review 2026-09-30
 
 Decisions taken while closing `checklists/core-rules.md`:
@@ -494,6 +498,9 @@ dispatch panel at all.
   column names, and to export every master data set to CSV: merchants with their aliases
   and pickup points, couriers, carriers, neighborhoods with their rate zones, and the rate
   card with its history.
+  CSV text MUST be safe to open in Excel without executing user-controlled formula text;
+  the neutralization MUST be documented. Numeric COP values and date semantics remain
+  intact; exact original text round trips are not promised for neutralized text cells.
 
 **Master data**
 
