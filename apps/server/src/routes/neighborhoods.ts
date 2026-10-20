@@ -15,8 +15,7 @@ import {
   neighborhoodVariants,
   rateZones,
 } from "../db/schema/index.ts";
-import { recordAudit } from "../lib/audit.ts";
-import { auditedChange, diffValues, requireActiveZone } from "../lib/master-data.ts";
+import { auditedChange, auditedCreate, diffValues, requireActiveZone } from "../lib/master-data.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
 import { isUniqueViolation, validate } from "../lib/validate.ts";
@@ -102,38 +101,40 @@ export const neighborhoodRoutes = new Hono<AppEnv>()
     const input = c.req.valid("json");
     const user = c.get("user");
     const db = c.get("db");
+
+    // Accepted creation replay before rate-zone active guard (Finding IV-18 / 001/T142)
+    const [existing] = await db
+      .select(selection)
+      .from(neighborhoods)
+      .innerJoin(municipalities, eq(municipalities.id, neighborhoods.municipalityId))
+      .innerJoin(rateZones, eq(rateZones.id, neighborhoods.rateZoneId))
+      .where(eq(neighborhoods.id, input.id));
+    if (existing) {
+      return c.json(existing, 200);
+    }
+
     await requireActiveZone(db, input.rateZoneId);
-    const created = await db
-      .transaction(async (tx) => {
-        const [row] = await tx
-          .insert(neighborhoods)
-          .values({
-            ...input,
-            nameNormalized: normalizeText(input.name),
-            needsReview: user.role !== "owner",
-            createdBy: user.id,
-          })
-          .onConflictDoNothing({ target: neighborhoods.id })
-          .returning({ id: neighborhoods.id });
-        if (!row) return false;
-        await recordAudit(tx, {
-          entityType: "neighborhood",
-          entityId: row.id,
-          action: "created",
-          actorUserId: user.id,
-          occurredAt: c.get("clock")(),
-          changes: { name: [null, input.name], rateZoneId: [null, input.rateZoneId] },
+    const created = await auditedCreate(c, { type: "neighborhood", id: input.id }, async (tx) => {
+      const [row] = await tx
+        .insert(neighborhoods)
+        .values({
+          ...input,
+          nameNormalized: normalizeText(input.name),
+          needsReview: user.role !== "owner",
+          createdBy: user.id,
+        })
+        .onConflictDoNothing({ target: neighborhoods.id })
+        .returning({ id: neighborhoods.id });
+      if (!row) return false;
+      return { name: input.name, rateZoneId: input.rateZoneId };
+    }).catch((error: unknown) => {
+      if (isUniqueViolation(error, "neighborhoods_name_municipality_key")) {
+        throw new AppError("invalid_request", {
+          fields: { name: "Ese barrio ya existe en el municipio." },
         });
-        return true;
-      })
-      .catch((error: unknown) => {
-        if (isUniqueViolation(error, "neighborhoods_name_municipality_key")) {
-          throw new AppError("invalid_request", {
-            fields: { name: "Ese barrio ya existe en el municipio." },
-          });
-        }
-        throw error;
-      });
+      }
+      throw error;
+    });
     const [row] = await db
       .select(selection)
       .from(neighborhoods)

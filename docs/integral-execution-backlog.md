@@ -408,28 +408,17 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Exit:** exactly one creation event per shipment, atomic all-or-none invalid-input
   handling, accurate row results and no false successful duplicate entries.
 
-### 001/T134 — Concurrent master-data creation replay
+### 001/T134 — Concurrent master-data creation replay [COMPLETED]
 
-- **Why/state:** IV-28; CRITICAL. Concurrent same-ID creation currently returns201/500.
-- **Touchpoints:** shared `lib/master-data.ts` `auditedCreate` and every caller, including
-  aliases/variants/default pickup side effects.
-- **RED:** actual PG insertion barrier forces same-ID overlap for each directory resource;
-  also distinguish a different-ID genuine uniqueness conflict.
-- **Work:** use native transactional conflict/replay resolution consistently, retaining
-  one entity/creation audit and all legitimate related-row writes.
-- **Exit:** same accepted identity yields successful created/replay responses, not500;
-  unrelated duplicate names/FK failures are not swallowed as successful replays.
+- **Why/state:** Resolved. In `apps/server/src/lib/master-data.ts` (`auditedCreate`), handled primary key constraint conflicts natively and returned 200 replay with the existing entity rather than raising HTTP 500 unique violations.
+- **Touchpoints:** `apps/server/src/lib/master-data.ts`, `apps/server/src/routes/merchants.ts`, `apps/server/src/routes/couriers.ts`, `apps/server/src/routes/carriers.ts`, `apps/server/src/routes/neighborhoods.ts`.
+- **Exit:** Validated: concurrent same-ID creations return 201 and 200 replay across all entities; distinct duplicate names or FK errors remain correctly refused.
 
-### 001/T135 — Truthful serialized master-data audit chains
+### 001/T135 — Truthful serialized master-data audit chains [COMPLETED]
 
-- **Why/state:** IV-29; CRITICAL. Concurrent edits can both claim the same before-value.
-- **Touchpoints:** `auditedChange`, all six directory areas and implicit related updates.
-- **RED:** PG barriers force simultaneous reads/writes; include two distinct edits,
-  no-op receipts, pickup default changes and an audit failure rollback.
-- **Work:** read authoritative before-values under the same write transaction/locks;
-  settle deadlock-safe ordering shared with alias/name and related-entity locks.
-- **Exit:** event chain is actualA→B→C, not twoA→different events; accepted no-ops still
-  prevent delayed overwrites and remain invisible as fictitious audit edits.
+- **Why/state:** Resolved. Added `lockEntity(tx, entity.type, entity.id)` (`SELECT ... FOR UPDATE`) in `auditedChange`, serializing concurrent writes so reads in `apply(tx)` read authoritative committed state and form a truthful A -> B -> C audit history.
+- **Touchpoints:** `apps/server/src/lib/master-data.ts`, `apps/server/tests/master-data-idempotency.test.ts`.
+- **Exit:** Validated: concurrent edits record true serialized history with exactly one action receipt per request without duplicate fictitious changes.
 
 ### 001/T136 — Real inferred RPC response boundaries
 
@@ -485,16 +474,11 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Exit:** no reachable English label/raw implementation identifier; meaningful entity,
   action and values, unchanged accurate history, keyboard and full axe pass.
 
-### 001/T142 — Accepted creation replay before later guards
+### 001/T142 — Accepted creation replay before later guards [COMPLETED]
 
-- **Why/state:** IV-18; CRITICAL. An accepted rate creation is refused after day rollover.
-- **Touchpoints:** rate/neighborhood creation and shared accepted-ID resolution.
-- **RED:** accept today then replay tomorrow; catalog activation/validity changes after
-  acceptance; concurrent replay and genuinely new invalid entries.
-- **Work:** distinguish accepted identity from a new request before present-day guards
-  that would invalidate the original action; align changed-body and permission semantics.
-- **Exit:** accepted action retains successful replay/current projection and one audit;
-  no new invalid entry or cross-actor bypass is admitted by the replay path.
+- **Why/state:** Resolved. In `apps/server/src/routes/rate-card.ts` and `apps/server/src/routes/neighborhoods.ts`, checked existing records by client `id` before evaluating date validity (`effectiveFrom < bogotaToday(now)`) or active zone guards, returning 200 replay with accepted state without creating duplicate events.
+- **Touchpoints:** `apps/server/src/routes/rate-card.ts`, `apps/server/src/routes/neighborhoods.ts`, `apps/server/tests/master-data-idempotency.test.ts`.
+- **Exit:** Validated: replaying accepted entries across day rollover or zone deactivation returns 200; genuinely new invalid entries are still refused with 400.
 
 ### 001/T143 — Inline neighborhood creation identity lifecycle
 
@@ -553,18 +537,11 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Exit:** non-pricing edit changes neither fee nor zone snapshot, legitimate pricing
   edits remain consistent with fee/COD rules, actual changed values are faithfully audited.
 
-### 001/T148 — Concurrent name/alias uniqueness
+### 001/T148 — Concurrent name/alias uniqueness [COMPLETED]
 
-- **Why/state:** IV-30; HIGH. Separate-table prechecks allow one entity's name to become
-  another entity's alias under concurrent writes.
-- **Touchpoints:** merchant/courier identity checks, native PG transactions/constraints,
-  aliases and shared master-data lock order.
-- **RED:** explicit INSERT/update barriers in both name→alias and alias→name directions;
-  independent directory namespaces, own unchanged aliases and unrelated edits.
-- **Work:** select the smallest invariant-enforcing design aligned with T134/T135;
-  retain normalized matching and useful conflict feedback, not500 or ambiguous lookup.
-- **Exit:** no cross-entity ambiguity under actual contention, namespaces remain separate,
-  valid edits work and lock ordering avoids introduced deadlocks.
+- **Why/state:** Resolved. In `apps/server/src/lib/master-data.ts` (`checkNames`), acquired transaction-scoped advisory locks on candidate names and aliases in deterministic alphabetical order, preventing cross-table name-to-alias clashes under concurrent creations or updates.
+- **Touchpoints:** `apps/server/src/lib/master-data.ts`, `apps/server/tests/master-data-idempotency.test.ts`.
+- **Exit:** Validated: concurrent attempts to claim the same name as alias or alias as name are safely serialized; the second request fails with 409 duplicate_alias without deadlocks.
 
 ### 001/T149 — Complete authoritative previous-recipient autofill
 

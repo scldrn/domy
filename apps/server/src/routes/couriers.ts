@@ -164,7 +164,12 @@ export const courierRoutes = new Hono<AppEnv>()
         .where(eq(couriers.id, id));
       if (existing) return false;
       await checkNames(tx, "courier", id, { name: input.name, aliases });
-      await tx.insert(couriers).values({ id, ...input });
+      const inserted = await tx
+        .insert(couriers)
+        .values({ id, ...input })
+        .onConflictDoNothing({ target: couriers.id })
+        .returning({ id: couriers.id });
+      if (inserted.length === 0) return false;
       await replaceAliases(tx, "courier", id, aliases);
       return { ...input, aliases };
     });
