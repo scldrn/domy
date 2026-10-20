@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { maxAggregateCop, maxCop, minCop } from "../money.ts";
 import { packageSize, paymentMode, serviceLevel, shipmentKind, shipmentStatus } from "./enums.ts";
 import type { Handover } from "./routes.ts";
 import type { RouteStatus } from "../routes.ts";
@@ -15,7 +16,14 @@ export const reason = z
 export const money = z
   .number({ error: "Escribe un valor en pesos." })
   .int("Usa pesos enteros, sin decimales.")
-  .min(0, "El valor no puede ser negativo.");
+  .min(minCop, "El valor no puede ser negativo.")
+  .max(maxCop, "El valor no puede superar $ 2.147.483.647 pesos.");
+
+export const aggregateMoney = z
+  .number({ error: "Escribe un valor en pesos." })
+  .int("Usa pesos enteros, sin decimales.")
+  .min(minCop, "El valor no puede ser negativo.")
+  .max(maxAggregateCop, "El valor supera el límite seguro de cálculo.");
 
 const phoneMessage = "Escribe un teléfono de 10 dígitos.";
 export const phone = z.string({ error: phoneMessage }).regex(/^\d{10}$/, phoneMessage);

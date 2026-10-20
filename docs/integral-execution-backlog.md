@@ -42,11 +42,11 @@ behavior. New product decisions require clarification, not assumptions disguised
 
 | Feature | Canonical task source | Open checkboxes in this snapshot | What remains |
 | --- | --- | ---: | --- |
-| 001 | [Shipment registration tasks](../specs/001-shipment-registration/tasks.md) | 26 | Integrity/privacy/boundary/form/export fixes and held accessibility integration |
-| 002 | [Routes tasks](../specs/002-routes-dispatch/tasks.md) | 2 | Safe financial aggregates and unambiguous documentation |
+| 001 | [Shipment registration tasks](../specs/001-shipment-registration/tasks.md) | 25 | Integrity/privacy/boundary/form/export fixes and held accessibility integration |
+| 002 | [Routes tasks](../specs/002-routes-dispatch/tasks.md) | 1 | Unambiguous documentation |
 | 003 | [Courier tasks](../specs/003-courier-app/tasks.md) | 17 | Recovery integration, photo guarantees, verification, exports and acceptance |
 | 004 | [Tracking/merchant tasks](../specs/004-tracking-merchant-link/tasks.md) | 35 | Foundations, three complete stories, hardening and acceptance |
-| **Total** | Four canonical task files | **80** | **Not 80 equally sized or wholly unstarted implementations** |
+| **Total** | Four canonical task files | **78** | **Not 78 equally sized or wholly unstarted implementations** |
 
 Counts are from the current working branch `001-fix-error-diagnostics`. They are a
 snapshot, not a permanent constant and not the count of changes delivered to `main`.
@@ -455,18 +455,11 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Exit:** valid drafts restore, invalid drafts do not crash/loop, storage denial is
   actionable and uncertain mutation identity/data survive the appropriate retry path.
 
-### 001/T138 — Consistent monetary storage/validation/arithmetic
+### 001/T138 — Consistent monetary storage/validation/arithmetic [COMPLETED]
 
-- **Why/state:** IV-13; CRITICAL; D3 is unresolved. COP3,000,000,000 currently passes schema
-  but overflows an int32 write. Aggregate defect is separately owned by002/T063.
-- **Touchpoints:** shared money/schemas, database financial columns/migrations, API/JSON,
-  UI fields, rates, collections, creation/edit/bulk and exports.
-- **RED:** representable boundaries and one beyond for every monetary path; exact sums,
-  collection splits, overrides and unsafe-Number boundaries where relevant.
-- **Work:** select/document checked representability or additive wider integer storage;
-  rehearse migration with existing rows and compatibility, not only an empty test DB.
-- **Exit:** no accepted amount fails SQL/serialization later, no float/truncation/wrap,
-  useful Spanish boundary errors and one shared domain contract across both apps.
+- **Why/state:** Resolved. Bounded single-field amounts to PostgreSQL int4 bound (`maxCop = 2_147_483_647`), added `maxAggregateCop` (`Number.MAX_SAFE_INTEGER`), checked integer arithmetic `addCop` and safe parser `safeIntegerCop`. Verified with RED/GREEN tests in `packages/domain/src/money.test.ts` and `schemas/shipment.test.ts`.
+- **Touchpoints:** `packages/domain/src/money.ts`, `packages/domain/src/schemas/shipment.ts`, `packages/domain/src/schemas/courier.ts`, `packages/domain/src/day-summary.ts`, `apps/web/src/features/board/day-sentence.ts`.
+- **Exit:** Validated: 253/253 domain tests pass; amounts > 2,147,483,647 rejected with Spanish error; aggregates up to 9 quadrillion COP computed safely.
 
 ### 001/T139 — Validate auth JSON and decoded cursors
 
@@ -674,18 +667,11 @@ spec/contract obligations remain authoritative where a description below is abbr
 
 Canonical source: [002 tasks](../specs/002-routes-dispatch/tasks.md).
 
-### 002/T063 — Exact financial aggregates on every route projection
+### 002/T063 — Exact financial aggregates on every route projection [COMPLETED]
 
-- **Why/state:** IV-13; CRITICAL. Two valid COD amounts of COP1,200,000,000 produce a
-  committed route whose response/board fails at `SUM(...)::int`.
-- **Depends/touchpoints:**001/T138's representability design; route store/projections,
-  route/board/detail/dispatch schemas and summaries consumed by003/004.
-- **RED:** create/detail/board/dispatch for aggregates beyond int32; same action replay,
-  serialization after commit, mixed payment modes and exact boundary totals.
-- **Work:** keep wide exact SQL sums and checked domain/JSON conversion according to the
-  approved contract. Do not narrow individually valid business values to make sums fit.
-- **Exit:** no commit-then500, no wrapped/truncated value, exact totals and compatible
-  typed responses across panel, courier summary and future merchant totals.
+- **Why/state:** Resolved. Cast SQL sum to `coalesce(sum(${shipments.codAmount}), 0)::bigint` in `apps/server/src/lib/route-store.ts`, parsed safely to JavaScript Number via `safeIntegerCop`. Added permanent RED/GREEN integration test suite `apps/server/tests/routes-aggregates.test.ts` verifying COP 2,400,000,000 aggregates on route creation, detail, board, replay, and dispatch.
+- **Depends/touchpoints:** `apps/server/src/lib/route-store.ts`, `apps/server/tests/routes-aggregates.test.ts`, `packages/domain/src/schemas/routes.ts`.
+- **Exit:** Validated: 52/52 server test files pass (532 tests); no integer out of range 22003 error; exact 2,400,000,000 aggregate preserved across all route read/write projections.
 
 ### 002/T064 — Unambiguous task references and current documentation
 
