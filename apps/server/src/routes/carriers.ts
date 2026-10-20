@@ -65,7 +65,12 @@ export const carrierRoutes = new Hono<AppEnv>()
         .where(eq(carriers.id, id));
       if (existing) return false;
       await checkName(tx, id, name);
-      await tx.insert(carriers).values({ id, name, nameNormalized: normalizeText(name) });
+      const inserted = await tx
+        .insert(carriers)
+        .values({ id, name, nameNormalized: normalizeText(name) })
+        .onConflictDoNothing({ target: carriers.id })
+        .returning({ id: carriers.id });
+      if (inserted.length === 0) return false;
       return { name };
     });
     return c.json(await loadCarrier(c.get("db"), id), created ? 201 : 200);

@@ -27,6 +27,7 @@ import {
   auditedCreate,
   checkNames,
   diffValues,
+  lockEntity,
   replaceAliases,
 } from "../lib/master-data.ts";
 import { validate } from "../lib/validate.ts";
@@ -110,6 +111,7 @@ async function openShipments(db: Executor, merchantId: string): Promise<number> 
  * it, or else the oldest active point when none is.
  */
 async function settleDefault(tx: Executor, merchantId: string, chosen?: string) {
+  await lockEntity(tx, "merchant", merchantId);
   if (chosen) {
     await tx
       .update(pickupPoints)
@@ -201,9 +203,12 @@ export const merchantRoutes = new Hono<AppEnv>()
       if (existing) return false;
       await checkNames(tx, "merchant", id, { name: input.name, aliases });
       const values = { ...input, whatsappPhone: input.whatsappPhone ?? null };
-      await tx
+      const inserted = await tx
         .insert(merchants)
-        .values({ id, ...values, nameNormalized: normalizeText(input.name) });
+        .values({ id, ...values, nameNormalized: normalizeText(input.name) })
+        .onConflictDoNothing({ target: merchants.id })
+        .returning({ id: merchants.id });
+      if (inserted.length === 0) return false;
       await replaceAliases(tx, "merchant", id, aliases);
       return { ...values, aliases };
     });
@@ -260,7 +265,12 @@ export const merchantRoutes = new Hono<AppEnv>()
         if (existing) return false;
         await loadMerchant(tx, merchantId);
         const values = { merchantId, ...input, instructions: input.instructions ?? null };
-        await tx.insert(pickupPoints).values({ id, ...values });
+        const inserted = await tx
+          .insert(pickupPoints)
+          .values({ id, ...values })
+          .onConflictDoNothing({ target: pickupPoints.id })
+          .returning({ id: pickupPoints.id });
+        if (inserted.length === 0) return false;
         await settleDefault(tx, merchantId, isDefault ? id : undefined);
         return values;
       });

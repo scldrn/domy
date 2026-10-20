@@ -117,13 +117,21 @@ export const rateCardRoutes = new Hono<AppEnv>()
   // A new entry from 00:00 in Bogotá of its day, today or later; nothing is edited or removed.
   .post("/entries", requireRole("owner"), validate("json", rateCardEntryInput), async (c) => {
     const { id, effectiveFrom, ...input } = c.req.valid("json");
+    const db = c.get("db");
+
+    // Accepted creation replay before date/catalog guards (Finding IV-18 / 001/T142)
+    const [existing] = await findEntries(db, and(eq(rateCardEntries.id, id)));
+    if (existing) {
+      return c.json(existing.view, 200);
+    }
+
     const now = c.get("clock")();
     if (effectiveFrom < bogotaToday(now)) {
       throw new AppError("invalid_request", {
         fields: { effectiveFrom: "La vigencia empieza hoy o en una fecha futura." },
       });
     }
-    if (input.rateZoneId) await requireActiveZone(c.get("db"), input.rateZoneId);
+    if (input.rateZoneId) await requireActiveZone(db, input.rateZoneId);
     const created = await auditedCreate(c, { type: "rate_card_entry", id }, async (tx) => {
       const values = {
         ...input,
