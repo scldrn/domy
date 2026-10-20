@@ -32,11 +32,26 @@ export type BulkPreviewRow = {
 };
 
 /** Input of `POST /api/bulk/confirm`: the rows the dispatcher confirmed, created together. */
-export const bulkConfirmInput = z.object({
-  batchId: z.uuid(),
-  merchantId: z.uuid(),
-  rows: z.array(shipmentCreateInput).min(1).max(maxBulkRows),
-});
+export const bulkConfirmInput = z
+  .object({
+    batchId: z.uuid(),
+    merchantId: z.uuid(),
+    rows: z.array(shipmentCreateInput).min(1).max(maxBulkRows),
+  })
+  .superRefine((data, ctx) => {
+    const seen = new Set<string>();
+    for (const [index, row] of data.rows.entries()) {
+      if (seen.has(row.id)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "El identificador del envío está repetido en la lista.",
+          path: ["rows", index, "id"],
+        });
+      } else {
+        seen.add(row.id);
+      }
+    }
+  });
 export type BulkConfirmInput = z.input<typeof bulkConfirmInput>;
 
 export type BulkConfirmResult = {

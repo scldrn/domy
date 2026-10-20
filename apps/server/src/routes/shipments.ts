@@ -614,7 +614,7 @@ export const shipmentRoutes = new Hono<AppEnv>()
 
     const registeredAt = c.get("clock")();
     const values = await prepareShipment(db, input, { userId: user.id, registeredAt });
-    const created = await insertShipments(db, [values]);
+    const { created } = await insertShipments(db, [values]);
     return c.json(await loadShipment(db, input.id), created ? 201 : 200);
   })
   // Possible duplicates (FR-013): the same reference or, without one, the same phone.
