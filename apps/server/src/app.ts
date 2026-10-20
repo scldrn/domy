@@ -73,10 +73,24 @@ export function createApp(deps: AppDeps) {
       void sendNoticePushes(deps.db, noticeIds, deps.push ?? null, deps.logger);
       // Clients correct their clock with this header (research R9); it follows the fake clock.
       c.header("Date", deps.clock().toUTCString());
+      // R14/T151: recovery carries a bearer secret in its path. Decode segments
+      // independently so a refused malformed token cannot hide an encoded prefix.
+      const decodedPath = c.req.path
+        .split("/")
+        .map((segment) => {
+          try {
+            return decodeURIComponent(segment);
+          } catch {
+            return segment;
+          }
+        })
+        .join("/");
       c.get("logger").info(
         {
           method: c.req.method,
-          path: c.req.path,
+          path: /^\/api\/auth\/reset-password\//i.test(decodedPath)
+            ? "/api/auth/reset-password/:token"
+            : c.req.path,
           status: c.res.status,
           ms: Math.round(performance.now() - started),
         },
