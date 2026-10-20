@@ -32,6 +32,16 @@ describe("photo storage", () => {
     expect(await s3.storage.getPhoto("photos/missing/missing.jpg")).toBeNull();
   });
 
+  it("deletes a photo so subsequent reads return null", async () => {
+    const key = photoKey({ recordId: crypto.randomUUID(), photoId: crypto.randomUUID() });
+    await s3.storage.putPhoto(key, new Uint8Array([1, 2, 3]));
+    expect(await s3.storage.getPhoto(key)).toEqual(new Uint8Array([1, 2, 3]));
+    await s3.storage.deletePhoto(key);
+    expect(await s3.storage.getPhoto(key)).toBeNull();
+    // deleting non-existent key does not throw
+    await expect(s3.storage.deletePhoto(key)).resolves.toBeUndefined();
+  });
+
   it("is refused with the wrong keys: the bucket is private", async () => {
     const intruder = createStorage({ ...s3.config, secretAccessKey: "otra-clave" });
     await expect(intruder.getPhoto("photos/any/any.jpg")).rejects.toThrow();
