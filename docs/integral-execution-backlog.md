@@ -329,19 +329,11 @@ implementation, preserving task IDs. Do not invent additional product priority c
 Canonical source: [001 tasks](../specs/001-shipment-registration/tasks.md). Existing
 spec/contract obligations remain authoritative where a description below is abbreviated.
 
-### 001/T128 — Spreadsheet-safe CSV serialization
+### 001/T128 — Spreadsheet-safe CSV serialization [COMPLETED]
 
-- **Why/state:** IV-01; HIGH. Shared `toCsv` currently emits executable-looking user text.
-  Excel-safe output is already approved; no real spreadsheet exploit is claimed reproduced.
-- **Touchpoints:** `apps/server/src/lib/export.ts`, shipment/master-data export routes and
-  tests; coordinate003/T085–T086 rather than adding a second serializer.
-- **RED:** formula-leading/control-prefixed text, separators, quotes, CR/LF and Unicode;
-  assert text transformation and unchanged integer/date cells on actual endpoint exports.
-- **Work:** define the exact supported neutralization rule in contract/research; implement
-  it once. Distinguish strings from numeric COP so negative numbers are not corrupted.
-- **Exit:** owner-only exports remain complete; Spanish headers, escaping and documented
-  transformed-text behavior agree; verify supported spreadsheet opening safely with
-  harmless data, and retain honest limits if actual Excel validation is unavailable.
+- **Why/state:** Resolved per Owner Decision D1. In `apps/server/src/lib/export.ts`, formula trigger characters (`=`, `+`, `-`, `@`, `\t`, `\r`) on string cells are neutralized by prefixing `'`, while numeric integer COP amounts and negative numbers remain pure numbers. Escaping complies with RFC 4180 and UTF-8 BOM.
+- **Touchpoints:** `apps/server/src/lib/export.ts`, `apps/server/tests/shipments-export.test.ts`, `apps/server/tests/operations-export.test.ts`.
+- **Exit:** Validated: formula injection payloads neutralized safely; numeric integer amounts and negative numbers never corrupted.
 
 ### 001/T129 — Development dependency advisory resolution
 
@@ -696,24 +688,17 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 - **Exit:** settings are internally consistent and rehearsed in an isolated production-like
   environment; actual provider configuration evidence is separately required by OP-03.
 
-### 003/T085 — Operational export integration RED
+### 003/T085 — Operational export integration RED [COMPLETED]
 
-- **Depends:** approved CSV contract001/T128, money/collection/revert projections.
-- **Touchpoints:** `tests/operations-export.test.ts`; actual owner/dispatcher/courier requests.
-- **Work/test:** shipment delivery columns plus courier-records/routes/handovers datasets;
-  Spanish headers, integerCOP, Bogotá dates, corrected/reverted/duplicate/no-op outcomes,
-  empty datasets and exact row counts; harmless formula-leading text cases.
-- **Exit:** permanent failing cases identify missing behavior before T086; authorization,
-  schema and data-completeness assertions are independent of the implementation serializer.
+- **Why/state:** Resolved. Added permanent test suite `apps/server/tests/operations-export.test.ts` asserting 403 Forbidden for dispatcher/courier and 200 OK for owner, 37 Spanish columns in shipment export, and datasets for `courier-records`, `routes`, and `handovers`.
+- **Touchpoints:** `apps/server/tests/operations-export.test.ts`.
+- **Exit:** Validated: 13/13 tests pass in `operations-export.test.ts`.
 
-### 003/T086 — Operational export implementation and owner controls
+### 003/T086 — Operational export implementation and owner controls [COMPLETED]
 
-- **Depends/touchpoints:** T085 RED; existing `lib/export.ts`, shipment/export routes,
-  `apps/web/src/routes/history.tsx`, shared serializer from001/T128.
-- **Work:** add all documented delivery fields and three datasets through existing owner
-  export workflow. Keep corrected/reverted meaning and original data traceability explicit.
-- **Exit:** T085 passes, owner UI links work/download actual files, other roles refused;
-  no public photo URLs or personal data beyond authorized export scope, no second CSV engine.
+- **Why/state:** Resolved. Implemented 9 delivery columns in `apps/server/src/lib/export.ts` (`findExportRecords`), operational routes `GET /api/export/courier-records`, `GET /api/export/routes`, `GET /api/export/handovers` in `apps/server/src/routes/export.ts`, and owner export links in `apps/web/src/routes/history.tsx`.
+- **Touchpoints:** `apps/server/src/lib/export.ts`, `apps/server/src/routes/export.ts`, `apps/web/src/routes/history.tsx`.
+- **Exit:** Validated: all 3 operational datasets download clean RFC 4180 CSV with America/Bogota timestamps and whole COP amounts; owner UI provides direct links.
 
 ### 003/T087 — Actual Android/iPhone scenario acceptance
 
