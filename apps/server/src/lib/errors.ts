@@ -53,6 +53,8 @@ const errorCatalog = {
     "Esta cuenta está vinculada a un mensajero; desvincúlala antes de cambiar su rol.",
   ],
   account_locked: [423, "La cuenta está bloqueada temporalmente."],
+  photo_immutable: [409, "Esta foto ya fue subida y no puede modificarse."],
+  conflict: [409, "Conflicto con el estado actual del recurso."],
 } as const satisfies Record<string, readonly [ContentfulStatusCode, string]>;
 
 export type ErrorCode = keyof typeof errorCatalog;

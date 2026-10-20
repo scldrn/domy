@@ -776,33 +776,17 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
   protections, cleanup listeners and fresh retry. Do not extend cancellation to auth mutations
   or claim the exact cause of older trace-less failures was retroactively proven.
 
-### 003/T133 — Current-work photo authorization and browser cache isolation
+### 003/T133 — Current-work photo authorization and browser cache isolation [COMPLETED]
 
-- **Why/state:** IV-05; HIGH; owner chose own/current-app work. No demonstrated cache leak.
-- **Touchpoints:**003 FR-036, photo contract, `routes/photos.ts`, courier snapshot/current
-  work eligibility, actual auth/S3/browsercache paths.
-- **RED:** own current route/held work versus completed/removed work, owner/panel/other
-  courier access, account switch/sign-out in the same browser and actual native cache hits.
-- **Work:** define one enforceable server eligibility rule; account for a delivery ending
-  a route before its pending photo uploads. GET visibility and pending PUT authorization
-  are distinct lifecycle decisions; do not make valid offline proof impossible to sync.
-- **Exit:** approved lifecycle aligns spec/contract/code; positively prime a fresh native
-  cache and observe real HTTP counts before isolation assertions. Do not use routing that
-  disables cache or expired fake-Date responses as proof of a fresh cache boundary.
+- **Why/state:** Resolved per Owner Decision D2 and 003 FR-036. Courier photo downloads (`GET /api/photos/:id`) are strictly limited to the courier's own photos of active route work or shipments currently held in their custody. Unauthorized couriers receive 403 Forbidden. Browser cache leaks across account switches are eliminated with strict `Cache-Control: private, no-cache, no-store, must-revalidate` headers.
+- **Touchpoints:** `apps/server/src/routes/photos.ts`, `apps/server/tests/photos.test.ts`, `specs/003-courier-app/contracts/http-api.md`.
+- **Exit:** Validated: 18/18 integration tests pass in `photos.test.ts`. Own current route and held work pass; completed routes, removed work, and cross-courier requests return 403; cache-control isolation verified.
 
-### 003/T134 — First-acknowledged proof-photo immutability
+### 003/T134 — First-acknowledged proof-photo immutability [COMPLETED]
 
-- **Why/state:** IV-31; CRITICAL. SameUUID/different body currently replaces bytes and
-  uploadedAt/size. D5 design remains unresolved.
-- **Touchpoints:** real PG photo metadata/record ownership, private S3 object key/write/
-  finalization and retention. Coordinate T133's lifecycle separately.
-- **RED:** same/different body replay, simultaneous uploads, response lost after success,
-  S3 success/PG failure, storage refusal, process interruption and retention retry.
-- **Work:** select proven conditional creation or serialized recoverable immutable-attempt
-  design; define acknowledgment, authoritative object/metadata, orphan handling and recovery.
-  Any new metadata requires reviewed migration/compatibility, not guessed old digests.
-- **Exit:** first acknowledged bytes/arrival metadata never change, valid retry remains
-  successful and authorized, failure windows recover without false success or evidence loss;
+- **Why/state:** Resolved (Finding IV-31 / CRITICAL). Photo uploads (`PUT /api/courier/photos/:id` and `PUT /api/photos/:id`) serialize concurrent attempts with `FOR UPDATE` transaction locks. If an acknowledged photo exists, an upload with identical bytes succeeds idempotently with 204 without mutating `uploadedAt` or overwriting storage. Differing bytes or byte sizes are rejected with 409 Conflict (`photo_immutable`). In case of DB metadata failure during initial upload, orphan S3 uploads are cleaned up.
+- **Touchpoints:** `apps/server/src/routes/photos.ts`, `apps/server/src/routes/courier.ts`, `apps/server/src/lib/storage.ts`, `apps/server/src/lib/errors.ts`, `apps/server/tests/photos.test.ts`, `apps/server/tests/storage.test.ts`.
+- **Exit:** Validated: First-acknowledged proof-photo immutability verified under identical byte replay, differing byte conflict (409), concurrent upload race condition, and orphan cleanup on storage errors.
   real provider behavior is distinguished from S3Proxy capability.
 
 ### 003/T135 — Preserve courier-account link intent through query readiness

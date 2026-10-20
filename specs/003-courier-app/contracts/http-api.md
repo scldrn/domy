@@ -23,6 +23,7 @@ every mutation.
 | 409 | `not_held_by_courier` | "Recibido en oficina" for a package no courier holds (FR-041) |
 | 409 | `record_not_revertible` | Reverting a record that is not the shipment's latest applied delivery, exception, or return, or a package record followed by another dispatch decision or custody change (FR-035) |
 | 409 | `office_not_configured` | "Recibido en oficina" before the office address is set (FR-041) |
+| 409 | `photo_immutable` | Uploading photo bytes that differ in size or content from an already acknowledged photo under the same ID (FR-023, Finding IV-31, T134) |
 | 422 | `occurred_in_future` | A record on behalf with `occurredAt` later than now (FR-034) |
 
 ## Courier endpoints (role: courier)
@@ -31,7 +32,7 @@ every mutation.
 | --- | --- |
 | `GET /api/courier/route` | → `CourierSnapshot` = `{ serverTime, sessionExpiresAt, route: CourierRoute \| null, handoversToGive: HandoverToGive[], heldOffRoute: HeldShipment[], notices: Notice[], summary: DaySummary }`; `DaySummary` (today, Bogotá) = counts of deliveries, exceptions, returns, pending stops; `cash`, `companyTransfer`, `merchantTransfer`, `disbursements`, `cashToHandOver` (FR-037). `CourierRoute` = number, service date, `stops` in order, each with kind, address, neighborhood, contact phone (the recipient's on a delivery stop; the merchant's `whatsappPhone` on a pickup or return stop; absent when not registered, FR-016), and `tasks` (shipment id, tracking number, merchant, recipient name and phone, carrier, destination town, errand description, instructions, package count and size, delivery window, COD amount, status, `blockedByHandover`, `problemNote`; the phone computes the at-risk or late flag from the window and its corrected clock, so it stays right without signal). Updates `couriers.last_synced_at`. An account not linked to a courier gets `403` (FR-005, FR-022, FR-028) |
 | `POST /api/courier/records` | `{ deviceNow, records: CourierRecordInput[] }` (1–50, in the order they happened) → `{ results: { id, outcome }[] }`. Each record is applied in its own transaction (FR-018–FR-026) |
-| `PUT /api/courier/photos/:id` | Body: the JPEG image (`image/jpeg`, ≤ 1 MB, else `413 payload_too_large`) → `204`. `404` while its record has not arrived; repeating it is harmless (FR-023) |
+| `PUT /api/courier/photos/:id` | Body: the JPEG image (`image/jpeg`, ≤ 1 MB, else `413 payload_too_large`) → `204`. `404` while its record has not arrived; replaying identical bytes is an idempotent `204` without modifying arrival metadata; uploading differing bytes or sizes rejects with `409 photo_immutable` (FR-023, Finding IV-31, T134) |
 | `POST /api/courier/notices/acknowledge` | `{ actionId, noticeIds, occurredAt }` → `204`; sets `acknowledged_at` only where empty (FR-027) |
 | `GET /api/courier/push-config` | → `200 { publicKey: string \| null }`; the server's VAPID public key, or `null` when phone notifications are disabled in development. Requires a linked courier account like the snapshot; owner, dispatcher and unlinked courier get `403`. Never returns the private key or subject (FR-040, owner-approved US5 alignment) |
 | `POST /api/courier/push-subscriptions` | `{ actionId, endpoint, keys: { p256dh, auth } }` → `204` (FR-040) |
@@ -60,7 +61,8 @@ and optional `location: { latitude, longitude, accuracyM }`:
 | `POST /api/shipments/:id/clear-review` | `{ actionId, note }` → `Shipment` (FR-026) |
 | `POST /api/courier-records/:id/correct` | `{ actionId, reason, receivedByName?, cashAmount?, companyTransferAmount?, merchantTransferAmount?, exceptionReason?, note?, amount?, payee? }` → `CourierRecord` (FR-035) |
 | `POST /api/courier-records/:id/revert` | `{ actionId, reason }` → `Shipment` (FR-035) |
-| `GET /api/photos/:id` | → the image. Owner and dispatcher: any photo; courier: photos of their own records. `404` when the object was deleted by retention (FR-036) |
+| `GET /api/photos/:id` | → the image. Owner and dispatcher: any photo; courier: photos of their own current work (active in-progress route, custody off-route, or their own photos of current work on their route). Unauthorized couriers receive `403 forbidden`. `404` when the record/photo has not arrived or was deleted by retention (FR-036, Owner Decision D2, T133). Response headers include `Cache-Control: private, no-cache, no-store, must-revalidate` to prevent browser cache cross-contamination across account switches |
+| `PUT /api/photos/:id` | Body: the JPEG image (`image/jpeg`, ≤ 1 MB, else `413 payload_too_large`) → `204`. Owner and dispatcher: any photo; courier: photos of their own records. `404` while its record has not arrived; replaying identical bytes is an idempotent `204`; uploading differing bytes or sizes rejects with `409 photo_immutable` (FR-023, Finding IV-31, T134) |
 | `GET /api/settings` | No request body → `200 CompanySettings`; owner and dispatcher (FR-041) |
 | `PATCH /api/settings` | `{ actionId, officeAddress, officeNeighborhoodId }` → `200 CompanySettings`; owner only, change audited (FR-041). Replaying an accepted `actionId` returns the current configuration without restoring an intervening change |
 

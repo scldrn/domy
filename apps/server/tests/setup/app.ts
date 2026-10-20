@@ -11,6 +11,7 @@ export type SentEmail = { email: string; name: string; url: string };
 const noStorage: PhotoStorage = {
   putPhoto: () => Promise.reject(new Error("This test has no photo storage")),
   getPhoto: () => Promise.reject(new Error("This test has no photo storage")),
+  deletePhoto: () => Promise.resolve(),
   ensureBucket: () => Promise.resolve(),
 };
 
