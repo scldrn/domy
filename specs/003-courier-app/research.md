@@ -263,6 +263,25 @@ npm registry on 2026-09-30 and again on 2026-10-14, after feature 002 shipped (R
 
 ## R15. Testing
 
+- **T131 retained-trace refinement (2026-10-19 UTC)**: actual final-head PR #30
+  CI `39197282004` reproduces the previously open recovery-navigation timeout and
+  uploads its first-failure trace. A session GET is left without a response across
+  a rapid native offline/online transition while record/snapshot recovery succeeds.
+  Distinguish browser/interception transition readiness from an application session
+  dependency before selecting a correction; inspect native events/transport with
+  explicit gates, not guessed timing, successful mocks or a suite-until-green loop.
+  Preserve all existing unavailable-server and delivery/axe assertions and budgets.
+  The trace proves this lead, not the older runner's precise cause or a completed fix.
+  The controlled held-response journey subsequently fails at cached navigation and
+  three times at opening delivery while the session remains pending. Select native
+  AbortController cancellation of session reads on offline, linked to Query's native
+  signal and cleaned up in finally, to activate the existing offline error fallback.
+  Reject guessed deadlines, newer AbortSignal.any/timeout browser APIs, auth bypasses,
+  mutation cancellation and replacing actual responses. Preserve null/401/403 and
+  invalid-success semantics; verify fresh retry, listener removal and actual browser
+  cached actions before releasing the old response. This fixes the demonstrated
+  network dependency without claiming why the original browser left its GET pending.
+
 - **Decision**:
   - unit tests for `resolveCourierRecord`, the day summary, and the extended route and flag
     rules (domain, test-first);

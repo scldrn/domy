@@ -52,6 +52,14 @@ this research also fixes the project foundation that features 002–004 build on
 
 ## R5. Authentication, roles, sessions, and lockout
 
+- **003 T131 session-read refinement (2026-10-19 UTC)**: a pending session fetch must
+  not survive a native offline event and indefinitely hold cached courier navigation.
+  Link a per-read AbortController to the native QueryFunctionContext signal and offline
+  event; remove listeners after settlement. Interrupted reads keep the existing network
+  error/fallback, not a fabricated valid session. Null/401/403/invalid DTO decisions,
+  session expiry and sign-in/out/admin/password mutations stay unchanged. See 003's
+  plan/R15 for retained real-browser RED, browser compatibility and required gates.
+
 - **Decision**: Better Auth with email and password, the admin plugin, and three roles
   (`owner`, `dispatcher`, `courier`) defined with its access-control helper. Sessions live in
   PostgreSQL with a fixed 30-day lifetime and session refresh disabled (clarification Q4).

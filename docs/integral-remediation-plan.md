@@ -30,17 +30,14 @@ started; not a readiness certificate.
 
 ## Objective and scope
 
-Current gate addendum (2026-10-19 UTC): T141 is merged (`321ef93`, PR #29).
-PR #31's local session correction is published at `b4c83f3` but held: latest CI
-`39273068925` has a distinct modal-notification axe flake, recorded as IV-40/T154.
-PR #30 remains held at `682bc97` for its different recovery flake. T154 is now
-locally complete after controlled RED, 30 focused passes, all four final gates
-(948 tests/97 first-attempt e2e) and scoped convergence; not merged/global readiness.
-Preserve full axe/modal focus/expiry and every budget; no retry-green merger.
-T150–T153 remain OPEN privacy obligations, imported from the preserved checkpoints.
-The current independent main-based branch has **79 unchecked tasks (25/2/17/35)**;
-T131's local closure remains separately preserved on #31 until clean reconciliation.
-The following baseline counts/mapping are historical, not present completion claims.
+Current gate addendum (2026-10-19 UTC): T141 (`321ef93`, PR #29), T153 (`fedbb63`, PR #33),
+and T154 (`33e4797`, PR #32) are merged into `main`.
+PR #31 (`003-fix-session-recovery-readiness`) resolves 003 T131: cancels session reads on
+native offline events and Query cancellation, forwards AbortSignal, and cleans up listeners,
+allowing cached route and stop navigation to proceed without waiting indefinitely on interrupted requests.
+Rebased on `main` (`33e4797`), it inherits the T154 modal-notification scan stabilization.
+With T131 verified locally on this branch, 77 canonical tasks remain open. PR #30 remains held
+for separate transport verification. Account-integrity commit `0504631` (T130/T150/T151) remains preserved locally.
 Samuel resolved D1 (CSV safe for Excel) and D2 (own/current-work courier photos);
 implementation and validation remain required. Production deployment is not authorized.
 
@@ -48,11 +45,12 @@ Resolve every actionable finding IV-01–IV-40 in
 [the consolidated audit](integral-verification.md), finish the approved 001–004 scope,
 retain historical regressions and prove operational readiness. The planning baseline
 had **76 open Spec Kit tasks**: 22 in 001, 2 in 002, 17 in 003 and 35 in 004.
-Historical planning checkpoint: after local T141 completion (2026-10-19 UTC),
-**75 remained open**: 21/2/17/35. The current count is 81 in the execution companion;
-the following unpublished-T141 sentence is preserved as that checkpoint's history.
-T141 is verified locally, not yet committed or published; the mapping below preserves
-the full original queue, including this completed first task.
+T141 merged as `321ef93` (PR #29) and T153 merged as `fedbb63` (PR #33).
+With T131 verified locally on this branch, 78 canonical tasks remain open.
+Its publication/latest-head CI is required before merge. The transport correction T136 is
+separately preserved in held PR #30. Current `003-fix-session-recovery-readiness` addresses
+the session-read navigation dependency. Account code `0504631` remains local/unmerged; no
+account or privacy task is silently closed by capability probes or another slice.
 Checked historical tasks are regression obligations, not work to delete or rebuild.
 
 This is the project-level execution/dependency plan, not a new feature or a substitute
@@ -107,9 +105,9 @@ an order in which every intermediate head is compatible and passes all gates.
 
 | Slice | Owning tasks | Dependency and deliverable | Exit evidence |
 | --- | --- | --- | --- |
-| S00 Baseline reliability and traceability | 001 T141/T154; 002 T064; 003 T131/T136 | T141 merged; recovery T131 is held in #31 and transport T136 in #30. Current T154 resolves the distinct retained modal-notification scan race before reconciling either held PR. Preserve causal evidence, normal lifecycle/focus, every axe rule and all budgets; phase-qualify duplicate historical IDs | Controlled RED before correction, all local gates/convergence and clean latest-head CI, not a flaky nominal green |
-| S01 Auth surface and input/lockout | 001 T130/T139/T146 | Inventory every delegated plugin mutation, deny or constrain unused bypass paths without inventing permissions. Validate unknown auth/cursor input. Serialize last-owner invariant across different target owners and lockout counters | Real PG: sole owner, two-owner/mixed ban-demotion, link-role races, five simultaneous failures, malformed inputs, same-origin/CSRF and role matrix |
-| S02 Atomic account actions and link intent | 001 T131/T132; 003 T135 | D4 then auth transaction/receipt design, including client-generated creation identity and all credential/session consequences. Bound receipts to actor/operation/target and define changed-body replay. Fix account dialog authoritative initialization and inactive existing links | Audit/credential/session failure rolls back the defined mutation; A→B→A and concurrent retries are exactly once; held-GET browser save preserves untouched link |
+| S00 Baseline reliability and traceability | 001 T141/T154; 002 T064; 003 T131/T136 | T141 and T154 merged on main; recovery T131 is resolved on #31 and transport T136 in held PR #30. Preserve causal evidence, normal lifecycle/focus, every axe rule and all budgets; phase-qualify duplicate historical IDs | Controlled RED before correction, all local gates/convergence and clean latest-head CI, not a flaky nominal green |
+| S01 Auth surface, atomicity, privacy and input/lockout | 001 T130/T131/T139/T146/T150/T151/T152/T153 | T153 merged on main; T130/T131 share the native transaction boundary; T150/T151 protect native failures/request-path logs, T152 protects SDK-added context. Complete coherent small sub-slices, then remaining input/lockout work. Account corrections remain unmerged until their own clean gates | Real PG: bypass/races, credential/session/audit rollback; no raw credentials, bearer URLs or recipient data in logs/reporting; useful safe diagnostics and native auth/recovery/fixed sessions |
+| S02 Exactly-once account actions and link intent | 001 T132; 003 T135 | D4 then transaction/receipt lifecycle, client-generated creation identity and credential/session consequences. Bind receipts to actor/operation/target and define changed-body replay. Fix authoritative initialization and inactive existing links | A→B→A and concurrent retries are exactly once; uncertain responses preserve intent/identity; held-GET browser save preserves untouched link |
 | S03 Master-data concurrency/replay | 001 T134/T135/T142/T148 | Shared transactional locking/diff/replay rules, not six divergent endpoint patches. Serialize cross-table name/alias identity checks and related pickup defaults. Replay accepted creations before later validity guards | Explicit lock-barrier PG tests: same-ID 201/200, truthful before/after chain, cross-table clashes rejected, day rollover replay and no false visible no-op edits |
 | S04 Atomic bulk identity | 001 T133 | Align duplicate-row and mixed-existing-ID semantics before code. Prefer refusal of ambiguous duplicate row IDs; preserve legitimate batch replay and one event per actual creation | Existing+new and repeated-row-ID RED cases; all-or-none on invalid input; concurrent batch/individual registration and original-result replay |
 | S05 Financial correctness | 001 T138/T147; 002 T063 | D3, then storage/schema/domain/JSON and wider route aggregates as one compatible change. Preserve registered fee/zone unless the actual pricing inputs change | Boundary sums never wrap/truncate; route creation cannot commit then fail serialization; catalog/rate update plus instructions-only edit preserves fee; all payment modes remain consistent |

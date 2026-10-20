@@ -275,6 +275,85 @@ screen.
 
 ### T131 unavailable-server recovery investigation — 2026-10-17
 
+#### Retained runner evidence and resumed diagnosis — 2026-10-19 UTC
+
+New branch `003-fix-session-recovery-readiness` starts independently from main
+`321ef93`. PR #30's final head `682bc97` remains unmerged: CI `39197282004`
+has 91 first-attempt passes and one flaky instance of this same case, despite its
+nominal success. The first-failure trace is actually retained as artifact
+`12163321382` (SHA-256
+`7a1ae0d1ec51107cfea1f93de4422c55fa0dbe1a2c17c471f7b949d86ad5d7e6`),
+privately downloaded under ignored `.git/t131-ci-39197282004/`.
+
+The trace now establishes a narrower lead: a session GET starts immediately after
+the broad 503 interception is removed and immediately before the two rapid native
+offline/online calls. It has no completed response in the retained trace. Records
+and snapshot subsequently succeed in about 40/24 ms; the pending list empties.
+The route-link click completes, but the router still displays the pending-screen
+content while its stop-link assertion waits until the unchanged test timeout.
+This does not establish an overlay, DNS delay, browser crash or exact cause of
+the older trace-less failure. A stalled session check, native routing transition
+and application navigation behavior must be distinguished before correction.
+
+Clarify: the existing cached-work/recovery/session-withdrawal requirements remain
+unchanged; no product ambiguity, data-model/API change or new owner choice. Reuse
+T131 rather than inventing another task for its newly retained evidence. Both
+reviewer checklists remain read-only (16/16 and 48/48). The later program-wide
+per-slice publication authorization supersedes the historical local-only authority
+below, but does not allow merging flaky CI or production deployment.
+
+Next diagnostic: use explicit native request/response and browser offline/online
+event gates around the observed in-flight session request. Compare the original
+rapid transition with a fully observed transition and with controlled unavailable
+session responses; do not fabricate a successful response. Retain all original
+cached-route, saved-pickup, pending-count, recovery, delivery and axe assertions.
+Any controlled harness failure must be identified separately from application RED.
+Do not add a guessed application timeout, bypass session checks, wait arbitrarily,
+force clicks or raise any test deadline/retry/worker limit. Refine the design with
+the resulting causal evidence and perform read-only analyze before a selected fix.
+
+Constitution check: I native primitives/no service or abstraction; II–IV unchanged
+saved records/domain/transaction guarantees; V existing validated contracts; VI
+causal regression before implementation and unchanged budgets; VII all actual
+mobile navigation/Spanish/axe checks; VIII separate short-lived branch and retained
+failures; IX private restricted traces with no printed credentials or operational
+data. No complexity exception or completion/global-readiness claim.
+
+Selected native cancellation design after RED (2026-10-19 UTC): the first held-
+response probe passed only after releasing the session before opening the delivery;
+it did not prove work remained navigable during an unresolved check. Keeping that
+same real response held through stop navigation produces a missing route in 6.3 s;
+three further executions all reach the held request and then block at the delivery
+action until the existing 30-second test timeout. They are retained under ignored
+`.git/t131-session-navigation-red/` and `.git/t131-session-interrupt-reproduction/`.
+The unit regression fails independently because the actual session query supplies
+no native cancellation signal (one failed/eight skipped, 44 ms). No runtime change
+precedes these failures. The controlled probe demonstrates the pending-session
+dependency across native connectivity changes, not the underlying cause of the
+original runner's unfinished network request.
+
+Use one native AbortController for each session read in the existing shared
+`features/auth/session.ts`, link the existing QueryFunctionContext signal and
+the browser's native offline event, and pass its signal to that read's fetch.
+Remove both listeners in finally; handle already-aborted/already-offline entry and
+abort during response-body reading. Interrupted reads return the existing network
+error, so the current courier beforeLoad can use only its already-owned validated
+local metadata. A new online read may retry normally. Preserve authoritative null,
+401/403 and malformed-success responses, ordinary query cancellation, fixed session
+expiry and all cross-account/withdrawal guards. Do not use AbortSignal.any/timeout
+(not available throughout the ratified Android/iOS range), invent an expiry/deadline,
+return a cached user as a new successful server response, or cancel account/sign-in/
+sign-out/password mutations when connectivity changes. No new factory or wrapper.
+
+The permanent browser regression holds an actual same-origin native response,
+observes a real offline event, reconnects, and must complete cached route/stop/delivery
+navigation before that old response is released; then verify synchronization/empty
+pending list, the final completed-route state and all ordinary axe scans. Retain the
+original 503 recovery case unchanged. Unit regressions cover signal use, abort/fresh
+retry, listener cleanup and authoritative refusal. Repeat focused repetitions and
+all four gates, scoped convergence and clean latest-head CI before any task closure/
+publication/merge claim. PR #30 remains held and separate.
+
 Samuel authorized local investigation/correction after PR #27 merged as `f4f124d`.
 Post-merge CI 39071328672 passed overall but retried the temporary-server-unavailability
 case in `courier-offline.spec.ts:191`: after API recovery and the empty-pending assertion,

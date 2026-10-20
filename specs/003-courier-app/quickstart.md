@@ -15,6 +15,14 @@ endpoints in [contracts/http-api.md](contracts/http-api.md). Setup and gates are
 
 ## Automated gates
 
+T131's regression in `courier-offline.spec.ts` retains the ordinary 503 recovery
+journey and additionally holds a real successful session response across an observed
+native offline/reconnect event. Cached route/stop/delivery navigation must finish
+before releasing that old response; records then synchronize and the route completes.
+Run it with the built service worker and real PostgreSQL/storage, not a mock session.
+The shared auth unit cases verify cancellation, fresh retry, listener cleanup and
+authoritative refusal without changing session expiry or mutation behavior.
+
 ```bash
 pnpm check
 pnpm test

@@ -179,9 +179,11 @@ for (const delayedResponse of [
         await page.reload();
         await expect(page.getByRole("heading", { name: "Nuevo envío", exact: true })).toBeVisible();
       }
-      await expect(page.getByRole("combobox", { name: "Cliente" })).toBeFocused();
+      const merchantCombobox = page.getByRole("combobox", { name: "Cliente" });
+      await expect(merchantCombobox).toBeFocused();
       if (delayedResponse === "merchant search") {
-        // Prime real unfiltered results: the desired match is visible but not highlighted.
+        // Prime real unfiltered results: wait until options are loaded before keyboard navigation.
+        await expect(merchantCombobox).toHaveAttribute("data-ready", "");
         await page.keyboard.press("ArrowDown");
         await expect(page.getByRole("option", { name: /Amy Tecnology/ })).toHaveAttribute(
           "data-highlighted",

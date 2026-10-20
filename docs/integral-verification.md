@@ -39,35 +39,34 @@ This checkpoint is not whole-feature/global convergence or certification.
 
 ## Status and authority
 
-**Current execution addendum (2026-10-19 UTC):** PR #31 `b4c83f3` remains held:
-CI `39273068925` is nominal green but has 91 first-attempt e2e passes/one flaky
-master-data scenario16; check, 955 tests, build and post-actions pass. Restricted
-artifact `12196664566` is privately retained. PR #30's distinct recovery failure
-also remains held; no rerun or merge. Current main-based T154 investigation imports
-preserved T150–T153 OPEN. T154 is locally complete after causal RED, 30 focused
-passes, final check/948 tests/97 first-attempt e2e/build and scoped convergence;
-actual latest-head publication/review/CI is required before merge. This does not
-implement those privacy tasks or certify stable production contrast/global readiness.
+**Current execution addendum (2026-10-19 UTC):** T141 (`321ef93`, PR #29), T153 (`fedbb63`, PR #33),
+and T154 (`33e4797`, PR #32) are merged into `main` with clean prior/post-merge CI.
+The separate `003-fix-session-recovery-readiness` branch (PR #31) resolves 003 T131:
+it reproduces the pending-session dependency and cancels session reads on native
+offline events and Query cancellation, preserving existing local fallback and authoritative
+refusals. Rebased on `main` (`33e4797`), it inherits the T154 modal-notification scan stabilization.
+PR #30 remains held separately for transport verification.
 
-**IV-40 — modal notification scan race (T154):** at the retained CI head, `fixtures.ts`
-skipped stabilization when a dialog existed, assuming background notifications were hidden. Installed
+**IV-40 — modal notification scan race (T154):** merged into `main` via PR #32 (`33e4797`).
 Base UI excludes aria-live regions from background hiding; Sonner is such a region.
-The actual retained trace starts axe before toast expiry and marks it removed during
-the scan; the failure reports contrast1.69. Reproduce with controlled native timing,
-then distinguish scan readiness from stable application contrast before correction.
-Preserve visible notifications, modal input/focus, full axe and normal timer cleanup.
-No production contrast correction or completed task is claimed by this finding.
+`fixtures.ts` was corrected to stabilize accessibility scans with open modals/notifications without
+dropping focus or user-expanded stacks, alongside fixing CI-LOCK and CI-POINTER.
 
 Preserved unmerged findings remain open in the same inventory:
 
 | ID | Finding and owning task |
 | --- | --- |
-| IV-35 | Native credential-write failure logs SQL/parameters and can leave an orphan user; actual trusted app/disposable PG RED remains preserved on account checkpoint `0504631`, T150 and atomicity T131. |
-| IV-36 | Native emailed recovery GET logs its bearer path despite a successful redirect; preserved T151. |
+| IV-35 | Native credential-write failure logs raw SQL/parameters and leaves an orphan user; actual trusted app/disposable PG RED, preserved T150 and atomicity T131. |
+| IV-36 | Native emailed recovery GET returns 302 but logs its bearer path; preserved real-callback RED and T151. |
 | IV-37 | Separate full-gate day-summary transport timeout led to held PR #30/T136; no claim it shares the recovery/modal causes. |
-| IV-38 | Actual native SDK probes recapture synthetic bearer/query data in automatic context; browser messages/causes/stack URLs also require handling, T152. These are local/in-memory SDK probes, not an application fix or external delivery. |
-| IV-39 | A real PostgreSQL 22P02 message retains its synthetic input through `errorForLog`; actual handler probe also retains it in log/reporter message/stack, T153. No customer leak or completed privacy correction is claimed. |
+| IV-38 | CRITICAL, FR-041/R14/Constitution IX: native SDK default request/transaction metadata contains synthetic bearer/query values despite a safe Error. Actual Chromium/loopback intake additionally shows arbitrary message/cause and stack URL values surviving a context-only mask. T152 requires full real-app/browser envelopes and a reviewed privacy policy; these SDK probes are not a fix. |
+| IV-39 | Resolved on `main` via PR #33 (`fedbb63`, T153 diagnostic boundary). |
 
+All new probes use runtime-generated synthetic values and disposable/local/in-memory
+intakes, without external reporting or printed payloads/secrets. No customer leak is
+claimed. CSV-safe-for-Excel and own/current-work-only photo choices are explicitly
+resolved; deployment/infrastructure remain outside authority. Subsequent baseline
+paragraphs and metrics are historical wherever they differ from this addendum.
 
 **Status: NOT READY FOR GLOBAL SIGN-OFF.** Baseline source is
 `9006db32270338670e51c609c6b67ba2750fec83` (2026-10-17 in America/Bogota).
