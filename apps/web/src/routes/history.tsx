@@ -42,7 +42,7 @@ function HistoryPage() {
         description="Todos los envíos registrados, con búsqueda y filtros."
         actions={
           user.role === "owner" && (
-            <>
+            <div className="flex flex-wrap items-center gap-2">
               <a
                 className={buttonVariants({ variant: "outline" })}
                 href={exportUrl(filters, "csv")}
@@ -57,7 +57,28 @@ function HistoryPage() {
               >
                 Exportar Excel
               </a>
-            </>
+              <a
+                className={buttonVariants({ variant: "outline" })}
+                href="/api/export/courier-records?format=csv"
+                download
+              >
+                Exportar registros
+              </a>
+              <a
+                className={buttonVariants({ variant: "outline" })}
+                href="/api/export/routes?format=csv"
+                download
+              >
+                Exportar rutas
+              </a>
+              <a
+                className={buttonVariants({ variant: "outline" })}
+                href="/api/export/handovers?format=csv"
+                download
+              >
+                Exportar traspasos
+              </a>
+            </div>
           )
         }
       />

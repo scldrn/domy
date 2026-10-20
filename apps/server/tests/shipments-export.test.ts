@@ -80,6 +80,15 @@ const expected = (shipment: Shipment) => [
   "",
   "Santiago Marín",
   "01/10/2026 19:30",
+  "01/10/2026 19:30",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "0",
+  "",
 ];
 
 describe("GET /api/shipments/export", () => {
@@ -108,9 +117,34 @@ describe("GET /api/shipments/export", () => {
     const rows = await readSheet(Buffer.from(await response.arrayBuffer()));
     expect(rows[0]).toEqual([...exportColumns]);
     const values = expected(shipment).map((value, index) =>
-      [16, 17, 18].includes(index) ? Number(value) : value === "" ? null : value,
+      [16, 17, 18, 35].includes(index) ? Number(value) : value === "" ? null : value,
     );
     expect(rows[1]).toEqual(values);
+  });
+
+  it("neutralizes formula trigger characters in user text (IV-01, T128)", async () => {
+    const response = await t.request("/api/shipments", {
+      method: "POST",
+      cookie: owner.cookie,
+      body: {
+        id: crypto.randomUUID(),
+        kind: "errand",
+        merchantId: catalog.merchant.bullish,
+        pickupPointId: catalog.pickup.bullish,
+        errandDescription: "=1+1",
+        instructions: "+573001234567",
+        paymentMode: "merchant_account",
+        fee: 12000,
+        feeOverrideReason: "-Descuento autorizado",
+      },
+    });
+    expect(response.status).toBe(201);
+    const csv = await (
+      await t.request("/api/shipments/export?format=csv", { cookie: owner.cookie })
+    ).text();
+    expect(csv).toContain("'=1+1");
+    expect(csv).toContain("'+573001234567");
+    expect(csv).toContain("'-Descuento autorizado");
   });
 
   it("quotes values with commas or quotes in CSV", async () => {

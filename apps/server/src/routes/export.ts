@@ -1,5 +1,18 @@
-import { bogotaToday, neighborhoodKindLabels, rateEntryKindLabels } from "@domy/domain";
+import {
+  bogotaToday,
+  courierRecordKindLabels,
+  exceptionReasonLabels,
+  formatTrackingNumber,
+  handoverStatusLabels,
+  neighborhoodKindLabels,
+  notAppliedReasonLabels,
+  rateEntryKindLabels,
+  routeStatusLabels,
+  stopKindLabels,
+  taskStatusLabels,
+} from "@domy/domain";
 import { asc, desc, eq } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../app.ts";
@@ -7,7 +20,9 @@ import type { Executor } from "../db/client.ts";
 import {
   carriers,
   courierAliases,
+  courierRecords,
   couriers,
+  handovers,
   merchantAliases,
   merchants,
   municipalities,
@@ -16,6 +31,10 @@ import {
   pickupPoints,
   rateCardEntries,
   rateZones,
+  routes,
+  routeStops,
+  routeTasks,
+  shipments,
   users,
 } from "../db/schema/index.ts";
 import { requireRole } from "../lib/auth-guard.ts";
@@ -32,7 +51,7 @@ function grouped<T>(rows: T[], key: (row: T) => string, value: (row: T) => strin
   return (id: string) => (groups.get(id) ?? []).join("; ");
 }
 
-/** Each master data set as a table with Spanish headers (FR-025, Constitution IX). */
+/** Each master and operational data set as a table with Spanish headers (FR-025, 003 FR-042, Constitution IX). */
 const datasets: Record<string, (db: Executor) => Promise<Cell[][]>> = {
   async merchants(db) {
     const rows = await db
@@ -138,10 +157,228 @@ const datasets: Record<string, (db: Executor) => Promise<Cell[][]>> = {
       ]),
     ];
   },
+  async "courier-records"(db) {
+    const authors = alias(users, "authors");
+    const reverters = alias(users, "reverters");
+    const outcomeLabels: Record<string, string> = {
+      applied: "Aplicado",
+      duplicate: "Duplicado",
+      not_applied: "No aplicado",
+    };
+    const rows = await db
+      .select({
+        record: courierRecords,
+        shipment: shipments,
+        courier: couriers,
+        author: authors,
+        reverter: reverters,
+      })
+      .from(courierRecords)
+      .innerJoin(shipments, eq(shipments.id, courierRecords.shipmentId))
+      .innerJoin(couriers, eq(couriers.id, courierRecords.courierId))
+      .innerJoin(authors, eq(authors.id, courierRecords.authorUserId))
+      .leftJoin(reverters, eq(reverters.id, courierRecords.revertedBy))
+      .orderBy(desc(courierRecords.occurredAt), desc(courierRecords.recordedAt));
+    return [
+      [
+        "ID",
+        "Guía",
+        "Tipo",
+        "Resultado",
+        "Motivo no aplicado",
+        "Mensajero",
+        "Registrado por",
+        "En representación",
+        "Fecha ocurrencia",
+        "Fecha registro",
+        "Recibido por",
+        "Efectivo",
+        "Transferencia a la empresa",
+        "Transferencia al cliente",
+        "Motivo novedad",
+        "Nota",
+        "Valor pago por cuenta",
+        "Beneficiario",
+        "Anulado el",
+        "Anulado por",
+        "Motivo anulación",
+      ],
+      ...rows.map(({ record: r, shipment: s, courier: c, author: a, reverter: rev }) => [
+        r.id,
+        formatTrackingNumber(s.trackingNumber),
+        courierRecordKindLabels[r.kind],
+        outcomeLabels[r.outcome] ?? r.outcome,
+        r.notAppliedReason ? notAppliedReasonLabels[r.notAppliedReason] : null,
+        c.name,
+        a.name,
+        yesNo(r.onBehalf),
+        instant(r.occurredAt),
+        instant(r.recordedAt),
+        r.receivedByName,
+        r.cashAmount,
+        r.companyTransferAmount,
+        r.merchantTransferAmount,
+        r.exceptionReason ? exceptionReasonLabels[r.exceptionReason] : null,
+        r.note,
+        r.disbursementAmount,
+        r.payee,
+        instant(r.revertedAt),
+        rev?.name ?? null,
+        r.revertReason,
+      ]),
+    ];
+  },
+  async routes(db) {
+    const routeCouriers = alias(couriers, "route_couriers");
+    const taskCouriers = alias(couriers, "task_couriers");
+    const rows = await db
+      .select({
+        route: routes,
+        stop: routeStops,
+        task: routeTasks,
+        shipment: shipments,
+        routeCourier: routeCouriers.name,
+        taskCourier: taskCouriers.name,
+        neighborhood: neighborhoods.name,
+      })
+      .from(routeTasks)
+      .innerJoin(routeStops, eq(routeStops.id, routeTasks.stopId))
+      .innerJoin(routes, eq(routes.id, routeStops.routeId))
+      .innerJoin(shipments, eq(shipments.id, routeTasks.shipmentId))
+      .leftJoin(routeCouriers, eq(routeCouriers.id, routes.courierId))
+      .leftJoin(taskCouriers, eq(taskCouriers.id, routeTasks.completedByCourierId))
+      .leftJoin(neighborhoods, eq(neighborhoods.id, routeStops.neighborhoodId))
+      .orderBy(
+        desc(routes.serviceDate),
+        asc(routes.number),
+        asc(routeStops.position),
+        asc(routeTasks.id),
+      );
+    return [
+      [
+        "Fecha",
+        "Ruta",
+        "Estado ruta",
+        "Mensajero",
+        "Parada",
+        "Tipo de parada",
+        "Dirección",
+        "Barrio",
+        "Guía",
+        "Tipo tarea",
+        "Estado tarea",
+        "Problema de recogida",
+        "Completada el",
+        "Completada por",
+        "Despachada el",
+        "Finalizada el",
+      ],
+      ...rows.map(
+        ({ route: r, stop, task, shipment: s, routeCourier, taskCourier, neighborhood }) => [
+          day(r.serviceDate),
+          r.number,
+          routeStatusLabels[r.status],
+          routeCourier,
+          stop.position,
+          stopKindLabels[stop.kind],
+          stop.address,
+          neighborhood,
+          formatTrackingNumber(s.trackingNumber),
+          stopKindLabels[task.kind],
+          taskStatusLabels[task.status],
+          task.problemNote,
+          instant(task.completedAt),
+          taskCourier,
+          instant(r.dispatchedAt),
+          instant(r.finishedAt),
+        ],
+      ),
+    ];
+  },
+  async handovers(db) {
+    const fromCouriers = alias(couriers, "from_couriers");
+    const toCouriers = alias(couriers, "to_couriers");
+    const fromRoutes = alias(routes, "from_routes");
+    const toRoutes = alias(routes, "to_routes");
+    const requesters = alias(users, "requesters");
+    const resolvers = alias(users, "resolvers");
+    const rows = await db
+      .select({
+        handover: handovers,
+        shipment: shipments,
+        fromCourier: fromCouriers.name,
+        toCourier: toCouriers.name,
+        fromRoute: fromRoutes.number,
+        toRoute: toRoutes.number,
+        requester: requesters.name,
+        resolver: resolvers.name,
+      })
+      .from(handovers)
+      .innerJoin(shipments, eq(shipments.id, handovers.shipmentId))
+      .innerJoin(fromCouriers, eq(fromCouriers.id, handovers.fromCourierId))
+      .innerJoin(toCouriers, eq(toCouriers.id, handovers.toCourierId))
+      .leftJoin(fromRoutes, eq(fromRoutes.id, handovers.fromRouteId))
+      .innerJoin(toRoutes, eq(toRoutes.id, handovers.toRouteId))
+      .innerJoin(requesters, eq(requesters.id, handovers.requestedBy))
+      .leftJoin(resolvers, eq(resolvers.id, handovers.resolvedBy))
+      .orderBy(desc(handovers.requestedAt));
+    return [
+      [
+        "ID",
+        "Guía",
+        "Mensajero origen",
+        "Mensajero destino",
+        "Ruta origen",
+        "Ruta destino",
+        "Estado",
+        "Motivo",
+        "Solicitado por",
+        "Solicitado el",
+        "Resuelto por",
+        "Resuelto el",
+        "En representación",
+      ],
+      ...rows.map(
+        ({
+          handover: h,
+          shipment: s,
+          fromCourier,
+          toCourier,
+          fromRoute,
+          toRoute,
+          requester,
+          resolver,
+        }) => [
+          h.id,
+          formatTrackingNumber(s.trackingNumber),
+          fromCourier,
+          toCourier,
+          fromRoute ?? null,
+          toRoute,
+          handoverStatusLabels[h.status],
+          h.reason,
+          requester,
+          instant(h.requestedAt),
+          resolver ?? null,
+          instant(h.resolvedAt),
+          yesNo(h.resolvedOnBehalf),
+        ],
+      ),
+    ];
+  },
 };
 
 const params = z.object({
-  dataset: z.enum(["merchants", "couriers", "carriers", "neighborhoods", "rate-card"]),
+  dataset: z.enum([
+    "merchants",
+    "couriers",
+    "carriers",
+    "neighborhoods",
+    "rate-card",
+    "courier-records",
+    "routes",
+    "handovers",
+  ]),
 });
 
 export const exportRoutes = new Hono<AppEnv>()

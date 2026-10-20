@@ -7,7 +7,15 @@ const panelRoute = getRouteApi("/_panel");
 export function ExportButton({
   dataset,
 }: {
-  dataset: "merchants" | "couriers" | "carriers" | "neighborhoods" | "rate-card";
+  dataset:
+    | "merchants"
+    | "couriers"
+    | "carriers"
+    | "neighborhoods"
+    | "rate-card"
+    | "courier-records"
+    | "routes"
+    | "handovers";
 }) {
   const { user } = panelRoute.useRouteContext();
   if (user.role !== "owner") return null;
