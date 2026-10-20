@@ -293,7 +293,14 @@ export const bulkRoutes = new Hono<AppEnv>()
     const entries = await rateEntriesFor(db, merchantId);
     const fields: Record<string, string> = {};
     const values: NewShipment[] = [];
+    const seenIds = new Set<string>();
     for (const [index, row] of rows.entries()) {
+      if (seenIds.has(row.id)) {
+        fields[`rows.${String(index)}.id`] =
+          "El identificador del envío está repetido en la lista.";
+        continue;
+      }
+      seenIds.add(row.id);
       if (row.merchantId !== merchantId) {
         fields[`rows.${String(index)}.merchantId`] = "Todas las filas son del mismo cliente.";
         continue;
@@ -321,19 +328,29 @@ export const bulkRoutes = new Hono<AppEnv>()
     }
 
     try {
-      await insertShipments(db, values, async (tx) => {
-        await tx.insert(bulkBatches).values({
-          id: batchId,
-          merchantId,
-          createdBy: user.id,
-          rowCount: rows.length,
-          createdCount: rows.length,
-        });
-      });
+      const outcome = await insertShipments(
+        db,
+        values,
+        async (tx) => {
+          await tx.insert(bulkBatches).values({
+            id: batchId,
+            merchantId,
+            createdBy: user.id,
+            rowCount: rows.length,
+            createdCount: 0,
+          });
+        },
+        async (tx, inserted) => {
+          await tx
+            .update(bulkBatches)
+            .set({ createdCount: inserted.length })
+            .where(eq(bulkBatches.id, batchId));
+        },
+      );
+      return c.json(await result(), outcome.createdCount > 0 ? 201 : 200);
     } catch (error) {
       // The same batch confirmed at the same time by a retry.
       if (!isUniqueViolation(error, "bulk_batches_pkey")) throw error;
       return c.json(await result(), 200);
     }
-    return c.json(await result(), 201);
   });

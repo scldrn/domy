@@ -388,17 +388,11 @@ spec/contract obligations remain authoritative where a description below is abbr
   create+link failure resumes safely; relogin/replay of self-end-sessions cannot kill the
   new session. No secret-bearing receipt or arbitrary auth `data` passthrough.
 
-### 001/T133 — Atomic bulk creation identity and event correctness
+### 001/T133 — Atomic bulk creation identity and event correctness [COMPLETED]
 
-- **Why/state:** IV-16; CRITICAL. Mixed existing/new or duplicate UUID rows corrupt creation
-  history despite one stored shipment.
-- **Touchpoints:** domain bulk schemas, `routes/bulk.ts`, `lib/registration.ts`, events.
-- **RED:** repeated row UUID, mixed existing/new batch, exact replay, concurrent bulk and
-  individual creation, invalid row in otherwise valid batch.
-- **Work:** explicitly align ambiguous duplicate-row semantics before code; generate creation
-  events only for actual inserts and preserve original accepted replay results.
-- **Exit:** exactly one creation event per shipment, atomic all-or-none invalid-input
-  handling, accurate row results and no false successful duplicate entries.
+- **Why/state:** Resolved. In `packages/domain/src/schemas/bulk.ts`, added duplicate row ID check in `bulkConfirmInput.superRefine`, rejecting repeated UUIDs with 400 validation error. In `apps/server/src/lib/registration.ts` (`insertShipments`), filtered `shipmentEvents` insertion strictly to newly inserted rows (`insertedIds.has(row.id)`), eliminating duplicate creation events for pre-existing shipments. In `apps/server/src/routes/bulk.ts`, replaying confirmed batches or existing shipments returns 200 without duplicate events, and atomic all-or-none rejection is maintained.
+- **Touchpoints:** `packages/domain/src/schemas/bulk.ts`, `apps/server/src/routes/bulk.ts`, `apps/server/src/lib/registration.ts`, `apps/server/tests/bulk.test.ts`.
+- **Exit:** Validated: 19/19 tests pass in `bulk.test.ts`, exactly one creation event per inserted shipment, atomic batch integrity verified under concurrent and mixed submissions.
 
 ### 001/T134 — Concurrent master-data creation replay [COMPLETED]
 

@@ -1,7 +1,7 @@
 import { bulkColumns, type BulkPreviewRow, type ShipmentCreateInput } from "@domy/domain";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { bulkBatches, shipments } from "../src/db/schema/index.ts";
+import { bulkBatches, shipmentEvents, shipments } from "../src/db/schema/index.ts";
 import { createTestApp } from "./setup/app.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
 import { startDatabase, type TestDatabase } from "./setup/database.ts";
@@ -259,5 +259,236 @@ describe("POST /api/bulk/confirm", () => {
     const rows = await preview([delivery()]);
     const result = await confirm(crypto.randomUUID(), rows, catalog.merchant.bullish);
     expect(result.status).toBe(400);
+  });
+
+  it("refuses ambiguous duplicate row IDs in the same batch with 400 validation error", async () => {
+    const rows = await preview([delivery({ Referencia: "D-1" }), delivery({ Referencia: "D-2" })]);
+    const firstRow = rows[0];
+    const secondRow = rows[1];
+    if (!firstRow || !secondRow) throw new Error("Expected preview rows");
+    const duplicateId = crypto.randomUUID();
+    const batchId = crypto.randomUUID();
+    const body = {
+      batchId,
+      merchantId: catalog.merchant.amy,
+      rows: [
+        { ...firstRow.input, id: duplicateId, confirmed: true },
+        { ...secondRow.input, id: duplicateId, confirmed: true },
+      ],
+    };
+    const response = await post("/api/bulk/confirm", body);
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({
+      error: {
+        code: "invalid_request",
+        fields: {
+          "rows.1.id": expect.any(String),
+        },
+      },
+    });
+    expect(await database.db.select().from(shipments)).toHaveLength(0);
+    expect(await database.db.select().from(shipmentEvents)).toHaveLength(0);
+    expect(await database.db.select().from(bulkBatches)).toHaveLength(0);
+  });
+
+  it("creates events only for newly inserted shipments in a mixed batch", async () => {
+    const [initialRow] = await preview([delivery({ Referencia: "INITIAL-1" })]);
+    if (!initialRow) throw new Error("Expected preview row");
+    const existingId = crypto.randomUUID();
+    const createExisting = await post("/api/shipments", {
+      ...initialRow.input,
+      id: existingId,
+      confirmed: true,
+    });
+    expect(createExisting.status).toBe(201);
+    const eventsBefore = await database.db
+      .select()
+      .from(shipmentEvents)
+      .where(eq(shipmentEvents.shipmentId, existingId));
+    expect(eventsBefore).toHaveLength(1);
+
+    const newId = crypto.randomUUID();
+    const batchRows = await preview([
+      delivery({ Referencia: "INITIAL-1" }),
+      delivery({ Referencia: "NEW-2" }),
+    ]);
+    const existingRow = batchRows[0];
+    const newRow = batchRows[1];
+    if (!existingRow || !newRow) throw new Error("Expected preview rows");
+    const batchId = crypto.randomUUID();
+    const response = await post("/api/bulk/confirm", {
+      batchId,
+      merchantId: catalog.merchant.amy,
+      rows: [
+        { ...existingRow.input, id: existingId, confirmed: true },
+        { ...newRow.input, id: newId, confirmed: true },
+      ],
+    });
+    expect(response.status).toBe(201);
+    expect(response.body["created"]).toHaveLength(2);
+
+    const existingEventsAfter = await database.db
+      .select()
+      .from(shipmentEvents)
+      .where(eq(shipmentEvents.shipmentId, existingId));
+    expect(existingEventsAfter).toHaveLength(1);
+
+    const newEvents = await database.db
+      .select()
+      .from(shipmentEvents)
+      .where(eq(shipmentEvents.shipmentId, newId));
+    expect(newEvents).toHaveLength(1);
+    expect(newEvents[0]?.type).toBe("created");
+
+    const [batch] = await database.db.select().from(bulkBatches).where(eq(bulkBatches.id, batchId));
+    expect(batch).toMatchObject({ rowCount: 2, createdCount: 1 });
+  });
+
+  it("replaying a confirmed batch returns 200 and inserts no duplicate creation events", async () => {
+    const rows = await preview([delivery({ Referencia: "A-1" }), delivery({ Referencia: "A-2" })]);
+    const batchId = crypto.randomUUID();
+    const body = {
+      batchId,
+      merchantId: catalog.merchant.amy,
+      rows: rows.map((r) => ({ ...r.input, id: crypto.randomUUID(), confirmed: true })),
+    };
+    const first = await post("/api/bulk/confirm", body);
+    expect(first.status).toBe(201);
+
+    const eventsAfterFirst = await database.db.select().from(shipmentEvents);
+    expect(eventsAfterFirst).toHaveLength(2);
+
+    const replay = await post("/api/bulk/confirm", body);
+    expect(replay.status).toBe(200);
+    expect(replay.body["created"]).toEqual(first.body["created"]);
+
+    const eventsAfterReplay = await database.db.select().from(shipmentEvents);
+    expect(eventsAfterReplay).toHaveLength(2);
+  });
+
+  it("submitting already-existing shipments under a new batch ID returns 200 with existing records and no duplicate events", async () => {
+    const rows = await preview([delivery({ Referencia: "B-1" }), delivery({ Referencia: "B-2" })]);
+    const rowInputs = rows.map((r) => ({ ...r.input, id: crypto.randomUUID(), confirmed: true }));
+    const first = await post("/api/bulk/confirm", {
+      batchId: crypto.randomUUID(),
+      merchantId: catalog.merchant.amy,
+      rows: rowInputs,
+    });
+    expect(first.status).toBe(201);
+
+    const secondBatchId = crypto.randomUUID();
+    const second = await post("/api/bulk/confirm", {
+      batchId: secondBatchId,
+      merchantId: catalog.merchant.amy,
+      rows: rowInputs,
+    });
+    expect(second.status).toBe(200);
+    expect(second.body["created"]).toEqual(first.body["created"]);
+
+    const events = await database.db.select().from(shipmentEvents);
+    expect(events).toHaveLength(2);
+
+    const [batch] = await database.db
+      .select()
+      .from(bulkBatches)
+      .where(eq(bulkBatches.id, secondBatchId));
+    expect(batch).toMatchObject({ rowCount: 2, createdCount: 0 });
+  });
+
+  it("refuses batch and inserts nothing when an invalid row is mixed with valid new and existing rows", async () => {
+    const [initial] = await preview([delivery({ Referencia: "EXISTING" })]);
+    if (!initial) throw new Error("Expected preview row");
+    const existingId = crypto.randomUUID();
+    await post("/api/shipments", {
+      ...initial.input,
+      id: existingId,
+      confirmed: true,
+    });
+    expect(await database.db.select().from(shipments)).toHaveLength(1);
+
+    const rows = await preview([
+      delivery({ Referencia: "EXISTING" }),
+      delivery({ Referencia: "NEW-VALID" }),
+      delivery({ Referencia: "NEW-INVALID" }),
+    ]);
+    const existingRow = rows[0];
+    const newValidRow = rows[1];
+    const newInvalidRow = rows[2];
+    if (!existingRow || !newValidRow || !newInvalidRow) throw new Error("Expected preview rows");
+    const newValidId = crypto.randomUUID();
+    const newInvalidId = crypto.randomUUID();
+    const batchId = crypto.randomUUID();
+    const response = await post("/api/bulk/confirm", {
+      batchId,
+      merchantId: catalog.merchant.amy,
+      rows: [
+        { ...existingRow.input, id: existingId, confirmed: true },
+        { ...newValidRow.input, id: newValidId, confirmed: true },
+        {
+          ...newInvalidRow.input,
+          id: newInvalidId,
+          fee: 5000,
+          feeOverrideReason: undefined,
+          confirmed: true,
+        },
+      ],
+    });
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({
+      error: {
+        code: "invalid_request",
+        fields: {
+          "rows.2.feeOverrideReason": expect.any(String),
+        },
+      },
+    });
+
+    expect(await database.db.select().from(shipments)).toHaveLength(1);
+    expect(await database.db.select().from(bulkBatches)).toHaveLength(0);
+    expect(await database.db.select().from(shipmentEvents)).toHaveLength(1);
+  });
+
+  it("handles concurrent bulk and individual creation without duplicate events", async () => {
+    const [previewRow] = await preview([delivery({ Referencia: "CONCURRENT-1" })]);
+    if (!previewRow) throw new Error("Expected preview row");
+    const sharedId = crypto.randomUUID();
+    const newId = crypto.randomUUID();
+    const batchId = crypto.randomUUID();
+
+    const shipmentPayload = {
+      ...previewRow.input,
+      id: sharedId,
+      confirmed: true,
+    };
+    const bulkPayload = {
+      batchId,
+      merchantId: catalog.merchant.amy,
+      rows: [
+        shipmentPayload,
+        { ...previewRow.input, id: newId, merchantReference: "CONCURRENT-2", confirmed: true },
+      ],
+    };
+
+    const [shipmentRes, bulkRes] = await Promise.all([
+      post("/api/shipments", shipmentPayload),
+      post("/api/bulk/confirm", bulkPayload),
+    ]);
+
+    expect([200, 201]).toContain(shipmentRes.status);
+    expect([200, 201]).toContain(bulkRes.status);
+
+    const sharedEvents = await database.db
+      .select()
+      .from(shipmentEvents)
+      .where(eq(shipmentEvents.shipmentId, sharedId));
+    expect(sharedEvents).toHaveLength(1);
+    expect(sharedEvents[0]?.type).toBe("created");
+
+    const newEvents = await database.db
+      .select()
+      .from(shipmentEvents)
+      .where(eq(shipmentEvents.shipmentId, newId));
+    expect(newEvents).toHaveLength(1);
+    expect(newEvents[0]?.type).toBe("created");
   });
 });

@@ -256,16 +256,23 @@ export async function prepareShipment(
   };
 }
 
+export type InsertShipmentsResult = {
+  created: boolean;
+  createdCount: number;
+  insertedIds: string[];
+};
+
 /**
  * Inserts registrations with their "created" events in one transaction, with new tracking
  * numbers (retried on the rare collision). `before` runs first in the same transaction, for
- * the bulk batch row. Returns false when the shipments already existed (FR-042).
+ * the bulk batch row, and `after` runs with the actually inserted rows before commit.
  */
 export async function insertShipments(
   db: Db,
   rows: NewShipment[],
   before?: (tx: Executor) => Promise<void>,
-): Promise<boolean> {
+  after?: (tx: Executor, inserted: { id: string }[]) => Promise<void>,
+): Promise<InsertShipmentsResult> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await db.transaction(async (tx) => {
@@ -275,21 +282,29 @@ export async function insertShipments(
           .values(rows.map((row) => ({ ...row, trackingNumber: generateTrackingNumber() })))
           .onConflictDoNothing({ target: shipments.id })
           .returning({ id: shipments.id });
-        if (inserted.length === 0) return false;
-        await tx.insert(shipmentEvents).values(
-          rows.map(({ recipientNameNormalized: _, trackingNumber: __, ...values }) => ({
-            shipmentId: values.id,
-            type: "created" as const,
-            toStatus: "registered" as const,
-            actorUserId: values.registeredBy,
-            occurredAt: values.registeredAt,
-            reason: values.feeOverrideReason,
-            changes: Object.fromEntries(
-              Object.entries(values).map(([field, value]) => [field, [null, value]]),
-            ),
-          })),
-        );
-        return true;
+        const insertedIds = new Set(inserted.map((r) => r.id));
+        const newlyInserted = rows.filter((row) => insertedIds.has(row.id));
+        if (newlyInserted.length > 0) {
+          await tx.insert(shipmentEvents).values(
+            newlyInserted.map(({ recipientNameNormalized: _, trackingNumber: __, ...values }) => ({
+              shipmentId: values.id,
+              type: "created" as const,
+              toStatus: "registered" as const,
+              actorUserId: values.registeredBy,
+              occurredAt: values.registeredAt,
+              reason: values.feeOverrideReason,
+              changes: Object.fromEntries(
+                Object.entries(values).map(([field, value]) => [field, [null, value]]),
+              ),
+            })),
+          );
+        }
+        await after?.(tx, inserted);
+        return {
+          created: inserted.length > 0,
+          createdCount: inserted.length,
+          insertedIds: inserted.map((r) => r.id),
+        };
       });
     } catch (error) {
       if (attempt < 5 && isUniqueViolation(error, "shipments_tracking_number_key")) continue;
