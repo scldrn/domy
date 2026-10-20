@@ -6,6 +6,7 @@ import { sql } from "drizzle-orm";
 import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { AppError, errorForLog, setErrorReporter } from "../src/lib/errors.ts";
+import { createMailer } from "../src/lib/email.ts";
 import { createLogger } from "../src/lib/logger.ts";
 import { createTestApp } from "./setup/app.ts";
 import { createCatalog } from "./setup/catalog.ts";
@@ -22,6 +23,76 @@ afterAll(async () => {
 describe("logs (FR-041)", () => {
   beforeEach(async () => {
     await database.truncate();
+  });
+
+  it("never logs a password recovery token carried in the native callback path (T151)", async () => {
+    let output = "";
+    const sink = new Writable({
+      write(chunk: Buffer, _encoding, done) {
+        output += chunk.toString();
+        done();
+      },
+    });
+    const t = createTestApp(database.db, { logger: createLogger("debug", sink) });
+    const owner = await t.signIn("owner");
+    const requested = await t.request("/api/auth/request-password-reset", {
+      method: "POST",
+      body: { email: owner.email, redirectTo: "http://localhost:3000/restablecer-contrasena" },
+    });
+    expect(requested.status).toBe(200);
+    const url = t.emails[0]?.url;
+    if (!url) throw new Error("The recovery fixture must receive its native email");
+    const token = new URL(url).pathname.split("/").at(-1);
+    if (!token) throw new Error("The native callback must carry a token");
+    expect((await t.app.request(url)).status).toBe(302);
+    for (const variant of [
+      url.replace("/reset-password/", "/%72eset-password/"),
+      url.replace("/reset-password/", "/RESET-PASSWORD/"),
+      url.replace(`/reset-password/${token}`, `/%72eset-password/${token}%FF`),
+    ]) {
+      expect((await t.app.request(variant)).status).toBe(404);
+    }
+    // A failed privacy assertion must not print the live token or captured logs.
+    expect(output.includes(token), "request logs must omit recovery tokens").toBe(false);
+    expect(output).toContain('"msg":"request"');
+    expect(output).toContain('"path":"/api/auth/reset-password/:token"');
+  });
+
+  it("never logs recovery bearer URLs or tokens in development mail fallback (T155)", async () => {
+    let output = "";
+    const sink = new Writable({
+      write(chunk: Buffer, _encoding, done) {
+        output += chunk.toString();
+        done();
+      },
+    });
+    const logger = createLogger("debug", sink);
+    const mailer = createMailer({
+      nodeEnv: "development",
+      apiKey: undefined,
+      from: "soporte@domy.test",
+      logger,
+    });
+    const secretToken = "super-secret-bearer-token-12345";
+    const bearerUrl = `http://localhost:3000/api/auth/reset-password/${secretToken}?callbackURL=http://localhost:3000/restablecer`;
+    await mailer.sendResetPassword({
+      email: "recuperacion@domy.test",
+      name: "Usuario Recuperación",
+      url: bearerUrl,
+    });
+
+    expect(
+      output.includes(secretToken),
+      "development mail fallback must not log bearer tokens",
+    ).toBe(false);
+    expect(output.includes(bearerUrl), "development mail fallback must not log bearer URLs").toBe(
+      false,
+    );
+    expect(
+      output.includes("recuperacion@domy.test"),
+      "development mail fallback must not log recipient emails",
+    ).toBe(false);
+    expect(output).toContain("RESEND_API_KEY");
   });
   it("never contain passwords, cookies, or recipients' data", async () => {
     let output = "";

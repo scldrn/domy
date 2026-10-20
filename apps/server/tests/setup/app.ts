@@ -23,6 +23,7 @@ export function createTestApp(
     storage?: PhotoStorage;
     /** US5/T061 uses real VAPID configuration; only the external push transport is spied. */
     push?: { publicKey: string; privateKey: string; subject: string };
+    sendResetPassword?: (data: { email: string; name: string; url: string }) => Promise<void>;
   } = {},
 ) {
   let now = new Date(options.now ?? "2026-10-01T15:00:00Z");
@@ -33,7 +34,9 @@ export function createTestApp(
     baseUrl: "http://localhost:3000",
     sendResetPassword: async (email) => {
       emails.push(email);
-      await Promise.resolve();
+      if (options.sendResetPassword) {
+        await options.sendResetPassword(email);
+      }
     },
   });
   const app = createApp({

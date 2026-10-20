@@ -5,7 +5,7 @@ export type ResetEmail = { email: string; name: string; url: string };
 
 /**
  * Transactional email through Resend (research R5). In tests the messages are kept in
- * memory; in development without an API key the link is logged so it can be followed.
+ * memory; in development without an API key a static diagnostic is logged without sensitive tokens.
  */
 export function createMailer(options: {
   nodeEnv: "development" | "test" | "production";
@@ -26,7 +26,9 @@ export function createMailer(options: {
       return;
     }
     if (!resend) {
-      options.logger.info({ url: message.url }, "password reset link (email not configured)");
+      options.logger.info(
+        "password reset email requested; configure RESEND_API_KEY to receive recovery emails",
+      );
       return;
     }
     const text = [

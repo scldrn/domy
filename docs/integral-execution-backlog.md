@@ -590,16 +590,11 @@ spec/contract obligations remain authoritative where a description below is abbr
   remain proper client auth failures. Do not disable native logging globally or duplicate
   auth configuration. T153/T152 still need their own layer-specific guarantees.
 
-### 001/T151 — Recovery bearer removal from request-path logs
+### 001/T151 — Recovery bearer removal from request-path logs [COMPLETED]
 
-- **Why/state:** IV-36; CRITICAL; local implementation/regression preserved in `0504631`.
-- **Touchpoints:** `apps/server/src/app.ts` request logging and native emailed callback.
-- **RED/retained:** actual emailed GET recovery callback, alternate encoded/refused paths,
-  ordinary requests and query omission; inspect complete captures via boolean assertions.
-- **Work:** log the callback route template instead of its bearer segment without
-  altering native redirects, recovery or trusted request checks.
-- **Exit:** raw/alternate bearer paths never enter request logs, useful method/status/
-  latency diagnostics remain. This does not cover the development email URL itself(T155).
+- **Why/state:** Resolved. Decoded segments in `apps/server/src/app.ts` request logging middleware and templated matching `/^\/api\/auth\/reset-password\//i` paths as `/api/auth/reset-password/:token`, preventing raw/encoded bearer tokens from entering request logs.
+- **Touchpoints:** `apps/server/src/app.ts`, `apps/server/tests/log-redaction.test.ts`.
+- **Exit:** Validated: permanent boolean assertion in `log-redaction.test.ts` passes; no bearer token appears in stdout/pino captures across standard, lowercase, encoded, and malformed path requests.
 
 ### 001/T152 — Native Sentry server/browser envelope privacy
 
@@ -648,20 +643,11 @@ spec/contract obligations remain authoritative where a description below is abbr
   expiry resumes, existing offline/photo/save hit tests remain; latest reviewed PR head
   and trunk must be clean. Prior local97-pass evidence cannot authorize the failed CI head.
 
-### 001/T155 — Development recovery mail must not log bearer URLs
+### 001/T155 — Development recovery mail must not log bearer URLs [COMPLETED]
 
-- **Why/state:** IV-41; CRITICAL. Actual native PG/auth/development-mailer probe proves
-  successful recovery writes the actual nonempty bearer URL to logs. No customer incident.
-- **Touchpoints:** `lib/email.ts`, native Resend wiring, actual recovery/mail tests, R5/R14
-  and local setup/quickstart. Research exists; permanent RED/implementation remain.
-- **RED:** real known/unknown recovery requests with no provider; inspect actual log and
-  token absence via safe captures; preserve test-only outbox and production missing-key refusal.
-- **Work:** development stays available but delivery requires configured mail; issue static
-  actionable configuration diagnostics, never email/token/URL. Keep native callback/
-  generic confirmation. No public mailbox, custom token or mail wrapper.
-- **Exit:** real SDK POST goes only to an explicit fake-key loopback receiver, Spanish
-  content/link work through actual native reset, single-use/expiry/sign-in preserved,
-  environment/listeners/db cleaned. Local intake proves API integration, not real inbox delivery.
+- **Why/state:** Resolved. In `apps/server/src/lib/email.ts`, replaced logging `{ url: message.url }` when `RESEND_API_KEY` is not configured in development with an actionable static diagnostic message without sensitive tokens. Preserved test-only outbox and production key requirement.
+- **Touchpoints:** `apps/server/src/lib/email.ts`, `apps/server/tests/auth-lockout-recovery.test.ts`, `apps/server/tests/log-redaction.test.ts`.
+- **Exit:** Validated: 31/31 tests pass in `log-redaction.test.ts` and `auth-lockout-recovery.test.ts`; development mail fallback never prints secret bearer tokens, recovery URLs, or recipient emails to stdout/pino logs.
 
 ## 7. Feature 002: both open tasks
 

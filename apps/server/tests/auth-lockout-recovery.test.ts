@@ -1,4 +1,7 @@
+import { Writable } from "node:stream";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { createMailer } from "../src/lib/email.ts";
+import { createLogger } from "../src/lib/logger.ts";
 import { createTestApp } from "./setup/app.ts";
 import { startDatabase, type TestDatabase } from "./setup/database.ts";
 
@@ -71,6 +74,44 @@ describe("lockout (FR-033)", () => {
 });
 
 describe("password recovery (FR-030)", () => {
+  it("never logs recovery bearer URLs or tokens when mail provider is unconfigured in development (T155)", async () => {
+    let output = "";
+    const sink = new Writable({
+      write(chunk: Buffer, _encoding, done) {
+        output += chunk.toString();
+        done();
+      },
+    });
+    const logger = createLogger("debug", sink);
+    const mailer = createMailer({
+      nodeEnv: "development",
+      apiKey: undefined,
+      from: "soporte@domy.test",
+      logger,
+    });
+    const devApp = createTestApp(database.db, {
+      logger,
+      sendResetPassword: mailer.sendResetPassword,
+    });
+    const requested = await devApp.request("/api/auth/request-password-reset", {
+      method: "POST",
+      body: { email: user.email, redirectTo: "/restablecer" },
+    });
+    expect(requested.status).toBe(200);
+    expect(devApp.emails).toHaveLength(1);
+    const recoveryUrl = devApp.emails[0]?.url;
+    if (!recoveryUrl) throw new Error("Expected recovery email URL");
+    const token = tokenOf(recoveryUrl);
+    expect(token).toBeTruthy();
+
+    expect(output.includes(token), "logs must not contain recovery token").toBe(false);
+    expect(output.includes(recoveryUrl), "logs must not contain recovery URL").toBe(false);
+    expect(output).toContain("RESEND_API_KEY");
+
+    const callbackResponse = await devApp.app.request(recoveryUrl);
+    expect(callbackResponse.status).toBe(302);
+    expect(output.includes(token), "request logs must not contain recovery token").toBe(false);
+  });
   it("sends a single-use link and answers the same for unknown emails (scenarios 2, 7)", async () => {
     const known = await requestReset(user.email);
     const unknown = await requestReset("nadie@domy.test");
