@@ -139,3 +139,34 @@ describe("length limits", () => {
     ]);
   });
 });
+
+describe("monetary bounds (Finding IV-13 / T138)", () => {
+  it("rejects amounts exceeding PostgreSQL int4 bound ($ 2.147.483.647)", () => {
+    const overFee = shipmentCreateInput.safeParse({
+      ...delivery,
+      fee: 3_000_000_000,
+      confirmed: true,
+    });
+    expect(overFee.success).toBe(false);
+    expect(overFee.error?.issues[0]?.message).toMatch(/superar \$ 2\.147\.483\.647/);
+
+    const overCod = shipmentCreateInput.safeParse({
+      ...delivery,
+      paymentMode: "cash_on_delivery",
+      codAmount: 3_000_000_000,
+      confirmed: true,
+    });
+    expect(overCod.success).toBe(false);
+    expect(overCod.error?.issues[0]?.message).toMatch(/superar \$ 2\.147\.483\.647/);
+  });
+
+  it("accepts confirmed amounts up to the representable bound", () => {
+    const validBoundary = shipmentCreateInput.safeParse({
+      ...delivery,
+      fee: 2_147_483_647,
+      feeOverrideReason: "Tarifa acordada",
+      confirmed: true,
+    });
+    expect(validBoundary.success).toBe(true);
+  });
+});
