@@ -4,6 +4,7 @@ import { getRouteApi } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { OptionSelect } from "@/components/option-select";
+import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import {
   addNeighborhood,
@@ -76,6 +77,69 @@ export function AddNeighborhoodDialog() {
 }
 
 /**
+ * State machine managing authoritative detail loading for neighborhood editing (Finding IV-21, 001/T145).
+ * Prevents early destructive save while detail is pending or failed; preserves existing variants on name-only edits.
+ */
+export class NeighborhoodEditState {
+  private status: "pending" | "resolved" | "error" = "pending";
+  private initialVariants: string[] = [];
+  private currentVariants: string = "";
+  private variantsDirty: boolean = false;
+  private currentName: string = "";
+
+  constructor(initialName: string) {
+    this.currentName = initialName;
+  }
+
+  isSaveAllowed(): boolean {
+    return this.status === "resolved";
+  }
+
+  resolveDetail(variants: string[]): void {
+    this.status = "resolved";
+    this.initialVariants = [...variants];
+    if (!this.variantsDirty) {
+      this.currentVariants = variants.join(", ");
+    }
+  }
+
+  failDetail(): void {
+    this.status = "error";
+  }
+
+  retryDetail(): void {
+    this.status = "pending";
+  }
+
+  setVariants(text: string): void {
+    this.currentVariants = text;
+    this.variantsDirty = true;
+  }
+
+  setName(name: string): void {
+    this.currentName = name;
+  }
+
+  getStatus(): "pending" | "resolved" | "error" {
+    return this.status;
+  }
+
+  getVariantsText(): string {
+    return this.currentVariants;
+  }
+
+  getEffectiveVariants(): string[] {
+    if (!this.isSaveAllowed()) {
+      throw new Error("Cannot save while detail is uninitialized or failed");
+    }
+    if (!this.variantsDirty) {
+      return this.initialVariants;
+    }
+    return splitList(this.currentVariants);
+  }
+}
+
+/**
  * Edits a neighborhood's name and spelling variants; the owner also changes its kind and
  * rate zone and confirms a dispatcher's addition (FR-026, FR-036).
  */
@@ -85,10 +149,36 @@ export function EditNeighborhoodDialog({ place }: { place: NeighborhoodOption })
   const owner = user.role === "owner";
   const zones = useZones();
   const [key, setKey] = useState(() => crypto.randomUUID());
-  const [name, setName] = useState("");
+  const [name, setName] = useState(place.name);
   const [variants, setVariants] = useState("");
-  const [rateZoneId, setRateZoneId] = useState("");
-  const [kind, setKind] = useState<NeighborhoodKind>("neighborhood");
+  const [rateZoneId, setRateZoneId] = useState(place.rateZone.id);
+  const [kind, setKind] = useState<NeighborhoodKind>(place.kind);
+  const [editState, setEditState] = useState(() => new NeighborhoodEditState(place.name));
+  const [status, setStatus] = useState<"pending" | "resolved" | "error">("pending");
+
+  const loadDetail = async (state: NeighborhoodEditState) => {
+    setStatus("pending");
+    try {
+      const detail = await getNeighborhood(place.id);
+      state.resolveDetail(detail.variants);
+      setVariants(state.getVariantsText());
+      setStatus("resolved");
+    } catch {
+      state.failDetail();
+      setStatus("error");
+    }
+  };
+
+  const handleOpen = () => {
+    setKey(crypto.randomUUID());
+    setName(place.name);
+    setRateZoneId(place.rateZone.id);
+    setKind(place.kind);
+    const nextState = new NeighborhoodEditState(place.name);
+    setEditState(nextState);
+    setVariants("");
+    void loadDetail(nextState);
+  };
 
   return (
     <FormDialog
@@ -99,32 +189,60 @@ export function EditNeighborhoodDialog({ place }: { place: NeighborhoodOption })
         owner ? undefined : `Zona tarifaria: ${place.rateZone.name}. Solo el propietario la cambia.`
       }
       submitLabel="Guardar cambios"
-      onOpen={() => {
-        setKey(crypto.randomUUID());
-        setName(place.name);
-        setRateZoneId(place.rateZone.id);
-        setKind(place.kind);
-        setVariants("");
-        void getNeighborhood(place.id).then((detail) => {
-          setVariants(detail.variants.join(", "));
-        });
-      }}
+      submitDisabled={status !== "resolved"}
+      onOpen={handleOpen}
       onSubmit={async () => {
         await updateNeighborhood(place.id, {
           actionId: key,
           name,
-          variants: splitList(variants),
+          variants: editState.getEffectiveVariants(),
           ...(owner && { rateZoneId, kind }),
         });
         await queryClient.invalidateQueries({ queryKey: ["master", "neighborhoods"] });
         toast.success("Barrio actualizado");
       }}
     >
-      <TextField label="Nombre del barrio" value={name} onChange={setName} autoFocus />
+      <TextField
+        label="Nombre del barrio"
+        value={name}
+        onChange={(val) => {
+          setName(val);
+          editState.setName(val);
+        }}
+        autoFocus
+      />
+      {status === "pending" && (
+        <p className="text-body-s text-on-surface-variant animate-pulse">
+          Cargando variantes registradas…
+        </p>
+      )}
+      {status === "error" && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-2 rounded-sm border border-error/30 bg-error/5 p-3 text-body-s text-error"
+        >
+          <span>No pudimos cargar las variantes del barrio.</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              editState.retryDetail();
+              void loadDetail(editState);
+            }}
+          >
+            Reintentar
+          </Button>
+        </div>
+      )}
       <TextField
         label="Variantes"
         value={variants}
-        onChange={setVariants}
+        disabled={status !== "resolved"}
+        onChange={(val) => {
+          setVariants(val);
+          editState.setVariants(val);
+        }}
         description="Otras formas de escribirlo, separadas por comas (por ejemplo «estadio»)."
       />
       {owner && (

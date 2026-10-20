@@ -78,7 +78,23 @@ export function SearchCombobox<T>({
         data-ready={!results.isFetching && results.data !== undefined ? "" : undefined}
       />
       <ComboboxContent>
-        <ComboboxEmpty>{results.isFetching ? "Buscando…" : emptyText}</ComboboxEmpty>
+        {results.isError ? (
+          <div
+            role="alert"
+            className="flex items-center justify-between gap-2 p-3 text-body-s text-error"
+          >
+            <span>Error al buscar. Revisa tu conexión.</span>
+            <button
+              type="button"
+              className="text-label-s font-medium underline cursor-pointer"
+              onClick={() => void results.refetch()}
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : (
+          <ComboboxEmpty>{results.isFetching ? "Buscando…" : emptyText}</ComboboxEmpty>
+        )}
         <ComboboxList>
           {(item: T) => (
             <ComboboxItem key={itemKey(item)} value={item}>

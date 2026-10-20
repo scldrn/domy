@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/page-header";
+import { DirectoryEmptyState, QueryErrorAlert, TableSkeleton } from "@/components/query-state";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -35,7 +37,6 @@ import {
   type Account,
 } from "@/features/users/api";
 import { ApiError } from "@/lib/api-client";
-import { PageHeader } from "@/components/page-header";
 
 export const Route = createFileRoute("/_panel/usuarios")({
   beforeLoad: ({ context }) => {
@@ -72,70 +73,85 @@ function UsersPage() {
           </>
         }
       />
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Correo</TableHead>
-            <TableHead>Rol</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {(accounts.data ?? []).map((account) => (
-            <TableRow key={account.id}>
-              <TableCell>{account.name}</TableCell>
-              <TableCell>{account.email}</TableCell>
-              <TableCell>
-                {userRoleLabels[account.role]}
-                {account.role === "courier" && (
-                  <span className="block text-body-s text-on-surface-variant">
-                    {linkedCourier(couriers.data, account.id)?.name ?? "Sin vincular"}
-                  </span>
-                )}
-              </TableCell>
-              <TableCell>
-                {account.banned ? (
-                  <Badge variant="outline">Inactiva</Badge>
-                ) : (
-                  <Badge variant="success">Activa</Badge>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  <AccountDialog account={account} />
-                  <Button
-                    variant="ghost"
-                    onClick={() => void act(() => endSessions(account.id), "Sesiones cerradas")}
-                  >
-                    Cerrar sesiones
-                  </Button>
-                  {account.banned ? (
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        void act(() => reactivateAccount(account.id), "Cuenta reactivada")
-                      }
-                    >
-                      Reactivar
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setDeactivating(account);
-                      }}
-                    >
-                      Desactivar
-                    </Button>
-                  )}
-                </div>
-              </TableCell>
+      {accounts.isPending ? (
+        <TableSkeleton columns={5} rows={5} label="Cargando usuarios…" />
+      ) : accounts.isError ? (
+        <QueryErrorAlert
+          title="No pudimos cargar los usuarios"
+          message="Revisa tu conexión e inténtalo de nuevo."
+          onRetry={() => void accounts.refetch()}
+        />
+      ) : accounts.data.length === 0 ? (
+        <DirectoryEmptyState
+          title="Todavía no hay usuarios"
+          description="Crea la primera cuenta de usuario para comenzar."
+        />
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Correo</TableHead>
+              <TableHead>Rol</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Acciones</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {accounts.data.map((account) => (
+              <TableRow key={account.id}>
+                <TableCell>{account.name}</TableCell>
+                <TableCell>{account.email}</TableCell>
+                <TableCell>
+                  {userRoleLabels[account.role]}
+                  {account.role === "courier" && (
+                    <span className="block text-body-s text-on-surface-variant">
+                      {linkedCourier(couriers.data, account.id)?.name ?? "Sin vincular"}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {account.banned ? (
+                    <Badge variant="outline">Inactiva</Badge>
+                  ) : (
+                    <Badge variant="success">Activa</Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    <AccountDialog account={account} />
+                    <Button
+                      variant="ghost"
+                      onClick={() => void act(() => endSessions(account.id), "Sesiones cerradas")}
+                    >
+                      Cerrar sesiones
+                    </Button>
+                    {account.banned ? (
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          void act(() => reactivateAccount(account.id), "Cuenta reactivada")
+                        }
+                      >
+                        Reactivar
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          setDeactivating(account);
+                        }}
+                      >
+                        Desactivar
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
 
       <AlertDialog
         open={deactivating !== null}

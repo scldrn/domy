@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import SearchOffIcon from "@material-symbols/svg-400/rounded/search_off.svg?react";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { QueryErrorAlert, TableSkeleton } from "@/components/query-state";
 import { SearchField } from "@/components/search-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -79,63 +80,19 @@ export function DirectoryPage<T extends { id: string; name: string; isActive: bo
           Mostrar inactivos
         </Toggle>
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {columns.map((column) => (
-              <TableHead key={column.header}>{column.header}</TableHead>
-            ))}
-            <TableHead>Estado</TableHead>
-            <TableHead>Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {visible.map((item) => (
-            <TableRow key={item.id}>
-              {columns.map((column) => (
-                <TableCell key={column.header}>{column.cell(item)}</TableCell>
-              ))}
-              <TableCell>
-                {item.isActive ? (
-                  <Badge variant="success">Activo</Badge>
-                ) : (
-                  <Badge variant="outline">Inactivo</Badge>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  {edit(item)}
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setActive(item, !item.isActive).then(
-                        async (warning) => {
-                          await queryClient.invalidateQueries({ queryKey: ["master", queryKey] });
-                          const done = item.isActive
-                            ? `${item.name} desactivado`
-                            : `${item.name} reactivado`;
-                          if (warning) toast.warning(`${done}. ${warning}`);
-                          else toast.success(done);
-                        },
-                        (error: unknown) => {
-                          toast.error(
-                            error instanceof ApiError
-                              ? error.message
-                              : "No pudimos guardar el cambio.",
-                          );
-                        },
-                      );
-                    }}
-                  >
-                    {item.isActive ? "Desactivar" : "Reactivar"}
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      {items.isSuccess && visible.length === 0 && (
+      {items.isPending ? (
+        <TableSkeleton
+          columns={columns.length + 2}
+          rows={6}
+          label={`Cargando ${title.toLowerCase()}…`}
+        />
+      ) : items.isError ? (
+        <QueryErrorAlert
+          title={`No pudimos cargar ${title.toLowerCase()}`}
+          message="Revisa tu conexión e inténtalo de nuevo."
+          onRetry={() => void items.refetch()}
+        />
+      ) : visible.length === 0 ? (
         <EmptyState
           icon={SearchOffIcon}
           title={q ? "Nada coincide con la búsqueda" : "Todavía no hay registros"}
@@ -144,6 +101,63 @@ export function DirectoryPage<T extends { id: string; name: string; isActive: bo
               description: "Si lo que buscas está inactivo, activa «Mostrar inactivos».",
             })}
         />
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {columns.map((column) => (
+                <TableHead key={column.header}>{column.header}</TableHead>
+              ))}
+              <TableHead>Estado</TableHead>
+              <TableHead>Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {visible.map((item) => (
+              <TableRow key={item.id}>
+                {columns.map((column) => (
+                  <TableCell key={column.header}>{column.cell(item)}</TableCell>
+                ))}
+                <TableCell>
+                  {item.isActive ? (
+                    <Badge variant="success">Activo</Badge>
+                  ) : (
+                    <Badge variant="outline">Inactivo</Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    {edit(item)}
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setActive(item, !item.isActive).then(
+                          async (warning) => {
+                            await queryClient.invalidateQueries({ queryKey: ["master", queryKey] });
+                            const done = item.isActive
+                              ? `${item.name} desactivado`
+                              : `${item.name} reactivado`;
+                            if (warning) toast.warning(`${done}. ${warning}`);
+                            else toast.success(done);
+                          },
+                          (error: unknown) => {
+                            toast.error(
+                              error instanceof ApiError
+                                ? error.message
+                                : "No pudimos guardar el cambio.",
+                            );
+                          },
+                        );
+                      }}
+                    >
+                      {item.isActive ? "Desactivar" : "Reactivar"}
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   );

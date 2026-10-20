@@ -3,6 +3,9 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { createFileRoute, getRouteApi } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/page-header";
+import { DirectoryEmptyState, QueryErrorAlert, TableSkeleton } from "@/components/query-state";
+import { SearchField } from "@/components/search-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,8 +25,6 @@ import {
   EditNeighborhoodDialog,
 } from "@/features/master-data/neighborhoods/neighborhood-dialogs";
 import { ApiError } from "@/lib/api-client";
-import { PageHeader } from "@/components/page-header";
-import { SearchField } from "@/components/search-field";
 
 const panelRoute = getRouteApi("/_panel");
 
@@ -97,61 +98,84 @@ function NeighborhoodsPage() {
           </Toggle>
         )}
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Barrio</TableHead>
-            <TableHead>Municipio</TableHead>
-            <TableHead>Zona</TableHead>
-            <TableHead>Tipo</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {(places.data ?? []).map((place) => (
-            <TableRow key={place.id}>
-              <TableCell>{place.name}</TableCell>
-              <TableCell>{place.municipality.name}</TableCell>
-              <TableCell>{place.rateZone.name}</TableCell>
-              <TableCell>{neighborhoodKindLabels[place.kind]}</TableCell>
-              <TableCell className="flex gap-1">
-                {place.needsReview && <Badge variant="warning">Por revisar</Badge>}
-                {!place.isActive && <Badge variant="outline">Inactivo</Badge>}
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  <EditNeighborhoodDialog place={place} />
-                  {owner && place.needsReview && (
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        void change(place.id, { needsReview: false }, `${place.name} confirmado`)
-                      }
-                    >
-                      Confirmar
-                    </Button>
-                  )}
-                  {owner && (
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        void change(
-                          place.id,
-                          { isActive: !place.isActive },
-                          place.isActive ? `${place.name} desactivado` : `${place.name} reactivado`,
-                        )
-                      }
-                    >
-                      {place.isActive ? "Desactivar" : "Reactivar"}
-                    </Button>
-                  )}
-                </div>
-              </TableCell>
+      {places.isPending ? (
+        <TableSkeleton columns={6} rows={6} label="Cargando barrios…" />
+      ) : places.isError ? (
+        <QueryErrorAlert
+          title="No pudimos cargar los barrios"
+          message="Revisa tu conexión e inténtalo de nuevo."
+          onRetry={() => void places.refetch()}
+        />
+      ) : places.data.length === 0 ? (
+        <DirectoryEmptyState
+          title={q ? "Nada coincide con la búsqueda" : "Todavía no hay barrios"}
+          description={
+            q
+              ? "Prueba con otro término."
+              : !showInactive
+                ? "Si buscas un barrio inactivo, activa «Mostrar inactivos»."
+                : "Agrega el primer barrio para comenzar."
+          }
+        />
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Barrio</TableHead>
+              <TableHead>Municipio</TableHead>
+              <TableHead>Zona</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Acciones</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {places.data.map((place) => (
+              <TableRow key={place.id}>
+                <TableCell>{place.name}</TableCell>
+                <TableCell>{place.municipality.name}</TableCell>
+                <TableCell>{place.rateZone.name}</TableCell>
+                <TableCell>{neighborhoodKindLabels[place.kind]}</TableCell>
+                <TableCell className="flex gap-1">
+                  {place.needsReview && <Badge variant="warning">Por revisar</Badge>}
+                  {!place.isActive && <Badge variant="outline">Inactivo</Badge>}
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    <EditNeighborhoodDialog place={place} />
+                    {owner && place.needsReview && (
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          void change(place.id, { needsReview: false }, `${place.name} confirmado`)
+                        }
+                      >
+                        Confirmar
+                      </Button>
+                    )}
+                    {owner && (
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          void change(
+                            place.id,
+                            { isActive: !place.isActive },
+                            place.isActive
+                              ? `${place.name} desactivado`
+                              : `${place.name} reactivado`,
+                          )
+                        }
+                      >
+                        {place.isActive ? "Desactivar" : "Reactivar"}
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
     </div>
   );
 }

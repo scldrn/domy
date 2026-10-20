@@ -15,8 +15,10 @@ import type { AppEnv } from "../app.ts";
 import {
   merchantAliases,
   merchants,
+  municipalities,
   neighborhoods,
   pickupPoints,
+  rateZones,
   shipments,
 } from "../db/schema/index.ts";
 import type { Executor } from "../db/client.ts";
@@ -293,10 +295,20 @@ export const merchantRoutes = new Hono<AppEnv>()
           recipientName: shipments.recipientName,
           recipientPhone: shipments.recipientPhone,
           recipientAddress: shipments.recipientAddress,
-          recipientNeighborhood: { id: neighborhoods.id, name: neighborhoods.name },
+          neighborhoodId: neighborhoods.id,
+          neighborhoodName: neighborhoods.name,
+          neighborhoodKind: neighborhoods.kind,
+          neighborhoodNeedsReview: neighborhoods.needsReview,
+          neighborhoodIsActive: neighborhoods.isActive,
+          municipalityId: municipalities.id,
+          municipalityName: municipalities.name,
+          rateZoneId: rateZones.id,
+          rateZoneName: rateZones.name,
         })
         .from(shipments)
         .innerJoin(neighborhoods, eq(neighborhoods.id, shipments.recipientNeighborhoodId))
+        .innerJoin(municipalities, eq(municipalities.id, neighborhoods.municipalityId))
+        .innerJoin(rateZones, eq(rateZones.id, neighborhoods.rateZoneId))
         .where(
           and(
             eq(shipments.merchantId, id),
@@ -311,7 +323,21 @@ export const merchantRoutes = new Hono<AppEnv>()
         )
         .orderBy(shipments.recipientPhone, desc(shipments.registeredAt))
         .limit(10);
-      return c.json({ items: rows });
+      const items = rows.map((row) => ({
+        recipientName: row.recipientName,
+        recipientPhone: row.recipientPhone,
+        recipientAddress: row.recipientAddress,
+        recipientNeighborhood: {
+          id: row.neighborhoodId,
+          name: row.neighborhoodName,
+          kind: row.neighborhoodKind,
+          needsReview: row.neighborhoodNeedsReview,
+          isActive: row.neighborhoodIsActive,
+          municipality: { id: row.municipalityId, name: row.municipalityName },
+          rateZone: { id: row.rateZoneId, name: row.rateZoneName },
+        },
+      }));
+      return c.json({ items });
     },
   );
 

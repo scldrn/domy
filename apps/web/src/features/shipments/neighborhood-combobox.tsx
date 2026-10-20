@@ -116,7 +116,33 @@ const addSchema = z.object({
   rateZoneId: z.string().min(1, "Elige la zona tarifaria."),
 });
 
-function AddNeighborhoodDialog({
+/**
+ * Manages the client identity of inline neighborhood creations (FR-036, Finding IV-22).
+ * Retains identity while an attempt is uncertain/errored; rotates upon acknowledged success or cancel.
+ */
+export class NeighborhoodCreationLifecycle {
+  private currentId: string = crypto.randomUUID();
+
+  getId(): string {
+    return this.currentId;
+  }
+
+  onSuccess(): string {
+    this.currentId = crypto.randomUUID();
+    return this.currentId;
+  }
+
+  onCancel(): string {
+    this.currentId = crypto.randomUUID();
+    return this.currentId;
+  }
+
+  onError(): string {
+    return this.currentId;
+  }
+}
+
+export function AddNeighborhoodDialog({
   open,
   onOpenChange,
   onAdded,
@@ -128,18 +154,28 @@ function AddNeighborhoodDialog({
   const queryClient = useQueryClient();
   const municipalities = useQuery({ queryKey: ["municipalities"], queryFn: listMunicipalities });
   const zones = useQuery({ queryKey: ["rate-zones"], queryFn: listRateZones });
-  const [id] = useState(() => crypto.randomUUID());
+  const [lifecycle] = useState(() => new NeighborhoodCreationLifecycle());
+  const [id, setId] = useState(() => lifecycle.getId());
   const form = useForm<z.infer<typeof addSchema>>({
     resolver: zodResolver(addSchema),
     defaultValues: { name: "", municipalityId: "", rateZoneId: "" },
   });
 
+  const handleClose = () => {
+    setId(lifecycle.onCancel());
+    form.reset({ name: "", municipalityId: "", rateZoneId: "" });
+    onOpenChange(false);
+  };
+
   const submit = form.handleSubmit(async (values) => {
     try {
       const place = await addNeighborhood({ id, ...values });
       await queryClient.invalidateQueries({ queryKey: ["neighborhoods"] });
+      setId(lifecycle.onSuccess());
+      form.reset({ name: "", municipalityId: "", rateZoneId: "" });
       onAdded(place);
     } catch (error) {
+      lifecycle.onError();
       form.setError("root", {
         message: error instanceof ApiError ? error.message : "No pudimos agregar el barrio.",
       });
@@ -147,7 +183,13 @@ function AddNeighborhoodDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) handleClose();
+        else onOpenChange(true);
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Agregar barrio</DialogTitle>
@@ -192,12 +234,7 @@ function AddNeighborhoodDialog({
           {form.formState.errors.root && <FieldError errors={[form.formState.errors.root]} />}
         </FieldGroup>
         <DialogFooter>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              onOpenChange(false);
-            }}
-          >
+          <Button variant="ghost" onClick={handleClose}>
             Cancelar
           </Button>
           <Button onClick={() => void submit()} disabled={form.formState.isSubmitting}>

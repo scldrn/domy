@@ -1,8 +1,28 @@
-import { useFormContext, useWatch } from "react-hook-form";
+import { useFormContext, useWatch, type UseFormSetValue } from "react-hook-form";
 import { SearchCombobox } from "@/components/search-combobox";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { searchRecipients, type RecipientOption } from "./api";
 import type { ShipmentFormValues } from "./form-values";
+
+export type RecipientAutofillSetter = UseFormSetValue<ShipmentFormValues>;
+
+/**
+ * Applies authoritative previous-recipient data to the shipment form (FR-004, Finding IV-23, 001/T149).
+ * Preserves required validation if past neighborhood is inactive/missing, without guessing replacements.
+ */
+export function applyRecipientAutofill(
+  recipient: RecipientOption,
+  setValue: RecipientAutofillSetter,
+) {
+  setValue("recipientName", recipient.recipientName ?? "");
+  setValue("recipientPhone", recipient.recipientPhone ?? "");
+  setValue("recipientAddress", recipient.recipientAddress ?? "");
+  if (recipient.recipientNeighborhood && recipient.recipientNeighborhood.isActive !== false) {
+    setValue("recipientNeighborhood", recipient.recipientNeighborhood);
+  } else {
+    setValue("recipientNeighborhood", null);
+  }
+}
 
 /**
  * Recipients of the merchant's past shipments, by name or phone; choosing one fills their
@@ -23,10 +43,7 @@ export function RecipientAutocomplete() {
         value={null}
         onChange={(recipient) => {
           if (!recipient) return;
-          setValue("recipientName", recipient.recipientName ?? "");
-          setValue("recipientPhone", recipient.recipientPhone ?? "");
-          setValue("recipientAddress", recipient.recipientAddress ?? "");
-          setValue("recipientNeighborhood", null);
+          applyRecipientAutofill(recipient, setValue);
         }}
         itemKey={(recipient) => recipient.recipientPhone ?? ""}
         itemLabel={(recipient) => recipient.recipientName ?? ""}

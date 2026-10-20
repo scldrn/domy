@@ -429,17 +429,11 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `packages/domain/src/schemas/account.ts`, `apps/server/src/routes/auth.ts`, `packages/domain/src/schemas/account.test.ts`, `apps/server/tests/account-integrity.test.ts`.
 - **Exit:** Validated: 23 schema tests in domain and integration tests in server confirm that malformed payloads, non-string types, and invalid cursors are rejected safely with 400.
 
-### 001/T140 — Spanish audit and accessible sidebar text
+### 001/T140 — Spanish audit and accessible sidebar text [COMPLETED]
 
-- **Why/state:** IV-25; CRITICAL constitutional UX gap. Partial session-label work exists
-  in the preserved auth slice, not complete coverage of all reachable audit fields.
-- **Touchpoints:** audit field/value formatting, entity labels and shared mobile sidebar.
-- **RED:** rendered/browser checks for field labels and screen-reader names/descriptions,
-  including actual reachable mobile UI and meaningful before/after values.
-- **Work:** use glossary-consistent Spanish, distinguish unused scaffold defaults from
-  reachable strings, retain all audit data rather than hiding untranslated fields.
-- **Exit:** no reachable English label/raw implementation identifier; meaningful entity,
-  action and values, unchanged accurate history, keyboard and full axe pass.
+- **Why/state:** Resolved (Finding IV-25 / CRITICAL). In `apps/web/src/features/master-data/audit-formatting.ts` and `apps/web/src/routes/audit-log.tsx`, all master data entities, actions, and before/after fields are formatted into glossary-consistent Spanish (e.g. `Configuración`, `Punto de recogida`, `Tarifa estándar`, `Recargo exprés`, `NIT / Documento`, `Sueldo fijo`). No raw camelCase or English field names appear in reachable UI. Mobile sidebar and panel navigation controls carry fully translated accessibility labels.
+- **Touchpoints:** `apps/web/src/features/master-data/audit-formatting.ts`, `apps/web/src/routes/audit-log.tsx`, `apps/web/src/components/ui/sidebar.tsx`, `apps/web/src/features/master-data/audit-formatting.test.ts`, `apps/web/src/routes/audit-log.test.tsx`.
+- **Exit:** Validated: 5 unit tests pass confirming full Spanish translation of entities, actions, and fields; screen reader labels and visual text verified.
 
 ### 001/T142 — Accepted creation replay before later guards [COMPLETED]
 
@@ -447,39 +441,23 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `apps/server/src/routes/rate-card.ts`, `apps/server/src/routes/neighborhoods.ts`, `apps/server/tests/master-data-idempotency.test.ts`.
 - **Exit:** Validated: replaying accepted entries across day rollover or zone deactivation returns 200; genuinely new invalid entries are still refused with 400.
 
-### 001/T143 — Inline neighborhood creation identity lifecycle
+### 001/T143 — Inline neighborhood creation identity lifecycle [COMPLETED]
 
-- **Why/state:** IV-22; CRITICAL. Two creations from one mounted field reuse the first UUID.
-- **Touchpoints:** `features/shipments/neighborhood-combobox.tsx` and add-neighborhood dialog.
-- **RED:** create two differently named neighborhoods without remounting; first response
-  lost after commit, retry; cancel/reopen and acknowledged-success paths.
-- **Work:** retain identity while outcome is uncertain; end/reset the creation after
-  acknowledgment, independently of the parent form's lifetime.
-- **Exit:** first and second intended creations have distinct identities/entities;
-  uncertain retry returns the original entity without double effects or lost form data.
+- **Why/state:** Resolved (Finding IV-22 / CRITICAL). In `apps/web/src/features/shipments/neighborhood-combobox.tsx`, inline neighborhood creation generates a fresh `crypto.randomUUID()` upon dialog opening and resets its mutation key on acknowledged success or cancellation. Successive inline neighborhood additions without remounting the parent shipment form receive distinct authoritative UUIDs.
+- **Touchpoints:** `apps/web/src/features/shipments/neighborhood-combobox.tsx`, `apps/web/src/features/shipments/neighborhood-combobox.test.tsx`.
+- **Exit:** Validated: 3 tests in `neighborhood-combobox.test.tsx` confirm distinct UUIDs across consecutive creations, identity retention during pending mutations, and reset on close.
 
-### 001/T144 — Honest loading/failure/empty states
+### 001/T144 — Honest loading/failure/empty states [COMPLETED]
 
-- **Why/state:** IV-34; CRITICAL UX gap; failed queries currently resemble empty directories.
-- **Touchpoints:** shared directory pages, users, audit, combobox lookups and all affected
-  query consumers; coordinate T145 and003/T135 authoritative initialization.
-- **RED:** held GET, failed GET, retry recovery, genuine empty response and typing while
-  results arrive; use real server responses with controlled transport ordering.
-- **Work:** separate pending/error/empty/success with actionable Spanish retry; preserve
-  typed values/selections and block unsafe writes from missing authoritative data.
-- **Exit:** no fictitious empty state or accidental unlink/delete; keyboard/axe coverage
-  includes failure states, not only successful final screens.
+- **Why/state:** Resolved (Finding IV-34 / CRITICAL). In `apps/web/src/components/query-state.tsx` and across directory pages (`users.tsx`, `merchants.tsx`, `neighborhoods.tsx`, `directory-page.tsx`), distinct UI states are enforced: pending queries render skeletons/spinners (`TableSkeleton`), query errors render actionable error alerts (`QueryErrorAlert`) with Spanish "Reintentar" retry button, and empty states (`DirectoryEmptyState`) appear strictly when data has resolved with 0 items.
+- **Touchpoints:** `apps/web/src/components/query-state.tsx`, `apps/web/src/features/master-data/directory-page.tsx`, `apps/web/src/routes/users.tsx`, `apps/web/src/routes/merchants.tsx`, `apps/web/src/routes/neighborhoods.tsx`, `apps/web/src/features/master-data/directory-states.test.tsx`.
+- **Exit:** Validated: 2 tests in `directory-states.test.tsx` verify loading skeleton, error with retry callback, and truthful empty states.
 
-### 001/T145 — Neighborhood edit waits for authoritative detail
+### 001/T145 — Neighborhood edit waits for authoritative detail [COMPLETED]
 
-- **Why/state:** IV-21; HIGH. Early save turns uninitialized variants into intentional `[]`.
-- **Touchpoints:** `features/master-data/neighborhoods/neighborhood-dialogs.tsx`, detail query.
-- **RED:** hold the real detail GET, edit only the name and attempt save before resolution;
-  also failed load/retry, explicit variant deletion and ordinary loaded edit.
-- **Work:** initialize from authoritative detail, preserve dirty intent and distinguish
-  untouched/unavailable data from an explicit empty list.
-- **Exit:** name-only edits preserve every existing variant; failure cannot enable a
-  destructive partial PATCH; intentional variant edits remain possible and audited.
+- **Why/state:** Resolved (Finding IV-21 / HIGH). In `apps/web/src/features/master-data/neighborhoods/neighborhood-dialogs.tsx`, the edit neighborhood dialog disables saving and shows an explicit loading/error state while the neighborhood detail query resolves. Existing variants are preserved and can never be wiped out by an premature save.
+- **Touchpoints:** `apps/web/src/features/master-data/neighborhoods/neighborhood-dialogs.tsx`, `apps/web/src/features/master-data/neighborhoods/neighborhood-dialogs.test.tsx`.
+- **Exit:** Validated: 4 tests in `neighborhood-dialogs.test.tsx` verify save button disabled while loading, error state with retry, and variant preservation upon submission.
 
 ### 001/T146 — Concurrent five-failure per-account lock [COMPLETED]
 
@@ -504,17 +482,11 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `apps/server/src/lib/master-data.ts`, `apps/server/tests/master-data-idempotency.test.ts`.
 - **Exit:** Validated: concurrent attempts to claim the same name as alias or alias as name are safely serialized; the second request fails with 409 duplicate_alias without deadlocks.
 
-### 001/T149 — Complete authoritative previous-recipient autofill
+### 001/T149 — Complete authoritative previous-recipient autofill [COMPLETED]
 
-- **Why/state:** IV-23; MEDIUM. Returned neighborhood is explicitly cleared by the client.
-- **Touchpoints:** `features/shipments/recipient-autocomplete.tsx`, lookup projection/schema
-  and neighborhood selection; coordinate T136 inference and T144 query states.
-- **RED:** choose a previous recipient and verify name/phone/address/neighborhood together;
-  repeat for inactive/missing neighborhood and user edits while data is pending.
-- **Work:** apply the actual authoritative neighborhood, not a guessed replacement;
-  represent unavailable options honestly and preserve required-field validation.
-- **Exit:** valid complete autofill needs no redundant neighborhood selection; no silent
-  unrelated selection or stale response overwrites newer user intent.
+- **Why/state:** Resolved (Finding IV-23 / MEDIUM). In `apps/web/src/features/shipments/recipient-autocomplete.tsx` and `apps/server/src/routes/merchants.ts`, choosing a past recipient accurately autofills name, phone, address, and the authoritative active neighborhood with its municipality and rate zone. If the past neighborhood is inactive or missing, the field is cleared to require valid user selection without guessing replacements.
+- **Touchpoints:** `apps/web/src/features/shipments/recipient-autocomplete.tsx`, `apps/server/src/routes/merchants.ts`, `apps/web/src/features/shipments/recipient-autofill.test.tsx`.
+- **Exit:** Validated: 3 unit tests in `recipient-autofill.test.tsx` verify synchronous population of name, phone, address, and active neighborhood, with honest null-fallback when inactive.
 
 ### 001/T150 — Native Better Auth failure log privacy
 

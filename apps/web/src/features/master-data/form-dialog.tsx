@@ -21,6 +21,7 @@ export function FormDialog({
   title,
   description,
   submitLabel,
+  submitDisabled = false,
   onOpen,
   onSubmit,
   children,
@@ -30,6 +31,7 @@ export function FormDialog({
   title: string;
   description?: ReactNode;
   submitLabel: string;
+  submitDisabled?: boolean;
   onOpen?: () => void;
   onSubmit: () => Promise<void>;
   children: ReactNode;
@@ -92,7 +94,7 @@ export function FormDialog({
           )}
           <DialogFooter>
             <DialogClose render={<Button variant="outline" type="button" />}>Volver</DialogClose>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || submitDisabled}>
               {submitLabel}
             </Button>
           </DialogFooter>

@@ -1,6 +1,9 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { PageHeader } from "@/components/page-header";
+import { DirectoryEmptyState, QueryErrorAlert, TableSkeleton } from "@/components/query-state";
+import { SearchField } from "@/components/search-field";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -11,12 +14,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Toggle } from "@/components/ui/toggle";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { listMerchants } from "@/features/master-data/api";
 import { ExportButton } from "@/features/master-data/export-button";
 import { MerchantDialog } from "@/features/master-data/merchants/merchant-dialog";
-import { PageHeader } from "@/components/page-header";
-import { SearchField } from "@/components/search-field";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 export const Route = createFileRoute("/_panel/clientes")({
   head: () => ({ meta: [{ title: "Clientes · Domy" }] }),
@@ -60,40 +61,61 @@ function MerchantsPage() {
           Mostrar inactivos
         </Toggle>
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Cliente</TableHead>
-            <TableHead>Alias</TableHead>
-            <TableHead>WhatsApp</TableHead>
-            <TableHead>Estado</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {(merchants.data ?? []).map((merchant) => (
-            <TableRow key={merchant.id}>
-              <TableCell>
-                <Link
-                  to="/clientes/$merchantId"
-                  params={{ merchantId: merchant.id }}
-                  className="text-primary underline-offset-4 hover:underline"
-                >
-                  {merchant.name}
-                </Link>
-              </TableCell>
-              <TableCell className="whitespace-normal">{merchant.aliases.join(", ")}</TableCell>
-              <TableCell className="tabular-nums">{merchant.whatsappPhone}</TableCell>
-              <TableCell>
-                {merchant.isActive ? (
-                  <Badge variant="success">Activo</Badge>
-                ) : (
-                  <Badge variant="outline">Inactivo</Badge>
-                )}
-              </TableCell>
+      {merchants.isPending ? (
+        <TableSkeleton columns={4} rows={6} label="Cargando clientes…" />
+      ) : merchants.isError ? (
+        <QueryErrorAlert
+          title="No pudimos cargar los clientes"
+          message="Revisa tu conexión e inténtalo de nuevo."
+          onRetry={() => void merchants.refetch()}
+        />
+      ) : merchants.data.length === 0 ? (
+        <DirectoryEmptyState
+          title={q ? "Nada coincide con la búsqueda" : "Todavía no hay clientes"}
+          description={
+            q
+              ? "Prueba con otro término."
+              : !showInactive
+                ? "Si buscas un cliente inactivo, activa «Mostrar inactivos»."
+                : "Crea el primer cliente para comenzar."
+          }
+        />
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Alias</TableHead>
+              <TableHead>WhatsApp</TableHead>
+              <TableHead>Estado</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {merchants.data.map((merchant) => (
+              <TableRow key={merchant.id}>
+                <TableCell>
+                  <Link
+                    to="/clientes/$merchantId"
+                    params={{ merchantId: merchant.id }}
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    {merchant.name}
+                  </Link>
+                </TableCell>
+                <TableCell className="whitespace-normal">{merchant.aliases.join(", ")}</TableCell>
+                <TableCell className="tabular-nums">{merchant.whatsappPhone}</TableCell>
+                <TableCell>
+                  {merchant.isActive ? (
+                    <Badge variant="success">Activo</Badge>
+                  ) : (
+                    <Badge variant="outline">Inactivo</Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
     </div>
   );
 }

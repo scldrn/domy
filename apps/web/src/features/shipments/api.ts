@@ -31,7 +31,7 @@ export type RecipientOption = {
   recipientName: string | null;
   recipientPhone: string | null;
   recipientAddress: string | null;
-  recipientNeighborhood: { id: string; name: string };
+  recipientNeighborhood: (NeighborhoodOption & { isActive?: boolean }) | null;
 };
 export type NeighborhoodOption = {
   id: string;
