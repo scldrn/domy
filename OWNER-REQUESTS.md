@@ -4,9 +4,34 @@ Preguntas y pendientes para Samuel (propietario de Domy) y, a través de él, pa
 lo mantiene al día: agrega cada pregunta cuando surge y la mueve a «Resueltas» con tu respuesta
 y la fecha. Responde aquí mismo o en la conversación.
 
-Última actualización: 2026-10-19 UTC.
+Última actualización: 2026-10-23 (America/Bogota).
 
 ## Bloquean algo ahora
+
+**Consolidación del repositorio — 2026-10-23:** pediste dejar el repositorio y
+GitHub limpios, con una sola versión. La entrega canónica es `main`, mediante una
+PR squash; se retiran las ramas incorporadas conservando un respaldo recuperable.
+La revisión no detectó archivos de producción idénticos, funciones completas
+repetidas de 80+ tokens ni copias `.bak/.old`. Se recuperó la corrección de transporte
+pendiente y se corrigió una carrera de preparación de la prueba de fotos.
+Pasan check, **1.626 pruebas**, **155 escenarios web sin reintentos** y build.
+[Entrega actual](docs/engineering-handoff.md). El catálogo sigue en **76/81 (94%)**;
+la aceptación física y el despliegue conservan su alcance anterior.
+
+
+**Cierre técnico local — 2026-10-23:** continué sin subagentes, con la otra
+sesión terminada. Recuperé ocho archivos y corregí fallos de bloqueo concurrente,
+reintentos UUID, cursores, exportaciones grandes e historial con fechas empatadas.
+Pasan check, **1.626 pruebas**, **154 escenarios web sin reintentos** y build sobre
+el mismo código. La imagen nueva pasa su inspección y el ensayo de actualización:
+se conservan cuentas, sesión, 29 tablas previas y valores COP; la base inicial
+permanece idéntica tras el ensayo. [Entrega técnica](docs/engineering-handoff.md).
+
+**76/81 tareas cerradas (94%).** Las cinco restantes son las pruebas físicas que
+aplazaste y los cierres que dependen de ellas. No queda una pregunta que impida
+este cierre técnico local. Infraestructura/despliegue siguen a tu cargo; las
+configuraciones reales de proveedores y la aceptación física no se certifican con
+estos ensayos. Los párrafos siguientes son evidencia histórica.
 
 **Avance actual (2026-10-19 UTC):** T141 ya está fusionada. T153 tiene pruebas que
 reproducen la filtración en diagnósticos y21 casos focalizados aprobados; pasan check,
@@ -146,6 +171,10 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
    borrado a los 12 meses. Solo al desplegar.
 7. **Medir con la coordinadora de despacho** los tiempos de SC-001, SC-004 y SC-006 de la 002
    (crear una ruta, despachar, reasignar) con el sistema en uso real.
+9. **Etapas 005 a 007** (2026-10-23): la verificación para despliegue pide revisar las etapas
+   001 a 007, pero el repositorio solo tiene especificaciones de la 001 a la 004 (`specs/`) y
+   ningún documento, rama ni tarea menciona una 005, 006 o 007. ¿Existen en otro lugar o el
+   alcance es 001–004? Mientras tanto se verifica 001–004.
 
 ## Decisiones visuales (son tuyas)
 

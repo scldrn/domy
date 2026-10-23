@@ -1,10 +1,35 @@
 # OP-01 local image upgrade rehearsal
 
-**Plan only; no historical database, migration, or runtime operation has been run.** Test the
+**Executed locally on 2026-10-23.** The [result receipt](../specs/004-tracking-merchant-link/local-image-upgrade-results.md) records the new image, preserved data, session and replay proofs. The original plan below is retained as the reviewed pre-execution contract; its future-tense blockers are historical. Test the
 current candidate against schema 0007. Commit `94a7e24` supplies migration SQL only; it is not
 represented as a released app image. This plan authorizes neither production use nor task closure.
 
 ## Target and prerequisites
+
+### Solo execution continuation — 2026-10-23
+
+The owner requested that root complete technical readiness without subagents. The
+current candidate supersedes the earlier 537-file identity after regression fixes;
+its 540-file frozen identity is
+`36ef1cd6ec355a7ee7e58009388a6990352e810ecf8754ec19bce5c63f26087c`.
+All four current gates and a new immutable image must pass before any lab mutation.
+The fixed private runner under
+`.git/local-orchestration/readiness-solo-20261023/upgrade/` implements the finite
+contract below without changing the existing fresh-lab wrapper. It accepts no
+arbitrary Docker/SQL target, refuses a pre-existing upgrade DB or prior failure,
+checks current source hashes and recorded app/Caddy/PostgreSQL IDs, and saves
+baseline metadata/logs before controlled app replacement. It preserves original
+private env files, fresh DB and volumes. The archived SQL is not a prior app image.
+
+The fixture uses Better Auth to create two accounts and an owner session, plus two
+shipments, one active route, three stops, four tasks, three applied courier records,
+state/custody events and integer COP totals. Snapshots use PostgreSQL JSON text,
+C-order sorting and UTF-8 length-prefixed SHA-256, comparing the saved old column
+lists after upgrade. Full current snapshots must remain identical after migration
+replay; the fresh database must also remain identical before/after the whole run.
+Actual HTTPS verifies the preserved owner session and the migrated shipment before
+returning the app to the fresh database. A source/gate manifest file enables the
+runner only after successful validation; no operation has run at this checkpoint.
 
 Use one Compose project, `domy-op01-20261022`, with its existing PostgreSQL volume, S3Proxy,
 app, and Caddy. Keep fresh current-schema database `domy`; add only logical database

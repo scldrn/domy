@@ -17,7 +17,7 @@ const courierPhone = "3004445566";
 const supportPhone = "3015550123";
 const supportNotice = "Para conocer más detalles, contacta con soporte.";
 const viewport = { width: 320, height: 800 };
-const publicOrigin = `http://localhost:${String(webPort)}`;
+const publicOrigin = `http://127.0.0.1:${String(webPort)}`;
 
 type MerchantFixture = { id: string; pickupPointId: string };
 type CreatedShipment = { id: string; trackingNumber: string; codAmount: number };
@@ -393,10 +393,21 @@ test("keeps the Bogotá date window and turns an unuploaded proof unavailable af
   await expect(courier.getByRole("list", { name: "Paradas" })).toBeVisible();
   await workerControls(courier);
   await openStop(courier, recipientAddress);
+  // The local pickup label is optimistic; direct API fixtures require its committed ACK.
+  const pickupAcknowledgment = courier.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/courier/records") && response.request().method() === "POST",
+  );
   await courierShipmentCard(courier, current)
     .getByRole("button", { name: "Confirmar recogida" })
     .click();
   await expect(courierShipmentCard(courier, current)).toContainText("Recogido");
+  const pickupResponse = await pickupAcknowledgment;
+  expect(pickupResponse.status()).toBe(200);
+  const pickupResult = z
+    .object({ results: z.array(z.object({ id: z.uuid(), outcome: z.literal("applied") })).min(1) })
+    .parse(await pickupResponse.json());
+  expect(pickupResult.results).toHaveLength(1);
 
   const photoId = crypto.randomUUID();
   const recordId = crypto.randomUUID();
@@ -416,6 +427,10 @@ test("keeps the Bogotá date window and turns an unuploaded proof unavailable af
     },
   });
   expect(deliveryResponse.status()).toBe(200);
+  const deliveryResult = z
+    .object({ results: z.array(z.object({ id: z.uuid(), outcome: z.literal("applied") })) })
+    .parse(await deliveryResponse.json());
+  expect(deliveryResult.results).toEqual([{ id: recordId, outcome: "applied" }]);
 
   const link = await merchantLink(merchant.id);
   const context = await browser.newContext({

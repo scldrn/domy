@@ -1,5 +1,30 @@
 # Local Execution Ledger
 
+## Canonical repository consolidation — 2026-10-23
+
+The latest owner request authorizes one clean local/GitHub source. The final
+540-file candidate `d604a287` passes check/1,626 tests/155 zero-retry E2E/build.
+The held transport work is recovered, first failures remain retained, and native
+runtime contents match the prior upgrade-tested image. The single PR/squash and
+branch cleanup use local QA with skip annotations, without remote workflow calls.
+[Consolidation evidence](repository-consolidation-results.md) supersedes older
+branch/current-source statements below. Catalog progress remains 76/81 (94%);
+physical/final and actual provider acceptance stay pending. Root worked solo.
+
+
+## Latest solo continuation — 2026-10-23
+
+The owner superseded earlier delegation instructions: complete local engineering
+without subagents; infrastructure/public deployment remains owner-managed.
+Root implemented and separately inspected the final corrections, ran all four
+gates (1,626 tests, 154 zero-retry browser cases), built the new immutable image
+and completed the representative upgrade/session/replay/fresh-data rehearsal.
+[Regression receipt](../specs/001-shipment-registration/solo-production-regression-results.md)
+and [upgrade receipt](../specs/004-tracking-merchant-link/local-image-upgrade-results.md)
+record the 540-file source `36ef1cd6` and actual scope. No independent-agent review
+is claimed for this continuation. Progress is 76/81 (94%); physical/final tasks
+and actual provider/production obligations remain open. Earlier entries follow.
+
 ## Authority and verification
 
 Owner instruction: 2026-10-20 (America/Bogota), execute the integral backlog using agents,

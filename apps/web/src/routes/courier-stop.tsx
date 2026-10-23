@@ -4,6 +4,8 @@ import ChatIcon from "@material-symbols/svg-400/rounded/chat.svg?react";
 import DirectionsIcon from "@material-symbols/svg-400/rounded/directions.svg?react";
 import RouteIcon from "@material-symbols/svg-400/rounded/route.svg?react";
 import {
+  exceptionReasonLabels,
+  exceptionReasons,
   flagLabel,
   formatCop,
   formatTrackingNumber,
@@ -11,8 +13,10 @@ import {
   shipmentFlag,
   stopKindLabels,
   resolveCourierRecord,
+  type CourierSnapshot,
   type CourierStop,
   type CourierTask,
+  type ExceptionReason,
 } from "@domy/domain";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -46,6 +50,7 @@ function internationalPhone(phone: string): string {
 
 function CourierStopPage() {
   const { stopId } = Route.useParams();
+  const { user } = Route.useRouteContext();
   const { view } = useCourierState();
   // The position while the stop is open, attached to its records when fresh (FR-015).
   useEffect(() => watchLocation(), []);
@@ -79,7 +84,7 @@ function CourierStopPage() {
       <Shortcuts stop={stop} />
       <ul className="flex flex-col gap-3" aria-label="Envíos de la parada">
         {stop.tasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
+          <TaskCard key={task.id} task={task} userId={user?.id ?? null} view={view} />
         ))}
       </ul>
     </div>
@@ -141,20 +146,28 @@ function Shortcuts({ stop }: { stop: CourierStop }) {
   );
 }
 
-function TaskCard({ task }: { task: CourierTask }) {
-  const { user } = Route.useRouteContext();
-  const { view } = useCourierState();
+export function TaskCard({
+  task,
+  userId,
+  view,
+}: {
+  task: CourierTask;
+  userId: string | null;
+  view: CourierSnapshot | null;
+}) {
   const [form, setForm] = useState<"delivery" | "disbursement" | "exception" | "problem" | null>(
     null,
   );
+  const [exceptionReason, setExceptionReason] = useState<ExceptionReason | null>(null);
   const [saving, setSaving] = useState(false);
-  if (!user) return null;
+  if (!userId) return null;
   const pending = task.status === "pending";
   const window = formatWindow(task.windowStart, task.windowEnd);
   const flag = shipmentFlag(
     { status: task.shipmentStatus, windowEnd: task.windowEnd ? new Date(task.windowEnd) : null },
     now(),
   );
+  const canDisburse = task.shipmentStatus !== "voided";
   const finishing = task.kind === "delivery" || task.kind === "errand";
   const returning = task.kind === "return";
   const shipmentState = view?.route
@@ -176,7 +189,7 @@ function TaskCard({ task }: { task: CourierTask }) {
   const receive = async () => {
     setSaving(true);
     try {
-      await saveCourierRecord(user.id, {
+      await saveCourierRecord(userId, {
         id: crypto.randomUUID(),
         shipmentId: task.shipmentId,
         kind: "handover_confirmation",
@@ -194,7 +207,7 @@ function TaskCard({ task }: { task: CourierTask }) {
   const pickUp = async () => {
     setSaving(true);
     try {
-      await saveCourierRecord(user.id, {
+      await saveCourierRecord(userId, {
         id: crypto.randomUUID(),
         shipmentId: task.shipmentId,
         kind: "pickup",
@@ -348,7 +361,7 @@ function TaskCard({ task }: { task: CourierTask }) {
           {task.kind === "errand" ? "Completar diligencia" : "Registrar entrega"}
         </Button>
       )}
-      {finishing && (
+      {canDisburse && (
         <Button
           variant="ghost"
           className="max-w-full self-start text-left whitespace-normal"
@@ -361,14 +374,23 @@ function TaskCard({ task }: { task: CourierTask }) {
       )}
 
       {pending && task.kind === "delivery" && !task.blockedByHandover && pickedUp && (
-        <Button
-          variant="outline"
-          onClick={() => {
-            setForm("exception");
-          }}
-        >
-          Reportar novedad
-        </Button>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-body-l font-medium text-on-surface">Reportar novedad</legend>
+          {exceptionReasons.map((reason) => (
+            <Button
+              key={reason}
+              type="button"
+              variant="outline"
+              className="w-full whitespace-normal text-left"
+              onClick={() => {
+                setExceptionReason(reason);
+                setForm("exception");
+              }}
+            >
+              {exceptionReasonLabels[reason]}
+            </Button>
+          ))}
+        </fieldset>
       )}
       {pending && (task.kind === "pickup" || task.kind === "errand" || returning) && (
         <Button
@@ -383,13 +405,18 @@ function TaskCard({ task }: { task: CourierTask }) {
       {form === "exception" && (
         <ExceptionForm
           task={task}
-          userId={user.id}
+          userId={userId}
           open
+          {...(exceptionReason ? { initialReason: exceptionReason } : {})}
           onOpenChange={(open) => {
-            if (!open) setForm(null);
+            if (!open) {
+              setForm(null);
+              setExceptionReason(null);
+            }
           }}
           onSaved={() => {
             setForm(null);
+            setExceptionReason(null);
             toast.success("Novedad guardada");
           }}
         />
@@ -397,7 +424,7 @@ function TaskCard({ task }: { task: CourierTask }) {
       {form === "problem" && (
         <ProblemForm
           task={task}
-          userId={user.id}
+          userId={userId}
           open
           onOpenChange={(open) => {
             if (!open) setForm(null);
@@ -412,7 +439,7 @@ function TaskCard({ task }: { task: CourierTask }) {
       {form === "delivery" && (
         <DeliveryForm
           task={task}
-          userId={user.id}
+          userId={userId}
           open
           onOpenChange={(open) => {
             if (!open) setForm(null);
@@ -432,7 +459,7 @@ function TaskCard({ task }: { task: CourierTask }) {
       {form === "disbursement" && (
         <DisbursementForm
           task={task}
-          userId={user.id}
+          userId={userId}
           open
           onOpenChange={(open) => {
             if (!open) setForm(null);

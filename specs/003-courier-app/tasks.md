@@ -1236,3 +1236,12 @@ Agent browser preflight and four isolated per-device fixtures passed local
 double QA. See quickstart-results.md for the exact scope and screenshots.
 No camera/offline/restart/timing or all-scenario physical completion is inferred.
 T093/T087/T088 remain unchecked; catalog 43/81 (53%).
+
+## Recovered transport task — 2026-10-23
+
+- [X] T136 HIGH Consolidate the approved PR30 literal-loopback correction into the current browser harness. Preserve the failing native DNS-refusal control, coherent origin/cookies/preview/proxy and current public fixtures. Run check, full tests, zero-retry E2E and build locally before publishing the unified candidate; retain all historical failures. This existing task remains outside the 81-entry integral catalog.
+
+T136 revalidation: check, 1,626 tests, 155 zero-retry E2E and build pass on final
+frozen source; [receipt](../../docs/repository-consolidation-results.md). The owner
+requires local-only validation, superseding the historical remote-CI prerequisite.
+No physical task is closed by this transport consolidation.

@@ -52,6 +52,22 @@ test("refuses the second of two concurrent saves and keeps its values (scenario 
   await second.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(second.getByText("Este envío cambió; revisa la versión más reciente")).toBeVisible();
   await expect(second.getByLabel("Dirección de entrega")).toHaveValue("Calle 12 # 40-10");
+  await expect(second.getByLabel("Dirección de entrega")).toBeDisabled();
+  await second.getByRole("button", { name: "Cargar versión actual" }).click();
+  await expect(
+    second.getByRole("heading", { name: "El envío cambió desde que guardaste este borrador" }),
+  ).toBeVisible();
+  await expect(second.getByRole("button", { name: "Cargar datos actuales" })).toBeDisabled();
+  const download = second.waitForEvent("download");
+  await second.getByRole("button", { name: "Descargar copia local" }).click();
+  await download;
+  await second
+    .getByLabel(
+      "Descargué la copia y entiendo que cargar la versión actual reemplaza el formulario.",
+    )
+    .check();
+  await second.getByRole("button", { name: "Cargar datos actuales" }).click();
+  await expect(second.getByLabel("Dirección de entrega")).toHaveValue("Calle 11 # 40-10");
 });
 
 test("lets the owner confirm a fee marked for review (FR-035)", async ({

@@ -43,6 +43,27 @@ function link(userId: string, courierId: string | null, actionId = crypto.random
     `/api/couriers/accounts/${userId}`,
     { actionId, courierId },
     "PUT",
+    owner.user.id,
+  );
+}
+
+function linkRequest(
+  cookie: string,
+  actorId: string,
+  userId: string,
+  courierId: string | null,
+  actionId: string,
+) {
+  return t.app.request(
+    new Request(`http://localhost:3000/api/couriers/accounts/${userId}`, {
+      method: "PUT",
+      headers: {
+        cookie,
+        "content-type": "application/json",
+        "X-Domy-Actor-Id": actorId,
+      },
+      body: JSON.stringify({ actionId, courierId }),
+    }),
   );
 }
 
@@ -61,6 +82,39 @@ const auditOf = async (courierId: string) =>
 
 /** Linking a courier account to its courier (feature 003, FR-002, tasks.md T094). */
 describe("PUT /api/couriers/accounts/:userId", () => {
+  it("refuses a changed cookie actor before writing a link or audit receipt", async () => {
+    const carlos = await courier("Carlos Pérez");
+    const account = await t.signIn("courier");
+    const secondOwner = await t.signIn("owner");
+    const actionId = crypto.randomUUID();
+
+    const mismatch = await linkRequest(
+      secondOwner.cookie,
+      owner.user.id,
+      account.user.id,
+      carlos,
+      actionId,
+    );
+
+    expect(mismatch.status).toBe(409);
+    expect(await linkedUser(carlos)).toBeNull();
+    expect(await auditOf(carlos)).toHaveLength(0);
+    expect(
+      await database.db.select().from(auditEvents).where(eq(auditEvents.clientEventId, actionId)),
+    ).toHaveLength(0);
+
+    const correctActor = await linkRequest(
+      secondOwner.cookie,
+      secondOwner.user.id,
+      account.user.id,
+      carlos,
+      actionId,
+    );
+    expect(correctActor.status).toBe(200);
+    expect(await linkedUser(carlos)).toBe(account.user.id);
+    expect(await auditOf(carlos)).toMatchObject([{ actorUserId: secondOwner.user.id }]);
+  });
+
   it("links a courier account, which then reaches the courier app", async () => {
     const carlos = await courier("Carlos Pérez");
     const account = await t.signIn("courier", { name: "Carlos Pérez" });
@@ -212,7 +266,17 @@ describe("PUT /api/couriers/accounts/:userId", () => {
     });
 
     const banned = await t.signIn("courier");
-    await send(t, owner.cookie, "/api/auth/admin/ban-user", { userId: banned.user.id });
+    await send(
+      t,
+      owner.cookie,
+      "/api/auth/admin/ban-user",
+      {
+        actionId: crypto.randomUUID(),
+        userId: banned.user.id,
+      },
+      "POST",
+      owner.user.id,
+    );
     expect((await link(banned.user.id, carlos)).status).toBe(409);
 
     const account = await t.signIn("courier");
@@ -243,6 +307,7 @@ describe("PUT /api/couriers/accounts/:userId", () => {
       `/api/couriers/accounts/${account.user.id}`,
       { actionId: crypto.randomUUID(), courierId: carlos },
       "PUT",
+      dispatcher.user.id,
     );
     expect(result.status).toBe(403);
   });
@@ -254,18 +319,34 @@ describe("the role of a linked account", () => {
     const account = await t.signIn("courier");
     await link(account.user.id, carlos);
 
-    const refused = await send<Failure>(t, owner.cookie, "/api/auth/admin/set-role", {
-      userId: account.user.id,
-      role: "dispatcher",
-    });
+    const refused = await send<Failure>(
+      t,
+      owner.cookie,
+      "/api/auth/admin/set-role",
+      {
+        actionId: crypto.randomUUID(),
+        userId: account.user.id,
+        role: "dispatcher",
+      },
+      "POST",
+      owner.user.id,
+    );
     expect(refused.status).toBe(409);
     expect(refused.body.error.code).toBe("courier_account_linked");
 
     await link(account.user.id, null);
-    const changed = await send(t, owner.cookie, "/api/auth/admin/set-role", {
-      userId: account.user.id,
-      role: "dispatcher",
-    });
+    const changed = await send(
+      t,
+      owner.cookie,
+      "/api/auth/admin/set-role",
+      {
+        actionId: crypto.randomUUID(),
+        userId: account.user.id,
+        role: "dispatcher",
+      },
+      "POST",
+      owner.user.id,
+    );
     expect(changed.status).toBe(200);
   });
 });

@@ -127,7 +127,7 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     proxy: {
-      "/api": `http://localhost:${process.env["API_PORT"] ?? "3000"}`,
+      "/api": `http://127.0.0.1:${process.env["API_PORT"] ?? "3000"}`,
     },
   },
 }));

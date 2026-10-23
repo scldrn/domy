@@ -58,3 +58,16 @@ failures and the root writer failure/read-only completion remain documented. No 
 or provider was modified. This satisfies only the bounded local demonstration; agreed
 RPO/RTO, schedules/ownership/retention/alerts and provider/object recovery remain open.
 OP-release-evidence stays in progress; G1 and the five catalog tasks remain pending.
+
+## Solo image-upgrade addendum — 2026-10-23
+
+The [current handoff](../../docs/engineering-handoff.md) and
+[upgrade receipt](local-image-upgrade-results.md) supersede the earlier claim that
+a representative local image upgrade remains unrun. The 540-file source `36ef1cd6`
+passes check, 1,626 tests, 154 zero-retry E2E and build. The new arm64 image
+upgrades a synthetic schema-0007 DB with accounts, session, routes, courier records
+and COP totals preserved; replay and the original fresh database are unchanged.
+Root worked solo and separately inspected the results. This narrows the local
+OP-01 gap; actual providers, scheduled backups, consent, mobile data and physical
+acceptance remain unevidenced. OP-release-evidence stays in progress; G1/G2 and
+the five physical/final catalog tasks remain pending. No production operation.

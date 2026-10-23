@@ -604,3 +604,36 @@ describe("record reversions", () => {
     },
   );
 });
+
+it("orders tied history clocks by stable event identity", async () => {
+  const { shipment, id: recordId } = await fixture();
+  const instant = "2026-10-01T15:01:00.000Z";
+  t.setNow("2026-10-01T15:02:00Z");
+  const ids = ["ffffffff-ffff-4fff-8fff-ffffffffffff", "00000000-0000-4000-8000-000000000099"];
+  await database.db.insert(shipmentEvents).values(
+    ids.map((id) => ({
+      id,
+      shipmentId: shipment.id,
+      type: "updated" as const,
+      actorUserId: authorId,
+      occurredAt: new Date(instant),
+      recordedAt: new Date(instant),
+      changes: { instructions: ["Antes", "Después"] },
+    })),
+  );
+  for (let index = 0; index < 16; index += 1) {
+    await database.db.insert(shipmentEvents).values({
+      shipmentId: shipment.id,
+      type: "record_corrected",
+      actorUserId: authorId,
+      occurredAt: new Date(instant),
+      recordedAt: new Date(instant),
+      courierRecordId: recordId,
+      changes: {},
+    });
+    const tied = (await detail(shipment.id)).events.filter(
+      (event) => event.occurredAt === instant && event.recordedAt === instant,
+    );
+    expect(tied.map((event) => event.id)).toEqual([...ids].sort());
+  }
+});

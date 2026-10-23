@@ -125,9 +125,11 @@ test("carries out a route from the phone (scenarios 2–7)", async ({
   await openStop(page, "Calle 11 # 40-01");
   await taskCard(page, plain).getByRole("button", { name: "Registrar entrega" }).click();
   const sheet = page.getByRole("dialog");
+  await expect(sheet).toContainText("Laura Gómez");
+  await sheet.getByRole("button", { name: "Corregir" }).click();
   await expect(sheet.getByLabel("Quién recibe")).toHaveValue("Laura Gómez");
-  await takePhoto(page, "Tomar foto");
   await sheet.getByRole("button", { name: "Revisar" }).click();
+  await takePhoto(page, "Tomar foto");
   await expect(sheet).toContainText("Laura Gómez");
   await sheet.getByRole("button", { name: "Guardar entrega" }).click();
   await expect(taskCard(page, plain)).toContainText("Entregado");
@@ -135,18 +137,26 @@ test("carries out a route from the phone (scenarios 2–7)", async ({
   // Scenario 5: COP 85.000 split between cash and a transfer to the company, with receipt.
   await openStop(page, "Calle 12 # 40-02");
   await taskCard(page, split).getByRole("button", { name: "Registrar entrega" }).click();
+  await sheet.getByRole("button", { name: "Corregir" }).click();
   await expect(sheet.getByLabel("Efectivo")).toHaveValue("$ 85.000");
   await sheet.getByLabel("Efectivo").fill("50000");
   await sheet.getByLabel("Transferencia a la empresa").fill("35000");
   await expect(sheet.getByText("Comprobante de la transferencia")).toBeVisible();
   await sheet.getByRole("button", { name: "Revisar" }).click();
   await expect(sheet).toContainText("$ 35.000");
+  await expect(
+    sheet.getByText("Valor a recaudar").locator("..").getByRole("definition"),
+  ).toHaveText("$ 85.000");
+  await expect(sheet.getByText("Total cobrado").locator("..").getByRole("definition")).toHaveText(
+    "$ 85.000",
+  );
   await sheet.getByRole("button", { name: "Guardar entrega" }).click();
   await expect(taskCard(page, split)).toContainText("Entregado");
 
   // Scenario 6: a different amount requires a note; no photo.
   await openStop(page, "Calle 13 # 40-03");
   await shortCard.getByRole("button", { name: "Registrar entrega" }).click();
+  await sheet.getByRole("button", { name: "Corregir" }).click();
   await sheet.getByLabel("Efectivo").fill("80000");
   await sheet.getByRole("button", { name: "Revisar" }).click();
   await expect(sheet).toContainText("escribe una nota de al menos 5 caracteres");

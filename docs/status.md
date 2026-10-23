@@ -1,7 +1,7 @@
 # Project status
 
 Where Domy stands and what comes next, so any session can resume without the conversation
-that produced it. Updated 2026-10-19 UTC; update it whenever a slice is merged or the next step
+that produced it. Updated 2026-10-23 (America/Bogota); update it whenever a slice is merged or the next step
 changes.
 
 ## Features
@@ -11,13 +11,52 @@ a short-lived branch, so the specification and implementation of every feature l
 
 | Feature | State |
 | --- | --- |
-| 001 Shipment registration | Implemented on `main`; integral audit identifies additional conformance defects. T141 corrected/verified locally, not published; other T128–T149 remain open; historical convergence is not current global sign-off |
+| 001 Shipment registration | 27 integral catalog tasks verified locally; latest T139/T146 regression closure is recorded below. Final corrections remain uncommitted |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
-| 002 Routes and dispatch | Implemented on `main` (#4–#11), with 003 custody extensions; audit adds T063/T064 for aggregate overflow and traceability. Earlier test/review evidence remains in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US7 are on `main`. [PR #28](https://github.com/scldrn/domy/pull/28) merged as `9006db3`; post-merge CI 39081231438 is clean (948 tests/90 first-attempt e2e). T131, final closure and physical T087/T093 remain pending; audit adds T133–T135 for photo lifecycle, immutable upload and account-link form readiness |
-| 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
+| 002 Routes and dispatch | 2 integral catalog tasks verified locally, including aggregate overflow and traceability; retain historical feature receipts |
+| 003 Courier app | 14/17 integral catalog tasks verified locally; T093/T087 physical acceptance and dependent T088 closure remain open |
+| 004 Tracking page and merchant link | 33/35 tasks verified locally; T034 physical acceptance and dependent T035 closure remain open |
 
 ## Next step
+
+### Canonical repository consolidation — 2026-10-23
+
+The owner requested one clean local/GitHub source. Use `main` after the single
+consolidation PR; older branch/source paragraphs below are historical receipts.
+Source `d604a287` (540 files) passes check, 1,626 tests, 155 zero-retry browser
+scenarios and build. The recovered 003/T136 literal-loopback control passes;
+a native ACK fixes the merchant-photo fixture race without runtime changes.
+No identical production source files, repeated complete function bodies of 80+
+tokens, version-copy paths or case collisions were found in the scoped audit.
+The rebuilt image matches the previously upgrade-tested runtime bytes.
+[Consolidation receipt](repository-consolidation-results.md) and
+[current handoff](engineering-handoff.md) record exact identities and limits.
+**76/81 catalog tasks (94%) remain closed; five physical/final tasks stay open.**
+Publication/branch cleanup is authorized by the current owner request; no provider,
+production or remote-CI action follows from it.
+
+
+### Solo technical handoff verified — 2026-10-23
+
+Current branch: `chore/deployment-readiness-verification`, base `f0bc5ac`, with
+uncommitted corrections. Eight SHA-matching candidate files were recovered; real
+RED defects in cursor validation, concurrent account lockout, UUID retries,
+large exports and tied-clock history were corrected. Root inspected the final
+diff and ran check, **1,626 tests**, **154 browser cases with zero retries**, and
+build on unchanged 540-file source `36ef1cd6`. T139/T146 are reclosed.
+
+The new arm64 image builds and passes its structural proof. A representative
+schema-0007→0009 upgrade preserves all 29 old non-journal table hashes, finances,
+accounts and session; migration replay is unchanged. Strict-CA HTTPS authenticates
+the old session. The app returns to the fresh database with its snapshot unchanged.
+See [regressions](../specs/001-shipment-registration/solo-production-regression-results.md),
+[upgrade](../specs/004-tracking-merchant-link/local-image-upgrade-results.md) and
+[current handoff](engineering-handoff.md) for exact identities and limits.
+
+**76/81 catalog tasks closed (94%); five physical/final tasks remain.** The owner
+requested solo work, deferred phone scenarios and handles infrastructure/public
+deployment. No independent-agent review, physical acceptance, provider proof or
+production approval is claimed. Earlier execution paragraphs below are historical.
 
 ### Current narrow diagnostic work — 2026-10-19 UTC
 

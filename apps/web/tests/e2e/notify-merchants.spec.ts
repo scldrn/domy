@@ -7,8 +7,8 @@ import { formatDateTime } from "../../src/lib/format";
 
 const serviceDate = "2026-10-01";
 const viewport = { width: 320, height: 800 };
-const publicOrigin = `http://localhost:${String(webPort)}`;
-const apiOrigin = `http://localhost:${String(apiPort)}`;
+const publicOrigin = `http://127.0.0.1:${String(webPort)}`;
+const apiOrigin = `http://127.0.0.1:${String(apiPort)}`;
 
 type MerchantFixture = { id: string; name: string; pickupPointId: string };
 type ShipmentFixture = { id: string; trackingNumber: string; recipientName: string };
@@ -117,7 +117,7 @@ function merchantCard(page: Page, name: string) {
 
 function trackingCodesIn(message: string): string[] {
   return Array.from(
-    message.matchAll(/https?:\/\/localhost:\d+\/seguimiento\/([A-Za-z0-9_-]{22})/gu),
+    message.matchAll(/https?:\/\/127\.0\.0\.1:\d+\/seguimiento\/([A-Za-z0-9_-]{22})/gu),
     (match) => match[1],
   ).filter((code): code is string => code !== undefined);
 }

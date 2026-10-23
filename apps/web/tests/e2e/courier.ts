@@ -18,7 +18,7 @@ export async function ownSession(page: Page, owner: Page) {
   const email = `offline-${id}@example.com`;
   const created = await owner.request.post("/api/auth/admin/create-user", {
     headers: {
-      origin: `http://localhost:${String(webPort)}`,
+      origin: `http://127.0.0.1:${String(webPort)}`,
       "X-Domy-Actor-Id": actorId,
     },
     data: { id: crypto.randomUUID(), email, password, name: "Mensajero offline", role: "courier" },
@@ -38,7 +38,7 @@ export async function ownSession(page: Page, owner: Page) {
     (
       await owner.request.put(`/api/couriers/accounts/${account.user.id}`, {
         headers: {
-          origin: `http://localhost:${String(webPort)}`,
+          origin: `http://127.0.0.1:${String(webPort)}`,
           "X-Domy-Actor-Id": actorId,
         },
         data: { actionId: crypto.randomUUID(), courierId: id },

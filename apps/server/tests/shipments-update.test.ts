@@ -427,3 +427,38 @@ describe("POST /api/shipments/:id/confirm-fee", () => {
     expect(result.status).toBe(409);
   });
 });
+
+describe("concurrent shipment retry acknowledgment (FR-042)", () => {
+  it.each(["edit", "void"] as const)(
+    "acknowledges every simultaneous %s replay with one event",
+    async (operation) => {
+      const shipment = await register();
+      const actionId = crypto.randomUUID();
+      const request = () =>
+        operation === "edit"
+          ? edit(shipment, { instructions: "Conservar esta indicación" }, actionId)
+          : voidShipment(shipment, "El cliente canceló", actionId);
+      const responses = await Promise.all(Array.from({ length: 6 }, request));
+      expect(responses.map((response) => response.status)).toEqual(Array(6).fill(200));
+      expect(responses.map((response) => response.body.version)).toEqual(
+        Array(6).fill(shipment.version + 1),
+      );
+      const { events } = await detail(shipment);
+      expect(
+        events.filter((event) => event.type === (operation === "edit" ? "updated" : "voided")),
+      ).toHaveLength(1);
+    },
+  );
+});
+
+it("keeps different concurrent edit intents in version conflict (FR-018)", async () => {
+  const shipment = await register();
+  const responses = await Promise.all(
+    ["Primera indicación", "Segunda indicación", "Tercera indicación"].map((instructions) =>
+      edit(shipment, { instructions }),
+    ),
+  );
+  expect(responses.map((response) => response.status).sort()).toEqual([200, 409, 409]);
+  const { events } = await detail(shipment);
+  expect(events.filter((event) => event.type === "updated")).toHaveLength(1);
+});

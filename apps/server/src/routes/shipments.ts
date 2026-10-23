@@ -253,7 +253,11 @@ async function loadDetail(db: Executor, id: string, now: Date): Promise<Shipment
     .from(shipmentEvents)
     .innerJoin(users, eq(users.id, shipmentEvents.actorUserId))
     .where(eq(shipmentEvents.shipmentId, id))
-    .orderBy(asc(shipmentEvents.occurredAt), asc(shipmentEvents.recordedAt));
+    .orderBy(
+      asc(shipmentEvents.occurredAt),
+      asc(shipmentEvents.recordedAt),
+      asc(shipmentEvents.id),
+    );
   const names = await referenceNames(
     db,
     events.flatMap(({ event }) =>
@@ -460,12 +464,12 @@ const unassignedQuery = z.object({
 const pageSize = 50;
 const newestFirst = [desc(shipments.registeredAt), desc(shipments.id)];
 
+const cursorPayload = z.tuple([z.iso.datetime({ offset: true }), z.uuid()]);
+
 function decodeCursor(cursor: string) {
   try {
-    const [registeredAt, id] = JSON.parse(Buffer.from(cursor, "base64url").toString()) as [
-      string,
-      string,
-    ];
+    const decoded: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString());
+    const [registeredAt, id] = cursorPayload.parse(decoded);
     return { registeredAt, id };
   } catch {
     throw new AppError("invalid_request", { fields: { cursor: "Página no válida." } });
@@ -514,13 +518,20 @@ async function loadVersion(db: Executor, id: string, version: number): Promise<S
 }
 
 /** A shipment that can still be edited or voided: not picked up yet (FR-015). */
-async function loadEditable(db: Executor, id: string, version: number, action: "edit" | "void") {
-  const [found] = await db
-    .select({ status: shipments.status })
-    .from(shipments)
-    .where(eq(shipments.id, id));
-  const allowed = found && (action === "edit" ? isEditable(found.status) : canVoid(found.status));
-  if (found && !allowed) {
+async function loadEditable(
+  db: Executor,
+  id: string,
+  version: number,
+  action: "edit" | "void",
+  actionId: string,
+) {
+  const [found] = await db.select().from(shipments).where(eq(shipments.id, id));
+  if (!found) throw new AppError("not_found", { message: "No encontramos ese envío." });
+  const allowed = action === "edit" ? isEditable(found.status) : canVoid(found.status);
+  // A retry may have checked its receipt immediately before the first request committed.
+  if ((!allowed || found.version !== version) && (await findShipmentAction(db, actionId)) === id)
+    return null;
+  if (!allowed) {
     throw new AppError("invalid_transition", {
       message:
         found.status === "voided"
@@ -528,7 +539,11 @@ async function loadEditable(db: Executor, id: string, version: number, action: "
           : `Este envío ya fue recogido (estado «${shipmentStatusLabels[found.status]}»); no se puede ${action === "edit" ? "editar" : "anular"}.`,
     });
   }
-  return loadVersion(db, id, version);
+  if (found.version !== version)
+    throw new AppError("version_conflict", {
+      message: "Este envío cambió; revisa la versión más reciente.",
+    });
+  return found;
 }
 
 /** `{ field: [old, new] }` for every field whose value changes. */
@@ -571,6 +586,11 @@ async function saveChange(
         .where(and(eq(shipments.id, current.id), eq(shipments.version, current.version)))
         .returning({ id: shipments.id });
       if (!row) {
+        if (
+          event.clientEventId &&
+          (await findShipmentAction(tx, event.clientEventId)) === current.id
+        )
+          return;
         throw new AppError("version_conflict", {
           message: "Este envío cambió; revisa la versión más reciente.",
         });
@@ -1104,7 +1124,8 @@ export const shipmentRoutes = new Hono<AppEnv>()
     const { actionId, version, confirmed, window: windowInput, ...input } = c.req.valid("json");
     const db = c.get("db");
     if (await findShipmentAction(db, actionId)) return c.json(await loadShipment(db, id));
-    const current = await loadEditable(db, id, version, "edit");
+    const current = await loadEditable(db, id, version, "edit", actionId);
+    if (!current) return c.json(await loadShipment(db, id));
 
     const misplaced = Object.keys(input).find(
       (field) => !kindFields[current.kind].has(field) && !commonFields.has(field),
@@ -1254,7 +1275,8 @@ export const shipmentRoutes = new Hono<AppEnv>()
     const { actionId, version, reason } = c.req.valid("json");
     const db = c.get("db");
     if (await findShipmentAction(db, actionId)) return c.json(await loadShipment(db, id));
-    const current = await loadEditable(db, id, version, "void");
+    const current = await loadEditable(db, id, version, "void", actionId);
+    if (!current) return c.json(await loadShipment(db, id));
     const actorUserId = c.get("user").id;
     const occurredAt = c.get("clock")();
     await saveChange(

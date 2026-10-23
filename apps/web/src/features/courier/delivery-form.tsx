@@ -17,7 +17,7 @@ import { currentLocation } from "@/lib/offline/location";
 import { CollectionFields, proposedCollection, type Collection } from "./collection-fields";
 import { saveCourierRecord } from "./courier-store";
 import { CourierSheet, SummaryLine } from "./courier-sheet";
-import { needsAmountConfirmation, proposedReceivedBy } from "./delivery-rules";
+import { collectionNoteLabel, needsAmountConfirmation, proposedReceivedBy } from "./delivery-rules";
 import { PhotoInput, type TakenPhoto } from "./photo-input";
 
 type Errors = Partial<Record<"receivedByName" | "note" | "save", string>>;
@@ -53,14 +53,13 @@ export function DeliveryForm({
   );
   const [receipts, setReceipts] = useState<TakenPhoto[]>([]);
   const [note, setNote] = useState("");
-  const [reviewing, setReviewing] = useState(false);
+  const [reviewing, setReviewing] = useState(!returning);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
 
   const collects = !returning && task.codAmount > 0;
   const total = collectedTotal(collection);
   const transferred = collection.companyTransferAmount + collection.merchantTransferAmount > 0;
-  const differs = collects && total !== task.codAmount;
 
   const record = () => ({
     id: crypto.randomUUID(),
@@ -80,7 +79,7 @@ export function DeliveryForm({
     ],
   });
 
-  const review = () => {
+  const validate = (): boolean => {
     const found: Errors = {};
     const nameProblem = receivedByNameProblem(task.shipmentKind, receivedByName);
     if (nameProblem) found.receivedByName = nameProblem;
@@ -93,10 +92,18 @@ export function DeliveryForm({
       found.note = parsed.error.issues[0]?.message ?? "Revisa los datos.";
     }
     setErrors(found);
-    if (Object.keys(found).length === 0) setReviewing(true);
+    return Object.keys(found).length === 0;
+  };
+
+  const review = () => {
+    if (validate()) setReviewing(true);
   };
 
   const save = async () => {
+    if (!validate()) {
+      setReviewing(false);
+      return;
+    }
     setSaving(true);
     try {
       const input = courierRecordInput.parse(record());
@@ -130,6 +137,11 @@ export function DeliveryForm({
     : errand
       ? "Completar diligencia"
       : "Registrar entrega";
+  const proofPhotoLabel = returning
+    ? "Foto de la devolución (opcional)"
+    : errand
+      ? "Foto de la diligencia (opcional)"
+      : "Foto de la entrega (opcional)";
   return (
     <CourierSheet
       open={open}
@@ -144,19 +156,22 @@ export function DeliveryForm({
               {returning ? "Devuelto" : errand ? "Diligencia completada" : "Entregado"}
             </SummaryLine>
             {!errand && <SummaryLine label="Recibió">{receivedByName.trim()}</SummaryLine>}
-            {collects && (
+            {returning ? (
+              <SummaryLine label="Recaudo">No aplica en una devolución</SummaryLine>
+            ) : (
               <>
-                {collection.cashAmount > 0 && (
+                <SummaryLine label="Valor a recaudar">{formatCop(task.codAmount)}</SummaryLine>
+                {collects && collection.cashAmount > 0 && (
                   <SummaryLine label={paymentMethodLabels.cash}>
                     {formatCop(collection.cashAmount)}
                   </SummaryLine>
                 )}
-                {collection.companyTransferAmount > 0 && (
+                {collects && collection.companyTransferAmount > 0 && (
                   <SummaryLine label={paymentMethodLabels.companyTransfer}>
                     {formatCop(collection.companyTransferAmount)}
                   </SummaryLine>
                 )}
-                {collection.merchantTransferAmount > 0 && (
+                {collects && collection.merchantTransferAmount > 0 && (
                   <SummaryLine label={paymentMethodLabels.merchantTransfer}>
                     {formatCop(collection.merchantTransferAmount)}
                   </SummaryLine>
@@ -169,6 +184,14 @@ export function DeliveryForm({
               {photos.length + (transferred ? receipts.length : 0) || "Sin foto"}
             </SummaryLine>
           </dl>
+          <PhotoInput label={proofPhotoLabel} photos={photos} onChange={setPhotos} />
+          {transferred && (
+            <PhotoInput
+              label="Comprobante de la transferencia (opcional)"
+              photos={receipts}
+              onChange={setReceipts}
+            />
+          )}
           {needsAmountConfirmation(total) && (
             <p
               role="alert"
@@ -188,7 +211,10 @@ export function DeliveryForm({
             </Button>
             <Button
               variant="ghost"
-              onClick={() => {
+              onClick={(event) => {
+                // FR-017: keep focus inside the stable sheet before removing this button.
+                const sheet = event.currentTarget.closest('[role="dialog"]');
+                if (sheet instanceof HTMLElement) sheet.focus();
                 setReviewing(false);
               }}
             >
@@ -213,17 +239,7 @@ export function DeliveryForm({
               <FieldError>{errors.receivedByName}</FieldError>
             </Field>
           )}
-          <PhotoInput
-            label={
-              returning
-                ? "Foto de la devolución"
-                : errand
-                  ? "Foto de la diligencia (opcional)"
-                  : "Foto de la entrega"
-            }
-            photos={photos}
-            onChange={setPhotos}
-          />
+          <PhotoInput label={proofPhotoLabel} photos={photos} onChange={setPhotos} />
           {collects && (
             <CollectionFields
               codAmount={task.codAmount}
@@ -233,14 +249,14 @@ export function DeliveryForm({
           )}
           {transferred && (
             <PhotoInput
-              label="Comprobante de la transferencia"
+              label="Comprobante de la transferencia (opcional)"
               photos={receipts}
               onChange={setReceipts}
             />
           )}
           <Field data-invalid={Boolean(errors.note)}>
             <FieldLabel htmlFor={`${id}-note`}>
-              {differs ? "Nota sobre el recaudo" : "Nota (opcional)"}
+              {collects ? collectionNoteLabel(task.codAmount, collection) : "Nota (opcional)"}
             </FieldLabel>
             <Textarea
               id={`${id}-note`}

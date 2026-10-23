@@ -4,7 +4,7 @@ import { accessibilityViolations, expect, test } from "./fixtures";
 import { webPort } from "./ports";
 
 const serviceDate = "2026-10-01";
-const origin = `http://localhost:${String(webPort)}`;
+const origin = `http://127.0.0.1:${String(webPort)}`;
 const identifier = z.object({ id: z.uuid() });
 const detailSchema = z.object({ notifiedAt: z.iso.datetime().nullable() });
 const sessionSchema = z.object({ user: identifier });

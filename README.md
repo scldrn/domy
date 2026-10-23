@@ -12,6 +12,8 @@ public tracking page.
 - [Design system](docs/design-system.md): Material Design 3 over Tailwind CSS and shadcn/ui
 - [Specifications](specs/): one folder per feature, written with GitHub Spec Kit
 - [Project status](docs/status.md): where each feature stands and the next step
+- [Engineering handoff](docs/engineering-handoff.md): the canonical verified candidate,
+  local validation evidence and remaining acceptance
 - [Detailed execution backlog](docs/integral-execution-backlog.md): all open tasks,
   preserved work, dependencies, verification criteria, and operational acceptance
 - [Owner requests](OWNER-REQUESTS.md): questions and items the owner must answer or provide,

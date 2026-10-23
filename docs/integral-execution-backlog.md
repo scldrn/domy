@@ -1,15 +1,29 @@
 # Integral Execution Backlog and Delivery Contract
 
-**Local engineering handoff — 2026-10-23:** final537-file source9604ca96 remains
-unchanged after four green gates (1610 tests/154 browser cases/retries0/build),
-image verification and fresh Caddy HTTPS/proxy/privacy N1/N2 rehearsal. Source,
-migration, TLS, forwarding/rate isolation, built assets, private-photo refusal
-and zero-marker logging evidence are recorded in the
-[container receipt](../specs/004-tracking-merchant-link/deployment-container-results.md).
-**76/81 closed (94%),5 open**: physical acceptance and dependent final closures.
-The owner handles infrastructure/public deployment; historical-image upgrade
-remains planned/unrun in the [engineering handoff](engineering-handoff.md).
-This does not certify production or waive physical/final acceptance.
+**Canonical repository consolidation — 2026-10-23:** owner-requested cleanup
+consolidates the candidate for `main` through one squash PR. Source `d604a287`
+passes all four local gates: 1,626 tests, 155 zero-retry browser scenarios, check
+and build. Existing 003/T136 transport work is recovered; a native pickup ACK
+corrects the merchant-photo fixture race. The new image has identical runtime
+contents to the earlier upgrade-tested image. [Receipt](repository-consolidation-results.md).
+**76/81 catalog tasks closed (94%), five physical/final tasks open.** Older
+source/branch/publication statements below retain their historical scope; remote
+CI and production deployment are not part of this consolidation.
+
+
+**Latest solo engineering handoff — 2026-10-23:** unchanged 540-file source
+`36ef1cd6` passes check, 1,626 tests, 154 zero-retry browser cases and build.
+Real regression fixes reclose 001/T139/T146. The new immutable arm64 image passes
+its structural inspection and historical-schema upgrade rehearsal: 29 existing
+tables, COP totals, accounts/session preserved; replay and the original fresh DB
+remain unchanged. Root worked alone and performed a separate final inspection,
+as requested; no independent-agent approval is claimed. See
+[regression results](../specs/001-shipment-registration/solo-production-regression-results.md),
+[upgrade results](../specs/004-tracking-merchant-link/local-image-upgrade-results.md)
+and [handoff](engineering-handoff.md).
+**76/81 closed (94%), five open** for physical acceptance and dependent closures.
+The owner handles infrastructure/public deployment. This is not production
+approval. Earlier checkpoints below retain their own source identities and scope.
 
 **Current integrated candidate verified — 2026-10-23:** root passes all four local
 gates on unchanged 537-file source9604ca96: check,1610 tests,154 first-attempt
@@ -645,9 +659,13 @@ spec/contract obligations remain authoritative where a description below is abbr
 
 ### 001/T139 — Validate auth JSON and decoded cursors [COMPLETED]
 
-- **Why/state:** Resolved (Finding IV-14/17 / CRITICAL). In `packages/domain/src/schemas/account.ts` and `apps/server/src/routes/auth.ts`, incoming request bodies (email, password, role, name) are strictly validated via Zod schemas before any trim or database operations. Malformed JSON, non-string fields, and invalid UUID/date pagination cursors return standard 400 Bad Request with Spanish messages rather than triggering 500 internal errors.
-- **Touchpoints:** `packages/domain/src/schemas/account.ts`, `apps/server/src/routes/auth.ts`, `packages/domain/src/schemas/account.test.ts`, `apps/server/tests/account-integrity.test.ts`.
-- **Exit:** Validated: 23 schema tests in domain and integration tests in server confirm that malformed payloads, non-string types, and invalid cursors are rejected safely with 400.
+- **Why/state:** Reopened by a real-PG audit, corrected and reclosed on 2026-10-23.
+  Decoded cursor JSON passes a Zod ISO-date/UUID tuple before SQL; existing auth-body
+  schemas remain authoritative. Invalid input returns safe Spanish 400 errors.
+- **Touchpoints:** `apps/server/src/routes/shipments.ts`, `apps/server/tests/shipments-search.test.ts`, and existing account boundary tests.
+- **Exit:** Six malformed cursor cases and all four local gates pass on source
+  `36ef1cd6`: 1,626 tests, 154 zero-retry E2E, check/build. See
+  [solo regression receipt](../specs/001-shipment-registration/solo-production-regression-results.md).
 
 ### 001/T140 — Spanish audit and accessible sidebar text [COMPLETED]
 
@@ -681,9 +699,14 @@ spec/contract obligations remain authoritative where a description below is abbr
 
 ### 001/T146 — Concurrent five-failure per-account lock [COMPLETED]
 
-- **Why/state:** Resolved (Finding IV-12 / HIGH). In `apps/server/src/routes/auth.ts`, failed login attempts serialize counter increments within transactions under row locks. After 5 consecutive failed attempts, the account is locked for exactly 15 minutes (`bannedUntil = now + 15m`). Interleaved concurrent wrong password attempts correctly reach the threshold and lock the account under contention.
-- **Touchpoints:** `apps/server/src/routes/auth.ts`, `apps/server/tests/account-integrity.test.ts`.
-- **Exit:** Validated: concurrent failed attempts serialize correctly without race conditions; exactly on the 5th attempt the account is locked, returning 401 with Spanish retry message.
+- **Why/state:** Reopened, corrected and reclosed on 2026-10-23. A normalized-email
+  advisory transaction lock serializes native Better Auth checks and counters.
+  The fifth failure commits `lockedUntil` for 15 minutes before returning 423;
+  existing sessions survive. This is separate from native IP limiting.
+- **Touchpoints:** `apps/server/src/routes/auth.ts`, `apps/server/tests/auth-lockout-recovery.test.ts`.
+- **Exit:** Twelve simultaneous failures yield four 401 and eight 423 responses;
+  correct credentials stay locked until expiry, then succeed. All four exact-source
+  local gates pass; [receipt](../specs/001-shipment-registration/solo-production-regression-results.md).
 
 ### 001/T147 — Preserve historical fee and rate-zone snapshots [COMPLETED]
 

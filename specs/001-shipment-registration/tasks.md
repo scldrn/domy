@@ -525,3 +525,11 @@ each held PR with its own new clean gates. No privacy/account/physical/global si
 ## Phase 19: Convergence
 
 - [X] T155 CRITICAL Remove recovery bearer URLs from the development mail fallback in `apps/server/src/lib/email.ts`. Preserve IV-41's real PostgreSQL/native Better Auth recovery reproduction with the actual development mailer, no API key and captured pino output: reset succeeds and the actual single-use token is logged. Align R5/R14, local setup guidance and quickstart; analyze before implementation. Add permanent failing coverage for the native recovery request and captured complete output without printing tokens, plus test outbox and configured-provider behavior. Preserve Spanish email, native 60-minute/single-use recovery and indistinguishable registered/unknown confirmation. Require explicit mail configuration for development delivery and actionable static diagnostics rather than a secret-bearing log or an unapproved public mailbox endpoint. Do not suppress ordinary logs, hand-roll tokens or add a mail wrapper/dependency. This is separate from T151's request-path and T153's fallback error projection (FR-030, US7/AC2, plan: R5/R14, Constitution IX; contradicts).
+
+## Solo regression revalidation — 2026-10-23
+
+T139/T146 were reopened after real RED, corrected and reclosed on the unchanged
+540-file candidate after check, 1,626 tests, 154 zero-retry browser cases and build.
+See [regression results](solo-production-regression-results.md). The same engineer
+performed implementation and a separate final inspection, per the owner’s solo
+instruction; no independent-agent approval or physical acceptance is claimed.

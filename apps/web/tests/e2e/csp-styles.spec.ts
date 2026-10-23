@@ -6,7 +6,7 @@ const violationStorageKey = "domy-csp-violated-directives";
 test("keeps bundled styles CSP-clean while keyboard selecting a carrier", async ({
   dispatcherPage: page,
 }) => {
-  const health = await fetch(`http://localhost:${String(apiPort)}/health/live`);
+  const health = await fetch(`http://127.0.0.1:${String(apiPort)}/health/live`);
   expect(health.status).toBe(200);
   const appPolicy = health.headers.get("content-security-policy");
   if (!appPolicy) throw new Error("The app health response must provide its CSP");

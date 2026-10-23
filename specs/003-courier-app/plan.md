@@ -852,3 +852,16 @@ outside the current route-task surface or change held-off-route record handling.
 shipment remains unavailable for disbursement. Rendered state tests cover the other
 task-specific actions and their existing pending, picked-up, completed, office-held and
 handover-blocked conditions. There is no API or shared-domain change in this slice.
+
+## T136 transport consolidation — 2026-10-23
+
+Recover the approved literal-loopback decision from preserved PR30, including
+its native hostname-refusal control before correction. Current public E2E
+fixtures must share the same 127.0.0.1 origin, cookie domain and message-link
+parsing; bind preview explicitly and keep the Vite API proxy on literal loopback.
+Preserve later actor/auth validation, built public origin, private fixture cleanup,
+every browser scenario, deadline, worker, retry and accessibility assertion.
+No production listener, Testcontainers host, domain rule or schema changes.
+The owner requires one clean GitHub/main and local-only QA; use a single squash
+PR with skip annotations, no remote workflow invocation or waiting. See
+[consolidation plan](../../docs/repository-consolidation-plan.md).

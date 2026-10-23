@@ -2,49 +2,113 @@ import { userRoleLabels, userRoles, type Courier, type UserRole } from "@domy/do
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { OptionSelect } from "@/components/option-select";
 import { Field, FieldDescription } from "@/components/ui/field";
-import { linkCourierAccount, listCouriers } from "@/features/master-data/api";
+import { listCouriers } from "@/features/master-data/api";
 import { FormDialog } from "@/features/master-data/form-dialog";
 import { TextField } from "@/features/master-data/text-field";
 import { ApiError } from "@/lib/api-client";
-import { createAccount, setRole, updateAccount, type Account } from "./api";
+import type { Account } from "./api";
+import { readAccountWorkflow, runAccountWorkflow } from "./account-workflow";
 
 const roleOptions = userRoles.map((value) => ({ value, label: userRoleLabels[value] }));
 const unlinked = "sin-vincular";
+type CourierSelection = string | null | undefined;
+type CourierReadiness = "loading" | "ready" | "error";
 
 /** The couriers and their accounts, to link a courier account (feature 003, FR-002). */
 export const courierAccountsQuery = {
   queryKey: ["couriers", "accounts"],
-  queryFn: () => listCouriers("", "true"),
+  queryFn: () => listCouriers(""),
 };
 
-export const linkedCourier = (couriers: Courier[] | undefined, accountId: string) =>
-  couriers?.find((courier) => courier.account?.id === accountId) ?? null;
+export function linkedCourier(
+  couriers: Courier[] | undefined,
+  accountId: string,
+): Courier | null | undefined {
+  if (couriers === undefined) return undefined;
+  return couriers.find((courier) => courier.account?.id === accountId) ?? null;
+}
 
 /**
  * Creates an account, or edits its name, email, and role (FR-032). An account with the
  * courier role is linked to the courier it works as, which decides the route it sees
  * (feature 003, FR-002).
  */
-export function AccountDialog({ account }: { account?: Account }) {
+export function AccountDialog({ account, actorId }: { account?: Account; actorId: string }) {
   const queryClient = useQueryClient();
   const couriers = useQuery(courierAccountsQuery);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRoleValue] = useState<UserRole>("dispatcher");
   const [password, setPassword] = useState("");
-  const [courierId, setCourierId] = useState<string>(unlinked);
+  const [courierId, setCourierId] = useState<CourierSelection>(undefined);
+  const [courierReadiness, setCourierReadiness] = useState<CourierReadiness>("loading");
+  const [createdUserId, setCreatedUserId] = useState<string | null>(null);
+  const [storageError, setStorageError] = useState(false);
 
-  const current = account ? linkedCourier(couriers.data, account.id) : null;
-  // Couriers without an account, and the one this account already works as.
+  const targetId = account?.id ?? createdUserId;
+  const current = targetId ? linkedCourier(couriers.data, targetId) : null;
+  const needsCourierReadiness = account?.role === "courier" || role === "courier";
+  const courierLoadFailed =
+    courierReadiness === "error" ||
+    (courierReadiness !== "loading" && (couriers.isRefetchError || couriers.isError));
+  const courierSelectionReady =
+    courierReadiness === "ready" && !couriers.isFetching && !courierLoadFailed;
+  // Active couriers may receive a new link. Keep only this account's inactive relationship
+  // visible so an ordinary edit can preserve it without treating it as an eligible target.
   const courierOptions = [
     { value: unlinked, label: "Sin vincular" },
     ...(couriers.data ?? [])
-      .filter((courier) => !courier.account || courier.account.id === account?.id)
-      .map((courier) => ({ value: courier.id, label: courier.name })),
+      .filter((courier) =>
+        courier.isActive
+          ? !courier.account || courier.account.id === targetId
+          : courier.account?.id === targetId,
+      )
+      .map((courier) => ({
+        value: courier.id,
+        label: `${courier.name}${courier.isActive ? "" : " (inactivo)"}`,
+      })),
   ];
-  const chosen = courierId === unlinked ? null : courierId;
+
+  function retryCouriers() {
+    setCourierReadiness("loading");
+    void couriers
+      .refetch()
+      .then((result) => {
+        if (!result.isSuccess) {
+          setCourierReadiness("error");
+          return;
+        }
+        const linked = targetId ? linkedCourier(result.data, targetId) : null;
+        setCourierId((selected) => (selected === undefined ? (linked?.id ?? null) : selected));
+        setCourierReadiness("ready");
+      })
+      .catch(() => {
+        setCourierReadiness("error");
+      });
+  }
+
+  const courierStatus = courierLoadFailed ? (
+    <div role="alert" className="flex flex-col items-start gap-3 text-body-m text-error">
+      <p>
+        No pudimos confirmar el mensajero vinculado. Revisa tu conexión e inténtalo de nuevo; no
+        guardaremos este cambio hasta verificarlo.
+      </p>
+      <Button type="button" variant="outline" className="min-h-12" onClick={retryCouriers}>
+        Reintentar
+      </Button>
+    </div>
+  ) : !courierSelectionReady ? (
+    <p role="status" aria-busy="true" className="text-body-s text-on-surface-variant">
+      Confirmando el mensajero vinculado…
+    </p>
+  ) : (
+    <FieldDescription>
+      La app del mensajero muestra la ruta del mensajero que elijas aquí.
+    </FieldDescription>
+  );
 
   return (
     <FormDialog
@@ -57,45 +121,78 @@ export function AccountDialog({ account }: { account?: Account }) {
           : "Comparte la contraseña inicial en persona; la persona puede cambiarla en Mi cuenta."
       }
       submitLabel={account ? "Guardar cambios" : "Crear cuenta"}
+      submitDisabled={storageError || (needsCourierReadiness && !courierSelectionReady)}
       onOpen={() => {
+        setStorageError(true);
+        setCourierReadiness("loading");
         setName(account?.name ?? "");
         setEmail(account?.email ?? "");
         setRoleValue(account?.role ?? "dispatcher");
         setPassword("");
-        setCourierId(current?.id ?? unlinked);
+        setCreatedUserId(null);
+        setCourierId(undefined);
+        void Promise.all([couriers.refetch(), readAccountWorkflow(actorId, account?.id ?? null)])
+          .then(([result, pending]) => {
+            if (pending) {
+              setName(pending.input.name);
+              setEmail(pending.input.email);
+              setRoleValue(pending.input.role);
+              setCourierId(pending.input.courierId);
+              setCreatedUserId(pending.createdUserId);
+            } else if (result.isSuccess) {
+              const target = account?.id ?? null;
+              const linked = target ? linkedCourier(result.data, target) : null;
+              setCourierId(linked?.id ?? null);
+            }
+            setCourierReadiness(result.isSuccess ? "ready" : "error");
+            setStorageError(false);
+          })
+          .catch((error: unknown) => {
+            toast.error(
+              error instanceof ApiError
+                ? error.message
+                : "No pudimos recuperar el cambio pendiente. Permite el almacenamiento del sitio e intenta de nuevo.",
+            );
+          });
       }}
       onSubmit={async () => {
-        if (account) {
-          if (name !== account.name || email !== account.email) {
-            await updateAccount(account.id, { name: name.trim(), email: email.trim() });
-          }
-          const wanted = role === "courier" ? chosen : null;
-          const relink = (current?.id ?? null) !== wanted;
-          // Only a courier account is linked: it becomes one before linking, and is unlinked
-          // before it stops being one.
-          if (role !== account.role && role === "courier") await setRole(account.id, role);
-          if (relink) await linkCourierAccount(account.id, wanted);
-          if (role !== account.role && role !== "courier") await setRole(account.id, role);
-        } else {
-          const { user } = await createAccount({
-            name: name.trim(),
-            email: email.trim(),
-            role,
-            password,
+        if (needsCourierReadiness && (!courierSelectionReady || courierId === undefined))
+          throw new ApiError(409, {
+            code: "courier_readiness_required",
+            message:
+              "No pudimos confirmar el mensajero vinculado. Reintenta la consulta antes de guardar.",
           });
-          if (role === "courier" && chosen) {
-            try {
-              await linkCourierAccount(user.id, chosen);
-            } catch (error) {
-              // The account exists: say so, and let the owner link it by editing it.
-              toast.error(
-                `La cuenta se creó, pero no se pudo vincular al mensajero: ${
-                  error instanceof ApiError ? error.message : "intenta de nuevo editándola."
-                }`,
-              );
-            }
+        try {
+          await runAccountWorkflow(
+            actorId,
+            account
+              ? {
+                  id: account.id,
+                  name: account.name,
+                  email: account.email,
+                  role: account.role,
+                  courierId: current?.id ?? null,
+                }
+              : null,
+            {
+              name: name.trim(),
+              email: email.trim().toLowerCase(),
+              role,
+              courierId: role === "courier" ? (courierId ?? null) : null,
+            },
+            password,
+          );
+        } catch (error) {
+          const pending = await readAccountWorkflow(actorId, account?.id ?? null).catch(() => null);
+          if (pending?.createdUserId) {
+            setCreatedUserId(pending.createdUserId);
+            setPassword("");
           }
+          throw error;
+        } finally {
+          await queryClient.invalidateQueries({ queryKey: ["account-intents", actorId] });
         }
+        setPassword("");
         await queryClient.invalidateQueries({ queryKey: ["accounts"] });
         await queryClient.invalidateQueries({ queryKey: ["couriers"] });
         toast.success(account ? "Cuenta actualizada" : `Cuenta de ${name} creada`);
@@ -106,20 +203,25 @@ export function AccountDialog({ account }: { account?: Account }) {
       <Field>
         <OptionSelect label="Rol" value={role} onChange={setRoleValue} options={roleOptions} />
       </Field>
+      {needsCourierReadiness && role !== "courier" && courierStatus}
       {role === "courier" && (
         <Field>
           <OptionSelect
             label="Mensajero vinculado"
-            value={courierId}
-            onChange={setCourierId}
+            value={courierId === undefined ? "" : (courierId ?? unlinked)}
+            onChange={(selected) => {
+              setCourierId(selected === unlinked ? null : selected);
+            }}
+            {...(!courierSelectionReady && {
+              placeholder: courierLoadFailed ? "Vínculo no confirmado" : "Consultando vínculo…",
+            })}
+            disabled={!courierSelectionReady}
             options={courierOptions}
           />
-          <FieldDescription>
-            La app del mensajero muestra la ruta del mensajero que elijas aquí.
-          </FieldDescription>
+          {courierStatus}
         </Field>
       )}
-      {!account && (
+      {!account && !createdUserId && (
         <TextField
           label="Contraseña inicial"
           type="password"

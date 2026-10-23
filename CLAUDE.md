@@ -188,7 +188,8 @@ and then needs a migration.
   rather than the typed client so it can run and be tested outside React. One store,
   `src/features/courier/courier-store.ts`, feeds every courier screen and runs the sync.
 - Server calls live in each area's `src/features/<area>/api.ts` as
-  `unwrap<T>(api.api.<resource>.$get(...))`. `api` is `hc<AppType>` from `@domy/server/app`
+  `unwrap(api.api.<resource>.$get(...))`, with response types inferred from the endpoint,
+  never supplied by the caller. `api` is `hc<AppType>` from `@domy/server/app`
   (`src/lib/api-client.ts`); `unwrap` turns an error body into an `ApiError` carrying the
   server's Spanish message and per-field messages. Data goes through TanStack Query. Forms
   use react-hook-form; the shipment form checks its input with the domain schema before

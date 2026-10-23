@@ -296,31 +296,40 @@ export const authRoutes = new Hono<AppEnv>()
   // Five consecutive failures lock password sign-in for 15 minutes; open sessions stay.
   .post("/sign-in/email", async (c) => {
     const { request, body } = await bodyOf(c, passwordSignInInput);
-    const db = c.get("db");
-    const now = c.get("clock")();
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(sql`lower(${users.email})`, body.email.toLowerCase()));
-    if (user?.lockedUntil && user.lockedUntil > now) throw locked(user.lockedUntil);
+    // FR-033: one account's password checks and failure counters have one order.
+    const outcome = await c.get("db").transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${`domy:sign-in:${body.email.toLowerCase()}`}, 0))`,
+      );
+      const now = c.get("clock")();
+      const [user] = await tx
+        .select()
+        .from(users)
+        .where(eq(sql`lower(${users.email})`, body.email.toLowerCase()));
+      if (user?.lockedUntil && user.lockedUntil > now) return locked(user.lockedUntil);
 
-    const response = await c.get("auth").handler(request);
-    if (!user) return response;
-    if (response.status === 401) {
-      const failures = user.failedSignInCount + 1;
-      const lockedUntil = failures >= maxFailures ? new Date(now.getTime() + lockMs) : null;
-      await db
-        .update(users)
-        .set({ failedSignInCount: lockedUntil ? 0 : failures, lockedUntil })
-        .where(eq(users.id, user.id));
-      if (lockedUntil) throw locked(lockedUntil);
-    } else if (response.ok && (user.failedSignInCount > 0 || user.lockedUntil)) {
-      await db
-        .update(users)
-        .set({ failedSignInCount: 0, lockedUntil: null })
-        .where(eq(users.id, user.id));
-    }
-    return response;
+      const auth = createAuth({ ...c.get("authConfig"), db: tx, logger: c.get("logger") });
+      const response = await auth.handler(request);
+      if (!user) return response;
+      if (response.status === 401) {
+        const failures = user.failedSignInCount + 1;
+        const lockedUntil = failures >= maxFailures ? new Date(now.getTime() + lockMs) : null;
+        await tx
+          .update(users)
+          .set({ failedSignInCount: lockedUntil ? 0 : failures, lockedUntil })
+          .where(eq(users.id, user.id));
+        // Return the refusal so the counter commits before Hono handles the error.
+        if (lockedUntil) return locked(lockedUntil);
+      } else if (response.ok && (user.failedSignInCount > 0 || user.lockedUntil)) {
+        await tx
+          .update(users)
+          .set({ failedSignInCount: 0, lockedUntil: null })
+          .where(eq(users.id, user.id));
+      }
+      return response;
+    });
+    if (outcome instanceof AppError) throw outcome;
+    return outcome;
   })
   .post("/admin/create-user", requireRole("owner"), async (c) => {
     const { request, body } = await bodyOf(c, accountCreateInput);
