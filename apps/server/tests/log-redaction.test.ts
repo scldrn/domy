@@ -1,3 +1,4 @@
+import { serve } from "@hono/node-server";
 import { Writable } from "node:stream";
 import { copyFileSync, mkdtempSync, rmSync, symlinkSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -21,6 +22,52 @@ afterAll(async () => {
 });
 
 describe("logs (FR-041)", () => {
+  it("omits arbitrary native path, header, query and body markers from request logs (OP-01)", async () => {
+    const marker = crypto.randomUUID();
+    let output = "";
+    const sink = new Writable({
+      write(chunk: Buffer, _encoding, done) {
+        output += chunk.toString();
+        done();
+      },
+    });
+    const t = createTestApp(database.db, { logger: createLogger("debug", sink) });
+    const server = serve({ fetch: t.app.fetch, hostname: "127.0.0.1", port: 0 });
+    await new Promise<void>((resolve) => server.once("listening", resolve));
+    try {
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Expected native listener");
+      const origin = `http://127.0.0.1:${String(address.port)}`;
+      const headers = {
+        "X-Request-Id": marker,
+        authorization: `Bearer ${marker}`,
+        cookie: `synthetic=${marker}`,
+        "content-type": "text/plain",
+      };
+      const missing = await fetch(`${origin}/missing/${marker}?q=${marker}`, {
+        method: "POST",
+        headers,
+        body: marker,
+      });
+      await missing.arrayBuffer();
+      expect(missing.status).toBe(404);
+      const health = await fetch(`${origin}/health/live?q=${marker}`, { headers });
+      await health.arrayBuffer();
+      expect(health.status).toBe(200);
+      expect(health.headers.get("x-request-id") === marker).toBe(false);
+      expect(output.includes(marker), "native log markers must be absent").toBe(false);
+      expect(output).toContain('"path":"/health/live"');
+      expect(output).toContain('"msg":"request"');
+    } finally {
+      if ("closeAllConnections" in server) server.closeAllConnections();
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => {
+          if (error) reject(error);
+          else resolve();
+        }),
+      );
+    }
+  });
   beforeEach(async () => {
     await database.truncate();
   });

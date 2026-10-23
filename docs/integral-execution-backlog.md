@@ -1,6 +1,159 @@
 # Integral Execution Backlog and Delivery Contract
 
-**Snapshot:** 2026-10-19 UTC. **Owner:** Samuel Calderón. **State:** NOT READY FOR RELEASE.
+**Canonical repository consolidation — 2026-10-23:** owner-requested cleanup
+consolidates the candidate for `main` through one squash PR. Source `d604a287`
+passes all four local gates: 1,626 tests, 155 zero-retry browser scenarios, check
+and build. Existing 003/T136 transport work is recovered; a native pickup ACK
+corrects the merchant-photo fixture race. The new image has identical runtime
+contents to the earlier upgrade-tested image. [Receipt](repository-consolidation-results.md).
+**76/81 catalog tasks closed (94%), five physical/final tasks open.** Older
+source/branch/publication statements below retain their historical scope; remote
+CI and production deployment are not part of this consolidation.
+
+
+**Latest solo engineering handoff — 2026-10-23:** unchanged 540-file source
+`36ef1cd6` passes check, 1,626 tests, 154 zero-retry browser cases and build.
+Real regression fixes reclose 001/T139/T146. The new immutable arm64 image passes
+its structural inspection and historical-schema upgrade rehearsal: 29 existing
+tables, COP totals, accounts/session preserved; replay and the original fresh DB
+remain unchanged. Root worked alone and performed a separate final inspection,
+as requested; no independent-agent approval is claimed. See
+[regression results](../specs/001-shipment-registration/solo-production-regression-results.md),
+[upgrade results](../specs/004-tracking-merchant-link/local-image-upgrade-results.md)
+and [handoff](engineering-handoff.md).
+**76/81 closed (94%), five open** for physical acceptance and dependent closures.
+The owner handles infrastructure/public deployment. This is not production
+approval. Earlier checkpoints below retain their own source identities and scope.
+
+**Current integrated candidate verified — 2026-10-23:** root passes all four local
+gates on unchanged 537-file source9604ca96: check,1610 tests,154 first-attempt
+browser cases (10.9minutes/retries0/cold2837.3ms),build. First failures remain
+preserved. The local image build and root's independent structural probe pass;
+fresh isolated runtime/upgrade rehearsal follows. **76/81 verified (94%),5 open**;
+physical, provider and final gates remain pending. [Preload results](../specs/004-tracking-merchant-link/deployment-preload-results.md).
+
+**Local database recovery double-verified — 2026-10-22:** executor and root independently recover the selected synthetic snapshot:31 exact table hashes,66 FK definitions, sequence and COP totals; migration no-op and restored account access pass; UUID registration replay has one effect. First harness failures retained. **76/81 verified (94%),5 open**. This supplies scoped OP-02 evidence; scheduled backups/object-provider recovery and G1/physical/final gates remain pending. [Restore results](../specs/004-tracking-merchant-link/local-database-restore-results.md).
+
+**Current-network candidate verified — 2026-10-22:** phone-20261022-public-b at https://192.168.58.219:8445 passes executor/root native checks and root public probes. Source523files2a885083 remains unchanged. Prior003 and public-a resources are retained; public-a is the separate OP-02 backup source. **76/81 verified (94%),5 open**; G1/OP/physical/final acceptance remain pending. [Current-network results](../specs/004-tracking-merchant-link/local-target-current-network-results.md).
+
+**Updated local 004 rehearsal verified — 2026-10-22:** new synthetic candidate phone-20261022-public-a at current LAN IP10.12.117.118:8444 passes executor/root native HTTPS/auth/worker/private-photo checks and root public API probes. Source523files2a885083 unchanged; old003 target retained. **76/81 verified (94%),5 open**. G1/operational and physical/final acceptance remain pending; owner confirms LAN only/no purchased domain. [Rehearsal results](../specs/004-tracking-merchant-link/local-target-preparation-results.md).
+
+**Public go-live documentation verified — 2026-10-22:** T033 README origin/support/individual-consent instructions pass executor/root contract review, diff check and32relative links. **76/81 verified (94%),5 open**. Documentation closure does not certify actual courier consent or G1; OP-release-evidence remains pending. [Documentation results](../specs/004-tracking-merchant-link/public-go-live-documentation-results.md).
+
+**Public accessibility verified — 2026-10-22:** T032 passes both-level focused checks, executor35 repeated native cases and root final check/1566tests/153E2E9.7min/retries0/build. Frozen523-file source2a885083; cold tracking2847.5ms. Original defects, harness failures and interruption retained. **75/81 verified (93%),6 open**. T033 documentation is eligible. [Accessibility results](../specs/004-tracking-merchant-link/public-accessibility-results.md).
+
+**Public permission matrix verified — 2026-10-22:** T030 both-level140native/5files/static/types PASS; four public anonymous reads, mutation refusal with unchanged data/photo, office notification/rotation and role denials verified. **74/81 verified (91%),7 open**. T032 accessibility continues. [Permission results](../specs/004-tracking-merchant-link/public-permissions-results.md).
+
+**Notification story verified — 2026-10-22:** T022 passes executor/root review and focused8 native cases; root final check/1561tests/150native9.4min/retries0/build PASS on identical522-file source edc9e6f1. Cold tracking2860.6ms. Original selector failures and interruption retained. **73/81 verified (90%),8 open**. T030 permissions and T032 accessibility may start in parallel. [UI results](../specs/004-tracking-merchant-link/notification-ui-results.md).
+
+**Notification API history fix verified — 2026-10-22:** T021 reclosed after causal RED and both-level65native affected tests/static/server types. Receipt remains intact; detail no longer invents field changes. **72/81 verified (89%),9 open**. T022 resumes; ungenerated concurrent route-type failures remain explicitly pending its integration gates. [API results](../specs/004-tracking-merchant-link/notification-api-results.md).
+
+**Notification API reopened — 2026-10-22:** root found notification receipt metadata rendered as fabricated detail field changes. T021 reopened; T022 assembly held pending causal regression and N1/N2. **71/81 verified (88%),10 open**. Earlier API/core passes remain historical evidence, not closure of this finding.
+
+**Notification UI checkpoint — 2026-10-22:** T022 remains in progress; presentation/core N1/N2 pass424domain/382web/static/types, including root-discovered partial-batch refresh regression. Page/navigation and8focused browser cases precede full gates. **72/81 verified (89%),9 open**. [UI results](../specs/004-tracking-merchant-link/notification-ui-results.md).
+
+**Notification API checkpoint — 2026-10-22:** T021 both-level43affectedserverPASS/423domain/staticPASS; first full753PASS/2obsolete-contract failures preserved, then strict tests aligned. **72/81 verified (89%),9 open**. [API results](../specs/004-tracking-merchant-link/notification-api-results.md). R21 design gate verified; T022 UI may start. Full story gates remain pending.
+
+**Notification browser RED checkpoint — 2026-10-22:** T019 both-level3 intended missing-page RED/static PASS, native fixtures and preserved traces. **71/81 verified (88%),10 open**. [Browser RED](../specs/004-tracking-merchant-link/notification-browser-red-results.md). T021 API is the next implementation; T022 waits for its verified completion.
+
+**Notification domain checkpoint — 2026-10-22:** T020 both-level422domainPASS/static PASS with preserved UUID/date regressions. **70/81 verified (86%),11 open**. [Domain results](../specs/004-tracking-merchant-link/notification-domain-results.md). T019 browser RED next; T021 eligible after its runtime freeze.
+
+**Notification API RED checkpoint — 2026-10-22:** T018 both-level1baselinePASS/9intendedRED/staticPASS on real PostgreSQL. **69/81 verified (85%),12 open**. [API RED](../specs/004-tracking-merchant-link/notification-api-red-results.md). T020 domain implementation and T019 browser RED continue; T021 waits for T020 verification.
+
+**Notification composer RED checkpoint — 2026-10-22:** T017 both-level3 intended missing-export RED/static PASS; contract seam aligned first. **68/81 verified (84%),13 open**. [Composer RED](../specs/004-tracking-merchant-link/notification-composer-red-results.md). T020 eligible; API/browser RED continues.
+
+**Merchant portal checkpoint — 2026-10-22:** T028/T029 pass both QA levels: check,1511tests,142first-attemptE2E9.3min,build;506-file source55c58134 unchanged. **67/81 verified (83%),14 open**. [Portal results](../specs/004-tracking-merchant-link/merchant-browser-results.md). Next: notifications RED T017–T019 in parallel, with local DB/build/E2E execution serialized.
+
+
+**Public code scan checkpoint — 2026-10-22:** T031 bothlevels2firstattemptnativePASS/1000codes×2endpoints; rate-limit/real positives retained. **65/81 verified (80%),16 open**. [Scan results](../specs/004-tracking-merchant-link/public-codes-scan-results.md). UI T028/T029 in progress.
+
+**Merchant API checkpoint — 2026-10-22:** T027 root738server/412domain/staticPASS on identical12-file source. **64/81 verified (79%),17 open**. [API results](../specs/004-tracking-merchant-link/merchant-api-results.md). UI T028/T029 and independent T031 now eligible.
+
+**Merchant projection checkpoint — 2026-10-22:** T026 bothlevels410domain/staticPASS; root30nativePGPASS, int4regressionfixed/retained. **63/81 verified (78%),18 open**. [Projection results](../specs/004-tracking-merchant-link/merchant-projection-results.md). T027 endpoints eligible.
+
+**Merchant browser RED checkpoint — 2026-10-22:** T025 final-source82d7d26c bothlevels3intendedRED plus strictstaticPASS. **62/81 verified (77%),19 open**. [Browser RED](../specs/004-tracking-merchant-link/merchant-browser-red-results.md). Source freeze released; T026 implementation starts.
+
+**Merchant projection RED checkpoint — 2026-10-22:** T023 owner-note decision aligned; independent analysis and both RED runs132total/14intendedfail/118PASS. **61/81 verified (75%),20 open**. [Projection RED](../specs/004-tracking-merchant-link/merchant-projection-red-results.md). T025 final browser audit precedes source-freeze release for T026.
+
+**Planning revision:** 2026-10-22 (America/Bogota). **Owner:** Samuel Calderón.
+**Local base:** `94a7e2450ec2abae4192f7f864e34c4638f7c963`; active branch `codex/local-readiness-orchestration`.
+**State:** NOT READY FOR RELEASE; 5 canonical tasks remain open, plus operational obligations.
+
+**Merchant API RED checkpoint — 2026-10-22:** T024 independently reproduced9cases/6intended404failures/3baselinepasses; strict static checks PASS. **60/81 verified (74%),21 open**. [Merchant API RED](../specs/004-tracking-merchant-link/merchant-api-red-results.md). T023/T025 authoring corrections continue; implementations remain gated.
+
+**Tracking story checkpoint — 2026-10-22:** T016 root fullcheck/1472tests/138firstattemptE2E8.9min/build PASS; cold2803.4ms; identical492-file source49e15ee7. **59/81 verified (73%),22 open**. [Tracking results](../specs/004-tracking-merchant-link/tracking-browser-results.md). R19 gate verified; merchant RED T023/T024/T025 authorized in parallel with serialized native execution.
+
+**Tracking API checkpoint — 2026-10-22:** T015 passes both-level18 native server/118 domain tests and strict static checks. **58/81 verified (72%),23 open**. [API results](../specs/004-tracking-merchant-link/tracking-api-results.md). T016 UI authorized.
+
+**Projection checkpoint — 2026-10-22:** T013 passes both-level118 tests and strict static checks. **57/81 verified (70%),24 open**. [Projection results](../specs/004-tracking-merchant-link/tracking-projection-results.md). T015 API authorized; T016 remains gated.
+
+**Browser RED checkpoint — 2026-10-22:** T012 corrected five intended UI failures independently reproduced; scoped static checks pass. **56/81 verified (69%),25 open**. [Browser RED](../specs/004-tracking-merchant-link/tracking-browser-red-results.md). T013 proceeds; T015/T016 remain gated.
+
+**Tracking RED checkpoint — 2026-10-22:** T009/T011 independently verified intendedRED and scopedstaticchecks; T013 unlocked. **55/81 verified (68%),26 open**. [Tracking RED](../specs/004-tracking-merchant-link/tracking-red-results.md).
+
+**Queue implementation checkpoint — 2026-10-22:** T014 passes both-level41/41 and scoped static checks. **53/81 verified (65%),28 open**. [Queue helper](../specs/004-tracking-merchant-link/queue-helper-results.md).
+
+**Queue RED checkpoint — 2026-10-22:** T010 verified by both levels (33 existing pass/8 intended failures), unlocksT014. **52/81 verified (64%),29 open**. [Queue RED](../specs/004-tracking-merchant-link/queue-red-results.md).
+
+**Foundation checkpoint — 2026-10-22:** T001–T008 verified, including corrected URL aliases. Root full check/1376tests/133 first-attempt E2E7.7min/build PASS on identical481-file sourcec13b486c. **51/81 verified (63%),30 open**. [Foundation results](../specs/004-tracking-merchant-link/foundation-integration-results.md). T009–T012 RED begins in parallel.
+
+**Historical reopened checkpoint — 2026-10-22:** independent audit found public case/encoded aliases bypass T007 worker guards; T007 reopened for correction and regressions. **49/81 verified (60%),32 open**. Earlier lowercase-path QA remains historical.
+
+**Code checkpoint — 2026-10-22:** T005 verified independently53/53 tests including API creation without SQL code defaults. **50/81 verified (62%),31 open**. [Code results](../specs/004-tracking-merchant-link/secret-code-results.md).
+
+**Layout checkpoint — 2026-10-22:** T007 independently verified3/3 first-attempt built-worker E2E and static checks on unchanged sourcefca79157. **49/81 verified (60%),32 open**. [Layout results](../specs/004-tracking-merchant-link/public-layout-results.md).
+
+**HTTP checkpoint — 2026-10-22:** T006 verified: independent final42 tests, static checks and privacy/static-fallback review. **48/81 verified (59%),33 open**. See [boundary results](../specs/004-tracking-merchant-link/public-protection-results.md).
+
+**Schema checkpoint — 2026-10-22:** T004 passed executor and root native migration/code tests (6/6), scoped static checks and generated-DDL review. **47/81 verified (58%), 34 open**. T005/T008 unlocked; T006/T007 continue. See [schema results](../specs/004-tracking-merchant-link/schema-migration-results.md).
+
+**Historical RED checkpoint — 2026-10-21:** T002/T003 RED-only deliverables passed independent
+N1/N2 verification: four and five intended failures on real PostgreSQL/native HTTP,
+with clean types/lint. **46/81 verified by task deliverable (57%), 35 open**.
+These are failing tests awaiting T004/T005/T006, not implemented protections.
+See [foundational RED results](../specs/004-tracking-merchant-link/foundational-red-results.md).
+
+**Previous configuration checkpoint:** 004/T001 passed local N1/N2 on source
+`adb2e974c14025cb3c23a5108ed32f9e51bf1b6beb43def82f5f9f619a313e2d`:
+1,311 tests, check, 2 first-attempt courier E2E, build and private-origin isolation.
+Catalog: **44/81 verified (54%), 37 open**. Next: T002/T003 RED in parallel.
+See [public-origin results](../specs/004-tracking-merchant-link/public-origin-results.md).
+Earlier counts below describe their dated checkpoints.
+
+**Owner sequencing decision — 2026-10-21:** “omite y continuemos” defers physical
+003 acceptance and allows local 004 development from the verified technical baseline.
+003/T093, T087 and T088 remain open and required for final acceptance; no scenario
+is marked passed. For development only, W12 follows the approved deferral and the
+verified W01–W09 technical exits instead of waiting for physical W10/W11 closure.
+W13–W21 retain their technical dependencies and double QA. This supersedes earlier
+statements that all 004 work must wait; it does not authorize production or waive
+physical evidence at final delivery. Catalog remains 43/81 (53%).
+
+**2026-10-21 verified checkpoint:** T083 passed executor N1 and root N2: 36 focused
+browser cases; integrated check, 1,281 tests, 129 first-attempt E2E and build. Root
+reviewed the source and screenshots; all prior failures remain in the local ledger.
+T084 subsequently passed the isolated rehearsal and independent root review; G0 now permits owner-operated phone acceptance. There are 43/81 verified catalog tasks (53% by count), 38 open. See the local ledger for preserved failures and exact evidence.
+
+**T093 preparation checkpoint:** agent browser login/navigation and actual 360/390 CSS
+standard/high-contrast checks passed. Four isolated device fixtures (16 shipments, four
+routes) passed executor/root QA. Physical outcomes remain pending; no new task is closed.
+An additional isolated browser route completed four pickups, three deliveries,
+one exception and a synthetic proof upload; N1/N2 audits verified eight unique
+records, COP 75,000 cash, route closure and private JPEG access. The four phone
+routes remain untouched. Physical camera/offline/restart/timing evidence is pending.
+
+**Active execution instruction — 2026-10-20:** the owner explicitly requires local-only
+orchestration with executor QA followed by independent orchestrator inspection and
+verification. Do not configure, invoke, query or wait for GitHub Actions/remote pipelines.
+For this run, historical PR/head/trunk-CI requirements below map to recorded local source
+identity, local integration review and the complete local quality gates; do not fabricate
+remote evidence. Physical acceptance, provider proof and production authorization remain
+separate prerequisites. Current batches and evidence: [local execution ledger](local-orchestration.md).
+
+**Start here:** [§5](#5-execution-waves-and-dependency-order) orders the remaining work
+by prerequisite and defines separate test-environment and production gates. Completed
+catalog entries are regression prerequisites, not work to implement again. This revision
+uses local Git history and task markers; it does not certify current remote CI or a deployment.
 
 This is the detailed execution companion to [the remediation plan](integral-remediation-plan.md)
 and [the verification report](integral-verification.md). It explains every currently open
@@ -12,13 +165,13 @@ Spec Kit, a declaration that all designs are settled, or permission to deploy pr
 
 1. [Authoritative scope and exact count](#1-authoritative-scope-and-exact-count)
 2. [Mandatory execution and closure protocol](#2-mandatory-execution-and-closure-protocol)
-3. [Preserved work and immediate integration sequence](#3-preserved-work-and-immediate-integration-sequence)
+3. [Integration baseline and historical receipts](#3-integration-baseline-and-historical-receipts)
 4. [Decisions already made and remaining design gates](#4-decisions-already-made-and-remaining-design-gates)
 5. [Execution waves and dependency order](#5-execution-waves-and-dependency-order)
-6. [Feature 001: all 27 open tasks](#6-feature-001-all-27-open-tasks)
-7. [Feature 002: both open tasks](#7-feature-002-both-open-tasks)
-8. [Feature 003: all 17 open tasks](#8-feature-003-all-17-open-tasks)
-9. [Feature 004: all 35 open tasks](#9-feature-004-all-35-open-tasks)
+6. [Feature 001: 27 cataloged tasks, 0 open](#6-feature-001-27-cataloged-tasks-0-open)
+7. [Feature 002: 2 cataloged tasks, 0 open](#7-feature-002-2-cataloged-tasks-0-open)
+8. [Feature 003: 17 cataloged tasks, 3 open](#8-feature-003-17-cataloged-tasks-3-open)
+9. [Feature 004: 35 cataloged tasks, 2 open](#9-feature-004-35-cataloged-tasks-2-open)
 10. [Historical regressions and approved ideas to retain](#10-historical-regressions-and-approved-ideas-to-retain)
 11. [Operational work and owner acceptance](#11-operational-work-and-owner-acceptance)
 12. [Evidence ledger, final acceptance and maintenance](#12-evidence-ledger-final-acceptance-and-maintenance)
@@ -40,46 +193,49 @@ override a newer verified receipt. Correct present-tense summaries while preserv
 dated history. This document describes work; only the owning artifacts authorize its
 behavior. New product decisions require clarification, not assumptions disguised as fixes.
 
-| Feature | Canonical task source | Open checkboxes in this snapshot | Completed on `main` | What remains |
+| Feature | Canonical task source | Open checkboxes | Checked catalog entries in the working tree | What remains |
 | --- | --- | ---: | ---: | --- |
-| 001 | [Shipment registration tasks](../specs/001-shipment-registration/tasks.md) | 5 | 22 | T129 (advisories), T132 (actionId), T136 (RPC types), T137 (form drafts), T152 (Sentry envelope) |
-| 002 | [Routes tasks](../specs/002-routes-dispatch/tasks.md) | 1 | 1 | T064 (unambiguous documentation) |
-| 003 | [Courier tasks](../specs/003-courier-app/tasks.md) | 12 | 5 | T081-T084, T087-T093 (courier verification matrices & physical acceptance), T135 (link intent) |
-| 004 | [Tracking/merchant tasks](../specs/004-tracking-merchant-link/tasks.md) | 35 | 0 | Full feature 004 implementation (T001–T035) |
-| **Total** | Four canonical task files | **53** | **28** | **53 open tasks across features 001, 002, 003, and 004** |
+| 001 | [Shipment registration tasks](../specs/001-shipment-registration/tasks.md) | 0 | 27 | All cataloged tasks verified locally; human/operational obligations remain |
+| 002 | [Routes tasks](../specs/002-routes-dispatch/tasks.md) | 0 | 2 | Cataloged tasks verified locally; human/operational obligations remain |
+| 003 | [Courier tasks](../specs/003-courier-app/tasks.md) | 3 | 14 | T087-T088/T093 (physical acceptance and final gates); T084 locally verified |
+| 004 | [Tracking/merchant tasks](../specs/004-tracking-merchant-link/tasks.md) | 2 | 33 | T001–T033 verified by deliverable; T034–T035 remain |
+| **Total** | Four canonical task files | **5** | **76** | **5 open tasks across features 001, 002, 003, and 004** |
 
-Counts are from the current working branch `001-fix-error-diagnostics`. They are a
-snapshot, not a permanent constant and not the count of changes delivered to `main`.
+Counts were recomputed from the four working-tree task files after the local double-QA
+closure of 001/T129/T132/T136/T137/T152, 002/T064 and 003/T081/T082/T083/T084/T089/T090/T091/T092/T135. The 81 catalog entries comprise 5 open and 76 checked tasks; they are not the entire historical
+task inventory. Checked markers do not certify current CI, physical acceptance or release.
 The earlier 75-task objective remains the same completion program; newly discovered
 obligations expanded its tracked queue. Some unchecked tasks already have preserved
 code, but cannot be treated as integrated, verified delivery.
 
-### 1.2 What the 80 does and does not count
+### 1.2 What the count does and does not establish
 
-- T153 is checked locally after full passing gates (check, 967 tests, 91 e2e, build) and receipt.
-  Publication/merge to trunk remain.
-- 001/T130, T131, T150 and T151 have local account-integrity code on another branch.
-- 003/T131 is checked on the session-recovery branch but open in this branch's task file.
-- 001/T154 is checked on its PR branch but open here, where the fix is absent.
-- 003/T136 is a **new already-checked transport task on PR #30**, not an unchecked item in
-  this snapshot. Import its identity/evidence, but do not subtract another open task for it.
-- The two failures in PR #32's latest CI require investigation below. They have not yet
-  been assigned new canonical task IDs; map them to existing obligations where justified,
-  or append distinct tasks through convergence. Do not conceal them to keep the count at 81.
+- The schedule in §5 assigns each task once; 001/T129/T132/T136/T137/T152, 002/T064 and 003/T081/T082/T083/T084/T089/T090/T091/T092/T135 are verified prerequisites and
+  the other 38 remain open. Operational
+  rows and design/deployment gates are not additional Spec Kit tasks or completed work.
+- 001/T130, T131, T150, T151, T153, T154, T155 and 003/T131 are checked in the current
+  local tree. Their earlier unmerged/held states in §3 are historical, not the next queue.
+- 003/T136 is already checked outside this 81-entry remediation catalog. Do not add it
+  to the open queue or subtract it again. Preserve its transport regression and evidence.
+- CI-LOCK/CI-POINTER are historical investigation labels, not canonical task IDs. Preserve
+  those failures; inspect applicability and current receipts before alleging a new failure.
 - Operational OP-01–OP-05, evidence reconciliation and future pilot measurements are
   required deliverables, not five fictitiously completed runtime tasks. They can require
   explicit additional approved tasks before operational implementation/provisioning.
 - Historical checked tasks remain regression obligations. A checkbox is not proof that
   its behavior still works after later changes.
 
-### 1.3 Current delivery baseline
+### 1.3 Current local planning baseline
 
-- `main`/`origin/main`: `321ef93adffae9fd4e6fead0aea18fc5fd81664b`, PR #29/T141.
-- T141's keyboard readiness correction is merged; do not implement or merge it again.
-- Features 001 and 002 and 003 US1–US7 exist on trunk, with the deficiencies below.
+- Local `main`: `94a7e2450ec2abae4192f7f864e34c4638f7c963`; remote state was not queried
+  for this documentation change. Do not equate local history with current remote CI.
+- Account integrity, master-data concurrency, bulk identity, money/aggregates, historical
+  pricing, CSV/operational exports, photo corrections and directory/Spanish fixes now have
+  checked task markers and local history. Retain their regressions rather than rebuilding them.
+- Features 001 and 002 and 003 US1–US7 exist in this tree, with the remaining gaps below.
 - Feature 004 has specifications/design/tasks but no delivered implementation.
-- Current T153 working tree contains implementation, tests and documentation changes;
-  preserve them. This document is not permission to reset, overwrite or discard them.
+- Preserve unrelated working-tree changes and historical branches/evidence. This document
+  is not permission to reset, overwrite, cherry-pick or merge old work.
 - Existing iOS/Android owner feedback is valid historical evidence for its tested scope,
   not full later-US/device/installed-notification or public-page acceptance.
 
@@ -168,9 +324,15 @@ must still identify publication/integration/CI pending. Do not call a task deliv
 because its checkbox is checked on an unmerged branch. Do not check any task based on this
 document alone.
 
-## 3. Preserved work and immediate integration sequence
+## 3. Integration baseline and historical receipts
 
-### 3.1 Branch and PR ledger
+**Historical record — 2026-10-19 UTC:** the ledger, CI failures and sequence below describe
+earlier heads. They remain evidence for regression retention, not assertions that those
+PRs are still open or instructions to repeat their integration. The current local baseline
+is in §1.3; the next development queue is §5. Reconcile exact source/CI receipts at execution
+time and append any newly reproduced gap to its owning task through the established workflow.
+
+### 3.1 Historical branch and PR ledger
 
 | Work | Preserved head | State and required next step |
 | --- | --- | --- |
@@ -184,7 +346,7 @@ All heads are snapshot evidence, not commands to force-push or overwrite a branc
 their tests, owner decisions, task IDs and failure receipts during reconciliation.
 Never cherry-pick whole old status documents over newer decisions.
 
-### 3.2 Latest PR #32 CI: two explicit unresolved work items
+### 3.2 Historical PR #32 CI: two retained failures
 
 **CI-LOCK — lockout browser test assumes a non-progressing business clock.**
 
@@ -232,7 +394,7 @@ are under `.git/t154-ci-39285191879/`; original T153 RED notes are retained in
 not a durable shared evidence store. Before their external artifact retention expires,
 retain approved access-controlled evidence according to project policy, never in public git.
 
-### 3.3 Immediate sequence
+### 3.3 Historical integration sequence
 
 1. Preserve the clean T153 behavioral source and its actual local results; complete its
    remaining review/convergence/publication work without bundling unrelated browser fixes.
@@ -273,58 +435,124 @@ dependency rationale; never pretend an unmerged prerequisite is already on trunk
 Record the CSV/photo replies in the resolved owner ledger and align stale present-tense
 summaries. Their currently stale “unanswered” paragraphs must not drive new implementation.
 
-### 4.2 Technical choices still requiring evidence/design
+### 4.2 Design and environment gates at the current baseline
 
-| Gate | Required work before behavioral implementation | Forbidden shortcut |
+| Gate | Current prerequisite and remaining work | Forbidden shortcut |
 | --- | --- | --- |
-| D3 Money | Define one representability/checked-arithmetic contract across per-field SQL, aggregates, domain, JSON and UI; compare checked current storage with additive wider storage | Invented business cap, float money, narrowing SUM, unsafe Number cast |
-| D4 Accounts | Preserve native shared transaction proof; finish replay binding and creation/session-ending semantics through actual Better Auth APIs | Ordinary after-hook audit, duplicated auth config, password fingerprints as replay receipts |
-| D5 Photos | Prove first-acknowledged immutability and recoverable PG/S3 failure windows on test storage and selected production provider | Claiming cross-store atomicity or assuming SDK options prove provider behavior |
-| D6 Existing data | Establish whether operational rows/objects exist before migration/backfill/repair; read-only inventory first | Fabricated historical events, guessed photo digests, unauthorized repair |
-| D7 Public004 | Reconcile finalized custody/reverts/photos/money/settings/replay and trusted proxy/SW behavior; serve valid merchant links before releasing messages containing them | Shipping dead private links or treating public navigation as authenticated offline content |
-| SDK privacy | Native server/browser envelope allowlists with structural diagnostics and real delivery to local capture | `sendDefaultPii:false` alone, pino-only sanitization, global telemetry shutdown |
-| Development mail | No-provider development stays usable but cannot deliver; static configuration diagnostic, no bearer log; test outbox unchanged | Public debug mailbox, token-in-log fallback, unnecessary development startup failure |
+| D3 Money | 001/T138 and 002/T063 are checked; preserve the checked integer contract and aggregates in 004 projections/migrations | Reopening the settled representation without evidence, float money or narrowing SUM |
+| D4 Accounts | 001/T130/T131 transaction work is checked; 001/T132 must finish replay binding and creation/session-ending semantics | Ordinary after-hook audit, duplicated auth config, password fingerprints as receipts |
+| D5 Photos | 003/T133/T134 are checked; verify actual provider behavior, interruption and retention under OP-03 before release | Treating S3Proxy or SDK options as provider proof or claiming PG/S3 atomicity |
+| D6 Existing data | Establish whether operational rows/objects exist before 004/T004 migration/backfill or any repair; read-only inventory first | Fabricated history, guessed photo digests or unauthorized repair |
+| D7 Public004 | After the verified 001–003 technical baseline and owner-approved physical deferral, align current custody/reverts/photos/money/settings/replay, trusted proxy and worker behavior; build merchant links before notification UI | Dead merchant links or treating bearer pages as authenticated offline content |
+| SDK privacy | 001/T152 remains open: native server/browser envelope allowlists with useful structural diagnostics and actual local capture | `sendDefaultPii:false` alone, pino-only sanitization or global telemetry shutdown |
+| Development mail | 001/T155 is checked; preserve static no-provider diagnostics and test-only outbox in OP-03 delivery checks | Token-in-log fallback or a public debug mailbox |
 
-The immutable-photo candidate using a distinct object key for each unacknowledged attempt
-is research, not a selected implementation. Test S3Proxy supports conditional create in
-an isolated probe; the selected production provider has not been certified here.
-The browser-cache negative probe did not establish a fresh positive cache baseline;
-there is no reproduced cross-account cache leak to claim as fixed.
+Earlier upload candidates and cache probes remain historical research. Current checked
+implementation entries are not a certification of the selected production provider or
+of every same-browser scenario; collect the outstanding evidence in courier verification
+and OP-03 without claiming an unproven historical cache leak.
 
 ## 5. Execution waves and dependency order
 
-Wave names are grouping labels, **not new Spec Kit task IDs**. Tests precede the
-implementation tasks they prove. Split large waves into small coherent PRs.
+### 5.1 How to execute this order
 
-| Wave | Primary tasks | Start condition | Required exit |
+The schedule initially covered 53 open tasks. **38 remain open** after 001/T129/T132/T136/T137/T152, 002/T064 and 003/T081/T082/T083/T084/T089/T090/T091/T092/T135 passed
+executor and orchestrator QA; their rows remain as explicitly verified prerequisites.
+Wave labels and G0/G1/G2 are planning gates, not new tasks. Within a test/implementation
+pair, retain actual RED before the correction; a range is not permission to write all code
+before tests. Every behavioral slice still follows §2 and merges through its own clean PR.
+
+The table is a recommended topological schedule, not a claim that every preceding row
+is a technical dependency. The prerequisite column controls entry: independent privacy,
+toolchain and operational preparation can progress without waiting for unrelated work.
+Do not infer authorization for infrastructure changes from a row becoming executable.
+
+### 5.2 Remaining queue by prerequisite
+
+| Order | Open tasks / operational work | Prerequisite to start | Required exit / what it unlocks |
 | --- | --- | --- | --- |
-| W00 Reliable verification/integration | 001/T153, T154; 003/T131; held transport task; CI-LOCK/CI-POINTER | Preserve all branch/CI receipts | Native causal regressions; each reconciled head independently clean |
-| W01 Privacy closure | 001/T150–T152, T155 | Resolved native diagnostic/auth designs | No runtime values/bearers in complete logs or native reporting envelopes |
-| W02 Account invariants/atomicity | 001/T130, T131, T139, T146 | Native transaction proof and restored gate prerequisites | Role/owner/link/lockout matrix; rollback under faults |
-| W03 Account replay/forms | 001/T132; 003/T135 | W02 transaction boundary | Durable per-operation identity, correct lost-response recovery and untouched links |
-| W04 Master-data concurrency/replay | 001/T134, T135, T142, T148 | Shared lock/identity design | Same-ID success, truthful audit chains, unique aliases and accepted replays |
-| W05 Bulk identity | 001/T133 | Explicit duplicate/mixed replay contract | Exactly one creation event per actual entity; atomic batches |
-| W06 Money/snapshots | 001/T138, T147; 002/T063 | D3 resolved | Exact representable fields/aggregates and stable historical prices |
-| W07 Typed/storage boundaries | 001/T136, T137 | Actual response/storage contracts | Native inferred responses and recoverable validated drafts |
-| W08 Complete forms and Spanish | 001/T140, T143–T145, T149 | Authoritative readiness/identity rules | Honest loading/errors, preserved intent and correct autofill |
-| W09 Photo lifecycle/evidence | 003/T133, T134 | D2 settled; D5/D6 aligned | Immutable bytes, recoverable finalization, current-work access and cache matrix |
-| W10 Exports | 001/T128; 003/T085, T086 | Approved CSV + safe money/photo contracts | Safe consistent exports with all documented datasets/columns |
-| W11 Toolchain/documentation | 001/T129; 002/T064 | Current advisory and identity inventory | Compatible maintained lockfile, explicit risk disposition and unambiguous docs |
-| W12 Courier verification | 003/T081, T082, T089–T092 | Relevant runtime corrections integrated | Complete role/contract/security/invariant/capacity/pure-UI evidence |
-| W13 Courier interaction conformance | 003/T083, T093 | Required review/confirmation retained | Genuine ≤3-tap flows, 48px targets and accessible 360/390px layouts |
-| W14 Public foundations | 004/T001–T008 | D7 aligned/analyzed | Safe codes/backfill/proxy/headers/settings/layout/SW isolation |
-| W15 Tracking | 004/T009–T016 | W14 | Every kind/state/privacy boundary and anonymous weak-network journey |
-| W16 Merchant page | 004/T023–T029 | W14/W15 and photo/money guarantees | Merchant-only list/detail/photos, 30-day boundary and immediate rotation |
-| W17 Manual notifications | 004/T017–T022 | Working tracking AND merchant links | Same-tap open/copy, durable mark retries and truthful notified status |
-| W18 Public hardening/device acceptance | 004/T030–T032, T034; 003/T087 | Technical matrices complete | Real devices, previews, network timings and notification workflow evidence |
-| W19 Operational preparation | 003/T084; 004/T033; OP-01–OP-05 | Exact target/cost/authority for external changes | Restore, private storage/mail/monitoring, consent, training and runbooks |
-| W20 Final delivery | 003/T088; 004/T035 | All preceding required exits satisfied | Full delivery-head gates/CI, traceability, convergence and owner acceptance |
+| W00 Baseline and environment preparation | No new task; prepare OP-01 and OP-04 | Inspect actual local/source/CI receipts, preserve unrelated work; use §1 and historical §3 | Identify candidate, operator, isolated test target, ownership/cost and existing-data inventory plan. Read-only design can begin now; external mutations require authorization. |
+| W01 Actual API contracts — VERIFIED LOCALLY | 001/T136 | Existing Hono/auth routes and endpoint inventory | Inferred response boundaries and compile-time mismatch regression. Schedule first to avoid rebuilding account/form/public consumers around unchecked projections. |
+| W02 Exactly-once account actions — VERIFIED LOCALLY | 001/T132 | Checked 001/T130/T131 transaction/invariant work; settle native response contract with W01 | Durable creation/action identity, bound receipts, lost-response/session-ending replay; unlock account-link and draft retry verification. |
+| W03 Authoritative links and recoverable drafts — VERIFIED LOCALLY | 003/T135; 001/T137 | W02 identity lifecycle and W01 boundary contract; checked neighborhood identity corrections retained | No silent unlink or malformed-draft loop; user intent and pending identities survive recovery. These two tasks need not wait on each other. |
+| W04 Reporting privacy — VERIFIED LOCALLY | 001/T152 | Checked diagnostic/auth/log privacy prerequisites; align native SDK policy | Enabled/disabled real server/browser reporting remains useful and contains no sensitive data. Independent of W02/W03; required before enabling reporting on a reachable candidate. |
+| W05 Maintained toolchain — VERIFIED LOCALLY | 001/T129 | Current advisory/path investigation and compatible upstream resolution | Verified frozen install, migrations and four gates; explicit advisory disposition. Independent of account/UI changes; include final pins in subsequent candidate evidence. |
+| W06 Courier logic and interactions | 003/T092, then 003/T083 | W03, existing courier runtime and approved interaction design | Fill pure/rendered gaps first; preserve required confirmations while meeting ≤3 taps, 48px and full accessibility coverage. Unlock physical usability review. |
+| W07 Courier contracts, safety and capacity | 003/T081, 003/T082, 003/T089, 003/T090, 003/T091 | W01–W03 contracts/runtime; checked auth/photo/money corrections | Complete role/shape/security/invariant matrix and unchanged capacity budgets. These independent matrices may be prepared alongside W06; rerun affected checks after runtime changes. |
+| W08 Current documentation and courier configuration | 002/T064 and003/T084 (VERIFIED LOCALLY) | Actual integrated source, task identities and selected test topology | Unambiguous references/status and rehearsable private storage/VAPID/CSP instructions. Prepare OP-01/OP-03 alongside this work; no secrets in docs. |
+| W09 First controlled test deployment — G0 | OP-01/OP-03 test-environment rehearsal; OP-04 applicable inputs | W01–W08 exits; exact authorized test target, safe data, secrets/ports/CSP/worker and recovery procedure | Reachable HTTPS build for 001–003, identified by source/schema/build. Verify provider/email/push behavior needed by the phone scenarios. Does not open production to operations. |
+| W10 Courier physical acceptance | 003/T093, then 003/T087 | W06/W07 and G0; Android/iPhone and operator available | One-handed 360/390px review, then full quickstart 1–21 on both OSs, installed push/offline/restart/session/timings. Reuse traceable scenario evidence, not duplicate or inferred acceptance. |
+| W11 Close 001–003 | 003/T088 | W01–W10; all remaining 001/002/003 tasks satisfied | Full exact-source gates, feature convergence and integration receipts; refresh after any later shared change. This is the canonical prerequisite for starting 004. |
+| W12 Public design alignment | No new task; resolve D6/D7 and align 004 artifacts | Verified W01–W09 technical exits plus owner-approved W10/W11 physical deferral for development; current custody/photo/money/replay contracts and native transport/worker boundaries | Read-only analyze has no CRITICAL/HIGH inconsistency; safe existing-data backfill design. Retain task IDs; schedule US3 before US2 delivery because messages contain merchant links. |
+| W13 Public setup and foundational RED | 004/T001; 004/T002, 004/T003 | W12; real prior-schema migration fixtures and proxy identity design | Validated public origin; failing secret-code/backfill and boundary/proxy/header regressions before corresponding implementation. |
+| W14 Public foundations | 004/T004 → 004/T005; 004/T006; 004/T007; 004/T008 | W13; T004 schema before T005/T008; T003 RED before T006; D6 inventory before backfill | Safe migration/codes, public router/limits, lazy layout/worker isolation and owner support settings. All foundations pass before any public story starts. |
+| W15 Recipient tracking | 004/T009–T012 → 004/T013–T014 → 004/T015 → 004/T016 | W14; each test is RED before its implementation | Anonymous tracking works for every status/kind, privacy/expiry/revert and weak-network timing. |
+| W16 Merchant portal | 004/T023–T025 → 004/T026 → 004/T027 → 004/T028–T029 | W14 and W15; shared test file follows T009; checked money/photo contracts retained | Merchant-only list/detail/photos/totals, 30-day boundaries and immediate audited link rotation. Both kinds of links now work. |
+| W17 Manual merchant notifications | 004/T017–T019 → 004/T020–T021 → 004/T022 | W15 AND W16; working tracking/merchant links before browser RED/UI delivery | Same-tap WhatsApp open/copy, ≤2 taps, durable notified marking/retry and export/detail consistency. Opening WhatsApp is not delivery confirmation. |
+| W18 Public permission/security/accessibility verification | 004/T030, 004/T031, 004/T032 | W14–W17 endpoints/screens complete | Read-only/role matrix, uniform random-code responses and full 320px/WCAG checks. Test preparation may begin earlier; closure requires complete runtime coverage. |
+| W19 Release rehearsal and updated test deployment — G1 | 004/T033; finish applicable OP-01–OP-04 evidence | W18, consent before real courier disclosure, authorized environment/provider and reviewed migration/backfill | Update the isolated candidate with 004; rehearse fresh install/upgrade, backup restore, provider/email/push/monitoring, proxy/cache/CSP and runbooks. Record hashes and actual limitations. |
+| W20 Public physical acceptance and operator rehearsal | 004/T034; OP-05 pre-launch activities | G1; actual mobile data/WhatsApp/devices, dispatcher and training materials | Public quickstart 1–14, notification/time/tap checks and operator walkthrough pass; preserve 001–003 regressions. Assign pilot support and future measurement owner/schedule. |
+| W21 Final integrated delivery | 004/T035; final OP-05 acceptance/handoff | W20, all earlier tasks and required OP-01–OP-04 evidence | Four exact-source gates, feature/global convergence, reviewed matching-head CI and resulting trunk CI; §12.2 evidence complete. Unlock G2 review, not an automatic deployment. |
 
-Do not mechanically execute004 US2 before US3 merely because its task numbers are lower:
-messages contain the merchant URL. Align that explicit dependency in004 artifacts before
-implementation, preserving task IDs. Do not invent additional product priority changes.
+**Task reconciliation:** W01–W11 contain 3 open tasks in 001–003; W13–W21
+contain 2 open tasks in 004, with T001–T033 verified locally. Total remaining:
+**5 catalog tasks**, with **76 of81 verified**. Operational work remains additional assurance.
+001/T129/T132/T136/T137/T152, 002/T064 and 003/T081/T082/T083/T084/T089/T090/T091/T092/T135 were checked after documented double QA; no IDs were renumbered.
+OP-01–OP-05 span preparation, rehearsal and acceptance; mentioning them in multiple rows
+means completing successive parts of the same obligation, not counting them repeatedly.
 
-## 6. Feature 001: all 27 open tasks
+### 5.3 Deployment gates and the physical-test dependency
+
+- **G0 — controlled test deployment of 001–003:** after automated technical prerequisites
+  and safe-environment preparation, before 003/T093/T087. Those tasks require a reachable
+  installed app on real phones. Waiting for physical acceptance before providing that
+  environment would create a circular dependency. External provisioning/deployment still
+  needs an approved target, scope/cost and operator; this plan alone grants none.
+- **G1 — updated test deployment including 004:** after technical public implementation
+  and hardening, before 004/T034. Rehearse the changed migration/public origin/proxy/worker,
+  restore and real provider behavior on the exact candidate. Use safe test data; obtain
+  consent before disclosing any real courier's first name/phone.
+- **G2 — ready to request/start the production deployment:** only after W21 and §12.2,
+  with OP-01–OP-05 pre-launch obligations evidenced, no unexplained failing/flaky gate,
+  agreed recovery objectives and demonstrated restore, reviewed migration/recovery steps,
+  required consent and owner acceptance. Request explicit approval for the concrete
+  production environment/release and external changes. Existing code-publication approval
+  is not production deployment approval.
+
+Actual post-launch outcomes (004 SC-006/SC-007) occur after launch; record their owner and
+schedule before G2 and their measurements when due. Do not require invented future results
+to start deployment or confuse them with the mandatory pre-launch physical checks.
+
+### 5.4 Active batch and verified unlocking
+
+T136/T152 passed executor QA and independent orchestrator inspection plus complete local
+check, 1,150 tests, 100 first-attempt E2E cases and build on source fingerprint
+`0c356fec6fd3de1daf6df72b359664eff202ad7d88e752b5905f017046f92a6f`.
+See the [local ledger](local-orchestration.md) and owning results for exact evidence.
+
+T129/T132 and 003/T082 subsequently passed both QA levels on unchanged source
+`7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d`:
+check, 1,215 tests, 106 first-attempt E2E and build. T082's runtime prerequisites
+were independently verified; administrative replay and form drafts are unrelated.
+
+T137/T135 subsequently passed executor and root QA on source `1e348e85e314145433fedeb4d027245bcac36c386cd10f67fa80dff273389dbd`:
+check, 1,241 tests, 121 first-attempt awake E2E (6.2 minutes) and build. Preserve
+the causal sticky-footer failure and the separate system-sleep-interrupted attempt
+in the ledger; the successful run had no Sleep events and no relaxed checks.
+
+The courier assurance batch and native SDK follow-up then passed all four gates on
+unchanged source`dbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e`:1,281 tests,121 first-attempt E2E,
+check and build. Both QA levels approve T081/T089/T090/T091/T092 and re-closeT152.
+
+T083 subsequently passed local N1/N2: 36 focused browser cases, check, 1,281 tests,
+129 first-attempt E2E (7.6 minutes) and build; see its receipt and source provenance.
+T084 and the isolated HTTPS target subsequently passed both QA levels. G0 is
+verified for owner-operated LAN acceptance. Next: **003/T093**, then T087 and T088;
+no physical result is inferred. The later owner instruction “omite y continuemos”
+defers that physical run and unlocks local 004 development only. T093/T087/T088
+still gate final delivery; the earlier wait-for-003 rule is superseded for development.
+
+## 6. Feature 001: 27 cataloged tasks, 0 open
 
 Canonical source: [001 tasks](../specs/001-shipment-registration/tasks.md). Existing
 spec/contract obligations remain authoritative where a description below is abbreviated.
@@ -335,7 +563,9 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `apps/server/src/lib/export.ts`, `apps/server/tests/shipments-export.test.ts`, `apps/server/tests/operations-export.test.ts`.
 - **Exit:** Validated: formula injection payloads neutralized safely; numeric integer amounts and negative numbers never corrupted.
 
-### 001/T129 — Development dependency advisory resolution
+### 001/T129 — Development dependency advisory resolution [COMPLETED]
+
+- **Local closure (2026-10-20):** both QA levels approved; check, 1,215 tests, 106 first-attempt E2E and build passed on unchanged source `7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d`. See the task receipt and [local ledger](local-orchestration.md). Original execution criteria follow for traceability.
 
 - **Why/state:** IV-02; MEDIUM task priority, separate from advisory severity. Investigated,
   not closed. `source-map-js1.2.1` and Drizzle-tooling `esbuild0.18.20` remain in scope.
@@ -361,7 +591,9 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `apps/server/src/routes/auth.ts`, `apps/server/tests/account-integrity.test.ts`.
 - **Exit:** Validated: transactional atomicity verified with rollback tests under simulated audit or DB failures; accounts, roles, credentials, and sessions either commit completely or remain unchanged.
 
-### 001/T132 — Exactly-once account administration lifecycle
+### 001/T132 — Exactly-once account administration lifecycle [COMPLETED]
+
+- **Local closure (2026-10-20):** both QA levels approved; check, 1,215 tests, 106 first-attempt E2E and build passed on unchanged source `7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d`. See the task receipt and [local ledger](local-orchestration.md). Original execution criteria follow for traceability.
 
 - **Why/state:** IV-19; CRITICAL; research exists, permanent implementation remains.
 - **Touchpoints:** auth account routes, audit receipts, `features/users/api.ts`, account
@@ -405,7 +637,9 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Exit:** no unchecked generic assertion simply moved elsewhere; request/response types
   remain end-to-end checked, legitimate library contracts used directly, all consumers work.
 
-### 001/T137 — Validated recoverable persisted form drafts
+### 001/T137 — Validated recoverable persisted form drafts [COMPLETED]
+
+- **Local closure (2026-10-21):** executor N1 and root N2 approved; check, 1,241 tests, 121 first-attempt awake E2E and build passed on unchanged repaired source. See owning results and [local ledger](local-orchestration.md). Original criteria below are retained for traceability.
 
 - **Why/state:** IV-24; CRITICAL. Valid JSON with invalid shape can cause a retry render loop.
 - **Touchpoints:** `features/shipments/use-form-draft.ts`, registration/edit/bulk draft
@@ -425,9 +659,13 @@ spec/contract obligations remain authoritative where a description below is abbr
 
 ### 001/T139 — Validate auth JSON and decoded cursors [COMPLETED]
 
-- **Why/state:** Resolved (Finding IV-14/17 / CRITICAL). In `packages/domain/src/schemas/account.ts` and `apps/server/src/routes/auth.ts`, incoming request bodies (email, password, role, name) are strictly validated via Zod schemas before any trim or database operations. Malformed JSON, non-string fields, and invalid UUID/date pagination cursors return standard 400 Bad Request with Spanish messages rather than triggering 500 internal errors.
-- **Touchpoints:** `packages/domain/src/schemas/account.ts`, `apps/server/src/routes/auth.ts`, `packages/domain/src/schemas/account.test.ts`, `apps/server/tests/account-integrity.test.ts`.
-- **Exit:** Validated: 23 schema tests in domain and integration tests in server confirm that malformed payloads, non-string types, and invalid cursors are rejected safely with 400.
+- **Why/state:** Reopened by a real-PG audit, corrected and reclosed on 2026-10-23.
+  Decoded cursor JSON passes a Zod ISO-date/UUID tuple before SQL; existing auth-body
+  schemas remain authoritative. Invalid input returns safe Spanish 400 errors.
+- **Touchpoints:** `apps/server/src/routes/shipments.ts`, `apps/server/tests/shipments-search.test.ts`, and existing account boundary tests.
+- **Exit:** Six malformed cursor cases and all four local gates pass on source
+  `36ef1cd6`: 1,626 tests, 154 zero-retry E2E, check/build. See
+  [solo regression receipt](../specs/001-shipment-registration/solo-production-regression-results.md).
 
 ### 001/T140 — Spanish audit and accessible sidebar text [COMPLETED]
 
@@ -461,9 +699,14 @@ spec/contract obligations remain authoritative where a description below is abbr
 
 ### 001/T146 — Concurrent five-failure per-account lock [COMPLETED]
 
-- **Why/state:** Resolved (Finding IV-12 / HIGH). In `apps/server/src/routes/auth.ts`, failed login attempts serialize counter increments within transactions under row locks. After 5 consecutive failed attempts, the account is locked for exactly 15 minutes (`bannedUntil = now + 15m`). Interleaved concurrent wrong password attempts correctly reach the threshold and lock the account under contention.
-- **Touchpoints:** `apps/server/src/routes/auth.ts`, `apps/server/tests/account-integrity.test.ts`.
-- **Exit:** Validated: concurrent failed attempts serialize correctly without race conditions; exactly on the 5th attempt the account is locked, returning 401 with Spanish retry message.
+- **Why/state:** Reopened, corrected and reclosed on 2026-10-23. A normalized-email
+  advisory transaction lock serializes native Better Auth checks and counters.
+  The fifth failure commits `lockedUntil` for 15 minutes before returning 423;
+  existing sessions survive. This is separate from native IP limiting.
+- **Touchpoints:** `apps/server/src/routes/auth.ts`, `apps/server/tests/auth-lockout-recovery.test.ts`.
+- **Exit:** Twelve simultaneous failures yield four 401 and eight 423 responses;
+  correct credentials stay locked until expiry, then succeed. All four exact-source
+  local gates pass; [receipt](../specs/001-shipment-registration/solo-production-regression-results.md).
 
 ### 001/T147 — Preserve historical fee and rate-zone snapshots [COMPLETED]
 
@@ -495,8 +738,12 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `apps/server/src/app.ts`, `apps/server/tests/log-redaction.test.ts`.
 - **Exit:** Validated: permanent boolean assertion in `log-redaction.test.ts` passes; no bearer token appears in stdout/pino captures across standard, lowercase, encoded, and malformed path requests.
 
-### 001/T152 — Native Sentry server/browser envelope privacy
+### 001/T152 — Native Sentry server/browser envelope privacy [COMPLETED]
 
+- **Current state (2026-10-21):** native sampling remains zero; ignored deprecated
+  hook removed after real warning RED, native error-only GREEN and fresh root N2.
+  Re-closed with1,281 tests/121 E2E/check/build on unchanged source; earlier receipt
+  and warning attempt remain historical. Original investigation criteria follow.
 - **Why/state:** IV-38; CRITICAL. Native research reproduces URL/query/transaction leakage
   despite a safe application Error; no permanent actual-app implementation yet.
 - **Touchpoints:** `apps/server/src/index.ts`, `apps/web/src/main.tsx`, native SDK options.
@@ -527,7 +774,7 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `apps/server/src/lib/email.ts`, `apps/server/tests/auth-lockout-recovery.test.ts`, `apps/server/tests/log-redaction.test.ts`.
 - **Exit:** Validated: 31/31 tests pass in `log-redaction.test.ts` and `auth-lockout-recovery.test.ts`; development mail fallback never prints secret bearer tokens, recovery URLs, or recipient emails to stdout/pino logs.
 
-## 7. Feature 002: both open tasks
+## 7. Feature 002: 2 cataloged tasks, 0 open
 
 Canonical source: [002 tasks](../specs/002-routes-dispatch/tasks.md).
 
@@ -537,7 +784,9 @@ Canonical source: [002 tasks](../specs/002-routes-dispatch/tasks.md).
 - **Depends/touchpoints:** `apps/server/src/lib/route-store.ts`, `apps/server/tests/routes-aggregates.test.ts`, `packages/domain/src/schemas/routes.ts`.
 - **Exit:** Validated: 52/52 server test files pass (532 tests); no integer out of range 22003 error; exact 2,400,000,000 aggregate preserved across all route read/write projections.
 
-### 002/T064 — Unambiguous task references and current documentation
+### 002/T064 — Unambiguous task references and current documentation [COMPLETED]
+
+- **Local closure (2026-10-21):** documentation-only checks and independent Luna/max review approved preserved historical IDs/results, current record helpers and PR #28 local ancestry. The stale header date was corrected and re-reviewed. See [documentation results](../specs/002-routes-dispatch/documentation-results.md).
 
 - **Why/state:** IV-32; MEDIUM. T057/T058 each occur twice historically; current prose also
   contains outdated stand-in-record and PR status descriptions.
@@ -550,12 +799,14 @@ Canonical source: [002 tasks](../specs/002-routes-dispatch/tasks.md).
   dated historical failures/results remain clearly historical. Reconcile settled owner
   answers and the newly created execution-document links without stale “unpublished” claims.
 
-## 8. Feature 003: all 17 open tasks
+## 8. Feature 003: 17 cataloged tasks, 3 open
 
 Canonical source: [003 tasks](../specs/003-courier-app/tasks.md). These are completion and
 gap-filling obligations; do not rebuild working US1–US7 or duplicate existing test cases.
 
-### 003/T081 — Complete endpoint-to-role permission matrix
+### 003/T081 — Complete endpoint-to-role permission matrix [COMPLETED]
+
+- **Local closure (2026-10-21):** executor N1 and independent root N2 approved; check, 1,281 tests,121 first-attempt E2E and build pass on unchanged source. See the owning results and [local ledger](local-orchestration.md). Original criteria follow for traceability.
 
 - **Depends/touchpoints:** integrated auth/photo/settings corrections; existing
   `apps/server/tests/role-permissions.test.ts` and actual mounted routes.
@@ -565,7 +816,9 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 - **Exit:** couriers only their app/current authorized photos; panel roles denied courier
   routes; settings PATCH owner-only; refusals have correct statuses and no side effects.
 
-### 003/T082 — Custody and exactly-once generated invariants
+### 003/T082 — Custody and exactly-once generated invariants [COMPLETED]
+
+- **Local closure (2026-10-20):** both QA levels approved; check, 1,215 tests, 106 first-attempt E2E and build passed on unchanged source `7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d`. See the task receipt and [local ledger](local-orchestration.md). Original execution criteria follow for traceability.
 
 - **Depends/touchpoints:** integrity/photo/operational record corrections;
   `tests/routes-invariants.test.ts` with actual courier record application.
@@ -575,7 +828,9 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 - **Exit:** a package has at most one holder, final delivered/returned shipments none,
   every sent identity one stored row; independent domain/SQL/history assertions agree.
 
-### 003/T083 — Accessible courier controls and ≤3-tap primary actions
+### 003/T083 — Accessible courier controls and ≤3-tap primary actions [COMPLETED]
+
+- **Local closure (2026-10-21):** executor N1 and root N2 approved. Counts are 2/3/3; 360 px standard/high-contrast axe and native 48 px hit tests include offline Pending/My Day and correction controls. Integrated check, 1,281 tests, 129 first-attempt E2E and build passed; [receipt](../specs/003-courier-app/courier-accessibility-results.md). Original criteria below remain historical traceability.
 
 - **Depends:** interaction design aligned before behavior; coordinate T093, not a second
   inconsistent tap definition. Current route→stop→delivery→review→save exceeds the limit.
@@ -587,7 +842,9 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 - **Exit:** pickup, delivery and exception satisfy approved tap counting,48px targets,
   names/contrast/keyboard/full axe. CI-POINTER must have genuine non-forced hit-test evidence.
 
-### 003/T084 — Complete courier deployment documentation
+### 003/T084 — Complete courier deployment documentation [COMPLETED]
+
+- **Local closure (2026-10-21):** README/quickstart source review and isolated run d rehearsal passed executor N1/root N2; TLS/auth/private storage and graceful restart verified. See [deployment receipt](../specs/003-courier-app/courier-deployment-results.md). Provider/phone evidence remains separate.
 
 - **Touchpoints:** README deployment section, storage/notification/configuration runbooks;
   actual immutable production build and selected proxy topology.
@@ -628,7 +885,9 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 - **Exit:** no open actionable003 finding, unexplained flake or missing required physical
   evidence; exact source/tree/results receipt links to actual trunk delivery.
 
-### 003/T089 — Complete courier API contract verification
+### 003/T089 — Complete courier API contract verification [COMPLETED]
+
+- **Local closure (2026-10-21):** executor N1 and independent root N2 approved; check, 1,281 tests,121 first-attempt E2E and build pass on unchanged source. See the owning results and [local ledger](local-orchestration.md). Original criteria follow for traceability.
 
 - **Touchpoints:** `tests/courier-contract.test.ts`, mounted methods and003 HTTP contract;
   depends on final error/response inference and approved photo/settings changes.
@@ -638,7 +897,9 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 - **Exit:** real requests verify shapes, not just URL strings; no stale plugin endpoint,
   handwritten duplicate type or undocumented response field silently accepted.
 
-### 003/T090 — Complete courier security and payload matrix
+### 003/T090 — Complete courier security and payload matrix [COMPLETED]
+
+- **Local closure (2026-10-21):** executor N1 and independent root N2 approved; check, 1,281 tests,121 first-attempt E2E and build pass on unchanged source. See the owning results and [local ledger](local-orchestration.md). Original criteria follow for traceability.
 
 - **Touchpoints:** `tests/courier-security.test.ts`, real native auth, PG and S3.
 - **Work/test:** own versus other route/held package/notice/summary/photo; actor attribution,
@@ -649,7 +910,9 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 - **Exit:** exact documented refusal/clamp behavior with no unintended effects; complete
   sensitive output inspection uses synthetic data and does not print captured secrets.
 
-### 003/T091 — Busy-day courier performance evidence
+### 003/T091 — Busy-day courier performance evidence [COMPLETED]
+
+- **Local closure (2026-10-21):** executor N1 and independent root N2 approved; check, 1,281 tests,121 first-attempt E2E and build pass on unchanged source. See the owning results and [local ledger](local-orchestration.md). Original criteria follow for traceability.
 
 - **Touchpoints:** `tests/courier-scale.test.ts`, existing002 busy-day/history fixture.
 - **Work:** measure real15-shipment route snapshot and application of50 records under the
@@ -658,7 +921,9 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
   report environment/fixture/timings in quickstart results. No inference from a different
   route-scale test, arbitrary sleep, new cache or reduced dataset to obtain a pass.
 
-### 003/T092 — Courier pure logic and rendered component gaps
+### 003/T092 — Courier pure logic and rendered component gaps [COMPLETED]
+
+- **Local closure (2026-10-21):** executor N1 and independent root N2 approved; check, 1,281 tests,121 first-attempt E2E and build pass on unchanged source. See the owning results and [local ledger](local-orchestration.md). Original criteria follow for traceability.
 
 - **Touchpoints:** web tests adjacent to courier features and existing shared domain logic.
 - **Work:** inventory/reuse existing delivery/sync/scheme coverage; add missing collection
@@ -696,7 +961,9 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 - **Exit:** Validated: First-acknowledged proof-photo immutability verified under identical byte replay, differing byte conflict (409), concurrent upload race condition, and orphan cleanup on storage errors.
   real provider behavior is distinguished from S3Proxy capability.
 
-### 003/T135 — Preserve courier-account link intent through query readiness
+### 003/T135 — Preserve courier-account link intent through query readiness [COMPLETED]
+
+- **Local closure (2026-10-21):** executor N1 and root N2 approved; check, 1,241 tests, 121 first-attempt awake E2E and build passed on unchanged repaired source. See owning results and [local ledger](local-orchestration.md). Original criteria below are retained for traceability.
 
 - **Why/state:** IV-26; HIGH; permanent browser correction pending. Depends on001/T132.
 - **Touchpoints:** `features/users/account-dialog.tsx`, courier list/detail API and actual
@@ -709,7 +976,7 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 - **Exit:** no silent unlink on ordinary edit, actionable Spanish failed-load state,
   deliberate link changes work exactly once and native server role/link invariants hold.
 
-## 9. Feature 004: all 35 open tasks
+## 9. Feature 004: 35 cataloged tasks, 2 open
 
 Canonical sources: [tasks](../specs/004-tracking-merchant-link/tasks.md),
 [spec](../specs/004-tracking-merchant-link/spec.md),
@@ -717,20 +984,23 @@ Canonical sources: [tasks](../specs/004-tracking-merchant-link/tasks.md),
 [contract](../specs/004-tracking-merchant-link/contracts/http-api.md) and
 [quickstart](../specs/004-tracking-merchant-link/quickstart.md).
 
-All35 are currently unchecked. The specification is still labelled Draft in its artifact;
+T001–T033 are verified by their deliverables; T034–T035 remain unchecked. The specification is still labelled Draft in its artifact;
 approved inclusion in closure does not replace execution-time clarification/alignment and
 analysis. Reconcile current003 rules, money and task dependency order before code.
 
-### 004/T001 — Validated public base URL configuration
+### 004/T001 — Validated public base URL configuration [COMPLETED]
 
 - **Touchpoints:** `.env.example`, server `env.ts`, web `vite.config.ts`; never inspect actual.env.
 - **Work:** define and Zod-validate `PUBLIC_BASE_URL`, expose only the intended public
   value to message/link composition, align trusted same-origin/proxy deployment semantics.
-- **Tests/exit:** invalid/missing required configuration fails usefully; configured
-  generated links are canonical and actually reachable. No private key or runtime secret
-  accidentally enters a Vite public define or build artifact.
+- **Local closure:** N1/N2 results in public-origin-results.md; final source/check,
+  1,311 tests, 2 first-attempt courier E2E, build and private-build probe pass.
+- **Tests/exit:** invalid/missing required configuration fails usefully; build/runtime
+  select a canonical public origin. Actual generated-link reachability remains in
+  T015/T027/G1 once those pages exist; it is not fabricated to close configuration.
+  No private key/runtime secret enters a Vite define or artifact.
 
-### 004/T002 — Secret-code generation integration RED
+### 004/T002 — Secret-code generation integration RED [RED VERIFIED]
 
 - **Depends:** aligned schema/backfill/generation contract; real migrated PostgreSQL.
 - **Touchpoints:** new `tests/secret-codes.test.ts`; single/bulk shipment and merchant creation.
@@ -739,17 +1009,21 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** tests fail before T004/T005; include nonempty prior-schema migration data,
   concurrent identity replay and uniqueness/not-null enforcement, not merely a regex check.
 
-### 004/T003 — Public boundary/proxy/cache/header RED
+### 004/T003 — Public boundary/proxy/cache/header RED [RED VERIFIED]
 
-- **Touchpoints:** new `tests/public-protection.test.ts`, actual HTTP adapter/proxy boundary.
+- **Touchpoints:** new `tests/public-protection.test.ts`, actual native HTTP adapter/transport-peer boundary.
 - **Work/test:** anonymous public GET,61st request/minute refused429 in Spanish,
   no-store/noindex on every relevant response and public web document, invalid links uniform.
-- **Critical edge:** forged forwarded IP cannot evade the limit; specify trusted proxy
-  source and actual client-address derivation rather than accepting arbitrary headers.
-- **Exit:** deterministic clock/identity fixtures expose absent protections before T006;
-  no rate-limit test depends on the suite's leftover shared counter or wall-clock minute.
+- **Critical edge:** forged forwarded headers cannot evade the limit; use actual native
+  transport-peer identity and ignore untrusted forwarding. Real proxy topology/trust is
+  separately verified before deployment under OP-01/G1.
+- **Exit:** deterministic clock/identity fixtures and actual native adapter evidence expose
+  absent protections before T006; no limiter test depends on leftover shared counters or
+  wall-clock minute. Current T006 does not assume an unverified proxy deployment.
 
-### 004/T004 — Additive schema, audit/event additions and safe backfill
+### 004/T004 — Additive schema, audit/event additions and safe backfill [COMPLETED]
+
+- **Local closure (2026-10-22):** executor and root focused native tests passed, with generated-DDL review and scoped static checks. See [schema results](../specs/004-tracking-merchant-link/schema-migration-results.md). Full foundation integration gates remain open.
 
 - **Touchpoints:** shipments tracking/notified columns, merchant link/replacement columns,
   audit action, settings support phone/company name and reviewed generated migration.
@@ -759,7 +1033,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
   replay/second migration does not rotate codes or notification facts, existing server
   compatibility is addressed and no token material appears in failed SQL logs.
 
-### 004/T005 — Native secret-code generation at creation
+### 004/T005 — Native secret-code generation at creation [COMPLETED]
 
 - **Depends:** T002 RED/T004 schema and actual native entropy source.
 - **Touchpoints:** new `lib/secret-code.ts`, single shipment, bulk and merchant creation.
@@ -768,16 +1042,17 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** T002 passes for all creation paths/backfill; codes stay stable through edits,
   retries/restarts and valid old links. Random scan success is not entropy proof.
 
-### 004/T006 — Public router, limits and safe headers
+### 004/T006 — Public router, limits and safe headers [COMPLETED]
 
-- **Depends:** T003 RED and a proven trusted-proxy identity design.
+- **Depends:** T003 RED and approved native-peer identity (ignore forwarded headers);
+  later proxy deployment needs separate OP-01/G1 topology/trust evidence.
 - **Touchpoints:** native `lib/rate-limit.ts`, `routes/public.ts`, `app.ts` mounting/document headers.
 - **Work:** implement the approved single-process bounded rate limit with correct cleanup,
   Spanish errors and consistent no-store/noindex for success/refusal/photo/web responses.
-- **Exit:** T003 passes with actual adapter/proxy evidence, no forwarded-header bypass,
+- **Exit:** T003 passes with actual native adapter evidence, no forwarded-header bypass,
   no unbounded address map or unjustified new process/cache abstraction.
 
-### 004/T007 — Public lazy layout/routes and worker privacy
+### 004/T007 — Public lazy layout/routes and worker privacy [COMPLETED]
 
 - **Touchpoints:** `routes.ts`, public layout, tracking/merchant route entries, `main.tsx`,
   static generic metadata and current service worker routing/caches.
@@ -787,7 +1062,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
   installed app are safe. Skipping new registration alone does not remove an existing
   controller/cache; verify actual worker behavior without discarding pending courier work.
 
-### 004/T008 — Owner support contact settings
+### 004/T008 — Owner support contact settings [COMPLETED]
 
 - **Depends:** T004 settings additions and existing audited/idempotent settings contract.
 - **Touchpoints:** settings GET/PATCH, shared schema and owner settings page.
@@ -796,7 +1071,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Tests/exit:** PATCH owner-only, read exposure exactly approved, no-op/delayed replay
   safe, no contact buttons when unset and notification page gives the owner useful guidance.
 
-### 004/T009 — Public tracking projection privacy/state RED
+### 004/T009 — Public tracking projection privacy/state RED [RED VERIFIED]
 
 - **Touchpoints:** domain `public-tracking.test.ts`; approved allowlist and003 actual rules.
 - **Work/test:** every FR-005 status, four shipment kinds, pending return/office custody/
@@ -806,7 +1081,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** explicit object-key allowlist assertions fail absent implementation; synthetic
   internal input deliberately contains forbidden data so accidental spreading is detected.
 
-### 004/T010 — Pending-stop queue estimate RED
+### 004/T010 — Pending-stop queue estimate RED [RED VERIFIED]
 
 - **Touchpoints:** domain routes tests and proposed `deliveriesBefore` helper.
 - **Work/test:** pending delivery/return stops before this shipment, completed out-of-order
@@ -814,7 +1089,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** cases distinguish delivery stops from pickup-only stops and handle current
   task state; shared rule is written before T014 and UI labels remain an estimate, not ETA.
 
-### 004/T011 — Actual public tracking endpoint integration RED
+### 004/T011 — Actual public tracking endpoint integration RED [RED VERIFIED]
 
 - **Touchpoints:** new `tests/public-tracking.test.ts`, actual003 record/decision functions.
 - **Work/test:** anonymous endpoint across US1/AC1–8, current custody/revert transitions,
@@ -822,7 +1097,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** real domain→PG→HTTP projections expose no out-of-contract keys; expiry/revert
   uses actual append-only event semantics, not stand-in direct status writes.
 
-### 004/T012 — Anonymous tracking browser/network RED
+### 004/T012 — Anonymous tracking browser/network RED [RED VERIFIED]
 
 - **Touchpoints:** new `tracking-page.spec.ts`, built public routes and actual server.
 - **Work/test:** quickstart1–7 phone viewport, live status update within1minute, readable
@@ -830,7 +1105,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** define reproducible latency/measurement start/readability assertion in the
   plan, retain threshold, no authenticated seed/session makes the anonymous journey pass.
 
-### 004/T013 — Pure public tracking view/schema
+### 004/T013 — Pure public tracking view/schema [COMPLETED]
 
 - **Depends:** T009 RED, finalized003 custody/status and safe-money contract.
 - **Touchpoints:** domain `public-tracking.ts`, `schemas/public.ts`, exports.
@@ -839,7 +1114,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** T009 passes, no server/UI duplicate rule or accidental full-shipment spread;
   expired view contains only its allowed state/support payload, never stale private details.
 
-### 004/T014 — Shared deliveries-before calculation
+### 004/T014 — Shared deliveries-before calculation [COMPLETED]
 
 - **Depends/touchpoints:** T010 RED, `packages/domain/src/routes.ts` and shared exports.
 - **Work:** implement pending task-order count using actual current route eligibility,
@@ -847,7 +1122,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** T010 passes; both server projection and UI consume the one rule. No invented
   travel-time guarantee, count for an inactive route or duplicate per-shipment stop count.
 
-### 004/T015 — Public tracking endpoint implementation
+### 004/T015 — Public tracking endpoint implementation [COMPLETED]
 
 - **Depends:** T011 RED, public protections and T013/T014.
 - **Touchpoints:** `GET /api/public/tracking/:code` in the public router.
@@ -856,7 +1131,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** T011 passes, generic invalid/expired boundaries and headers remain correct,
   anonymous errors/logs/reporting do not include the bearer or personal data.
 
-### 004/T016 — Complete public tracking page
+### 004/T016 — Complete public tracking page [COMPLETED]
 
 - **Depends:** T012 RED and T015 stable typed contract.
 - **Touchpoints:** `tracking-status.tsx`, lazy `routes/tracking.tsx`, public layout.
@@ -865,7 +1140,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** slow-network/timing/anonymous journey passes,320px/WCAG/keyboard work,
   polling does not expose prior data after expiry and link previews remain generic.
 
-### 004/T017 — Merchant message composition RED
+### 004/T017 — Merchant message composition RED [RED VERIFIED]
 
 - **Touchpoints:** domain `merchant-message.test.ts`, proposed pure composer.
 - **Work/test:** Spanish greeting, recipient/neighborhood/guide/tracking URL per eligible
@@ -873,7 +1148,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** exact deterministic text/URL encoding cases fail before T020, including
   special characters and empty eligible set; no automatic send behavior is introduced.
 
-### 004/T018 — Notification list/mark/detail/export integration RED
+### 004/T018 — Notification list/mark/detail/export integration RED [RED VERIFIED]
 
 - **Depends:**004 foundations, safe exports/money and existing action/event semantics.
 - **Touchpoints:** new `tests/notifications.test.ts`, actual owner/dispatcher/courier requests.
@@ -882,7 +1157,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** test no-op/late/concurrent/lost-response mark and initial notification time;
   role refusals and invalid IDs have no partial effects. These tests precede T021.
 
-### 004/T019 — Manual notification browser RED
+### 004/T019 — Manual notification browser RED [RED VERIFIED]
 
 - **Depends:** working public tracking AND merchant pages, aligned task order.
 - **Touchpoints:** new `notify-merchants.spec.ts`, actual browser open/clipboard behavior.
@@ -891,7 +1166,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** native same-gesture popup/clipboard constraints and durable mark retry are
   exercised without a mocked successful business request or automatic external delivery.
 
-### 004/T020 — Shared merchant message composer/schema
+### 004/T020 — Shared merchant message composer/schema [VERIFIED LOCAL]
 
 - **Depends/touchpoints:** T017 RED, domain `merchant-message.ts`, notification schemas.
 - **Work:** deterministic plain Spanish composition using approved public base URL and
@@ -899,26 +1174,30 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** T017 passes; no copied composer in React/server, no unsafe URL concatenation,
   no unrelated shipment/phone/photo content beyond the approved merchant message.
 
-### 004/T021 — Notification endpoints and export/detail additions
+### 004/T021 — Notification endpoints and export/detail additions [VERIFIED LOCAL]
 
-- **Depends:** T018 RED; established idempotency/event boundary and complete schema.
+- **Depends:** T018 RED and verified T020 shared notification schemas; established idempotency/event boundary.
 - **Touchpoints:** `/api/notifications` GET/POST, app mounting, shipment detail/export.
 - **Work:** authorized date list and transactional first-notified facts/events with bound
   action receipt; exclude voids and preserve actual notified actor/time on replay.
 - **Exit:** T018 passes, current detail/export reflect correct facts, new shipments remain
   pending; posting/retrying cannot falsely replace prior notification history or bypass roles.
 
-### 004/T022 — Notification UI and durable post-open/copy marking
+### 004/T022 — Notification UI and durable post-open/copy marking [VERIFIED LOCAL]
 
 - **Depends:** T019 RED, T020/T021 and live merchant links(T027–T029).
 - **Touchpoints:** merchant-notify row, `/notificar`, panel navigation, shipment detail.
+- **Local closure:** executor/root native8cases and final check/1561tests/150E2E/build; identical522-file source edc9e6f1. [Results](../specs/004-tracking-merchant-link/notification-ui-results.md). Physical timing/WhatsApp acceptance remains T034.
 - **Work:** same-tap wa.me open/copy, missing-phone prompt, all-date option, support reminder,
   copy tracking URL, visible notified time and durable uncertain-response action identity.
 - **Exit:** ≤2taps/merchant for the approved flow, proper popup/clipboard failure feedback,
   retried mark not silently lost after navigation/reload; never claim actual message delivery
   merely because WhatsApp opened. No automatic messaging integration.
 
-### 004/T023 — Merchant list/detail financial/privacy projection RED
+### 004/T023 — Merchant list/detail financial/privacy projection RED [RED VERIFIED]
+
+- **Additional gate:** `004-merchant-contracts`: R19 exact list/detail shapes and
+  note-content privacy policy must pass independent analysis before merchant RED.
 
 - **Touchpoints:** domain `public-tracking.test.ts`, merchant view input/output contract.
 - **Work/test:** date list/fields, fee “por confirmar”, status/fee/COD/payment-method totals,
@@ -926,7 +1205,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** exact field allowlists reject recipient/courier phone, other merchant data,
   balance/netting; monetary boundaries agree with T138/T063, not unsafe duplicate arithmetic.
 
-### 004/T024 — Merchant link isolation/photo/rotation integration RED
+### 004/T024 — Merchant link isolation/photo/rotation integration RED [RED VERIFIED]
 
 - **Touchpoints:** new `tests/merchant-link.test.ts`, actual PG/auth/private S3.
 - **Work/test:** today/last30days/date-out-of-range422, cross-merchant/old detail404,
@@ -934,7 +1213,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** deactivation does not kill separately valid shipment tracking; photo ownership,
   pending/retained/deleted behavior and exact30-day boundaries are proven before T027.
 
-### 004/T025 — Merchant portal browser RED
+### 004/T025 — Merchant portal browser RED [RED VERIFIED]
 
 - **Touchpoints:** new `merchant-page.spec.ts`, actual public API/private storage and panel.
 - **Work/test:** quickstart12–14, list/totals/delivered photo/detail, valid earlier date,
@@ -942,16 +1221,17 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** anonymous merchant flow works at phone width without leaking panel/auth state;
   loading/failure/empty/photo-unavailable states and native clipboard/confirmation are checked.
 
-### 004/T026 — Pure merchant projection and schemas
+### 004/T026 — Pure merchant projection and schemas [VERIFIED LOCAL]
 
 - **Depends:** T023 RED and current fee/collection/record correction contracts.
-- **Touchpoints:** domain `merchantShipmentView`, `MerchantDay`, `MerchantShipment`.
+- **Touchpoints:** domain `merchantDayView`/`merchantShipmentView`, strict
+  `MerchantDay`, `MerchantShipmentSummary`, `MerchantShipment` and totals schemas (R19).
 - **Work:** explicit allowlisted list/detail, day totals and attempts with effective
   non-reverted records and approved fee-review behavior.
 - **Exit:** T023 passes, no balance/netting or duplicated collection/lifecycle rule,
   safe exact arithmetic and no internal entity spread into bearer-accessible payloads.
 
-### 004/T027 — Merchant bearer endpoints and audited link replacement
+### 004/T027 — Merchant bearer endpoints and audited link replacement [VERIFIED LOCAL]
 
 - **Depends:** T024 RED, T026 and photo immutability/lifecycle design.
 - **Touchpoints:** public merchant day/detail/photo routes; merchant detail linkCode and
@@ -961,7 +1241,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** T024 passes, old code invalid immediately, delayed replay cannot rotate again,
   inactive/unknown/replaced links indistinguishable; no publicly addressable object URL.
 
-### 004/T028 — Merchant page list/detail/date/totals UI
+### 004/T028 — Merchant page list/detail/date/totals UI [VERIFIED LOCAL]
 
 - **Depends:** T026/T027 typed responses and T025 browser coverage.
 - **Touchpoints:** merchant-shipment-list/detail and lazy merchant-page route.
@@ -970,7 +1250,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** anonymous320px/WCAG page shows only this merchant's data, correct COP/Bogotá
   formatting and no cached prior merchant payload after code/date/navigation changes.
 
-### 004/T029 — Copy/replace merchant link panel controls
+### 004/T029 — Copy/replace merchant link panel controls [VERIFIED LOCAL]
 
 - **Depends:** T025 RED, T027 audited idempotent replacement.
 - **Touchpoints:** existing merchant screen, confirmation and actual clipboard actions.
@@ -979,7 +1259,9 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** browser journey verifies old invalid/new working link and audit, Spanish
   failure/retry, legitimate permissions and no unintended repeated rotation.
 
-### 004/T030 — Complete public/panel permission and read-only matrix
+### 004/T030 — Complete public/panel permission and read-only matrix [VERIFIED LOCAL]
+
+- **Local closure:** both-level140native tests, scoped static/recursive types; real anonymous reads and denied mutation effects. [Results](../specs/004-tracking-merchant-link/public-permissions-results.md).
 
 - **Touchpoints:** existing role-permissions tests plus every004 contract endpoint.
 - **Work/test:** anonymous read-only public paths, no mutation method under `/api/public`,
@@ -987,7 +1269,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** mounted-method inventory agrees in both directions, sensitive header/cache/error
   behavior preserved on refusals and invalid/replayed requests have no unintended effects.
 
-### 004/T031 — Random-code negative scan
+### 004/T031 — Random-code negative scan [VERIFIED LOCAL]
 
 - **Touchpoints:** new `tests/public-codes-scan.test.ts`, both public lookup kinds.
 - **Work:**1,000 synthetic random unknown codes all yield uniform permitted invalid-link
@@ -996,7 +1278,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** no valid entity found, no existence-detail oracle; separately retain native
  128-bit generation/uniqueness proof. This statistical negative test is not entropy/security proof.
 
-### 004/T032 — Public and notification accessibility coverage
+### 004/T032 — Public and notification accessibility coverage [VERIFIED LOCAL]
 
 - **Touchpoints:** full axe fixtures and tracking/merchant/notification browser screens.
 - **Work:**320px minimum, permitted wide widths and applicable themes, loading/error/empty/
@@ -1004,7 +1286,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** WCAG2.2AA without hiding notifications/content, no new exclusions/forced input,
   native modal/focus and copy/open actions remain operable.
 
-### 004/T033 — Go-live privacy/configuration documentation
+### 004/T033 — Go-live privacy/configuration documentation [VERIFIED LOCAL]
 
 - **Touchpoints:** README go-live section, owner ledger and public deployment runbook.
 - **Work:** document `PUBLIC_BASE_URL`, support contact and courier consent for approved
@@ -1022,7 +1304,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 - **Exit:** dated `quickstart-results.md` records steps/results/timings and failures; a
   Chromium emulation or loopback provider test is not actual mobile/external-app acceptance.
 
-### 004/T035 — Feature004 final complete gates and delivery
+### 004/T035 — Feature 004 final complete gates and delivery
 
 - **Depends:** every required004 implementation/security/device/privacy obligation,
   cross-feature corrections and final traceability ledger.
@@ -1064,7 +1346,7 @@ notices/handover, on-behalf/correction/revert and daily estimate.
 | I-01–I-07 |001 registration/lookups/fees/bulk/typed fields/catalog/aliases/guides; close recipient, draft, alias/concurrency and monetary gaps above |
 | D-01–D-05 |002 planning/dispatch/board/alerts/reassignment plus003 actual custody/notices; retain current integration and safe aggregates |
 | E-01–E-05 |003 time/location/proof, exceptions/decisions, collection splits, disbursements and offline; finish evidence immutability/exports/mobile assurance |
-| C-01–C-03 |004 tracking, grouped manual WhatsApp and merchant page; all35 implementation/acceptance tasks remain |
+| C-01–C-03 |004 tracking, grouped manual WhatsApp and merchant page; T001–T033 verified locally, T034/T035 physical/final acceptance remain |
 | K-01–K-04/M-02 | Single database, search/audit, backups/exports and historical fee snapshots; close concrete audit/export/price defects and operational evidence |
 
 Two wording issues need explicit disposition during artifact reconciliation, not silent
@@ -1225,25 +1507,29 @@ not mean a mathematical guarantee that no unknown bug can exist.
 - Keep task details here synchronized with owning artifacts, but never use this file to
   rename/renumber/remove canonical tasks or rewrite historical evidence.
 - Record CSV/photo owner answers in the resolved ledger; label old unanswered paragraphs
-  historical. Correct present-tense CI claims: PR #32 is failed/held, not queued/green.
+  historical. Do not promote historical PR/CI receipts into current remote status without
+  inspecting the actual matching head and run.
 - New findings get an owning existing task or an append-only convergence task using the
   actual next free ID/phase. CI-LOCK/CI-POINTER labels are investigation references only.
 - A documentation-only request does not authorize implementing an unselected design,
   modifying dependencies, rerunning failed CI, merging held PRs or changing production.
 - The earlier “2–4 weeks” estimate was preliminary, not a per-task schedule or deadline.
-  81 tasks are heterogeneous; update forecasting after integration blockers/design gates,
+  The remaining tasks are heterogeneous; update forecasting after design gates,
   actual throughput and owner/provider/device availability are known. Never relax quality
   to make the estimate appear true or imply unattended work continues outside an active run.
 
 ## Immediate handoff
 
-The next developer should start with §3, preserve the dirty T153 source and all held
-branches, finish the safe diagnostic slice review/convergence, then causally resolve the
-two latest CI failures before attempting the dependent integration sequence. The full
-catalog above stays the single execution companion to the canonical task files. No task
-is closed, no PR is merged and no deployment is certified by creating this document.
+Start with the latest verified checkpoint, §1's local base and §5's dependency order. Preserve unrelated work and the
+historical regressions in §3/§10; do not re-integrate old heads merely because their dated
+receipts describe them as held. The owner-approved physical deferral permits local004
+work: foundations, tracking and merchant portal are verified, as are notification
+RED tasks T017–T019, domain T020 and API T021 including its corrected detail projection.
+T022 UI now passes double verification and full story gates. T030 permissions, T032 accessibility and T033 documentation are verified; OP release evidence and G1 remain pending before physical T034. Keep deferred003 acceptance open for final delivery; rehearse G1 and complete the G2 production-readiness evidence.
 
-**Document validation:** all 81 open feature-qualified task IDs were matched mechanically
-against the four canonical task files: zero missing, extra or duplicate catalog entries.
-All relative file links resolved at this snapshot. This checks documentation coverage and
-link integrity, not task implementation, test sufficiency or release readiness.
+**Document validation:** the remaining queue matches all 5 currently unchecked
+feature-qualified IDs in the four canonical task files exactly once, excluding the
+explicitly verified catalog entries. The detail catalog retains all 81 entries: 5 open
+and 76 checked. Operational work and planning gates are
+not additional task IDs. Relative links and prerequisite ordering are checked separately.
+This is documentation validation, not new runtime, CI, device or provider evidence. 001/T129/T132/T136/T137/T152, 002/T064 and 003/T081/T082/T083/T084/T089/T090/T091/T092/T135 were closed only by documented local double-QA execution. No PR was merged or production deployment performed in this run. The synthetic LAN candidate is ready for manual acceptance.

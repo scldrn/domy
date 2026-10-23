@@ -20,20 +20,22 @@ export function ExceptionForm({
   task,
   userId,
   open,
+  initialReason,
   onOpenChange,
   onSaved,
 }: {
   task: CourierTask;
   userId: string;
   open: boolean;
+  initialReason?: ExceptionReason;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }) {
   const id = useId();
-  const [reason, setReason] = useState<ExceptionReason | "">("");
+  const [reason, setReason] = useState<ExceptionReason | "">(() => initialReason ?? "");
   const [note, setNote] = useState("");
   const [photos, setPhotos] = useState<TakenPhoto[]>([]);
-  const [reviewing, setReviewing] = useState(false);
+  const [reviewing, setReviewing] = useState(() => initialReason !== undefined);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<"reason" | "note" | "save", string>>>({});
   const record = () => ({
@@ -90,10 +92,14 @@ export function ExceptionForm({
         <>
           <dl className="divide-y divide-outline-variant">
             <SummaryLine label="Resultado">Novedad</SummaryLine>
+            <SummaryLine label="Destinatario">
+              {task.recipientName ?? "Sin nombre registrado"}
+            </SummaryLine>
             <SummaryLine label="Motivo">{reason && exceptionReasonLabels[reason]}</SummaryLine>
             {note.trim() && <SummaryLine label="Nota">{note.trim()}</SummaryLine>}
             <SummaryLine label="Fotos">{photos.length || "Sin foto"}</SummaryLine>
           </dl>
+          <PhotoInput label="Foto de la novedad (opcional)" photos={photos} onChange={setPhotos} />
           <p className="text-body-l text-on-surface-variant">
             El paquete sigue a tu cargo. El coordinador decidirá qué hacer.
           </p>
@@ -109,7 +115,10 @@ export function ExceptionForm({
             <Button
               variant="ghost"
               disabled={saving}
-              onClick={() => {
+              onClick={(event) => {
+                // FR-017: keep focus inside the stable sheet before removing this button.
+                const sheet = event.currentTarget.closest('[role="dialog"]');
+                if (sheet instanceof HTMLElement) sheet.focus();
                 setReviewing(false);
               }}
             >

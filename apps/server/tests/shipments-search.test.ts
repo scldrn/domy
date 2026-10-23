@@ -170,3 +170,23 @@ describe("GET /api/shipments/search", () => {
     expect(response.status).toBe(403);
   });
 });
+
+it.each(
+  [
+    null,
+    [],
+    [null, null],
+    ["invalid-date", crypto.randomUUID()],
+    ["2026-10-01T15:00:00.000Z", "invalid-id"],
+    ["2026-10-01T15:00:00.000Z", crypto.randomUUID(), "extra"],
+  ].map((value) => ({ value })),
+)("rejects malformed decoded cursor %j before SQL (T139)", async ({ value }) => {
+  const cursor = Buffer.from(JSON.stringify(value)).toString("base64url");
+  const response = await t.request(`/api/shipments/search?cursor=${cursor}`, {
+    cookie: dispatcher.cookie,
+  });
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({
+    error: { code: "invalid_request", fields: { cursor: expect.any(String) } },
+  });
+});

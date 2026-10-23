@@ -11,7 +11,7 @@ import { NeighborhoodCombobox } from "./neighborhood-combobox";
 /**
  * The merchant's pickup point, filled with its default, or a one-off address (FR-003).
  */
-export function PickupPointSelect() {
+export function PickupPointSelect({ freezeDefault = false }: { freezeDefault?: boolean }) {
   const { control, register, setValue, formState } = useFormContext<ShipmentFormValues>();
   const merchant = useWatch({ control, name: "merchant" });
   const pickupPointId = useWatch({ control, name: "pickupPointId" });
@@ -23,10 +23,10 @@ export function PickupPointSelect() {
 
   // A newly chosen merchant fills its default pickup point.
   useEffect(() => {
-    if (!points.data || pickupPointId) return;
+    if (freezeDefault || !points.data || pickupPointId) return;
     const fallback = points.data.find((point) => point.isDefault) ?? points.data[0];
     setValue("pickupPointId", fallback?.id ?? otherPickupAddress);
-  }, [points.data, pickupPointId, setValue]);
+  }, [freezeDefault, points.data, pickupPointId, setValue]);
 
   const items = [
     ...(points.data ?? []).map((point) => ({

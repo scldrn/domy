@@ -1,4 +1,10 @@
-import { collectedTotal, recordFlags, type CourierRecord, type RecordFlagKind } from "@domy/domain";
+import {
+  collectedTotal,
+  isWithinPhotoWait,
+  recordFlags,
+  type CourierRecord,
+  type RecordFlagKind,
+} from "@domy/domain";
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Executor } from "../db/client.ts";
@@ -15,9 +21,6 @@ import {
  * The courier's records as the panel shows them (feature 003, FR-033, FR-036): the flags of
  * the board (research R11) and the records of a shipment.
  */
-
-/** A photo waits 24 hours before it counts as missing (FR-023). */
-const photoWaitMs = 24 * 60 * 60 * 1000;
 
 /** The record flags of each shipment, by id; a shipment without records has none. */
 export async function loadRecordFlags(
@@ -84,7 +87,7 @@ export async function loadRecordFlags(
         record &&
         !proofPhotos.includes(photo) &&
         photo.uploadedAt === null &&
-        now.getTime() - record.recordedAt.getTime() < photoWaitMs
+        isWithinPhotoWait(record.recordedAt, now)
       );
     }).length;
     result.set(

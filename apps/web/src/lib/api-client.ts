@@ -1,6 +1,8 @@
 import type { AppType } from "@domy/server/app";
 import { QueryClient } from "@tanstack/react-query";
-import { hc } from "hono/client";
+import { hc, type ClientResponse } from "hono/client";
+import { z } from "zod";
+import type { StatusCode } from "hono/utils/http-status";
 import { syncClock } from "./clock";
 
 /** An API error with the Spanish message the server wrote for the user. */
@@ -12,7 +14,7 @@ export class ApiError extends Error {
 
   constructor(
     status: number,
-    body: { code: string; message: string; fields?: Record<string, string> } & Record<
+    body: { code: string; message: string; fields?: Record<string, string> | undefined } & Record<
       string,
       unknown
     >,
@@ -42,28 +44,45 @@ async function fetchWithClock(input: RequestInfo | URL, init?: RequestInit): Pro
 /** Typed client of the Hono API (research R3). */
 export const api = hc<AppType>("/", { fetch: fetchWithClock });
 
-/** Returns the JSON body of a successful response, or throws an ApiError. */
-export async function unwrap<T>(response: Promise<Response>): Promise<T> {
-  const result = await response;
-  if (result.ok) {
-    return (await result.json()) as T;
-  }
-  const body = (await result.json().catch(() => null)) as {
-    error?: { code: string; message: string; fields?: Record<string, string> };
-  } | null;
+/** Validate unknown error payloads; retain structured retry details without trusting their shape. */
+export const apiErrorBody = z
+  .object({
+    code: z.string(),
+    message: z.string(),
+    fields: z.record(z.string(), z.string()).optional(),
+  })
+  .catchall(z.unknown());
+const apiErrorEnvelope = z.object({ error: apiErrorBody });
+
+async function throwResponseError(result: {
+  status: number;
+  json(): Promise<unknown>;
+}): Promise<never> {
+  const parsed = apiErrorEnvelope.safeParse(await result.json().catch(() => null));
   throw new ApiError(
     result.status,
-    body?.error ?? {
-      code: "unknown_error",
-      message: "Ocurrió un error inesperado. Intenta de nuevo.",
-    },
+    parsed.success
+      ? parsed.data.error
+      : {
+          code: "unknown_error",
+          message: "Ocurrió un error inesperado. Intenta de nuevo.",
+        },
   );
 }
 
-/** Successful 204 mutations have no JSON body; keep the same error handling. */
-export async function unwrapEmpty(response: Promise<Response>): Promise<void> {
+/** T136 / Constitution V: the endpoint supplies T; callers cannot invent an unchecked body. */
+export async function unwrap<T>(
+  response: Promise<ClientResponse<T, StatusCode, "json">>,
+): Promise<T> {
   const result = await response;
-  if (!result.ok) await unwrap(Promise.resolve(result));
+  if (!result.ok) return throwResponseError(result);
+  return result.json();
+}
+
+/** Successful 204 mutations have no JSON body; keep the same validated error handling. */
+export async function unwrapEmpty(response: Promise<ClientResponse<unknown>>): Promise<void> {
+  const result = await response;
+  if (!result.ok) await throwResponseError(result);
 }
 
 export const queryClient = new QueryClient({

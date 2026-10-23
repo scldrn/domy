@@ -14,7 +14,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth.ts";
-import { createdAt, updatedAt } from "./columns.ts";
+import { createdAt, publicCodeDefault, updatedAt } from "./columns.ts";
 import { carriers, couriers, merchants, pickupPoints } from "./directories.ts";
 import {
   packageSize,
@@ -46,6 +46,12 @@ export const shipments = pgTable(
   {
     id: uuid().primaryKey(),
     trackingNumber: char({ length: 8 }).notNull().unique("shipments_tracking_number_key"),
+    trackingCode: text()
+      .notNull()
+      .default(publicCodeDefault())
+      .unique("shipments_tracking_code_key"),
+    notifiedAt: timestamp({ withTimezone: true }),
+    notifiedBy: uuid().references(() => users.id),
     kind: shipmentKind().notNull(),
     status: shipmentStatus().notNull().default("registered"),
     serviceDate: date({ mode: "string" }).notNull(),
@@ -100,6 +106,14 @@ export const shipments = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
+    check(
+      "shipments_tracking_code_format_check",
+      sql`${table.trackingCode} ~ '^[A-Za-z0-9_-]{22}$'`,
+    ),
+    check(
+      "shipments_notification_actor_time_check",
+      sql`(${table.notifiedAt} is null) = (${table.notifiedBy} is null)`,
+    ),
     check(
       "shipments_payment_mode_check",
       sql`(${table.paymentMode} = 'cash_on_delivery' and ${table.codAmount} > 0)

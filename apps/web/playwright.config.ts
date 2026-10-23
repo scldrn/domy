@@ -10,7 +10,7 @@ export default defineConfig({
   retries: process.env["CI"] ? 1 : 0,
   reporter: process.env["CI"] ? "github" : "list",
   use: {
-    baseURL: `http://localhost:${String(webPort)}`,
+    baseURL: `http://127.0.0.1:${String(webPort)}`,
     locale: "es-CO",
     timezoneId: "America/Bogota",
     trace: "retain-on-failure",

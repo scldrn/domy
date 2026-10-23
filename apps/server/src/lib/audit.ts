@@ -1,3 +1,4 @@
+import type { AuditAction } from "@domy/domain";
 import { auditEvents } from "../db/schema/index.ts";
 import type { Executor } from "../db/client.ts";
 
@@ -18,7 +19,7 @@ export async function recordAudit(
   event: {
     entityType: AuditEntity;
     entityId: string;
-    action: "created" | "updated" | "deactivated" | "reactivated";
+    action: AuditAction;
     actorUserId: string;
     occurredAt: Date;
     changes?: Record<string, unknown>;

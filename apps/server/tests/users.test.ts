@@ -23,7 +23,20 @@ beforeEach(async () => {
 });
 
 async function admin(path: string, body: unknown, cookie = owner.cookie) {
-  const response = await t.request(`/api/auth/admin/${path}`, { method: "POST", cookie, body });
+  const mutation =
+    typeof body === "object" && body !== null
+      ? {
+          [path === "create-user" ? "id" : "actionId"]: crypto.randomUUID(),
+          ...body,
+        }
+      : body;
+  const actorId = cookie === owner.cookie ? owner.user.id : dispatcher.user.id;
+  const response = await t.request(`/api/auth/admin/${path}`, {
+    method: "POST",
+    cookie,
+    body: mutation,
+    actorId,
+  });
   return { status: response.status, body: (await response.json()) as Record<string, unknown> };
 }
 

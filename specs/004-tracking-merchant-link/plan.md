@@ -1,6 +1,6 @@
 # Implementation Plan: Tracking Page, Merchant Link, and WhatsApp Message
 
-**Branch**: `004-tracking-merchant-link` | **Date**: 2026-09-30 | **Spec**: [spec.md](spec.md)
+**Execution branch**: `codex/local-readiness-orchestration` | **Aligned**: 2026-10-21 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `/specs/004-tracking-merchant-link/spec.md`
 
@@ -60,7 +60,7 @@ clientes") and 3 panel additions
 | IV. Transactional Integrity & Traceability | Notifications write shipment events; replacing a merchant link writes an audit event; nothing is deleted | ✅ |
 | V. Type Safety at Every Boundary | Zod schemas for public responses and panel requests in `packages/domain`; public endpoints serialize only the domain views | ✅ |
 | VI. Test-First Business Logic | The views and the message are written test-first, with every status and kind; integration tests for isolation, expiry, uniform `404`, rate limit, and headers; Playwright for the constitution-named critical flow "public tracking page", including a slow network | ✅ |
-| VII. Effortless UX | Spanish plain-language statuses; tracking page without login or installation, exposing only what the recipient already knows plus the bounded exception of Principle VII (v1.2.0): the courier's first name and phone while on the way, and the received-by name; M3 design system; 320 px; WCAG 2.2 AA; two taps per merchant | ✅ |
+| VII. Effortless UX | Spanish plain-language statuses; tracking page without login or installation, exposing only what the recipient already knows plus the bounded exception of Principle VII (v2.0.0 (the original bounded disclosure decision dates to v1.2.0)): the courier's first name and phone while on the way, and the received-by name; M3 design system; 320 px; WCAG 2.2 AA; two taps per merchant | ✅ |
 | VIII. Absolute Repository Order | Files in the places feature 001 defined; new terms in the glossary | ✅ |
 | IX. Security, Privacy & Data Ownership | 128-bit random codes, never the tracking number; merchant links replaceable; photos only through a valid merchant link; `noindex`, `no-store`, uniform `404`, rate limit; couriers' authorization to show their name and phone collected before go-live, as Principle VII requires | ✅ |
 
@@ -68,7 +68,7 @@ clientes") and 3 panel additions
 table: notifications are shipment events plus two columns, and expiry is derived from the
 event history. `/speckit-analyze` found that showing the courier's name and phone and the
 received-by name went beyond Principle VII as written; the constitution was amended to
-v1.2.0 with a bounded exception approved by the owner.
+v2.0.0 (the original bounded disclosure decision dates to v1.2.0) with a bounded exception approved by the owner.
 
 ## Project Structure
 
@@ -136,7 +136,10 @@ apps/web/src/
 │   ├── merchant-shipment-list.tsx
 │   └── merchant-shipment-detail.tsx
 ├── features/notifications/
-│   └── merchant-notify-row.tsx
+│   ├── merchant-notify-row.tsx
+│   ├── api.ts                         # native inferred Hono queries/mutations
+│   ├── notification-intents.ts        # validated per-action browser metadata
+│   └── use-notification-sync.ts       # actor-scoped retry in the existing panel
 ├── features/shipments/shipment-detail.tsx        # + "Copiar enlace de seguimiento", notified
 └── features/master-data/merchants/               # + copy and replace the merchant link
 
@@ -156,4 +159,75 @@ Made in this branch:
 
 ## Complexity Tracking
 
-No constitution violations and no additions that need justification.
+| Addition | Why needed | Simpler alternative rejected |
+| --- | --- | --- |
+| Browser pending-notification intents (native localStorage, no service/dependency/table) | R8/T022 require the mark after a successful open/copy to survive navigation/reload and uncertain acknowledgment | In-memory mutation retries lose the action UUID on reload. Reusing the courier outbox mixes authenticated panel intents with courier records. One shared storage array risks cross-tab lost writes; one key per action avoids that without locks before the user-activation-sensitive popup |
+
+This bounded pending-action queue adds no process, broker, cache or package.
+Research R21 defines its write-before-action order and actor isolation. The normal
+Spec Kit gate and independent analysis still apply before T022 implementation.
+
+## Current execution alignment — 2026-10-21
+
+Research R12–R16 supersede narrower historical descriptions above: explicit public
+origin/build parity; stable existing-row migration; transport peer identity; bounded
+limiting; bearer-path/audit secrecy; existing-worker exclusion; partial support edits;
+nonempty actor-bound notification receipts; merchant-photo date window and carrier
+allowlist. Development proceeds after owner-approved physical deferral, while 003
+physical/final gates remain open for final delivery.
+
+Delivery order is foundations → tracking → merchant portal/rotation → notification
+UI. Shared files remain sequential; independent RED suites may be authored in parallel.
+No new service/dependency is needed. Existing migration/seed/test paths must remain
+compatible; run all four local gates before integrated closure. Reviewer-owned
+checklists remain unchanged and are not implementation completion markers.
+
+## Local public tracking performance measurement
+
+SC-003 uses the built app and a fresh anonymous 390×844 Chromium context with
+HTTP cache disabled, 250 ms latency, 1.5 Mbps download and 0.75 Mbps upload. Start
+the host monotonic clock immediately before navigation; wait only for navigation
+commit, then check the exact status heading's native CSS visibility on each browser
+animation frame. Capture elapsed time immediately when that visibility wait
+resolves, retain the independent exact-text Playwright visibility assertion, and
+require captured elapsed <= 3000 ms. The budget includes navigation, transfers,
+API response, rendering and the visibility result's IPC delivery. It excludes only
+the separate assertion helper's exponential retry/backoff after readiness; that
+backoff is not page loading. No cache warming, fake response or threshold increase.
+Attach elapsed measurements and retain first-failure traces. SC-002 likewise
+keeps its <=60000 ms update bound, including reactivation of an open expired link
+after an effective delivery is reverted.
+
+## OP-01 trusted proxy alignment (documentation only, 2026-10-22)
+
+The existing direct native-peer rate-limit behavior remains the default. The
+separate OP-01 opt-in is the single optional `DOMY_TRUSTED_PROXY_IP` validated as
+an exact IPv4 or IPv6 literal (no CIDR or port); invalid configuration fails
+validation. `index.ts` passes the value as optional `AppDeps.trustedProxyIp`.
+Implement the pure `resolveClientAddress(nativePeer, trustedProxyIp,
+canonicalHeader)` helper under `apps/server/src/lib/`, without a dependency or
+changes to domain packages. It may accept `X-Domy-Client-IP` only when the
+normalized native peer exactly equals the configured peer and the request carried
+exactly one valid canonical-header IP. Normalize IPv4-mapped IPv6 for comparison
+and output. Reject duplicate/comma-separated or malformed header values. Adapter
+extraction must preserve raw header cardinality and reject duplicate fields rather
+than silently selecting one value. On any rejection, fall back to the native peer
+or `unknown`; with a malformed header from
+the trusted proxy this intentionally shares the proxy's bounded in-memory
+60-per-minute bucket. `Forwarded`, `X-Forwarded-For`, and `X-Real-IP` remain
+ignored. Caddy overwrites, rather than appends or forwards, the canonical header.
+
+OP-01's synthetic lab uses edge `172.31.253.0/29` (Caddy `.2`, clients `.3` and
+`.4`), proxy/app `172.31.254.0/29` (Caddy `.2`, app `.3`), and internal DB
+`172.31.252.0/29`. Keep the app and database unpublished; verify only the intended
+Caddy endpoint is attached to the proxy/app network. The artifact plan owns the
+local addresses and loopback test origin; they do not set production network or
+host choices. Required verification preserves the current native-adapter forged
+header test, adds pure helper/env/peer RED cases, and runs the actual Caddy path
+with two distinct source addresses: client A's 61st request is 429 and client B
+remains allowed. Also verify Caddy replaces a forged value, malformed and
+multiple values fall back, an untrusted peer cannot choose a rate-limit identity,
+the backend is not published, and privacy markers do not enter app or proxy logs.
+This is a new OP-01 assurance item; it does not reopen verified feature tasks
+without an observed regression. Runtime source and deployment artifacts remain
+unimplemented by this documentation alignment.

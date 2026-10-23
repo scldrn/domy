@@ -23,7 +23,24 @@ describe("courier synchronization status (US2 T046, FR-003, FR-020)", () => {
     expect(hasOldPending(pending, new Date("2026-10-01T15:00:01Z"))).toBe(true);
     expect(hasOldPending([], new Date("2026-10-01T15:00:01Z"))).toBe(false);
   });
-  it("uses clear singular and plural pending counts", () => {
+  it("checks a saved record's occurrence time at the same two-hour boundary", () => {
+    const pending: OutboxItem[] = [
+      {
+        type: "record",
+        record: {
+          id: "00000000-0000-4000-8000-000000000001",
+          shipmentId: "00000000-0000-4000-8000-000000000002",
+          kind: "pickup",
+          occurredAt: "2026-10-01T13:00:00Z",
+        },
+      },
+    ];
+
+    expect(hasOldPending(pending, new Date("2026-10-01T15:00:00Z"))).toBe(false);
+    expect(hasOldPending(pending, new Date("2026-10-01T15:00:01Z"))).toBe(true);
+  });
+  it("uses clear zero, singular and plural pending counts", () => {
+    expect(pendingLabel(0)).toBe("0 pendientes por sincronizar");
     expect(pendingLabel(1)).toBe("1 pendiente por sincronizar");
     expect(pendingLabel(2)).toBe("2 pendientes por sincronizar");
   });

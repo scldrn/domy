@@ -7,6 +7,15 @@ import {
 } from "./enums.ts";
 import { calendarDate, money, phone } from "./shipment.ts";
 
+export const auditActions = [
+  "created",
+  "updated",
+  "deactivated",
+  "reactivated",
+  "link_replaced",
+] as const;
+export type AuditAction = (typeof auditActions)[number];
+
 /**
  * Master data (FR-026–FR-029, FR-036, FR-042). Creations carry the new record's `id`; every
  * other change carries an `actionId`. Records are deactivated, never deleted.
@@ -42,6 +51,9 @@ export const merchantUpdateInput = z.object({
   isActive: z.boolean().optional(),
 });
 export type MerchantUpdateInput = z.input<typeof merchantUpdateInput>;
+
+export const merchantLinkReplacementInput = z.strictObject({ actionId });
+export type MerchantLinkReplacementInput = z.input<typeof merchantLinkReplacementInput>;
 
 export const pickupPointCreateInput = z.object({
   id: z.uuid(),
@@ -189,7 +201,11 @@ export type PickupPoint = {
   isActive: boolean;
   neighborhood: Named;
 };
-export type MerchantDetail = Merchant & { pickupPoints: PickupPoint[]; openShipments: number };
+export type MerchantDetail = Merchant & {
+  linkCode: string;
+  pickupPoints: PickupPoint[];
+  openShipments: number;
+};
 export type Courier = Named & {
   phone: string;
   isActive: boolean;
@@ -233,7 +249,7 @@ export type AuditEvent = {
   id: string;
   entityType: string;
   entityId: string;
-  action: "created" | "updated" | "deactivated" | "reactivated";
+  action: AuditAction;
   actor: Named;
   occurredAt: string;
   changes: Record<string, [unknown, unknown]> | null;

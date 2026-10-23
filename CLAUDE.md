@@ -119,7 +119,7 @@ and then needs a migration.
 ### `apps/server` (Hono API)
 
 - `src/index.ts` wires the real dependencies from the environment (`env.ts` validates it with
-  Zod and exits on error). `createApp(deps)` in `src/app.ts` receives `db`, `authConfig`, `clock`,
+  Zod and exits on error). `createApp(deps)` in `src/app.ts` receives `db`, `auth`, `clock`,
   `logger`, `storage` (the private photo bucket, `lib/storage.ts`, S3 API), and optional
   `push` (validated server-side VAPID configuration), so tests build
   the same app around a test database and a controlled clock.
@@ -154,10 +154,8 @@ and then needs a migration.
 - Auth is Better Auth (`src/auth.ts`) under `/api/auth`, with the admin plugin and the roles
   `owner`, `dispatcher`, and `courier`. Sign-up is disabled: the owner creates accounts.
   `routes/auth.ts` wraps the endpoints that need Domy's own rules (lockout, last active owner,
-  a linked courier account's role, audit). Only the approved native HTTP paths are
-  exposed; other `/api/auth/*` requests are refused. Administrative mutations construct
-  the same native auth configuration against their Drizzle transaction, so user,
-  credential, session and audit writes commit or roll back together (001 research R18).
+  a linked courier account's role, audit); every other `/api/auth/*` request goes straight
+  to `auth.handler`.
 - The courier app's API is `routes/courier.ts` under `/api/courier` (`requireRole("courier")`):
   the caller is the courier whose `couriers.user_id` is the signed-in account, linked by the
   owner (`PUT /api/couriers/accounts/:userId`); an account not linked gets `403`. Photos go
@@ -190,7 +188,8 @@ and then needs a migration.
   rather than the typed client so it can run and be tested outside React. One store,
   `src/features/courier/courier-store.ts`, feeds every courier screen and runs the sync.
 - Server calls live in each area's `src/features/<area>/api.ts` as
-  `unwrap<T>(api.api.<resource>.$get(...))`. `api` is `hc<AppType>` from `@domy/server/app`
+  `unwrap(api.api.<resource>.$get(...))`, with response types inferred from the endpoint,
+  never supplied by the caller. `api` is `hc<AppType>` from `@domy/server/app`
   (`src/lib/api-client.ts`); `unwrap` turns an error body into an `ApiError` carrying the
   server's Spanish message and per-field messages. Data goes through TanStack Query. Forms
   use react-hook-form; the shipment form checks its input with the domain schema before

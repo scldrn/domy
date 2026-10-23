@@ -1,11 +1,11 @@
 import type { UseFormSetValue } from "react-hook-form";
 import { describe, expect, it } from "vitest";
-import type { NeighborhoodOption, RecipientOption } from "./api";
+import type { RecipientOption } from "./api";
 import type { ShipmentFormValues } from "./form-values";
 import { applyRecipientAutofill } from "./recipient-autocomplete";
 
 describe("Authoritative recipient autofill (Finding IV-23, 001/T149)", () => {
-  const laureles: NeighborhoodOption & { isActive?: boolean } = {
+  const laureles: RecipientOption["recipientNeighborhood"] = {
     id: "n-laureles",
     name: "Laureles",
     kind: "neighborhood",
@@ -24,7 +24,7 @@ describe("Authoritative recipient autofill (Finding IV-23, 001/T149)", () => {
     const fields: Record<string, unknown> = {};
     const setFieldValue = createMockSetValue(fields);
 
-    const recipient: RecipientOption = {
+    const recipient: Parameters<typeof applyRecipientAutofill>[0] = {
       recipientName: "Carlos Pérez",
       recipientPhone: "3001234567",
       recipientAddress: "Circular 4 # 73-12",
@@ -45,14 +45,14 @@ describe("Authoritative recipient autofill (Finding IV-23, 001/T149)", () => {
     };
     const setFieldValue = createMockSetValue(fields);
 
-    const inactiveNeighborhood: NeighborhoodOption & { isActive?: boolean } = {
+    const inactiveNeighborhood: RecipientOption["recipientNeighborhood"] = {
       ...laureles,
       id: "n-old",
       name: "Antiguo Sector Inactivo",
       isActive: false,
     };
 
-    const recipient: RecipientOption = {
+    const recipient: Parameters<typeof applyRecipientAutofill>[0] = {
       recipientName: "María López",
       recipientPhone: "3109876543",
       recipientAddress: "Calle 10 # 20-30",
@@ -72,7 +72,7 @@ describe("Authoritative recipient autofill (Finding IV-23, 001/T149)", () => {
     const fields: Record<string, unknown> = {};
     const setFieldValue = createMockSetValue(fields);
 
-    const recipient: RecipientOption = {
+    const recipient: Parameters<typeof applyRecipientAutofill>[0] = {
       recipientName: "Pedro Gómez",
       recipientPhone: "3201112233",
       recipientAddress: "Carrera 43A # 1-50",

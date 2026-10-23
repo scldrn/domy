@@ -200,6 +200,7 @@ export const shipmentEventTypes = [
   "record_corrected",
   "record_reverted",
   "review_cleared",
+  "notified",
 ] as const;
 export const shipmentEventType = z.enum(shipmentEventTypes);
 
@@ -261,6 +262,9 @@ export type ShipmentEvent = {
  * that route's courier, who holds the package, and the handover waiting for confirmation.
  */
 export type ShipmentDetail = Shipment & {
+  trackingCode: string;
+  notifiedAt: string | null;
+  notifiedBy: string | null;
   heldAtOffice: boolean;
   returnDecided: boolean;
   needsReview: boolean;

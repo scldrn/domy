@@ -49,7 +49,7 @@ export function createMailer(options: {
       text,
     });
     // The screen answers the same whether or not the email exists, so a failure is only logged.
-    if (error) options.logger.error({ err: error }, "password reset email failed");
+    if (error) options.logger.error({ outcome: "failed" }, "password reset email failed");
   }
 
   return { sendResetPassword, outbox };

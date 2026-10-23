@@ -26,8 +26,19 @@ beforeEach(async () => {
   dispatcher = await t.signIn("dispatcher", { name: "John Coordinador" });
 });
 
-async function call(method: string, path: string, body?: unknown, cookie = dispatcher.cookie) {
-  const response = await t.request(path, { method, cookie, body });
+async function call(
+  method: string,
+  path: string,
+  body?: unknown,
+  cookie = dispatcher.cookie,
+  actorId?: string,
+) {
+  const response = await t.request(path, {
+    method,
+    cookie,
+    body,
+    ...(actorId !== undefined && { actorId }),
+  });
   return { status: response.status, body: (await response.json()) as Record<string, unknown> };
 }
 
@@ -92,6 +103,7 @@ describe("GET /api/audit-events (FR-036)", () => {
         `/api/couriers/accounts/${account.user.id}`,
         { actionId, courierId },
         owner.cookie,
+        owner.user.id,
       );
     await link(id);
     const linkReceipt = crypto.randomUUID();

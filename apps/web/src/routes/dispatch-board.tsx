@@ -32,9 +32,7 @@ const pollMs = 20_000;
 const flagRefreshMs = 30_000;
 
 async function getBoard(date: string | undefined): Promise<DispatchBoard> {
-  const board = await unwrap<DispatchBoard>(
-    api.api.shipments.board.$get({ query: date ? { date } : {} }),
-  );
+  const board = await unwrap(api.api.shipments.board.$get({ query: date ? { date } : {} }));
   syncClock(board.serverTime);
   return board;
 }

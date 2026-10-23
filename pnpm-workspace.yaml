@@ -1,6 +1,10 @@
 packages:
   - apps/*
   - packages/*
+# 001/T129: tested transform/loader compatibility beyond upstream's ~0.18.20 range;
+# scoped evidence and limitations: specs/001-shipment-registration/dependency-audit-results.md.
+overrides:
+  "@esbuild-kit/core-utils@3.3.2>esbuild": "0.25.12"
 minimumReleaseAgeExclude:
   - "@vitest/mocker@5.0.3"
   - "@vitest/spy@5.0.3"

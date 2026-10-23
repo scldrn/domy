@@ -57,6 +57,20 @@
       "when": 1792199238191,
       "tag": "0007_skinny_menace",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792529000519,
+      "tag": "0008_purple_red_hulk",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792645334356,
+      "tag": "0009_tired_robbie_robertson",
+      "breakpoints": true
     }
   ]
 }

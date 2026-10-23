@@ -55,7 +55,8 @@ describe("sessions (FR-033a)", () => {
     const response = await t.request("/api/auth/admin/ban-user", {
       method: "POST",
       cookie: owner.cookie,
-      body: { userId: dispatcher.user.id },
+      body: { actionId: crypto.randomUUID(), userId: dispatcher.user.id },
+      actorId: owner.user.id,
     });
     expect(response.status).toBe(200);
     expect(await status(dispatcher.cookie)).toBe(401);
@@ -79,7 +80,8 @@ describe("sessions (FR-033a)", () => {
     const response = await t.request("/api/auth/admin/revoke-user-sessions", {
       method: "POST",
       cookie: owner.cookie,
-      body: { userId: first.user.id },
+      body: { actionId: crypto.randomUUID(), userId: first.user.id },
+      actorId: owner.user.id,
     });
     expect(response.status).toBe(200);
     expect(await status(first.cookie)).toBe(401);

@@ -5,6 +5,7 @@ import { admin } from "better-auth/plugins";
 import { createAccessControl } from "better-auth/plugins/access";
 import { adminAc, defaultStatements, userAc } from "better-auth/plugins/admin/access";
 import { eq } from "drizzle-orm";
+import type { Logger } from "pino";
 import type { Executor } from "./db/client.ts";
 import * as schema from "./db/schema/index.ts";
 import { users } from "./db/schema/index.ts";
@@ -26,8 +27,16 @@ export type AuthConfig = {
   sendResetPassword: (data: { email: string; name: string; url: string }) => Promise<void>;
 };
 
-export function createAuth(options: AuthConfig & { db: Executor }) {
+export function createAuth(options: AuthConfig & { db: Executor; logger: Logger }) {
   return betterAuth({
+    // R19: native diagnostics can contain attacker-controlled Origin/Referer and SQL args.
+    // Keep their level/event through the existing logger; unexpected faults still reach Hono.
+    logger: {
+      level: "debug",
+      log(level) {
+        options.logger[level]({ authDiagnostic: true }, "Authentication diagnostic.");
+      },
+    },
     secret: options.secret,
     baseURL: options.baseUrl,
     basePath: "/api/auth",

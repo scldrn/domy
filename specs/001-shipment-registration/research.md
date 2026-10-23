@@ -17,6 +17,19 @@ this research also fixes the project foundation that features 002–004 build on
 - **Alternatives considered**: TypeScript 7.0 (blocked by lint tooling); Drizzle 1.0 RC
   (not stable).
 
+### R1 addendum — bounded Vite security patch (001/T129, 2026-10-20)
+
+The resumed registry audit identifies Vite 8.3.1 in the affected 8.3.0–8.3.2 range of
+[GHSA-698v-4r3x-3vcv](https://github.com/advisories/GHSA-698v-4r3x-3vcv).
+Adopt the exact same-minor patched release **8.3.3** through native pnpm update, preserving
+all other direct pins, Drizzle ORM/Kit versions, the approved scoped esbuild override and
+source-map-js 1.2.2. Accept only the patch's necessary dependency/peer snapshot resolution;
+the orchestrator explicitly permits native normalization of the unchanged domain Vitest
+5.0.3 importer to the shared peer graph. No override suppression or RC upgrade is added.
+The advisory's Windows-specific file/environment conditions narrow demonstrated exposure;
+this macOS validation does not reproduce a Windows exploit. Frozen install, repeated
+all/dev/prod audits and the four integrated local gates must verify the resulting graph.
+
 ## R2. Monorepo layout and TypeScript execution
 
 - **Decision**: pnpm workspaces with `apps/server`, `apps/web`, `packages/domain`. The server
@@ -220,6 +233,53 @@ this research also fixes the project foundation that features 002–004 build on
   (Constitution IX).
 - **Alternatives considered**: OpenTelemetry collector (unjustified extra process).
 
+### OP-01 request-log boundary refinement (2026-10-23)
+
+- Generate correlation IDs on the server; never adopt a client-supplied `X-Request-Id` as
+  logger context. If the response returns a correlation header, return the generated value.
+- Log a registered Hono route template or a fixed unmatched-route class, never an arbitrary
+  request path. Preserve the existing public bearer and password-reset redactions before
+  applying any route fallback. Do not log query strings, request headers, or bodies.
+- Do not pass raw Resend, S3, or other provider error objects or `String(error)` values to
+  Pino. Project only safe fixed failure metadata; provider messages, payloads, request URLs,
+  recipients, keys, and arbitrary causes are not log fields.
+- Verify with a native-server request containing distinct markers in an unmatched path,
+  query, `X-Request-Id`, another header, and body, plus a provider failure sentinel. Assert
+  marker absence without embedding marker values in failed assertion output, while retaining
+  a useful route class, status, duration, and server-generated correlation ID.
+
+### T152 refinement — native error-envelope privacy
+
+- **Decision (2026-10-20)**: configure the installed native server/browser SDKs for
+  error reporting only. Reconstruct a fresh allowlisted event in `beforeSend`; never
+  spread SDK request/context/transaction/user/extra/tags, arbitrary causes, breadcrumbs,
+  runtime messages or URL-bearing stack data into the result. Keep a bounded built-in
+  classification, fixed message and useful validated structural locations. Server
+  classification of T153's projected Error is a bounded disclosure policy, not proof
+  of provenance; retain its fixed SQLSTATE projection without arbitrary message text.
+  Browser frames refer only to verified immutable application chunks; label a reporting
+  site fallback honestly rather than presenting it as the original fault.
+  Omit caller timestamps and generate a fresh cryptographic event ID rather than trusting
+  format-valid caller metadata. The application does not consume `captureException`'s
+  returned ID; it is not a correlation promise for the outgoing projected event.
+- **SDK boundary**: `beforeSend` does not filter every envelope type. Disable unneeded
+  session, transaction/tracing, log, metric, replay, profile and attachment channels
+  through supported native options/integrations; do not invent removed SDK options or
+  disable ordinary error delivery. Verify the whole delivered envelope, not one field.
+- **SDK 11.1 streaming correction (2026-10-21)**: with the native default
+  `traceLifecycle: "stream"`, `beforeSendTransaction` is deprecated, ignored and emits a
+  warning. `beforeSendSpan` must return a span and cannot discard it with `null`. Keep
+  native `tracesSampleRate: 0` and omit both hooks; permanent native server/browser tests
+  must attempt a real span, confirm no span envelope is delivered, and still capture the
+  sanitized error envelope without configuring an ignored transaction hook.
+- **Evidence required**: permanent RED before correction for the actual HTTP/Hono app
+  with real PostgreSQL failure, the native browser SDK and the compiled lazy reporter
+  handling an actual global browser error. Capture only in memory or loopback intake;
+  explicitly test disabled reporting and useful enabled delivery. Assertions must not
+  print synthetic sensitive sentinels. Child builds use empty/loopback DSNs and isolated
+  builds disable environment-file loading. No external reporting, new dependency,
+  telemetry wrapper, domain change or T153 callback change is needed.
+
 ### T153 refinement — fallback diagnostic privacy
 
 - **Decision**: replace arbitrary exception text with fixed diagnostic messages and
@@ -333,3 +393,180 @@ this research also fixes the project foundation that features 002–004 build on
   transaction flag remains unnecessary; the outer executor supplies atomicity. T132's
   complete client/server replay lifecycle and T139/T146's other boundary/lockout work
   remain separate unfinished work, not silently declared satisfied by this slice.
+
+
+## R19. Bound account intent receipts and durable browser phases (001/T132)
+
+- **Decision**: creation carries client `id`; every other account mutation carries
+  `actionId`. These identify attempts, while Better Auth still generates native user,
+  credential and session primary keys. Normalize public names with trim and emails to
+  lowercase after strict validation. Preserve native password validation; a replay's
+  different password is ignored because the first successful creation already committed.
+  Neither passwords nor hashes, fingerprints, cookies or session tokens are compared,
+  persisted in receipts or stored in browser intent metadata.
+- **Boundary**: within R18's existing account-administration advisory lock, revalidate
+  the current actor as an active owner and run native Origin/CSRF validation before
+  receipt lookup. Match intent to actor, operation, native target (for edits) and normalized
+  public input; conflicting reuse returns `409 idempotency_conflict`. A matching replay
+  returns its original safe result before target-state/last-owner/link guards. It writes
+  no user/session/audit effect and emits no stored Set-Cookie header. Thus a retried
+  self-session-ending action after relogin cannot revoke the new session.
+- **Native diagnostics**: pass the existing Pino logger to root and transaction auth.
+  The supported native logger callback preserves level and a fixed diagnostic event,
+  never native message/arguments (Origin/Referer can carry private URLs). Unexpected
+  faults still propagate to the existing sanitized Hono handler with safe SQLSTATE.
+  Test native checks in an isolated Node process with production import-time environment;
+  Better Auth captures test defaults at module import, so runtime env stubbing is insufficient.
+- **Storage**: one `account_action_receipts` row holds the intent UUID, actor FK,
+  operation, native target FK, public input JSON, validated success JSON, native 2xx status
+  and injected-clock time. CHECKs bound operation/status. Native writes, changed-only
+  audit (client event UUID) and receipt commit or roll back together. Unchanged successes
+  still receive a receipt without fictitious audit history.
+- **Projection**: preserve native envelope shapes, validated against native Better Auth
+  types: create/role/ban/unban `{ user }`, profile user directly, revoke `{ success: true }`.
+  User fields are allowlisted to id/name/email/emailVerified/createdAt/updatedAt/image/
+  role/banned/banReason/banExpires; no opaque native JSON passthrough.
+- **Browser**: validate persistent actor/operation/target/public-input/intent metadata
+  with Zod. Use a short Web Lock for read/check/write, never hold it during networking.
+  Same-input tabs share identity; different pending input cannot overwrite it. ACK removes
+  only its matching intent. Network/401/5xx/ambiguous response preserves it; definite native
+  rollback 4xx can release it, while identity conflicts retain the original receipt.
+  Storage failure or malformed pending data blocks sending without silent deletion.
+- **Dialog**: persist only public workflow input, phase ACKs, native created-user ID and
+  courier-link action UUID. Resume create→link or profile→role/link in valid role order,
+  skipping acknowledged phases. Preserve actor isolation and pending work across reload;
+  passwords remain memory-only and must be re-entered after uncertain creation reload.
+- **Alternatives rejected**: audit-only lookup (misses no-ops), password fingerprints,
+  client-selected native PK, network-held browser locks, replacing uncertain IDs, and
+  bypassing native Origin validation on receipt replays. No dependency or service added.
+
+### R19 actor-bound mutation refinement — cross-tab cookie replacement (2026-10-20)
+
+A pending intent can be saved under owner A in one tab, then sent after another tab has
+replaced the shared session cookie with owner B. Persisted actor isolation alone cannot
+bind the request to the actor whose intent was saved. Require `X-Domy-Actor-Id` with the
+UUID from the client's current session snapshot on the six native owner account mutations
+and `PUT /api/couriers/accounts/:userId`. This header is an intent consistency check only;
+the session cookie, current role check, and native Origin/CSRF validation remain the
+authorization boundary.
+
+Missing or malformed values return safe `400 invalid_request`. A valid UUID that differs
+from the authenticated actor returns `409 actor_changed`, with no account, link, audit,
+or receipt effects and no actor identifiers in the response. Native routes compare inside
+the existing transaction after Origin/CSRF and active-owner validation, before receipt
+lookup. The courier-link route compares the authenticated request user before entering
+`auditedChange`, which also precedes its receipt lookup. No other authentication, read,
+or password endpoint requires this header. Keep the guard small and shared; do not extend
+the generic audit framework or add a new transaction for linking.
+
+The real-PostgreSQL regression must switch the cookie from A to B while retaining A's
+header, prove refusal without effects, then show that a valid B-bound request can use its
+unconsumed intent. Existing Origin checks, owner/role checks, replay conflicts and all
+session behavior remain covered.
+
+### R19 browser lifecycle constraint — N2 account recovery finding (2026-10-20)
+
+An uncertain ban must be acknowledged before a later unban or new mutation of that same
+native account: otherwise a future ban could accidentally reuse the old successful ban
+receipt and report success while leaving the account active. Coordinate all operation
+intents for an actor/target with one short Web Lock. Show the pending simple operation's
+explicit retry control even when refreshed server state would hide its normal button;
+block different new mutations until its original ACK is recovered. Profile/role/link
+workflows retain their existing public form and fixed phase IDs. A concurrent tab that
+already completed a workflow may conservatively ask the other tab to reopen it; no
+completion tombstone or invented success is needed. Definite rollback 4xx can release a
+workflow only when its matching current stored state still has zero phase ACKs under the
+lock. Retain all uncertain/401/5xx/502 outcomes and conservatively retain 409 responses.
+
+The pending-creation workflow is keyed by `new`, and its validated native created-user ID
+identifies the matching row's recovery instruction: reopen **Nueva cuenta**, not Editar.
+Invalidate the actor's pending-intent query after every dialog submission, including
+partial failures and success, so acknowledged recovery immediately releases ordinary
+controls without a reload. New error-state browser coverage exposed an existing
+FormDialog accessibility defect: `role=alert` on a `ul` removes its list semantics. The
+bounded shared correction moves the live alert role to a surrounding div, preserving
+the semantic ul/li, messages and full axe assertions.
+
+### R19 retry validation refinement — preserve uncertain earlier commits
+
+A generic 400 or 403 can precede receipt lookup; it cannot prove that an earlier uncertain
+attempt never committed. Keep all failed outcomes except HTTP 400 with the installed native
+admin code `USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`, verified in Better Auth 1.7.6 admin
+create/update routes after the wrapper's receipt lookup. Share this exact release predicate
+between API intents and zero-ACK workflows. Validate the complete creation input, including
+its memory-only password, before networking; a local validation error must retain earlier
+pending IDs and workflow phases. An empty password after reload therefore requests re-entry
+without discarding a potentially committed creation. No password/fingerprint is persisted.
+
+Fresh creation forms must pass that same complete guard before acquiring workflow metadata,
+so an invalid initial password does not leave a zero-ACK draft that blocks correcting public
+inputs. Read existing validated workflow state first; after acknowledged creation the
+remaining link phase needs no password. Earlier uncertain workflow/intent IDs remain intact
+when local re-entry validation fails. The API keeps the same guard for direct callers.
+
+## R20. Validated and recoverable shipment form drafts (001/T137)
+
+- **Decision**: treat `sessionStorage` as untrusted input. Strictly validate the UUID
+  envelope and each UI draft shape with Zod before mounting form consumers. Shipment forms
+  may be incomplete, so validate their persisted UI shape rather than the final
+  `ShipmentCreateInput`. Validate consumed merchant/neighborhood fields while preserving
+  extra runtime API option fields; `fromShipment`'s empty municipality/rate-zone IDs are
+  legitimate view-model values. Keep valid legacy `{ id, values }` envelopes readable.
+  Preserve malformed or unknown raw data until local download and explicit discard. A failed
+  storage read prevents form initialization; a failed write preserves in-memory values and
+  blocks networking until an explicit persistence retry succeeds.
+- **Single/edit uncertain outcome**: before a create or update request, atomically persist
+  the exact final validated input, its UUID/action UUID, and the displayed values as pending.
+  Freeze form editing after an ambiguous outcome and offer exact replay. Accept an ACK only
+  when its shipment ID matches the pending target. Then replace the whole pending envelope
+  with a new UUID and next form state in one storage write. This is required because current
+  shipment endpoints can return an existing row for a repeated ID/action ID without
+  comparing a changed request body; the UI cannot safely let an uncertain identity follow
+  later edits.
+- **Edit version boundary**: new edit envelopes are stored under a stable shipment key and
+  retain `baseVersion`. A pending update may replay its exact older version after a commit,
+  while an unsent draft whose baseline is unknown or stale must be downloaded and explicitly
+  reloaded from the current shipment before another mutation. Never silently rebase user values.
+  Keep pending values visible but disabled. On a definitive `version_conflict`, fetch the current
+  shipment and clear the pending marker durably before showing the explicit reload decision.
+  Read only a legacy versioned key matching the currently loaded shipment; leave other
+  historical version keys untouched for assisted recovery.
+- **Pending binding**: at the storage boundary, require the mutation UUID/action UUID and target
+  to match the envelope and route, then reconstruct the request with the existing form mapper
+  and compare the canonical payload both when reading and saving. This prevents a valid-looking
+  envelope from showing form A while retrying request B, or a component effect from overwriting
+  a pending snapshot before it is retried. Bulk pending rows also have to agree with the visible
+  merchant. Retain mismatched raw data for local recovery without sending it.
+- **Local validation while pending**: keep form values visible but read-only and pause pricing,
+  pickup-default and other auto-fill writes. Before the first network request, use shared domain
+  validation for COD and manual-fee reasons, and wait for the current quote when its inputs are
+  complete. Restore server field errors onto visible form fields without automatically releasing
+  the pending UUID on `400 invalid_request`. Because a concurrent tab may have committed the same
+  identity, show the exact saved request for local download and require an explicit shipment-history
+  review before replacing it with a new UUID. Apply the same informed decision to a rejected bulk
+  batch while preserving its source rows. If persisting the fresh intent fails, keep the pending
+  controls locked until that new envelope is stored.
+- **Legacy uncertainty**: an old valid `{ id, values }` single/edit envelope contains no
+  sent-state marker or exact final payload. Bulk drafts additionally never stored their
+  preview batch/row UUIDs. Preserve their original raw JSON, keep valid visible form values,
+  explain that an earlier request may have committed, and require explicit informed
+  acknowledgement before creating a fresh intent. Do not silently migrate or imply exact
+  replay is possible when the legacy payload was not persisted.
+- **Bulk uncertain outcome**: persist the exact validated `BulkConfirmInput` (batch UUID,
+  row UUIDs, order and accepted row values) and remaining source rows before confirmation.
+  On reload or a lost ACK, retry that same payload. Validate a 2xx result against the
+  pending batch and every ordered row identity before releasing it; restore only the saved
+  remaining rows. Re-previewing committed rows would pair new IDs with an earlier effect.
+- **Form feedback layout**: keep lengthy warnings, duplicate tracking-number lists, field
+  errors, and storage recovery instructions in normal document flow. Reserve the sticky
+  footer for the primary form action; a high-count duplicate result must not cover fields or
+  block ordinary keyboard and pointer access. Preserve the complete duplicate list and
+  existing recovery controls.
+- **Rationale**: IV-24 demonstrates that syntactically valid JSON is not a valid form draft;
+  Constitution V requires a runtime check at this browser-storage boundary. FR-042 makes
+  each mutation UUID meaningful only for its exact pending request. Storage errors are
+  explicit Spanish actions; raw draft data never enters logs or a remote service.
+- **Alternatives rejected**: trust `JSON.parse` casts; silently replace corrupt data with an
+  empty draft; validate incomplete fields with the final business schema; enable editing
+  while a final mutation is uncertain; or retain bulk identity only in React state. No
+  dependency, endpoint, persistence service, or database change is required.

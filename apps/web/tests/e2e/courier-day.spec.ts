@@ -78,6 +78,7 @@ test("shows my day offline, survives reopening, syncs once and reflects dispatch
     await openStop(phone, shipment.recipientAddress ?? "");
     await phone.getByRole("button", { name: "Registrar entrega", exact: true }).click();
     const dialog = phone.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Corregir" }).click();
     await dialog.getByLabel("Efectivo", { exact: true }).fill("0");
     await dialog.getByLabel(method, { exact: true }).fill(amount);
     await dialog.getByRole("button", { name: "Revisar", exact: true }).click();

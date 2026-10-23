@@ -20,10 +20,9 @@ async function synchronized(page: Page) {
 }
 async function reportException(page: Page, address: string) {
   await openStop(page, address);
-  await page.getByRole("button", { name: "Reportar novedad" }).click();
+  await page.getByRole("button", { name: "Destinatario ausente", exact: true }).click();
   const sheet = page.getByRole("dialog");
-  await sheet.getByRole("radio", { name: "Destinatario ausente" }).check();
-  await sheet.getByRole("button", { name: "Revisar", exact: true }).click();
+  await expect(sheet).toContainText("Destinatario ausente");
   await sheet.getByRole("button", { name: "Guardar novedad" }).click();
   await expect(sheet).not.toBeVisible();
   await synchronized(page);
@@ -65,7 +64,9 @@ async function decide(
 async function confirmResult(page: Page, label: string, save: string) {
   await page.getByRole("button", { name: label, exact: true }).click();
   const sheet = page.getByRole("dialog");
-  await sheet.getByLabel("Quién recibe").fill("Persona de prueba");
+  const recipient = sheet.getByLabel("Quién recibe");
+  if (!(await recipient.isVisible())) await sheet.getByRole("button", { name: "Corregir" }).click();
+  await recipient.fill("Persona de prueba");
   await sheet.getByRole("button", { name: "Revisar", exact: true }).click();
   await sheet.getByRole("button", { name: save, exact: true }).click();
   await expect(sheet).not.toBeVisible();
@@ -215,7 +216,9 @@ test("decides another attempt and a return, preserving attempts and never collec
     .getByRole("link")
     .filter({ hasText: "Devolución" })
     .click();
-  await expect(phone.getByRole("button", { name: "Reportar novedad" })).toHaveCount(0);
+  await expect(
+    phone.getByRole("button", { name: "Destinatario ausente", exact: true }),
+  ).toHaveCount(0);
   await phone.getByRole("button", { name: "Reportar problema" }).click();
   const problem = phone.getByRole("dialog");
   await problem.getByLabel("Qué pasó").fill("El comercio está cerrado");

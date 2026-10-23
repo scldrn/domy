@@ -1,7 +1,7 @@
 # Project status
 
 Where Domy stands and what comes next, so any session can resume without the conversation
-that produced it. Updated 2026-10-19 UTC; update it whenever a slice is merged or the next step
+that produced it. Updated 2026-10-23 (America/Bogota); update it whenever a slice is merged or the next step
 changes.
 
 ## Features
@@ -11,32 +11,76 @@ a short-lived branch, so the specification and implementation of every feature l
 
 | Feature | State |
 | --- | --- |
-| 001 Shipment registration | T141 merged as `321ef93` (PR #29), with clean prior/post-merge CI. Account checkpoint `0504631` remains local/unmerged; T150–T153 add explicit privacy work. No global sign-off |
+| 001 Shipment registration | 27 integral catalog tasks verified locally; latest T139/T146 regression closure is recorded below. Final corrections remain uncommitted |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
-| 002 Routes and dispatch | Implemented on `main` (#4–#11), with 003 custody extensions; audit adds T063/T064 for aggregate overflow and traceability. Earlier test/review evidence remains in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US7 are on `main`. T131 is complete locally on `003-fix-session-recovery-readiness` (955 tests/92 first-attempt e2e); publication/latest-head CI and merge remain required. PR #30 is held separately. Final closure, physical T087/T093 and audit T133–T135 remain open |
-| 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
+| 002 Routes and dispatch | 2 integral catalog tasks verified locally, including aggregate overflow and traceability; retain historical feature receipts |
+| 003 Courier app | 14/17 integral catalog tasks verified locally; T093/T087 physical acceptance and dependent T088 closure remain open |
+| 004 Tracking page and merchant link | 33/35 tasks verified locally; T034 physical acceptance and dependent T035 closure remain open |
 
 ## Next step
 
-### Session recovery and stabilization work — 2026-10-19 UTC
+### Canonical repository consolidation — 2026-10-23
 
-Main is at `33e4797` (T141 merged via PR #29 `321ef93`, T153 merged via PR #33 `fedbb63`, T154 merged via PR #32 `33e4797`).
-The authoritative tracking document is [docs/integral-execution-backlog.md](integral-execution-backlog.md)
-with 81 canonical task entries across Features 001–004.
+The owner requested one clean local/GitHub source. Use `main` after the single
+consolidation PR; older branch/source paragraphs below are historical receipts.
+Source `d604a287` (540 files) passes check, 1,626 tests, 155 zero-retry browser
+scenarios and build. The recovered 003/T136 literal-loopback control passes;
+a native ACK fixes the merchant-photo fixture race without runtime changes.
+No identical production source files, repeated complete function bodies of 80+
+tokens, version-copy paths or case collisions were found in the scoped audit.
+The rebuilt image matches the previously upgrade-tested runtime bytes.
+[Consolidation receipt](repository-consolidation-results.md) and
+[current handoff](engineering-handoff.md) record exact identities and limits.
+**76/81 catalog tasks (94%) remain closed; five physical/final tasks stay open.**
+Publication/branch cleanup is authorized by the current owner request; no provider,
+production or remote-CI action follows from it.
 
-Branch `003-fix-session-recovery-readiness` (PR #31) resolves 003 T131: cancels session reads on
-native offline events and Query cancellation, forwards AbortSignal, and cleans up listeners,
-allowing cached route and stop navigation to proceed without waiting indefinitely on interrupted requests.
-With T131 verified locally, the branch is rebased onto `main` (`33e4797`), inheriting the modal-notification
-scan stabilization from T154.
 
-PR #30 (`682bc97`) remains held pending reconciliation with `main` and separate transport verification.
-Account-integrity commit `0504631` (T130/T150/T151 work) remains preserved locally.
-Development mail bearer token logging is tracked under Phase 19 as T155.
-Decisions D1 (spreadsheet-safe CSV) and D2 (courier photos of own work in app) are resolved by the owner.
-Owner authorization for per-slice publication and squash merge upon clean gates is in effect.
-All following execution sections are historical receipts.
+### Solo technical handoff verified — 2026-10-23
+
+Current branch: `chore/deployment-readiness-verification`, base `f0bc5ac`, with
+uncommitted corrections. Eight SHA-matching candidate files were recovered; real
+RED defects in cursor validation, concurrent account lockout, UUID retries,
+large exports and tied-clock history were corrected. Root inspected the final
+diff and ran check, **1,626 tests**, **154 browser cases with zero retries**, and
+build on unchanged 540-file source `36ef1cd6`. T139/T146 are reclosed.
+
+The new arm64 image builds and passes its structural proof. A representative
+schema-0007→0009 upgrade preserves all 29 old non-journal table hashes, finances,
+accounts and session; migration replay is unchanged. Strict-CA HTTPS authenticates
+the old session. The app returns to the fresh database with its snapshot unchanged.
+See [regressions](../specs/001-shipment-registration/solo-production-regression-results.md),
+[upgrade](../specs/004-tracking-merchant-link/local-image-upgrade-results.md) and
+[current handoff](engineering-handoff.md) for exact identities and limits.
+
+**76/81 catalog tasks closed (94%); five physical/final tasks remain.** The owner
+requested solo work, deferred phone scenarios and handles infrastructure/public
+deployment. No independent-agent review, physical acceptance, provider proof or
+production approval is claimed. Earlier execution paragraphs below are historical.
+
+### Current narrow diagnostic work — 2026-10-19 UTC
+
+The exhaustive current handoff is [the detailed execution backlog](integral-execution-backlog.md):
+81 open canonical task entries(27/2/17/35), preserved implementation states, exact next
+steps/dependencies/tests/exit criteria, CI failures, historical regressions and operational
+acceptance. This is a snapshot, not81 unstarted implementations or a readiness certificate.
+
+T141 is merged (`321ef93`, PR #29). The current branch is `001-fix-error-diagnostics`:
+T153 has real application/PostgreSQL RED, aligned design, and 21 focused green cases.
+All four local gates pass: check,967 tests(242/531/194),91 first-attempt e2e(5.1minutes)
+and build. Final review/convergence/publication remain; no T153 task closure or global
+sign-off is claimed. The accessibility correction is separately published in PR #32
+(`f4feb8c`); CI39285191879 failed with95 passed/one failed/one flaky and build skipped.
+The retained traces show a fixed lockout-time expectation versus a progressing clock and
+expanded notifications intercepting a disbursement button. The second causal sequence
+still needs investigation; no unchanged rerun or merge is authorized by a later local pass.
+PR #31/#30 remain held for reconciliation and fresh gates;
+the account-integrity commit `0504631` remains preserved locally.
+
+A further native development recovery probe confirms secret-bearing email URL logging
+without provider configuration. IV-41 is appended as 001 T155, not hidden inside T153.
+No actual customer data/external delivery was used, and no fix is claimed yet.
+The paragraphs below are historical execution receipts, not the current branch/status.
 
 ### Authorized remediation — execution checkpoint
 

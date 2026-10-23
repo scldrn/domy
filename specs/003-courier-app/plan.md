@@ -24,6 +24,27 @@ foundations of features [001](../001-shipment-registration/plan.md) and
 
 ## Technical Context
 
+### T082 local invariant verification — 2026-10-20
+
+Extend the existing route invariant test with an independent generated courier lane,
+using the already verified record/custody runtime. Account administration and draft
+corrections are not prerequisites for this test-only scope. Keep the original three
+seeds (7, 2026, 31337), 90-step lane, assertions, deadlines and performance limits intact.
+
+Add a second 90-command lane for each seed, interleaving dependency-ordered late/offline
+pickup, office/return, handover and on-behalf/correction/revert workflows. Require every
+workflow, record kind and outcome to execute; do not rely on random selection for coverage.
+Compare domain decisions with actual HTTP outcomes and independently inspect SQL holder
+constraints, append-only custody history and exact identity/actor/time/event correlation.
+Replayed identities must leave complete operational rows unchanged, including after a
+correction or revert. Preserve valid office and exception custody states.
+
+Use existing real PostgreSQL fixtures, strict HTTP success assertions and the native
+capacity project. Preserve failed fixture attempts and distinguish harness corrections
+from product defects. Executor and orchestrator validate locally, with no competing
+database/build/browser workload during capacity measurements; canonical T082 stays open
+until both reviews pass.
+
 **Language/Version**: TypeScript 6.0 (strict), Node.js 24 LTS — as feature 001
 
 **Primary Dependencies**: those of features 001 and 002, plus:
@@ -155,6 +176,21 @@ green latest-head CI; starting US6 remains outside this authorization.
 | VII. Effortless UX | Spanish glossary terms; M3 courier patterns from the design system (navigation bar, bottom sheets, connectivity banner, sync badge, high contrast); 48 px targets; pickup, delivery, and exception within 3 taps of the route screen; Android 10+ and iOS 16+ | ✅ |
 | VIII. Absolute Repository Order | Files in the places feature 001 defined; new terms in the glossary; features 001 and 002 documents aligned (research R17); every slice on its own short-lived branch (constitution 2.0.0) | ✅ |
 | IX. Security, Privacy & Data Ownership | Couriers reach only `/api/courier/*` and their own photos, checked on the server; private bucket with no public URLs; notification payloads without personal data; route data cleared from the phone at sign-out and when a route finishes; keys from validated environment variables | ✅ |
+
+**T083 interaction design (FR-017, FR-038; 2026-10-21)**: count every intentional tap
+from “Mi ruta” through the final save confirmation. The normal delivery path is open stop,
+open its full delivery review, and confirm; that review shows the shipment, proposed editable
+recipient, result, amounts and optional photo before the courier can save. The normal exception
+path is open stop, choose one of the three explicit contract reasons on the eligible picked-up
+shipment, and confirm its full review. Choosing a reason opens that review with the chosen
+reason; no reason is preselected and no action saves implicitly. Editing fields or adding an
+optional photo may require additional taps and remains available before confirmation. Pickup
+remains open stop then confirm pickup. This preserves FR-017's review and confirmation while
+meeting FR-038's normal-path count; it changes no record schema or API contract. When switching from
+review to correction, move focus to the stable sheet container before removing the
+focused review button. Base UI's native popup restoration otherwise queues a frame
+that can steal focus from the newly edited field (retained T154 regression).
+
 
 **Post-design re-check (after Phase 1)**: ✅ all principles hold.
 - The data model needs no new shipment status: status says what happened to the delivery,
@@ -777,6 +813,24 @@ couriers and their old/new account ids, or no changes; its fallback receipt iden
 target courier or the unlinked user. `GET /api/audit-events` excludes empty and null changes
 before pagination, while retaining the receipts in the database (feature 001 FR-036).
 
+### 003/T135 — account-link readiness
+
+`AccountDialog` reads `GET /api/couriers` without the `active` filter and refreshes that
+projection whenever Edit opens. Until that real request succeeds, a courier account's link
+selector and save action remain unavailable; a failed read presents a Spanish retry action.
+The UI keeps `undefined` (relationship not yet known) distinct from `null` (loaded as
+unlinked or deliberately selected for unlink). A currently linked inactive courier remains
+visible and selected, labeled as inactive, but is not offered as a new link target. Saving
+without changing that relationship skips the link phase; unlinking and relinking require an
+explicit selection and continue through T132's persisted workflow and action UUIDs. Pending
+workflow input remains authoritative over the refreshed display, and T132 uncertainty and
+create-then-link recovery remain covered by its existing browser cases.
+
+Verify with unit coverage for unknown versus unlinked and the unfiltered query, plus a real
+browser request held across Edit, a deactivated linked courier, a failed read followed by a
+real retry, and explicit unlink/relink. Keep the database real, preserve axe coverage, and do
+not alter the native rejection of new links to inactive couriers.
+
 | Addition | Why needed | Simpler alternative rejected because |
 | --- | --- | --- |
 | `vite-plugin-pwa` and a service worker | FR-001, FR-022: the app must open without signal and be installable | Without a service worker a closed app cannot open offline |
@@ -785,3 +839,29 @@ before pagination, while retaining the receipts in the database (feature 001 FR-
 | `apps/web/scripts/generate-app-icons.ts` (`pnpm icons`) | FR-001: an installable app needs PNG icons in several sizes | Drawing each size by hand repeats the work when the logo arrives; an SVG rasterizer cannot draw the wordmark without its font |
 | `web-push` | FR-040 (clarified): notification with the app closed | Polling cannot reach a closed app |
 | `courier_notices` table | FR-027: per-notice acknowledgment shown to the dispatcher | Deriving notices from two event tables misses shipment-level changes |
+
+### 003/T092 — courier logic and rendered actions
+
+The T092 UI audit reuses `packages/domain` for collection mismatch validation, received-by
+proposals, notice wording and record eligibility; web tests verify the inputs and rendered
+Spanish controls rather than copying those rules. FR-012 makes the disbursement action
+available for every shipment task on the courier's route while the task is pending or done,
+including pickup, delivery, errand and return tasks. Keep the task's existing actor/route
+boundary and custody, handover, exception and void rules authoritative; do not move the control
+outside the current route-task surface or change held-off-route record handling. A voided
+shipment remains unavailable for disbursement. Rendered state tests cover the other
+task-specific actions and their existing pending, picked-up, completed, office-held and
+handover-blocked conditions. There is no API or shared-domain change in this slice.
+
+## T136 transport consolidation — 2026-10-23
+
+Recover the approved literal-loopback decision from preserved PR30, including
+its native hostname-refusal control before correction. Current public E2E
+fixtures must share the same 127.0.0.1 origin, cookie domain and message-link
+parsing; bind preview explicitly and keep the Vite API proxy on literal loopback.
+Preserve later actor/auth validation, built public origin, private fixture cleanup,
+every browser scenario, deadline, worker, retry and accessibility assertion.
+No production listener, Testcontainers host, domain rule or schema changes.
+The owner requires one clean GitHub/main and local-only QA; use a single squash
+PR with skip annotations, no remote workflow invocation or waiting. See
+[consolidation plan](../../docs/repository-consolidation-plan.md).

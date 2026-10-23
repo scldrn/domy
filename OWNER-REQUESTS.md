@@ -4,22 +4,47 @@ Preguntas y pendientes para Samuel (propietario de Domy) y, a través de él, pa
 lo mantiene al día: agrega cada pregunta cuando surge y la mueve a «Resueltas» con tu respuesta
 y la fecha. Responde aquí mismo o en la conversación.
 
-Última actualización: 2026-10-19 UTC.
+Última actualización: 2026-10-23 (America/Bogota).
 
 ## Bloquean algo ahora
 
-**Avance actual (2026-10-19 UTC):** T141 y T153 ya están fusionadas en `main` (`fedbb63`, PR #29 y #33).
-La rama `001-fix-modal-notification-audit` (PR #32) completa localmente IV-40/T154 y resuelve las causas de
-fallo e intermitencia observadas en CI (bloqueo por tiempo fijo CI-LOCK y botón de liquidación tapado por
-notificaciones CI-POINTER). PR #30/#31 continúan retenidas hasta contar con compuertas limpias y rebase
-sobre `main`. El commit de integridad de cuentas `0504631` permanece preservado por separado.
-También se confirmó en entorno desechable que el correo de desarrollo registra su enlace con token:
-se añadió T155 como tarea pendiente en Phase 19, sin suponer incidente con datos reales.
-El documento `docs/integral-execution-backlog.md` detalla las 81 tareas canónicas abiertas, dependencias,
-pruebas y condiciones de cierre, además de los pendientes operativos.
-Ya aprobaste CSV seguro para Excel y fotos propias del trabajo aún disponible en la app; no son preguntas pendientes.
-Continúa vigente tu autorización por porción con revisión y todas las compuertas/CI limpios, sin despliegues
-ni infraestructura de producción. Los demás párrafos de ejecución conservan evidencia histórica.
+**Consolidación del repositorio — 2026-10-23:** pediste dejar el repositorio y
+GitHub limpios, con una sola versión. La entrega canónica es `main`, mediante una
+PR squash; se retiran las ramas incorporadas conservando un respaldo recuperable.
+La revisión no detectó archivos de producción idénticos, funciones completas
+repetidas de 80+ tokens ni copias `.bak/.old`. Se recuperó la corrección de transporte
+pendiente y se corrigió una carrera de preparación de la prueba de fotos.
+Pasan check, **1.626 pruebas**, **155 escenarios web sin reintentos** y build.
+[Entrega actual](docs/engineering-handoff.md). El catálogo sigue en **76/81 (94%)**;
+la aceptación física y el despliegue conservan su alcance anterior.
+
+
+**Cierre técnico local — 2026-10-23:** continué sin subagentes, con la otra
+sesión terminada. Recuperé ocho archivos y corregí fallos de bloqueo concurrente,
+reintentos UUID, cursores, exportaciones grandes e historial con fechas empatadas.
+Pasan check, **1.626 pruebas**, **154 escenarios web sin reintentos** y build sobre
+el mismo código. La imagen nueva pasa su inspección y el ensayo de actualización:
+se conservan cuentas, sesión, 29 tablas previas y valores COP; la base inicial
+permanece idéntica tras el ensayo. [Entrega técnica](docs/engineering-handoff.md).
+
+**76/81 tareas cerradas (94%).** Las cinco restantes son las pruebas físicas que
+aplazaste y los cierres que dependen de ellas. No queda una pregunta que impida
+este cierre técnico local. Infraestructura/despliegue siguen a tu cargo; las
+configuraciones reales de proveedores y la aceptación física no se certifican con
+estos ensayos. Los párrafos siguientes son evidencia histórica.
+
+**Avance actual (2026-10-19 UTC):** T141 ya está fusionada. T153 tiene pruebas que
+reproducen la filtración en diagnósticos y21 casos focalizados aprobados; pasan check,
+967 pruebas,91 e2e al primer intento y build. Falta revisión/convergencia y publicación.
+La PR #32 falló en CI:95 aprobadas, una fallida y una intermitente; sigue sin fusionarse.
+#30/#31 siguen retenidas y la corrección de cuentas está preservada aparte.
+También confirmé en un entorno desechable que el correo de desarrollo registra su
+enlace con token: se añadió T155, pendiente, sin afirmar un incidente de datos reales.
+No se requiere una nueva decisión de alcance para cumplir la prohibición de registrar
+secretos. El documento `docs/integral-execution-backlog.md` detalla las81 tareas abiertas,
+dependencias, pruebas y condiciones de cierre, además de los pendientes operativos.
+Ya aprobaste CSV seguro para Excel y fotos propias del trabajo aún disponible en la app;
+no son preguntas pendientes. Los demás párrafos de ejecución conservan evidencia histórica.
 
 **Objetivo continuo autorizado (2026-10-19 UTC):** con «autorizo» aprobaste commit,
 push, PR y fusión squash de cada porción, únicamente con revisión, compuertas locales
@@ -146,6 +171,10 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
    borrado a los 12 meses. Solo al desplegar.
 7. **Medir con la coordinadora de despacho** los tiempos de SC-001, SC-004 y SC-006 de la 002
    (crear una ruta, despachar, reasignar) con el sistema en uso real.
+9. **Etapas 005 a 007** (2026-10-23): la verificación para despliegue pide revisar las etapas
+   001 a 007, pero el repositorio solo tiene especificaciones de la 001 a la 004 (`specs/`) y
+   ningún documento, rama ni tarea menciona una 005, 006 o 007. ¿Existen en otro lugar o el
+   alcance es 001–004? Mientras tanto se verifica 001–004.
 
 ## Decisiones visuales (son tuyas)
 
@@ -156,8 +185,8 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
-| 2026-10-19 | ¿Priorizar CSV seguro para Excel o texto exacto con XLSX para consulta? | «Sí, CSV seguro para Excel». Neutralizar texto ejecutable como fórmula y documentar la transformación, conservando valores numéricos y fechas; decisión incorporada al backlog de ejecución (T128 pendiente de implementar/verificar) |
-| 2026-10-19 | ¿Mantener fotos del mensajero solo de su propio trabajo aún disponible en la app o todo el historial propio? | «Sí, solo trabajo vigente en la app». Conservar 003 FR-036 y definir/probar la frontera técnica aplicable en servidor (T133 pendiente de implementar/verificar) |
+| 2026-10-19 | ¿Priorizar CSV seguro para Excel, neutralizando fórmulas y documentando la transformación? | «Sí, CSV seguro para Excel». Mantener los valores monetarios/fechas correctos y documentar la transformación del texto; decisión incorporada al documento de ejecución |
+| 2026-10-19 | ¿Mantener fotos del mensajero solo de su propio trabajo aún disponible en la app? | «Sí, solo trabajo vigente en la app». Conservar003 FR-036; falta definir/probar la frontera técnica sin impedir subir pruebas offline pendientes |
 | 2026-10-19 | ¿Autorizar commit, push, PR y squash por porción del plan integral, con revisión y compuertas locales/CI limpias? | «autorizo». Incluye cerrar T141 y continuar las 75 tareas por ramas pequeñas; excluye despliegues e infraestructura de producción y no resuelve las decisiones de CSV/fotos |
 | 2026-10-17 | ¿Incluir en la etapa integral terminar la 004 o cerrar solo lo desarrollado en 001–003? | «Incluir también la implementación de 004». La verificación/cierre abarca las cuatro funcionalidades; no equivale a una certificación de calidad ni a autorización de commit, push o fusión |
 | 2026-10-17 | ¿Fusionar la PR #28 diagnóstica mediante squash y verificar después el CI de main? | «Si». Autorizada fusión solo con CI limpio del último commit y verificación posterior; sin cerrar T131 ni comenzar el pulido |

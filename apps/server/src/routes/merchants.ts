@@ -1,5 +1,6 @@
 import {
   merchantCreateInput,
+  merchantLinkReplacementInput,
   merchantUpdateInput,
   normalizeText,
   pickupPointCreateInput,
@@ -9,10 +10,11 @@ import {
   type PickupPoint,
 } from "@domy/domain";
 import { and, asc, count, desc, eq, ilike, inArray, ne, notInArray, or, sql } from "drizzle-orm";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../app.ts";
 import {
+  auditEvents,
   merchantAliases,
   merchants,
   municipalities,
@@ -23,7 +25,10 @@ import {
 } from "../db/schema/index.ts";
 import type { Executor } from "../db/client.ts";
 import { requireRole } from "../lib/auth-guard.ts";
+import { assertAccountActor } from "../lib/account-actor.ts";
 import { AppError } from "../lib/errors.ts";
+import { generateSecretCode } from "../lib/secret-code.ts";
+import { recordAudit } from "../lib/audit.ts";
 import {
   auditedChange,
   auditedCreate,
@@ -32,7 +37,7 @@ import {
   lockEntity,
   replaceAliases,
 } from "../lib/master-data.ts";
-import { validate } from "../lib/validate.ts";
+import { isUniqueViolation, validate } from "../lib/validate.ts";
 
 const listQuery = z.object({
   q: z.string().optional(),
@@ -58,6 +63,101 @@ async function loadMerchant(db: Executor, id: string): Promise<Merchant> {
     .where(eq(merchantAliases.merchantId, id))
     .orderBy(merchantAliases.alias);
   return { ...merchant, aliases: aliases.map((row) => row.alias) };
+}
+
+async function loadMerchantLinkReplacementReplay(
+  db: Executor,
+  merchantId: string,
+  actionId: string,
+  actorUserId: string,
+): Promise<(Merchant & { linkCode: string }) | null> {
+  const [receipt] = await db
+    .select({
+      entityType: auditEvents.entityType,
+      entityId: auditEvents.entityId,
+      action: auditEvents.action,
+      actorUserId: auditEvents.actorUserId,
+    })
+    .from(auditEvents)
+    .where(eq(auditEvents.clientEventId, actionId))
+    .limit(1);
+  if (!receipt) return null;
+  if (
+    receipt.entityType !== "merchant" ||
+    receipt.entityId !== merchantId ||
+    receipt.action !== "link_replaced" ||
+    receipt.actorUserId !== actorUserId
+  ) {
+    throw new AppError("idempotency_conflict");
+  }
+
+  const [merchant] = await db
+    .select({ linkCode: merchants.linkCode })
+    .from(merchants)
+    .where(eq(merchants.id, merchantId))
+    .limit(1);
+  if (!merchant) throw new AppError("not_found", { message: "No encontramos ese cliente." });
+  return { ...(await loadMerchant(db, merchantId)), linkCode: merchant.linkCode };
+}
+
+async function replaceMerchantLink(
+  c: Context<AppEnv>,
+  merchantId: string,
+  actionId: string,
+): Promise<Merchant & { linkCode: string }> {
+  const db = c.get("db");
+  const actorUserId = c.get("user").id;
+  const replay = await loadMerchantLinkReplacementReplay(db, merchantId, actionId, actorUserId);
+  if (replay) return replay;
+
+  return db
+    .transaction(async (tx) => {
+      await lockEntity(tx, "merchant", merchantId);
+      const lockedReplay = await loadMerchantLinkReplacementReplay(
+        tx,
+        merchantId,
+        actionId,
+        actorUserId,
+      );
+      if (lockedReplay) return lockedReplay;
+
+      const [current] = await tx
+        .select({ id: merchants.id, linkReplacedAt: merchants.linkReplacedAt })
+        .from(merchants)
+        .where(eq(merchants.id, merchantId))
+        .limit(1);
+      if (!current) throw new AppError("not_found", { message: "No encontramos ese cliente." });
+
+      const now = c.get("clock")();
+      const linkCode = generateSecretCode();
+      await tx
+        .update(merchants)
+        .set({ linkCode, linkReplacedAt: now, updatedAt: now })
+        .where(eq(merchants.id, merchantId));
+      await recordAudit(tx, {
+        entityType: "merchant",
+        entityId: merchantId,
+        action: "link_replaced",
+        actorUserId,
+        occurredAt: now,
+        clientEventId: actionId,
+        changes: {
+          linkReplacedAt: [current.linkReplacedAt?.toISOString() ?? null, now.toISOString()],
+        },
+      });
+      return { ...(await loadMerchant(tx, merchantId)), linkCode };
+    })
+    .catch(async (error: unknown) => {
+      if (!isUniqueViolation(error, "audit_events_client_event_id_key")) throw error;
+      const concurrentReplay = await loadMerchantLinkReplacementReplay(
+        db,
+        merchantId,
+        actionId,
+        actorUserId,
+      );
+      if (!concurrentReplay) throw error;
+      return concurrentReplay;
+    });
 }
 
 const pointSelection = {
@@ -204,7 +304,11 @@ export const merchantRoutes = new Hono<AppEnv>()
         .where(eq(merchants.id, id));
       if (existing) return false;
       await checkNames(tx, "merchant", id, { name: input.name, aliases });
-      const values = { ...input, whatsappPhone: input.whatsappPhone ?? null };
+      const values = {
+        ...input,
+        whatsappPhone: input.whatsappPhone ?? null,
+        linkCode: generateSecretCode(),
+      };
       const inserted = await tx
         .insert(merchants)
         .values({ id, ...values, nameNormalized: normalizeText(input.name) })
@@ -216,11 +320,29 @@ export const merchantRoutes = new Hono<AppEnv>()
     });
     return c.json(await loadMerchant(c.get("db"), id), created ? 201 : 200);
   })
+  .post(
+    "/:id/replace-link",
+    validate("param", idParam),
+    validate("json", merchantLinkReplacementInput),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { actionId } = c.req.valid("json");
+      const expectedActorId = c.req.header("X-Domy-Actor-Id");
+      if (expectedActorId !== undefined) assertAccountActor(expectedActorId, c.get("user").id);
+      return c.json(await replaceMerchantLink(c, id, actionId));
+    },
+  )
   .get("/:id", validate("param", idParam), async (c) => {
     const { id } = c.req.valid("param");
     const db = c.get("db");
+    const [link] = await db
+      .select({ linkCode: merchants.linkCode })
+      .from(merchants)
+      .where(eq(merchants.id, id));
+    if (!link) throw new AppError("not_found", { message: "No encontramos ese cliente." });
     return c.json({
       ...(await loadMerchant(db, id)),
+      linkCode: link.linkCode,
       pickupPoints: await loadPickupPoints(db, id, false),
       openShipments: await openShipments(db, id),
     } satisfies MerchantDetail);
@@ -230,23 +352,35 @@ export const merchantRoutes = new Hono<AppEnv>()
     const { id } = c.req.valid("param");
     const { actionId, ...input } = c.req.valid("json");
     const db = c.get("db");
-    await auditedChange(c, { type: "merchant", id, actionId }, async (tx) => {
-      const current = await loadMerchant(tx, id);
-      await checkNames(tx, "merchant", id, { name: input.name, aliases: input.aliases });
-      const changes = diffValues(current, input);
-      if (Object.keys(changes).length === 0) return null;
-      const { aliases, ...fields } = input;
-      await tx
-        .update(merchants)
-        .set({
-          ...fields,
-          ...(fields.name && { nameNormalized: normalizeText(fields.name) }),
-          updatedAt: c.get("clock")(),
-        })
-        .where(eq(merchants.id, id));
-      if (aliases) await replaceAliases(tx, "merchant", id, aliases);
-      return changes;
-    });
+    await auditedChange(
+      c,
+      { type: "merchant", id, actionId },
+      async (tx) => {
+        const current = await loadMerchant(tx, id);
+        await checkNames(tx, "merchant", id, { name: input.name, aliases: input.aliases });
+        const changes = diffValues(current, input);
+        if (Object.keys(changes).length === 0) return null;
+        const { aliases, ...fields } = input;
+        await tx
+          .update(merchants)
+          .set({
+            ...fields,
+            ...(fields.name && { nameNormalized: normalizeText(fields.name) }),
+            updatedAt: c.get("clock")(),
+          })
+          .where(eq(merchants.id, id));
+        if (aliases) await replaceAliases(tx, "merchant", id, aliases);
+        return changes;
+      },
+      async (tx) => {
+        const [receipt] = await tx
+          .select({ action: auditEvents.action })
+          .from(auditEvents)
+          .where(eq(auditEvents.clientEventId, actionId))
+          .limit(1);
+        if (receipt?.action === "link_replaced") throw new AppError("idempotency_conflict");
+      },
+    );
     return c.json({ ...(await loadMerchant(db, id)), openShipments: await openShipments(db, id) });
   })
   .get("/:id/pickup-points", validate("param", idParam), async (c) => {

@@ -1,8 +1,9 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 import { createECDH } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { GenericContainer } from "testcontainers";
+import { z } from "zod";
 import { apiPort, webPort } from "./ports";
 
 /**
@@ -43,7 +44,7 @@ async function waitFor(url: string): Promise<void> {
 }
 
 async function signIn(email: string): Promise<string> {
-  const response = await fetch(`http://localhost:${String(apiPort)}/api/auth/sign-in/email`, {
+  const response = await fetch(`http://127.0.0.1:${String(apiPort)}/api/auth/sign-in/email`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -61,7 +62,7 @@ async function saveStorageState(role: string, cookieHeader: string): Promise<voi
     return {
       name,
       value: value.join("="),
-      domain: "localhost",
+      domain: "127.0.0.1",
       path: "/",
       expires: -1,
       httpOnly: true,
@@ -104,7 +105,8 @@ export default async function globalSetup() {
     NODE_ENV: "test",
     DATABASE_URL: container.getConnectionUri(),
     BETTER_AUTH_SECRET: "e2e-secret-with-at-least-thirty-two-characters",
-    APP_URL: `http://localhost:${String(webPort)}`,
+    APP_URL: `http://127.0.0.1:${String(webPort)}`,
+    PUBLIC_BASE_URL: `http://127.0.0.1:${String(webPort)}`,
     API_PORT: String(apiPort),
     EMAIL_FROM: "Domy <no-reply@example.com>",
     DOMY_FAKE_NOW: "2026-10-01T15:00:00Z",
@@ -147,24 +149,32 @@ export default async function globalSetup() {
   // server leads its own process group so teardown also stops what `pnpm exec` started.
   const options = { stdio: ["ignore", "ignore", "inherit"], detached: true } satisfies SpawnOptions;
   // US2 T043: all scenarios use the built shell and real service worker, as phones do.
-  await run("pnpm", ["exec", "vite", "build"], webDir, { API_PORT: String(apiPort) });
+  await run("pnpm", ["exec", "vite", "build"], webDir, {
+    API_PORT: String(apiPort),
+    APP_URL: env.APP_URL,
+    PUBLIC_BASE_URL: env.PUBLIC_BASE_URL,
+  });
   const processes: ChildProcess[] = [
     spawn("node", ["src/index.ts"], {
       ...options,
       cwd: serverDir,
       env: { ...process.env, ...env },
     }),
-    spawn("pnpm", ["exec", "vite", "preview", "--port", String(webPort), "--strictPort"], {
-      ...options,
-      cwd: webDir,
-      env: { ...process.env, API_PORT: String(apiPort) },
-    }),
+    spawn(
+      "pnpm",
+      ["exec", "vite", "preview", "--host", "127.0.0.1", "--port", String(webPort), "--strictPort"],
+      {
+        ...options,
+        cwd: webDir,
+        env: { ...process.env, API_PORT: String(apiPort) },
+      },
+    ),
   ];
-  await waitFor(`http://localhost:${String(apiPort)}/api/auth/get-session`);
-  await waitFor(`http://localhost:${String(webPort)}/`);
+  await waitFor(`http://127.0.0.1:${String(apiPort)}/api/auth/get-session`);
+  await waitFor(`http://127.0.0.1:${String(webPort)}/`);
 
   // The seeded owner sets a known password; then one account per role is created.
-  const api = `http://localhost:${String(apiPort)}/api/auth`;
+  const api = `http://127.0.0.1:${String(apiPort)}/api/auth`;
   const ownerSignIn = await fetch(`${api}/sign-in/email`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -174,22 +184,34 @@ export default async function globalSetup() {
     .getSetCookie()
     .map((cookie) => cookie.split(";")[0])
     .join("; ");
+  const ownerSession = await fetch(`${api}/get-session`, { headers: { cookie: ownerCookie } });
+  if (!ownerSession.ok) throw new Error("Owner session could not be read for the test fixture");
+  const ownerActorId = z
+    .object({ user: z.object({ id: z.uuid() }) })
+    .parse((await ownerSession.json()) as unknown).user.id;
   await fetch(`${api}/change-password`, {
     method: "POST",
     headers: { "content-type": "application/json", cookie: ownerCookie },
     body: JSON.stringify({ currentPassword: ownerPassword, newPassword: password }),
   });
   for (const role of ["dispatcher", "courier"] as const) {
-    await fetch(`${api}/admin/create-user`, {
+    const created = await fetch(`${api}/admin/create-user`, {
       method: "POST",
-      headers: { "content-type": "application/json", cookie: ownerCookie },
+      headers: {
+        "content-type": "application/json",
+        cookie: ownerCookie,
+        origin: `http://127.0.0.1:${String(webPort)}`,
+        "X-Domy-Actor-Id": ownerActorId,
+      },
       body: JSON.stringify({
+        id: crypto.randomUUID(),
         email: `${role}@example.com`,
         password,
         name: role === "dispatcher" ? "John Coordinador" : "Mensajero Uno",
         role,
       }),
     });
+    if (!created.ok) throw new Error(`Test ${role} account could not be created`);
   }
 
   // The courier account is linked to its courier, as the courier app needs (feature 003).
@@ -211,8 +233,21 @@ export default async function globalSetup() {
   await saveStorageState("dispatcher", await signIn("dispatcher@example.com"));
   await saveStorageState("courier", await signIn("courier@example.com"));
 
+  // Private, disposable test fixture access: public-link E2E can read generated codes
+  // before the later panel-link feature exposes them. Never print or bundle this file.
+  const databaseFixture = `${authDir}database.json`;
+  await rm(databaseFixture, { force: true });
+  await writeFile(databaseFixture, JSON.stringify({ databaseUrl: env.DATABASE_URL }), {
+    flag: "wx",
+    mode: 0o600,
+  });
+
   return async () => {
-    for (const child of processes) if (child.pid) process.kill(-child.pid);
-    await Promise.all([container.stop(), storage.stop()]);
+    try {
+      for (const child of processes) if (child.pid) process.kill(-child.pid);
+      await Promise.all([container.stop(), storage.stop()]);
+    } finally {
+      await rm(databaseFixture, { force: true });
+    }
   };
 }

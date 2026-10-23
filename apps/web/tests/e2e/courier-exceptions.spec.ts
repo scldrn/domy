@@ -53,10 +53,12 @@ async function expectSynchronized(page: Page) {
 }
 
 async function reportException(page: Page, photo = false) {
-  await expect(page.getByRole("button", { name: "Reportar novedad" })).toBeVisible();
-  await page.getByRole("button", { name: "Reportar novedad" }).click();
+  await expect(
+    page.getByRole("button", { name: "Destinatario ausente", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Destinatario ausente", exact: true }).click();
   const sheet = page.getByRole("dialog");
-  await sheet.getByRole("radio", { name: "Destinatario ausente" }).check();
+  await expect(sheet).toContainText("Destinatario ausente");
   if (photo) {
     const image = await page.screenshot({ type: "jpeg", quality: 40 });
     const chooser = page.waitForEvent("filechooser");
@@ -64,7 +66,6 @@ async function reportException(page: Page, photo = false) {
     await (await chooser).setFiles({ name: "novedad.jpg", mimeType: "image/jpeg", buffer: image });
     await expect(sheet.getByRole("img", { name: "Foto 1" })).toBeVisible();
   }
-  await sheet.getByRole("button", { name: "Revisar" }).click();
   await expect(sheet).toContainText("Destinatario ausente");
   await sheet.getByRole("button", { name: "Guardar novedad" }).click();
   await expect(sheet).not.toBeVisible();
@@ -112,7 +113,7 @@ test("keeps exception controls above visible synchronization notifications", asy
     element.scrollIntoView({ block: "center", behavior: "instant" });
   });
   await address.click();
-  await page.getByRole("button", { name: "Reportar novedad" }).click();
+  await page.getByRole("button", { name: "Destinatario ausente", exact: true }).click();
   const sheet = page.getByRole("dialog");
   expect(await accessibilityViolations(page)).toEqual([]);
   const photo = sheet.getByRole("button", { name: "Tomar foto" });
@@ -124,8 +125,6 @@ test("keeps exception controls above visible synchronization notifications", asy
     await photo.evaluate(targetIsUncovered),
     "the complete photo target stays above notifications",
   ).toBe(true);
-  await sheet.getByRole("radio", { name: "Destinatario ausente" }).check();
-  await sheet.getByRole("button", { name: "Revisar" }).click();
   const save = sheet.getByRole("button", { name: "Guardar novedad" });
   await expect(page.locator("[data-sonner-toast][data-expanded=true]")).toHaveCount(2);
   await expect(notifications.nth(0)).toBeVisible();
@@ -156,8 +155,9 @@ test("stabilizes notifications below a courier sheet and restores expiry without
   await expect(notifications).toHaveCount(1);
   await page.getByRole("link", { name: "Mi ruta", exact: true }).first().click();
   await openStop(page, "Calle 26 # 40-06");
-  await page.getByRole("button", { name: "Reportar novedad" }).click();
+  await page.getByRole("button", { name: "Destinatario ausente", exact: true }).click();
   const sheet = page.getByRole("dialog");
+  await sheet.getByRole("button", { name: "Corregir" }).click();
   const input = sheet.getByLabel("Nota (opcional)");
   await input.fill("Nota conservada durante la revisión");
   await expect(input).toBeFocused();
@@ -208,7 +208,9 @@ test("reports and replaces a pickup problem, clears it upon pickup and reviews a
   await page.goto("/mensajero");
   await expect(page.getByRole("list", { name: "Paradas" })).toBeVisible();
   await openStop(page, "Calle 21 # 40-01");
-  await expect(page.getByRole("button", { name: "Reportar novedad" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Destinatario ausente", exact: true })).toHaveCount(
+    0,
+  );
   await page.getByRole("link", { name: "Mi ruta", exact: true }).first().click();
   await page.getByRole("list", { name: "Paradas" }).getByRole("link").first().click();
   await expect(
@@ -237,13 +239,24 @@ test("reports and replaces a pickup problem, clears it upon pickup and reviews a
   await card(page, failed).getByRole("button", { name: "Confirmar recogida" }).click();
   await expectSynchronized(page);
   await openStop(page, "Calle 21 # 40-01");
-  await page.getByRole("button", { name: "Reportar novedad" }).click();
+  const exceptionActions = card(page, failed);
+  await expect(
+    exceptionActions.getByRole("button", { name: "Destinatario ausente", exact: true }),
+  ).toBeVisible();
+  await expect(
+    exceptionActions.getByRole("button", { name: "Dirección errada", exact: true }),
+  ).toBeVisible();
+  await expect(
+    exceptionActions.getByRole("button", { name: "Rechazado", exact: true }),
+  ).toBeVisible();
+  await exceptionActions.getByRole("button", { name: "Destinatario ausente" }).click();
   sheet = page.getByRole("dialog");
+  await expect(sheet).toContainText("Destinatario ausente");
+  await sheet.getByRole("button", { name: "Corregir" }).click();
   await expect(sheet.getByRole("radio")).toHaveCount(3);
   await expect(sheet.getByRole("radio", { name: "Dirección errada" })).toBeVisible();
   await expect(sheet.getByRole("radio", { name: "Rechazado" })).toBeVisible();
-  await sheet.getByRole("button", { name: "Revisar" }).click();
-  await expect(sheet.getByText("Elige el motivo de la novedad.")).toBeVisible();
+  await expect(sheet.getByRole("radio", { name: "Destinatario ausente" })).toBeChecked();
   await sheet.getByRole("radio", { name: "Destinatario ausente" }).check();
   await sheet.getByLabel("Nota (opcional)").fill("xyz");
   await sheet.getByRole("button", { name: "Revisar" }).click();
@@ -298,7 +311,8 @@ test("keeps a reported errand pending and clears its problem after completion", 
   await expect(boardRow(office, errand)).toContainText("Problema de recogida");
   await page.getByRole("button", { name: "Completar diligencia" }).click();
   const sheet = page.getByRole("dialog");
-  await sheet.getByRole("button", { name: "Revisar" }).click();
+  await expect(sheet).toContainText("Diligencia completada");
+  await expect(sheet).toContainText(formatTrackingNumber(errand.trackingNumber));
   await sheet.getByRole("button", { name: "Guardar diligencia" }).click();
   await expect(sheet).not.toBeVisible();
   await expectSynchronized(page);

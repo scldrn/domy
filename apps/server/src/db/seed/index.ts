@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { bogotaLocalTimeToInstant, normalizeText, type NeighborhoodKind } from "@domy/domain";
 import { and, eq, isNull } from "drizzle-orm";
 import { createAuth, type Auth } from "../../auth.ts";
+import { createLogger } from "../../lib/logger.ts";
 import { createDb, type Db } from "../client.ts";
 import {
   carriers,
@@ -244,6 +245,7 @@ if (import.meta.main) {
   const db = createDb(url);
   const auth = createAuth({
     db,
+    logger: createLogger("info"),
     secret,
     baseUrl: process.env["APP_URL"] ?? "http://localhost:5173",
     sendResetPassword: () => Promise.resolve(),

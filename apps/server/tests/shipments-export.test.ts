@@ -89,6 +89,7 @@ const expected = (shipment: Shipment) => [
   "",
   "0",
   "",
+  "",
 ];
 
 describe("GET /api/shipments/export", () => {

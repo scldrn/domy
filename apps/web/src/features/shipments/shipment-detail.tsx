@@ -9,6 +9,7 @@ import {
   serviceLevelLabels,
   shipmentKindLabels,
   shipmentStatusLabels,
+  publicOriginSchema,
   type ShipmentDetail as ShipmentDetailData,
   type ShipmentEvent,
 } from "@domy/domain";
@@ -48,6 +49,7 @@ const eventLabels: Record<ShipmentEvent["type"], string> = {
   record_corrected: "Registro corregido",
   record_reverted: "Registro revertido",
   review_cleared: "Revisión resuelta",
+  notified: "Notificado",
 };
 
 /** Field names and value formats of the change history (FR-016). */
@@ -147,6 +149,21 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
   const queryClient = useQueryClient();
   const historyId = useId();
   const [reassigning, setReassigning] = useState(false);
+  async function copyTrackingLink() {
+    try {
+      const origin = publicOriginSchema.parse(import.meta.env.PUBLIC_BASE_URL);
+      const trackingUrl = new URL(
+        `/seguimiento/${encodeURIComponent(shipment.trackingCode)}`,
+        origin,
+      ).toString();
+      await navigator.clipboard.writeText(trackingUrl);
+      toast.success("Enlace de seguimiento copiado");
+    } catch {
+      toast.error(
+        "No pudimos copiar el enlace de seguimiento. Revisa el permiso del portapapeles e inténtalo de nuevo.",
+      );
+    }
+  }
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["shipment", shipment.trackingNumber] });
     await queryClient.invalidateQueries({ queryKey: ["routes-board"] });
@@ -167,6 +184,16 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         description={`${shipment.merchant.name} · ${formatDate(shipment.serviceDate)}`}
         actions={
           <>
+            {(user.role === "owner" || user.role === "dispatcher") && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void copyTrackingLink();
+                }}
+              >
+                Copiar enlace de seguimiento
+              </Button>
+            )}
             <ExceptionActions shipment={shipment} />
             <ClearReviewDialog shipment={shipment} />
             <RecordOnBehalfDialog shipment={shipment} />
@@ -277,6 +304,9 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
         )}
 
         <Section title="Detalles">
+          <Row label="Notificado">
+            {shipment.notifiedAt === null ? "Sin notificar" : formatDateTime(shipment.notifiedAt)}
+          </Row>
           <Row label="Franja">
             {formatWindow(shipment.windowStart, shipment.windowEnd) ?? "Sin franja"}
           </Row>

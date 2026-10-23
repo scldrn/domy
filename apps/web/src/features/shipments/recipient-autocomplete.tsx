@@ -11,13 +11,15 @@ export type RecipientAutofillSetter = UseFormSetValue<ShipmentFormValues>;
  * Preserves required validation if past neighborhood is inactive/missing, without guessing replacements.
  */
 export function applyRecipientAutofill(
-  recipient: RecipientOption,
+  recipient: Omit<RecipientOption, "recipientNeighborhood"> & {
+    recipientNeighborhood: RecipientOption["recipientNeighborhood"] | null;
+  },
   setValue: RecipientAutofillSetter,
 ) {
   setValue("recipientName", recipient.recipientName ?? "");
   setValue("recipientPhone", recipient.recipientPhone ?? "");
   setValue("recipientAddress", recipient.recipientAddress ?? "");
-  if (recipient.recipientNeighborhood && recipient.recipientNeighborhood.isActive !== false) {
+  if (recipient.recipientNeighborhood && recipient.recipientNeighborhood.isActive) {
     setValue("recipientNeighborhood", recipient.recipientNeighborhood);
   } else {
     setValue("recipientNeighborhood", null);

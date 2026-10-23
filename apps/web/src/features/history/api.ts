@@ -8,7 +8,7 @@ export async function searchShipments(
   filters: HistoryFilters,
   cursor: string | null,
 ): Promise<ShipmentSearchResult> {
-  return unwrap<ShipmentSearchResult>(
+  return unwrap(
     api.api.shipments.search.$get({ query: { ...filters, ...(cursor && { cursor }) } }),
   );
 }

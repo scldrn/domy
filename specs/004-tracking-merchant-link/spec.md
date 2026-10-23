@@ -128,8 +128,8 @@ and lets the merchant see yesterday.
 2. **Given** a delivered shipment on that list, **When** it is opened, **Then** the merchant
    sees the received-by name, the time, the proof-of-delivery photos, and the amount
    collected.
-3. **Given** a shipment in "Novedad", **Then** the merchant sees the reason, the note, and
-   every attempt.
+3. **Given** a shipment in "Novedad", **Then** the merchant sees the reason and every attempt. Each nonblank current/attempt
+   note is replaced by a contact-support notice; absent or blank notes show no note.
 4. **Given** the private link, **When** the merchant chooses an earlier date within the last
    30 days, **Then** the page lists that day's shipments.
 5. **Given** the private link of merchant A, **Then** no shipment of another merchant can be
@@ -273,7 +273,9 @@ and lets the merchant see yesterday.
   message when there are none. It shows no balance and no netting (Phase 2).
 - **FR-020**: Opening a shipment of the last 30 days on the merchant page MUST show: the status with its time,
   the received-by name, the proof-of-delivery photos, the amount collected, and for an
-  exception its reason, note, and every attempt. A photo that is pending or no longer
+  exception its reason and every attempt. Per the explicit owner decision of 2026-10-22,
+  every nonblank current/attempt note is replaced by a contact-support notice, including
+  benign notes; absent or blank notes show no note. Stored notes remain unchanged. A photo that is pending or no longer
   available is replaced by a message. The page never shows the recipient's phone, the
   courier's phone, or another merchant's data.
 - **FR-021**: The merchant's private link MUST contain a secret code that cannot be guessed.

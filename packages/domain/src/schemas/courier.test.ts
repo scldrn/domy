@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   collectionProblem,
+  companySettingsInput,
   courierRecordInput,
   courierRecordsBatch,
   exceptionDecisionInput,
@@ -309,5 +310,51 @@ describe("noticeAcknowledgeInput (FR-027)", () => {
         occurredAt: base.occurredAt,
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("companySettingsInput (FR-009, T008, R16)", () => {
+  const actionId = id(10);
+
+  it("accepts independent contact-only patches and explicitly clears a support phone", () => {
+    expect(companySettingsInput.safeParse({ actionId }).success).toBe(true);
+    expect(companySettingsInput.safeParse({ actionId, supportPhone: "3001234567" }).success).toBe(
+      true,
+    );
+    expect(companySettingsInput.safeParse({ actionId, supportPhone: null }).success).toBe(true);
+    expect(
+      companySettingsInput.parse({ actionId, companyName: "  Cohex Medellín  " }).companyName,
+    ).toBe("Cohex Medellín");
+  });
+
+  it.each(["300123456", "30012345678", "+573001234567", "300 123 4567", "abcdefghij"])(
+    "rejects a support phone that is not ten Colombian digits: %s",
+    (supportPhone) => {
+      const parsed = companySettingsInput.safeParse({ actionId, supportPhone });
+      expect(parsed.success).toBe(false);
+      expect(messages(parsed)).toContain("Escribe un teléfono de 10 dígitos.");
+    },
+  );
+
+  it("keeps the office address and neighborhood as an all-or-none patch pair", () => {
+    expect(
+      companySettingsInput.safeParse({
+        actionId,
+        officeAddress: "Carrera 90 # 65C-10",
+        officeNeighborhoodId: id(11),
+      }).success,
+    ).toBe(true);
+    expect(
+      companySettingsInput.safeParse({ actionId, officeAddress: "Carrera 90 # 65C-10" }).success,
+    ).toBe(false);
+    expect(companySettingsInput.safeParse({ actionId, officeNeighborhoodId: id(11) }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a blank company name with a Spanish correction", () => {
+    const parsed = companySettingsInput.safeParse({ actionId, companyName: "   " });
+    expect(parsed.success).toBe(false);
+    expect(messages(parsed)).toContain("Escribe el nombre de la empresa.");
   });
 });

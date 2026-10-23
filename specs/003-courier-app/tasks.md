@@ -386,10 +386,10 @@ disbursement; verify each total and "Efectivo por entregar"
 
 ## Phase 10: Polish & Cross-Cutting Concerns
 
-- [ ] T081 [P] Extend `apps/server/tests/role-permissions.test.ts` with every endpoint of contracts/http-api.md: couriers reach only `/api/courier/*` and their own photos; owner and dispatcher reach the panel endpoints and not `/api/courier/*`; `PATCH /api/settings` owner only (FR-002, Constitution IX)
-- [ ] T082 [P] Extend `apps/server/tests/routes-invariants.test.ts` with courier records in the random sequence, some sent twice and some late: a package has at most one holder (a courier or the office), a shipment delivered or returned has none, and every record sent has exactly one stored row (SC-001, SC-007)
-- [ ] T083 [P] Extend the accessibility checks in `apps/web/tests/e2e/fixtures.ts` to the courier screens at 360 px wide: WCAG 2.2 AA in the standard and high-contrast schemes, touch targets of at least 48 px, and confirming a pickup, confirming a delivery, and reporting an exception within 3 taps of "Mi ruta" (FR-038)
-- [ ] T084 [P] Document in `README.md` the deployment settings of this feature: the private bucket with its 12-month lifecycle rule, the storage and notification keys, how to generate the VAPID key pair, and what the production content security policy must allow for the courier app (`worker-src 'self'`, `manifest-src 'self'`, `img-src 'self' blob:`; research R17)
+- [X] T081 [P] Extend `apps/server/tests/role-permissions.test.ts` with every endpoint of contracts/http-api.md: couriers reach only `/api/courier/*` and their own photos; owner and dispatcher reach the panel endpoints and not `/api/courier/*`; `PATCH /api/settings` owner only (FR-002, Constitution IX)
+- [X] T082 [P] Extend `apps/server/tests/routes-invariants.test.ts` with courier records in the random sequence, some sent twice and some late: a package has at most one holder (a courier or the office), a shipment delivered or returned has none, and every record sent has exactly one stored row (SC-001, SC-007)
+- [X] T083 [P] Extend the accessibility checks in `apps/web/tests/e2e/fixtures.ts` to the courier screens at 360 px wide: WCAG 2.2 AA in the standard and high-contrast schemes, touch targets of at least 48 px, and confirming a pickup, confirming a delivery, and reporting an exception within 3 taps of "Mi ruta" (FR-038)
+- [X] T084 [P] Document in `README.md` the deployment settings of this feature: the private bucket with its 12-month lifecycle rule, the storage and notification keys, how to generate the VAPID key pair, and what the production content security policy must allow for the courier app (`worker-src 'self'`, `manifest-src 'self'`, `img-src 'self' blob:`; research R17)
 - [X] T085 [P] Integration tests in `apps/server/tests/operations-export.test.ts` (FR-042, Constitution IX): owner only; `GET /api/shipments/export` includes the delivery columns of contracts/http-api.md; `GET /api/export/courier-records`, `/routes`, and `/handovers` return CSV with Spanish headers, money as integers, Bogotá dates
 - [X] T086 Extend `apps/server/src/lib/export.ts`, `GET /api/shipments/export` in `apps/server/src/routes/shipments.ts`, and `GET /api/export/:dataset` in `apps/server/src/routes/export.ts` until T085 passes, and add the three exports for the owner to `apps/web/src/routes/history.tsx`
 - [ ] T087 Run every scenario of `specs/003-courier-app/quickstart.md` (1–21) on an Android phone and an iPhone and record the results, with the times of SC-002, in `specs/003-courier-app/quickstart-results.md`
@@ -399,10 +399,10 @@ disbursement; verify each total and "Efectivo por entregar"
 
 They run before T087 and T088, which close the phase.
 
-- [ ] T089 [P] Contract test `apps/server/tests/courier-contract.test.ts`: every endpoint of contracts/http-api.md is registered and every `/api/courier/*`, `/api/courier-records/*`, `/api/photos/*`, and `/api/settings` route is documented; every error code with its status; every body (`CourierSnapshot`, record results, `CourierRecord`, the additions to `Shipment`, `RouteSummary`, `RoutesBoard`, `UnassignedShipment`, and events) with exactly the documented shape
-- [ ] T090 [P] Security test `apps/server/tests/courier-security.test.ts`: a courier reads only their own route, held packages, notices, summary, and photos, and never another courier's; records stated for another courier are attributed to the signed-in one; a batch above 50 records, a record with malformed fields, and a body above 1 MB are refused without effect; an `occurredAt` in the future is clamped to the time received; a photo id not declared by one of the courier's records is refused; push payloads carry no personal data; a deactivated courier's session is refused at the next request (FR-002–FR-004, FR-019, FR-040, Constitution IX)
-- [ ] T091 [P] Performance test `apps/server/tests/courier-scale.test.ts` over the busy day of feature 002's `routes-scale.test.ts`: the snapshot of a route of 15 shipments answers in under 500 ms and a batch of 50 records is applied in under 2 seconds; record the timings in `specs/003-courier-app/quickstart-results.md` (SC-003, SC-004)
-- [ ] T092 [P] Web unit tests next to the code for the courier screens' pure logic and components rendered to HTML: the collection split and its note rule, the received-by name proposed per shipment kind, notice texts per type, the pending counter and its 2-hour warning, the session warning, and the stop actions shown per task state (FR-005–FR-017, FR-020, FR-027)
+- [X] T089 [P] Contract test `apps/server/tests/courier-contract.test.ts`: every endpoint of contracts/http-api.md is registered and every `/api/courier/*`, `/api/courier-records/*`, `/api/photos/*`, and `/api/settings` route is documented; every error code with its status; every body (`CourierSnapshot`, record results, `CourierRecord`, the additions to `Shipment`, `RouteSummary`, `RoutesBoard`, `UnassignedShipment`, and events) with exactly the documented shape
+- [X] T090 [P] Security test `apps/server/tests/courier-security.test.ts`: a courier reads only their own route, held packages, notices, summary, and photos, and never another courier's; records stated for another courier are attributed to the signed-in one; a batch above 50 records, a record with malformed fields, and a body above 1 MB are refused without effect; an `occurredAt` in the future is clamped to the time received; a photo id not declared by one of the courier's records is refused; push payloads carry no personal data; a deactivated courier's session is refused at the next request (FR-002–FR-004, FR-019, FR-040, Constitution IX)
+- [X] T091 [P] Performance test `apps/server/tests/courier-scale.test.ts` over the busy day of feature 002's `routes-scale.test.ts`: the snapshot of a route of 15 shipments answers in under 500 ms and a batch of 50 records is applied in under 2 seconds; record the timings in `specs/003-courier-app/quickstart-results.md` (SC-003, SC-004)
+- [X] T092 [P] Web unit tests next to the code for the courier screens' pure logic and components rendered to HTML: the collection split and its note rule, the received-by name proposed per shipment kind, notice texts per type, the pending counter and its 2-hour warning, the session warning, and the stop actions shown per task state (FR-005–FR-017, FR-020, FR-027)
 - [ ] T093 Usability and interface review of the courier app on a phone (360 and 390 px, light, dark, and high contrast, one hand): walk a whole route offline and online, time SC-002's deliveries, count the taps of FR-038, check every screen against `docs/design-system.md` (courier app first: bottom navigation, connectivity banner, sync badge, primary actions in the bottom third), and the panel additions against feature 002's screens; fix what fails, test-first when it is behavior, and record the findings in `specs/003-courier-app/quickstart-results.md`
 - [X] T094 Link a courier account to its courier (FR-002): `PUT /api/couriers/accounts/:userId` (owner only, one transaction, an audit event per courier changed) in `apps/server/src/routes/couriers.ts`, `account` on `GET /api/couriers`, the role of a linked account locked in `apps/server/src/routes/auth.ts`; "Mensajero vinculado" in `apps/web/src/features/users/account-dialog.tsx`, the linked courier on "Usuarios" and the account on "Mensajeros"; integration tests in `apps/server/tests/courier-accounts.test.ts` and an end-to-end step in `apps/web/tests/e2e/access.spec.ts` (found while building US1: nothing linked an account to its courier)
 
@@ -1166,7 +1166,7 @@ no causal patch, feature-wide polish or physical-validation completion is author
 ## Phase 43: Convergence
 
 - [X] T134 CRITICAL Preserve first-acknowledged proof-photo evidence on retry. Reproduce IV-31 with PostgreSQL and private S3 storage: a different body under an already uploaded UUID currently overwrites bytes and arrival metadata. Align the immutable upload/replay contract, then add same/different-body, concurrent-upload, lost-response, storage/metadata failure and retention regressions before implementation. Preserve upload-after-record ordering and authorization; do not confuse this reproduced overwrite with T133's separate access-lifecycle question (FR-023, Constitution II/IV; contradicts).
-- [ ] T135 HIGH Keep an existing courier-account link when the owner edits an account before courier query readiness or while its linked courier is inactive. Reproduce IV-26 first in the browser with a held real GET: opening before load and saving afterward currently unlinks it (200). Wait for authoritative initialization or preserve untouched link intent, show failed loads, and distinguish deliberate unlink/relink from missing list data. Cover lost responses with 001 T132 without duplicating its account-action work (FR-002, T094; contradicts).
+- [X] T135 HIGH Keep an existing courier-account link when the owner edits an account before courier query readiness or while its linked courier is inactive. Reproduce IV-26 first in the browser with a held real GET: opening before load and saving afterward currently unlinks it (200). Wait for authoritative initialization or preserve untouched link intent, show failed loads, and distinguish deliberate unlink/relink from missing list data. Cover lost responses with 001 T132 without duplicating its account-action work (FR-002, T094; contradicts).
 
 T131 local closure (2026-10-19 UTC): PR #30 final-head CI `39197282004` at
 `682bc97` reproduces the recovery failure (91 first-attempt passes/one flaky);
@@ -1218,3 +1218,30 @@ this subsequent tracking closes T131 locally. Reviewer checklists stay read-only
 Publication is authorized; actual clean latest-head CI/review remain required before
 squash. PR #30 stays held until this correction merges, its branch is reconciled
 and its own final head passes cleanly. No physical/privacy/account/global sign-off.
+
+
+### T084 local deployment documentation closure — 2026-10-21
+
+Root approved README/quickstart configuration guidance after executor N1 and independent
+N2 on isolated run phone-20261021-d: private build/seal, real TLS/auth/roles/storage
+verification and graceful app restart passed. See courier-deployment-results.md and
+local-target-rehearsal-results.md. Actual provider 12-month lifecycle, email/push delivery
+and production CSP remain separate operational evidence. Physical T093/T087 and final
+T088 remain unchecked. Local catalog 43/81 verified (53%), 38 open.
+
+
+### T093 preparation checkpoint (not closure) — 2026-10-21
+
+Agent browser preflight and four isolated per-device fixtures passed local
+double QA. See quickstart-results.md for the exact scope and screenshots.
+No camera/offline/restart/timing or all-scenario physical completion is inferred.
+T093/T087/T088 remain unchecked; catalog 43/81 (53%).
+
+## Recovered transport task — 2026-10-23
+
+- [X] T136 HIGH Consolidate the approved PR30 literal-loopback correction into the current browser harness. Preserve the failing native DNS-refusal control, coherent origin/cookies/preview/proxy and current public fixtures. Run check, full tests, zero-retry E2E and build locally before publishing the unified candidate; retain all historical failures. This existing task remains outside the 81-entry integral catalog.
+
+T136 revalidation: check, 1,626 tests, 155 zero-retry E2E and build pass on final
+frozen source; [receipt](../../docs/repository-consolidation-results.md). The owner
+requires local-only validation, superseding the historical remote-CI prerequisite.
+No physical task is closed by this transport consolidation.

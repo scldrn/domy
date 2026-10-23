@@ -1,4 +1,5 @@
-import { serve } from "@hono/node-server";
+import { createServer } from "node:http";
+import { getRequestListener } from "@hono/node-server";
 import * as Sentry from "@sentry/node";
 import { createApp } from "./app.ts";
 import type { AuthConfig } from "./auth.ts";
@@ -8,6 +9,8 @@ import { createClock } from "./lib/clock.ts";
 import { createMailer } from "./lib/email.ts";
 import { setErrorReporter } from "./lib/errors.ts";
 import { createLogger } from "./lib/logger.ts";
+import { reportingPrivacy } from "./lib/reporting-privacy.ts";
+import { registerGracefulShutdown, type RuntimeState } from "./lib/runtime-lifecycle.ts";
 import { createStorage } from "./lib/storage.ts";
 
 const env = readEnv();
@@ -15,7 +18,7 @@ const logger = createLogger(env.NODE_ENV === "production" ? "info" : "debug");
 
 // Server error reporting, only when configured (research R14).
 if (env.SENTRY_DSN) {
-  Sentry.init({ dsn: env.SENTRY_DSN, environment: env.NODE_ENV });
+  Sentry.init({ ...reportingPrivacy, dsn: env.SENTRY_DSN, environment: env.NODE_ENV });
   setErrorReporter((error) => Sentry.captureException(error));
 }
 const db = createDb(env.DATABASE_URL);
@@ -30,13 +33,14 @@ const authConfig: AuthConfig = {
   baseUrl: env.APP_URL,
   sendResetPassword: mailer.sendResetPassword,
 };
+const runtime: RuntimeState = { draining: false, readinessProbe: undefined };
 
 const storage = createStorage(env.storage);
 if (env.NODE_ENV !== "production") {
   // Development and tests create the bucket; production provisions it with its 12-month
   // lifecycle rule (research R6).
-  await storage.ensureBucket().catch((error: unknown) => {
-    logger.warn({ error: String(error) }, "photo storage unavailable; photos will fail");
+  await storage.ensureBucket().catch(() => {
+    logger.warn({ outcome: "failed" }, "photo storage unavailable; photos will fail");
   });
 }
 
@@ -50,8 +54,14 @@ const app = createApp({
   authConfig,
   clock: () => clock(),
   logger,
+  publicBaseUrl: env.PUBLIC_BASE_URL,
   storage,
   push: env.push,
+  runtime,
+  ...(env.DOMY_TRUSTED_PROXY_IP === undefined ? {} : { trustedProxyIp: env.DOMY_TRUSTED_PROXY_IP }),
+  ...(env.browserReportingOrigin === undefined
+    ? {}
+    : { browserReportingOrigin: env.browserReportingOrigin }),
   ...(env.NODE_ENV === "production" && { webDist: "../web/dist" }),
   ...(env.NODE_ENV === "test" && {
     setNow: (instant: string) => {
@@ -61,6 +71,10 @@ const app = createApp({
   }),
 });
 
-serve({ fetch: app.fetch, port: env.API_PORT }, (info) => {
-  logger.info({ port: info.port }, "server listening");
+// The adapter handles asynchronous listener errors; Node ignores its return value.
+// eslint-disable-next-line @typescript-eslint/no-misused-promises
+const server = createServer(getRequestListener(app.fetch));
+server.listen(env.API_PORT, () => {
+  logger.info({ port: env.API_PORT }, "server listening");
 });
+registerGracefulShutdown({ server, db, runtime, logger });

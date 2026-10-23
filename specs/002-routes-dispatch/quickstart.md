@@ -16,13 +16,18 @@ endpoints in [contracts/http-api.md](contracts/http-api.md). Setup and gates are
 pnpm check
 pnpm test
 pnpm test:e2e
+pnpm build
 ```
 
 ## Manual validation scenarios
 
-Scenarios that need a completed stop (marked ⚙) are validated by automated tests, which set
-task statuses directly, until feature 003 provides the courier's and the dispatcher's
-actions to complete stops.
+Scenarios requiring courier completion (marked ⚙) use feature 003's real records.
+Integration helpers `pickUp` and `finishTask` in `apps/server/tests/setup/routes.ts`
+call `applyCourierRecord`, including custody/history transactions; they do not directly
+set completed-task statuses. Browser courier flows exercise the actual HTTP/session
+boundary. For a manual walkthrough, use a linked courier account or the authorized
+panel action and confirm the resulting custody and history. These automated results
+do not replace the dispatcher timing or Android/iPhone acceptance receipts.
 
 | # | Story | Steps | Expected |
 | --- | --- | --- | --- |

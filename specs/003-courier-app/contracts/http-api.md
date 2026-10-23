@@ -96,12 +96,22 @@ revert is still recognized before this guard and does not undo any intervening o
 ## Changes to the contracts of features 001 and 002
 
 - **`GET /api/couriers`**: each courier gains `account: { id, email } | null` (FR-002).
+  With `active` omitted, the response includes both active and inactive couriers; `active=true`
+  is only an active-courier projection. Account editing reads the unfiltered collection so a
+  link that predates courier deactivation remains visible. An unchanged existing link is
+  preserved without submitting a new link action; only an explicit unlink or relink changes
+  it. The endpoint still refuses a new link to an inactive courier with
+  `409 courier_account_invalid`.
 - **`PUT /api/couriers/accounts/:userId`** (owner only, new): `{ actionId, courierId | null }`
   → `{ courier: Courier | null }`. Links the account to the courier, or unlinks it, in one
   transaction: the account leaves its previous courier and replaces the courier's previous
   account, with an audit event per courier changed. `409 courier_account_invalid` for an
   account that is not an active courier account or a courier that is deactivated; `404` for
-  an unknown account or courier (FR-002).
+  an unknown account or courier (FR-002). Requires `X-Domy-Actor-Id`, the UUID from the
+  client's session snapshot; missing/malformed values return `400 invalid_request`, and a
+  mismatch with the authenticated owner returns `409 actor_changed` before audit receipt
+  lookup, with no link or audit effect. The header binds the pending intent and does not
+  grant authorization.
   Every accepted `actionId` is remembered, including an unchanged link or unlink. Such a
   request writes an `updated` audit receipt with empty `changes`, for the courier when
   linked or the user when already unlinked, without updating the courier. A replay returns

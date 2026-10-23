@@ -8,7 +8,7 @@ import {
   resumeCourierSynchronization,
 } from "@/features/courier/courier-store";
 import { claimCourierDb, clearCourierDb, courierMeta, CourierDataError } from "@/lib/offline/db";
-import { ApiError } from "@/lib/api-client";
+import { ApiError, apiErrorBody } from "@/lib/api-client";
 import { syncClock } from "@/lib/clock";
 import { removePush } from "@/lib/offline/push";
 
@@ -24,16 +24,22 @@ const networkError = new ApiError(0, {
   message: "No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.",
 });
 
-async function authRequest(path: string, body?: unknown, signal?: AbortSignal): Promise<Response> {
+async function authRequest(
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+  headers?: Record<string, string>,
+): Promise<Response> {
   try {
     const response = await fetch(`/api/auth/${path}`, {
       method: body === undefined ? "GET" : "POST",
       credentials: "include",
       ...(signal && { signal }),
       ...(body !== undefined && {
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...headers },
         body: JSON.stringify(body),
       }),
+      ...(body === undefined && headers && { headers }),
     });
     syncClock(response.headers.get("date"));
     return response;
@@ -136,11 +142,10 @@ export async function signIn(email: string, password: string): Promise<void> {
       }
       return;
     }
-    const body = (await response.json().catch(() => ({}))) as {
-      code?: string;
-      error?: { code: string; message: string };
-    };
-    if (body.error) throw new ApiError(response.status, body.error);
+    const body = z
+      .object({ code: z.string().optional(), error: apiErrorBody.optional() })
+      .safeParse(await response.json().catch(() => null));
+    if (body.success && body.data.error) throw new ApiError(response.status, body.data.error);
     const messages: Record<number, string> = {
       401: "El correo o la contraseña no son correctos.",
       403: "Tu cuenta está desactivada. Comunícate con el propietario.",
@@ -148,7 +153,10 @@ export async function signIn(email: string, password: string): Promise<void> {
     };
     const message =
       messages[response.status] ?? "No pudimos iniciar sesión. Intenta de nuevo en un momento.";
-    throw new ApiError(response.status, { code: body.code ?? "sign_in_failed", message });
+    throw new ApiError(response.status, {
+      code: (body.success ? body.data.code : undefined) ?? "sign_in_failed",
+      message,
+    });
   } finally {
     resumeCourierSynchronization();
   }
@@ -179,6 +187,8 @@ export async function signOut(): Promise<void> {
 }
 
 /** Better Auth error codes, said in Spanish. */
+const actorChangedMessage =
+  "La sesión cambió de cuenta. Reabre la cuenta original para recuperar o continuar el cambio pendiente.";
 const authMessages: Record<string, string> = {
   USER_ALREADY_EXISTS: "Ya existe una cuenta con ese correo.",
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: "Ya existe una cuenta con ese correo.",
@@ -188,19 +198,30 @@ const authMessages: Record<string, string> = {
   INVALID_TOKEN: "El enlace no es válido o venció. Pide uno nuevo.",
   INVALID_EMAIL: "Escribe un correo válido.",
   YOU_CANNOT_BAN_YOURSELF: "No puedes desactivar tu propia cuenta.",
+  actor_changed: actorChangedMessage,
 };
 
 /**
  * A Better Auth call that throws an ApiError with a Spanish message; Domy's own rules
  * (lockout, last owner) already answer in Spanish.
  */
-export async function authCall<T>(path: string, body?: unknown): Promise<T> {
-  const response = await authRequest(path, body);
-  const json = (await response.json().catch(() => null)) as
-    (T & { code?: string; error?: { code: string; message: string } }) | null;
-  if (response.ok) return json as T;
-  if (json?.error) throw new ApiError(response.status, json.error);
-  const code = json?.code ?? "auth_error";
+export async function authCall(
+  path: string,
+  body?: unknown,
+  headers?: Record<string, string>,
+): Promise<unknown> {
+  const response = await authRequest(path, body, undefined, headers);
+  const json: unknown = await response.json().catch(() => null);
+  if (response.ok) return json;
+  const envelope = z.object({ error: apiErrorBody }).safeParse(json);
+  if (envelope.success) {
+    const error = envelope.data.error;
+    if (error.code === "actor_changed")
+      throw new ApiError(response.status, { ...error, message: actorChangedMessage });
+    throw new ApiError(response.status, error);
+  }
+  const nativeError = z.object({ code: z.string() }).safeParse(json);
+  const code = nativeError.success ? nativeError.data.code : "auth_error";
   throw new ApiError(response.status, {
     code,
     message: authMessages[code] ?? "No pudimos completar la acción. Intenta de nuevo.",

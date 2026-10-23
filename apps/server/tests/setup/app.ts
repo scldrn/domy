@@ -22,6 +22,9 @@ export function createTestApp(
     now?: string;
     logger?: Logger;
     storage?: PhotoStorage;
+    publicBaseUrl?: string;
+    webDist?: string;
+    monotonicNow?: () => number;
     /** US5/T061 uses real VAPID configuration; only the external push transport is spied. */
     push?: { publicKey: string; privateKey: string; subject: string };
     sendResetPassword?: (data: { email: string; name: string; url: string }) => Promise<void>;
@@ -39,13 +42,17 @@ export function createTestApp(
       }
     },
   };
-  const auth = createAuth({ db, ...authConfig });
+  const logger = options.logger ?? pino({ level: "silent" });
+  const auth = createAuth({ db, ...authConfig, logger });
   const app = createApp({
     db,
     authConfig,
     clock: () => now,
-    logger: options.logger ?? pino({ level: "silent" }),
+    logger,
+    publicBaseUrl: options.publicBaseUrl ?? "http://localhost:5173",
     storage: options.storage ?? noStorage,
+    ...(options.webDist && { webDist: options.webDist }),
+    ...(options.monotonicNow && { monotonicNow: options.monotonicNow }),
     ...(options.push && { push: options.push }),
   });
 
@@ -74,12 +81,13 @@ export function createTestApp(
   /** Sends a JSON request as a signed-in user. */
   async function request(
     path: string,
-    init: { method?: string; cookie?: string; body?: unknown } = {},
+    init: { method?: string; cookie?: string; body?: unknown; actorId?: string } = {},
   ) {
     return app.request(path, {
       method: init.method ?? "GET",
       headers: {
         ...(init.cookie && { cookie: init.cookie }),
+        ...(init.actorId && { "X-Domy-Actor-Id": init.actorId }),
         ...(init.body !== undefined && { "content-type": "application/json" }),
       },
       ...(init.body !== undefined && { body: JSON.stringify(init.body) }),

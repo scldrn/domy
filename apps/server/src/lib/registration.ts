@@ -28,6 +28,7 @@ import {
   shipments,
 } from "../db/schema/index.ts";
 import { AppError } from "./errors.ts";
+import { generateSecretCode } from "./secret-code.ts";
 import { isUniqueViolation } from "./validate.ts";
 
 /**
@@ -277,26 +278,38 @@ export async function insertShipments(
     try {
       return await db.transaction(async (tx) => {
         await before?.(tx);
+        const prepared = rows.map((row) => ({
+          ...row,
+          trackingNumber: generateTrackingNumber(),
+          trackingCode: generateSecretCode(),
+        }));
         const inserted = await tx
           .insert(shipments)
-          .values(rows.map((row) => ({ ...row, trackingNumber: generateTrackingNumber() })))
+          .values(prepared)
           .onConflictDoNothing({ target: shipments.id })
           .returning({ id: shipments.id });
         const insertedIds = new Set(inserted.map((r) => r.id));
-        const newlyInserted = rows.filter((row) => insertedIds.has(row.id));
+        const newlyInserted = prepared.filter((row) => insertedIds.has(row.id));
         if (newlyInserted.length > 0) {
           await tx.insert(shipmentEvents).values(
-            newlyInserted.map(({ recipientNameNormalized: _, trackingNumber: __, ...values }) => ({
-              shipmentId: values.id,
-              type: "created" as const,
-              toStatus: "registered" as const,
-              actorUserId: values.registeredBy,
-              occurredAt: values.registeredAt,
-              reason: values.feeOverrideReason,
-              changes: Object.fromEntries(
-                Object.entries(values).map(([field, value]) => [field, [null, value]]),
-              ),
-            })),
+            newlyInserted.map(
+              ({
+                recipientNameNormalized: _,
+                trackingNumber: __,
+                trackingCode: ___,
+                ...values
+              }) => ({
+                shipmentId: values.id,
+                type: "created" as const,
+                toStatus: "registered" as const,
+                actorUserId: values.registeredBy,
+                occurredAt: values.registeredAt,
+                reason: values.feeOverrideReason,
+                changes: Object.fromEntries(
+                  Object.entries(values).map(([field, value]) => [field, [null, value]]),
+                ),
+              }),
+            ),
           );
         }
         await after?.(tx, inserted);

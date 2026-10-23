@@ -31,7 +31,7 @@ function ShipmentEditPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title={title} />
       {isEditable(shipment.status) ? (
-        <ShipmentForm key={shipment.version} shipment={shipment} />
+        <ShipmentForm key={`${shipment.id}:${String(shipment.version)}`} shipment={shipment} />
       ) : (
         <p className="text-body-l text-on-surface-variant">
           Este envío ya fue recogido o está anulado; no se puede editar.{" "}

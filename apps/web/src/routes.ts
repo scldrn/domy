@@ -8,6 +8,8 @@ export const routes = rootRoute("root.tsx", [
   route("/ingresar", "sign-in.tsx"),
   route("/recuperar", "recover.tsx"),
   route("/restablecer", "reset-password.tsx"),
+  route("/seguimiento/$code", "tracking.tsx"),
+  route("/cliente/$code", "merchant-page.tsx"),
   // The courier app (feature 003).
   layout("courier", "courier-layout.tsx", [
     route("/mensajero", "courier-route.tsx"),
@@ -22,6 +24,7 @@ export const routes = rootRoute("root.tsx", [
     route("/envios/$trackingNumber", "shipment-detail.tsx"),
     route("/envios/$trackingNumber/editar", "shipment-edit.tsx"),
     route("/historial", "history.tsx"),
+    route("/notificar", "notify-merchants.tsx"),
     route("/rutas", "routes-board.tsx"),
     route("/rutas/$routeId", "route-detail.tsx"),
     route("/clientes", "merchants.tsx"),

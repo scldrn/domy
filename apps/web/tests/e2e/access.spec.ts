@@ -50,7 +50,7 @@ test("gives each role its own access (scenario 13)", async ({ ownerPage, browser
 
   const dispatcher = await signInAs(browser, `coordinadora${run}@example.com`);
   await expect(dispatcher.getByRole("heading", { name: "Tablero de despacho" })).toBeVisible();
-  await expect(dispatcher.getByRole("link", { name: "Clientes" })).toBeVisible();
+  await expect(dispatcher.getByRole("link", { name: "Clientes", exact: true })).toBeVisible();
   await expect(dispatcher.getByRole("link", { name: "Usuarios" })).toHaveCount(0);
   await expect(dispatcher.getByRole("link", { name: "Auditoría" })).toHaveCount(0);
   await dispatcher.goto("/tarifario");
@@ -525,7 +525,7 @@ test("recovers access with the emailed link", async ({ ownerPage, browser }) => 
   await expect(page.getByText(/Si el correo está registrado, te enviamos un enlace/)).toBeVisible();
 
   const emails = (await (
-    await fetch(`http://localhost:${String(apiPort)}/api/test/emails`)
+    await fetch(`http://127.0.0.1:${String(apiPort)}/api/test/emails`)
   ).json()) as {
     items: { email: string; url: string }[];
   };

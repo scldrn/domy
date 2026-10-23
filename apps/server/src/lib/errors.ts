@@ -7,13 +7,29 @@ import { isAbsolute, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DrizzleQueryError } from "drizzle-orm";
 import postgres from "postgres";
+import { isPublicResponsePath } from "./public-path.ts";
 
 /** Error codes of the API contract, each with its HTTP status and default Spanish message. */
 const errorCatalog = {
+  actor_changed: [
+    409,
+    "La sesión cambió de cuenta. Reabre la cuenta original para recuperar o continuar el cambio pendiente.",
+  ],
+  idempotency_conflict: [
+    409,
+    "Esta acción ya tiene otros datos. Revisa el resultado anterior antes de intentar de nuevo.",
+  ],
   invalid_request: [400, "Revisa los datos marcados."],
+  date_out_of_range: [422, "Elige una fecha dentro de los últimos 30 días."],
   unauthenticated: [401, "Tu sesión terminó. Ingresa de nuevo."],
   forbidden: [403, "No tienes permiso para esta acción."],
   not_found: [404, "No encontramos lo que buscas."],
+  // Public links and abuse guard (feature 004, FR-011, research R6/R14).
+  link_not_found: [404, "Este enlace no es válido"],
+  rate_limited: [
+    429,
+    "Has realizado demasiadas solicitudes. Espera un minuto e inténtalo de nuevo.",
+  ],
   version_conflict: [409, "Alguien cambió este registro. Revisa la versión más reciente."],
   invalid_transition: [409, "Este cambio no está permitido en el estado actual."],
   duplicate_alias: [409, "Ese nombre ya identifica a otro registro."],
@@ -201,6 +217,11 @@ export function setErrorReporter(reporter: ((error: Error) => void) | null): voi
 
 /** Hono error handler: every non-2xx response has the body `{ error: { code, message, fields? } }`. */
 export function handleError(error: Error, c: Context<AppEnv>) {
+  if (isPublicResponsePath(c.req.path)) {
+    c.header("Cache-Control", "no-store");
+    c.header("X-Robots-Tag", "noindex");
+  }
+
   // A body Hono could not read (broken JSON) is the client's mistake, not ours (research R13).
   if (error instanceof HTTPException && error.status < 500) {
     return handleError(

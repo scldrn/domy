@@ -1,20 +1,28 @@
 import {
+  packageSize,
+  paymentMode,
+  neighborhoodKind,
   presetFromWindow,
-  type PackageSize,
-  type PaymentMode,
-  type ServiceLevel,
+  serviceLevel,
+  shipmentKind,
+  shipmentCreateInput,
+  shipmentUpdateInput,
   type Shipment,
   type ShipmentCreateInput,
   type ShipmentKind,
   type ShipmentUpdateInput,
+  type PackageSize,
+  type PaymentMode,
+  type ServiceLevel,
   type WindowPreset,
 } from "@domy/domain";
-import type { NeighborhoodOption, NamedOption } from "./api";
+import { z } from "zod";
+import type { MerchantOption, NeighborhoodOption } from "./api";
 
 /** What the registration form holds; turned into `ShipmentCreateInput` on save. */
 export type ShipmentFormValues = {
   kind: ShipmentKind;
-  merchant: NamedOption | null;
+  merchant: MerchantOption | null;
   pickupPointId: string | null;
   pickupAddress: string;
   pickupNeighborhood: NeighborhoodOption | null;
@@ -39,6 +47,178 @@ export type ShipmentFormValues = {
   merchantReference: string;
   instructions: string;
 };
+
+const merchantDraftOption = z.looseObject({
+  id: z.uuid(),
+  name: z.string(),
+  aliases: z.array(z.string()).default([]),
+});
+
+const neighborhoodDraftOption = z.looseObject({
+  id: z.uuid(),
+  name: z.string(),
+  kind: neighborhoodKind,
+  needsReview: z.boolean(),
+  municipality: z.looseObject({ id: z.string(), name: z.string() }),
+  rateZone: z.looseObject({ id: z.string(), name: z.string() }),
+});
+
+/** Incomplete values are valid drafts; only the final request uses shipmentCreateInput. */
+export const shipmentFormValuesSchema = z.strictObject({
+  kind: shipmentKind,
+  merchant: merchantDraftOption.nullable(),
+  pickupPointId: z.string().nullable(),
+  pickupAddress: z.string(),
+  pickupNeighborhood: neighborhoodDraftOption.nullable(),
+  recipientName: z.string(),
+  recipientPhone: z.string(),
+  recipientAddress: z.string(),
+  recipientNeighborhood: neighborhoodDraftOption.nullable(),
+  handoffPlace: neighborhoodDraftOption.nullable(),
+  carrierId: z.string(),
+  destinationTown: z.string(),
+  errandDescription: z.string(),
+  paymentMode,
+  codAmount: z.number().nullable(),
+  serviceLevel,
+  fee: z.number().nullable(),
+  feeOverridden: z.boolean(),
+  feeOverrideReason: z.string(),
+  serviceDate: z.string(),
+  window: z.strictObject({
+    preset: z.enum(["none", "morning", "afternoon", "before", "after", "between"]),
+    start: z.string(),
+    end: z.string(),
+  }),
+  packageSize: z.union([packageSize, z.literal("")]),
+  packageCount: z.string(),
+  merchantReference: z.string(),
+  instructions: z.string(),
+});
+
+const stableJson = (value: unknown): string => {
+  const sorted = (entry: unknown): unknown => {
+    if (Array.isArray(entry)) return entry.map(sorted);
+    if (typeof entry !== "object" || entry === null) return entry;
+    return Object.fromEntries(
+      Object.entries(entry)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, sorted(nested)]),
+    );
+  };
+  return JSON.stringify(sorted(value));
+};
+
+const shipmentPendingMutationSchema = z
+  .unknown()
+  .nullable()
+  .transform((value, context) => {
+    if (value === null) return null;
+    const parsed = z
+      .union([
+        z.strictObject({ operation: z.literal("create"), input: shipmentCreateInput }),
+        z.strictObject({
+          operation: z.literal("update"),
+          shipmentId: z.uuid(),
+          input: shipmentUpdateInput,
+        }),
+      ])
+      .safeParse(value);
+    if (!parsed.success || stableJson(parsed.data) !== stableJson(value)) {
+      context.addIssue({ code: "custom", message: "La solicitud pendiente no es válida." });
+      return z.NEVER;
+    }
+    return parsed.data;
+  });
+export type ShipmentPendingMutation = Exclude<z.output<typeof shipmentPendingMutationSchema>, null>;
+
+const shipmentDraftEnvelopeSchema = z
+  .strictObject({
+    form: shipmentFormValuesSchema,
+    pending: shipmentPendingMutationSchema,
+    needsIntentAcknowledgement: z.boolean(),
+    baseVersion: z.number().int().min(1).nullable(),
+  })
+  .superRefine((draft, context) => {
+    if (
+      draft.pending?.operation === "update" &&
+      draft.pending.input.version !== draft.baseVersion
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["pending", "input", "version"],
+        message: "La versión de la solicitud pendiente no coincide con el borrador.",
+      });
+    }
+    if (draft.pending?.operation === "create" && draft.baseVersion !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["baseVersion"],
+        message: "Un registro nuevo no debe tener una versión base de edición.",
+      });
+    }
+  });
+
+/**
+ * Legacy `{id, values: ShipmentFormValues}` snapshots remain readable, but their values do not
+ * record whether a request was sent. New snapshots persist exact requests before networking.
+ */
+export const shipmentDraftValuesSchema = z.union([
+  shipmentDraftEnvelopeSchema,
+  shipmentFormValuesSchema.transform((form) => ({
+    form,
+    pending: null,
+    needsIntentAcknowledgement: true,
+    baseVersion: null,
+  })),
+]);
+
+export type ShipmentDraftValues = {
+  form: ShipmentFormValues;
+  pending: ShipmentPendingMutation | null;
+  needsIntentAcknowledgement: boolean;
+  baseVersion: number | null;
+};
+
+export function shipmentDraftValues(
+  form: ShipmentFormValues,
+  pending: ShipmentPendingMutation | null = null,
+  needsIntentAcknowledgement = false,
+  baseVersion: number | null = null,
+): ShipmentDraftValues {
+  return { form, pending, needsIntentAcknowledgement, baseVersion };
+}
+
+/** A pending mutation belongs to the same intent and route that will retry it. */
+export function shipmentDraftSnapshotMatchesRoute(
+  id: string,
+  values: ShipmentDraftValues,
+  shipment: Pick<Shipment, "id" | "version"> | undefined,
+): boolean {
+  if (values.pending === null) return true;
+  if (values.pending.operation === "create") {
+    if (shipment || values.pending.input.id !== id) return false;
+    const expected = shipmentCreateInput.safeParse(
+      toCreateInput(values.form, id, values.pending.input.confirmed ?? false),
+    );
+    return expected.success && stableJson(expected.data) === stableJson(values.pending.input);
+  }
+  if (
+    !shipment ||
+    values.pending.shipmentId !== shipment.id ||
+    values.pending.input.actionId !== id ||
+    values.baseVersion !== values.pending.input.version
+  )
+    return false;
+  const create = shipmentCreateInput.safeParse(
+    toCreateInput(values.form, shipment.id, values.pending.input.confirmed ?? false),
+  );
+  if (!create.success) return false;
+  const expected = shipmentUpdateInput.safeParse(
+    toUpdateInput(create.data, values.form, { version: values.pending.input.version }, id),
+  );
+  return expected.success && stableJson(expected.data) === stableJson(values.pending.input);
+}
 
 /** A one-off pickup address instead of one of the merchant's pickup points. */
 export const otherPickupAddress = "other";
@@ -169,7 +349,7 @@ export function fromShipment(shipment: Shipment): ShipmentFormValues {
   });
   return {
     kind: shipment.kind,
-    merchant: shipment.merchant,
+    merchant: { ...shipment.merchant, aliases: [] },
     pickupPointId: shipment.pickupPointId ?? otherPickupAddress,
     pickupAddress: shipment.pickupPointId ? "" : shipment.pickupAddress,
     pickupNeighborhood: shipment.pickupPointId ? null : place(shipment.pickupNeighborhood),
@@ -207,7 +387,7 @@ export function fromShipment(shipment: Shipment): ShipmentFormValues {
 export function toUpdateInput(
   input: ShipmentCreateInput,
   values: ShipmentFormValues,
-  shipment: Shipment,
+  shipment: Pick<Shipment, "version">,
   actionId: string,
 ): ShipmentUpdateInput {
   const { id: _id, merchantId: _merchant, kind: _kind, ...fields } = input;

@@ -12,6 +12,7 @@ import type { AppEnv } from "../app.ts";
 import type { Executor } from "../db/client.ts";
 import { courierAliases, couriers, routes, users } from "../db/schema/index.ts";
 import { requireRole } from "../lib/auth-guard.ts";
+import { assertAccountActor } from "../lib/account-actor.ts";
 import { AppError } from "../lib/errors.ts";
 import {
   auditedChange,
@@ -210,6 +211,7 @@ export const courierRoutes = new Hono<AppEnv>()
       const { userId } = c.req.valid("param");
       const { actionId, courierId } = c.req.valid("json");
       const db = c.get("db");
+      assertAccountActor(c.req.header("X-Domy-Actor-Id"), c.get("user").id);
       await auditedChange(
         c,
         { type: courierId ? "courier" : "user", id: courierId ?? userId, actionId },

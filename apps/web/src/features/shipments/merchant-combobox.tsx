@@ -19,7 +19,7 @@ export function MerchantCombobox({ autoFocus }: { autoFocus?: boolean }) {
             label="Cliente"
             queryKey={["merchants"]}
             search={searchMerchants}
-            value={field.value as MerchantOption | null}
+            value={field.value}
             onChange={(merchant) => {
               field.onChange(merchant);
               setValue("pickupPointId", null);

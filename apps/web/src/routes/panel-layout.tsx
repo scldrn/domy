@@ -1,4 +1,5 @@
 import AddBoxFillIcon from "@material-symbols/svg-400/rounded/add_box-fill.svg?react";
+import CampaignFillIcon from "@material-symbols/svg-400/rounded/campaign-fill.svg?react";
 import DashboardFillIcon from "@material-symbols/svg-400/rounded/dashboard-fill.svg?react";
 import GroupFillIcon from "@material-symbols/svg-400/rounded/group-fill.svg?react";
 import HistoryFillIcon from "@material-symbols/svg-400/rounded/history-fill.svg?react";
@@ -11,6 +12,7 @@ import StorefrontFillIcon from "@material-symbols/svg-400/rounded/storefront-fil
 import TruckFillIcon from "@material-symbols/svg-400/rounded/local_shipping-fill.svg?react";
 import TwoWheelerFillIcon from "@material-symbols/svg-400/rounded/two_wheeler-fill.svg?react";
 import AddBoxIcon from "@material-symbols/svg-400/rounded/add_box.svg?react";
+import CampaignIcon from "@material-symbols/svg-400/rounded/campaign.svg?react";
 import DashboardIcon from "@material-symbols/svg-400/rounded/dashboard.svg?react";
 import GroupIcon from "@material-symbols/svg-400/rounded/group.svg?react";
 import HistoryIcon from "@material-symbols/svg-400/rounded/history.svg?react";
@@ -58,6 +60,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { sessionQuery, signOut } from "@/features/auth/session";
+import { useNotificationSync } from "@/features/notifications/use-notification-sync";
 import { cn } from "@/lib/cn";
 
 type NavigationItem = {
@@ -66,6 +69,7 @@ type NavigationItem = {
     | "/envios/nuevo"
     | "/envios/masivo"
     | "/historial"
+    | "/notificar"
     | "/rutas"
     | "/clientes"
     | "/mensajeros"
@@ -122,6 +126,13 @@ const navigation: { label: string | null; items: NavigationItem[] }[] = [
         label: "Historial",
         icon: HistoryIcon,
         activeIcon: HistoryFillIcon,
+        roles: office,
+      },
+      {
+        to: "/notificar",
+        label: "Notificar clientes",
+        icon: CampaignIcon,
+        activeIcon: CampaignFillIcon,
         roles: office,
       },
     ],
@@ -206,6 +217,15 @@ function PanelLayout() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const notificationSnapshot = useNotificationSync(user.id);
+  const notificationIntents = notificationSnapshot.data?.intents ?? [];
+  const notificationDates = [...new Set(notificationIntents.map((intent) => intent.serviceDate))];
+  const readyNotificationCount = notificationIntents.filter(
+    (intent) => intent.phase === "ready",
+  ).length;
+  const preparedNotificationCount = notificationIntents.filter(
+    (intent) => intent.phase === "prepared",
+  ).length;
 
   const onSignOut = async () => {
     try {
@@ -225,7 +245,7 @@ function PanelLayout() {
     <SidebarProvider>
       <a
         href="#contenido"
-        className="sr-only z-50 rounded-sm bg-sheet px-4 py-3 text-label-l text-on-surface shadow-lg focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        className="sr-only z-50 rounded-sm bg-sheet px-4 py-3 text-label-l text-on-surface shadow-lg focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:min-h-12 focus:min-w-12 focus:inline-flex focus:items-center"
       >
         Saltar al contenido
       </a>
@@ -337,6 +357,42 @@ function PanelLayout() {
           tabIndex={-1}
           className="mx-auto w-full max-w-7xl px-4 pt-4 pb-16 outline-none md:px-8"
         >
+          {(notificationDates.length > 0 || notificationSnapshot.data?.guidance) && (
+            <aside
+              role={notificationSnapshot.data?.guidance ? "alert" : "status"}
+              aria-live="polite"
+              className="mb-5 flex flex-col gap-3 rounded-sm border border-outline-variant bg-secondary-container p-4 text-on-secondary-container"
+            >
+              <p className="text-body-m">
+                {notificationSnapshot.data?.guidance ??
+                  [
+                    readyNotificationCount > 0
+                      ? `${String(readyNotificationCount)} notificaciones esperan su registro.`
+                      : null,
+                    preparedNotificationCount > 0
+                      ? `${String(preparedNotificationCount)} acciones necesitan que vuelvas a compartir el mensaje.`
+                      : null,
+                  ]
+                    .filter((message) => message !== null)
+                    .join(" ")}
+              </p>
+              {notificationDates.length > 0 && (
+                <ul className="flex flex-wrap gap-2">
+                  {notificationDates.map((date) => (
+                    <li key={date}>
+                      <Link
+                        to="/notificar"
+                        search={{ date }}
+                        className="inline-flex min-h-12 items-center rounded-sm px-3 text-label-l text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        Revisar {date}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </aside>
+          )}
           <Outlet />
         </div>
       </SidebarInset>
@@ -391,7 +447,7 @@ function GlobalSearch() {
           aria-label="Buscar envíos"
           aria-keyshortcuts="/"
           placeholder="Buscar guía, cliente, destinatario o teléfono"
-          className="h-full min-w-0 flex-1 bg-transparent text-body-l text-on-surface outline-none placeholder:text-on-surface-variant"
+          className="h-full min-h-12 min-w-0 flex-1 bg-transparent text-body-l text-on-surface outline-none placeholder:text-on-surface-variant"
         />
         <kbd
           aria-hidden="true"

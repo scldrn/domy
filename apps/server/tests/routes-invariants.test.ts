@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, onTestFinished }
 import { createTestApp } from "./setup/app.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
 import { startDatabase, type TestDatabase } from "./setup/database.ts";
+import { generatedCustodySequence } from "./setup/custody-invariants.ts";
 import { createCourier, finishTask, pickUp, registerShipment, send } from "./setup/routes.ts";
 
 /**
@@ -19,6 +20,7 @@ let database: TestDatabase;
 let t: ReturnType<typeof createTestApp>;
 let catalog: Catalog;
 let users: string[];
+let ownerUserId: string;
 let couriers: string[];
 
 const now = new Date("2026-10-01T15:00:00Z");
@@ -34,6 +36,7 @@ beforeEach(async () => {
   await database.truncate();
   t = createTestApp(database.db, { now: now.toISOString() });
   const owner = await t.signIn("owner");
+  ownerUserId = owner.user.id;
   catalog = await createCatalog(database.db, owner.user.id);
   users = [owner.cookie, (await t.signIn("dispatcher")).cookie];
   couriers = [];
@@ -389,5 +392,18 @@ describe("route integrity under random actions (SC-002, FR-020, FR-021)", () => 
     }
     // The sequence really exercised the routes, not only refusals.
     expect(applied).toBeGreaterThan(20);
+  });
+});
+
+// T082 adds broader custody states without weakening the original route-only oracle.
+describe("courier custody and exactly-once generated actions (003 SC-001, SC-007)", () => {
+  it.each([7, 2026, 31337])("holds through 90 commands for seed %i", async (seed) => {
+    await generatedCustodySequence(
+      database.db,
+      t,
+      catalog,
+      { cookie: users[0] ?? "", userId: ownerUserId },
+      generator(seed),
+    );
   });
 });

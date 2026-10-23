@@ -26,7 +26,7 @@ async function resolve(
   id: string,
   actionId: string,
   apply: typeof confirmHandover,
-): Promise<Response> {
+) {
   const db = c.get("db");
   if (!(await findRouteAction(db, actionId))) {
     const by = {

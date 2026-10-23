@@ -1,18 +1,35 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { users } from "./auth.ts";
-import { createdAt, updatedAt } from "./columns.ts";
+import { createdAt, publicCodeDefault, updatedAt } from "./columns.ts";
 import { neighborhoods } from "./geography.ts";
 
-export const merchants = pgTable("merchants", {
-  id: uuid().primaryKey(),
-  name: text().notNull(),
-  nameNormalized: text().notNull().unique("merchants_name_normalized_key"),
-  whatsappPhone: text(),
-  isActive: boolean().notNull().default(true),
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-});
+export const merchants = pgTable(
+  "merchants",
+  {
+    id: uuid().primaryKey(),
+    name: text().notNull(),
+    nameNormalized: text().notNull().unique("merchants_name_normalized_key"),
+    linkCode: text().notNull().default(publicCodeDefault()).unique("merchants_link_code_key"),
+    linkReplacedAt: timestamp({ withTimezone: true }),
+    whatsappPhone: text(),
+    isActive: boolean().notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    check("merchants_link_code_format_check", sql`${table.linkCode} ~ '^[A-Za-z0-9_-]{22}$'`),
+  ],
+);
 
 export const merchantAliases = pgTable("merchant_aliases", {
   id: uuid().primaryKey(),

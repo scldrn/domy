@@ -110,8 +110,8 @@ export async function uploadPhoto(
     } catch (dbError) {
       try {
         await storage.deletePhoto(photo.storageKey);
-      } catch (cleanupError) {
-        logger.warn({ err: cleanupError }, "Failed to clean up orphan S3 photo on DB error");
+      } catch {
+        logger.warn({ outcome: "failed" }, "Failed to clean up orphan S3 photo on DB error");
       }
       throw dbError;
     }

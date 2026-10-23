@@ -7,11 +7,29 @@ endpoints in [contracts/http-api.md](contracts/http-api.md). Setup and gates are
 ## Prerequisites
 
 - Features 001 and 002 implemented and their quickstarts passing
-- `docker compose up -d` also starts S3Proxy (object storage for photos, research R6)
-- `.env` with the storage and notification keys listed in `.env.example`
-  (`pnpm dlx web-push generate-vapid-keys` prints a new key pair)
-- The seed loaded, with at least two courier users and the office address set
+- For ordinary development, `docker compose up -d` starts S3Proxy (object storage for
+  photos, research R6); configure that environment from `.env.example`. Development without
+  VAPID keys has no phone push. For the pinned key-generation command and unchanged
+  production requirements, see the [README production instructions](../../README.md#production).
+- The ordinary development seed loaded, with at least two courier users and the office
+  address set
+- For an isolated LAN rehearsal, wait for the approved target/QA window and use the
+  launcher's private, per-run configuration and synthetic credentials. Do not create a
+  `.env` for that target or copy production secrets into it. Local push is disabled by
+  default; its explicit opt-in generates per-run local keys and is not evidence of
+  production push delivery. See the [local deployment inventory](../../docs/local-deployment-inventory.md).
 - A phone on the same network, or Chrome's device toolbar with "Offline" in the Network tab
+
+### Manual acceptance preparation
+
+An initial smoke check is a setup check only; it does not replace any of the 21 scenarios
+below or complete T087/T093. Use a separate disposable shipment for it so it cannot consume
+the route or records needed by the acceptance run. The launcher's synthetic starting data
+contains one linked courier, one unlinked account, one route and one shipment. Before the
+full run, prepare and verify the additional courier accounts, routes and multiple shipments
+needed by scenarios such as the two-pickup/four-delivery route and the two-courier handover.
+Record any scenario that cannot be prepared as blocked rather than treating the smoke check
+as a pass.
 
 ## Automated gates
 

@@ -73,6 +73,16 @@ describe("lockout (FR-033)", () => {
   });
 });
 
+it("serializes simultaneous failures and preserves existing sessions (T146)", async () => {
+  const attempts = await Promise.all(Array.from({ length: 12 }, () => signIn("equivocada")));
+  expect(attempts.filter((attempt) => attempt.status === 401)).toHaveLength(4);
+  expect(attempts.filter((attempt) => attempt.status === 423)).toHaveLength(8);
+  expect((await signIn(user.password)).status).toBe(423);
+  expect(await status(user.cookie)).toBe(200);
+  t.setNow("2026-10-01T15:15:00Z");
+  expect((await signIn(user.password)).status).toBe(200);
+});
+
 describe("password recovery (FR-030)", () => {
   it("never logs recovery bearer URLs or tokens when mail provider is unconfigured in development (T155)", async () => {
     let output = "";

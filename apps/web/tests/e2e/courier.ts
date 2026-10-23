@@ -1,19 +1,32 @@
 import type { RouteDetail, Shipment } from "@domy/domain";
 import type { Page } from "@playwright/test";
+import { z } from "zod";
 import { expect } from "./fixtures";
+import { webPort } from "./ports";
 
 const phone = { width: 390, height: 844 };
 const password = "contrasena-e2e-segura";
 
 export async function ownSession(page: Page, owner: Page) {
   // Independent accounts and routes keep these cases runnable in any order, including alone.
+  const session = await owner.request.get("/api/auth/get-session");
+  expect(session.ok()).toBe(true);
+  const actorId = z
+    .object({ user: z.object({ id: z.uuid() }) })
+    .parse((await session.json()) as unknown).user.id;
   const id = crypto.randomUUID();
   const email = `offline-${id}@example.com`;
   const created = await owner.request.post("/api/auth/admin/create-user", {
-    data: { email, password, name: "Mensajero offline", role: "courier" },
+    headers: {
+      origin: `http://127.0.0.1:${String(webPort)}`,
+      "X-Domy-Actor-Id": actorId,
+    },
+    data: { id: crypto.randomUUID(), email, password, name: "Mensajero offline", role: "courier" },
   });
   expect(created.ok()).toBe(true);
-  const account = (await created.json()) as { user: { id: string } };
+  const account = z
+    .object({ user: z.object({ id: z.uuid() }) })
+    .parse((await created.json()) as unknown);
   expect(
     (
       await owner.request.post("/api/couriers", {
@@ -24,6 +37,10 @@ export async function ownSession(page: Page, owner: Page) {
   expect(
     (
       await owner.request.put(`/api/couriers/accounts/${account.user.id}`, {
+        headers: {
+          origin: `http://127.0.0.1:${String(webPort)}`,
+          "X-Domy-Actor-Id": actorId,
+        },
         data: { actionId: crypto.randomUUID(), courierId: id },
       })
     ).ok(),
@@ -96,7 +113,6 @@ export async function deliver(page: Page, photo: boolean) {
     await (await chooser).setFiles({ name: "prueba.jpg", mimeType: "image/jpeg", buffer: image });
     await expect(sheet.getByRole("img", { name: "Foto 1" })).toBeVisible();
   }
-  await sheet.getByRole("button", { name: "Revisar" }).click();
   await sheet.getByRole("button", { name: "Guardar entrega" }).click();
   await expect(sheet).not.toBeVisible();
 }

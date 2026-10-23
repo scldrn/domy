@@ -96,13 +96,20 @@ describe("company office settings", () => {
     for (const roleCookie of [owner, cookie]) {
       const empty = await send<CompanySettings>(t, roleCookie, "/api/settings");
       expect(empty.status).toBe(200);
-      expect(empty.body).toEqual({ officeAddress: null, officeNeighborhood: null });
+      expect(empty.body).toEqual({
+        officeAddress: null,
+        officeNeighborhood: null,
+        supportPhone: null,
+        companyName: "Cohex",
+      });
     }
     const changed = await configure();
     expect(changed.status).toBe(200);
     expect(changed.body).toEqual({
       officeAddress: office.officeAddress,
       officeNeighborhood: { id: catalog.place.estadio, name: "El Estadio" },
+      supportPhone: null,
+      companyName: "Cohex",
     });
     expect(
       (
@@ -154,7 +161,12 @@ describe("company office settings", () => {
     await database.db.insert(companySettings).values({});
     const response = await send<CompanySettings>(t, owner, "/api/settings");
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ officeAddress: null, officeNeighborhood: null });
+    expect(response.body).toEqual({
+      officeAddress: null,
+      officeNeighborhood: null,
+      supportPhone: null,
+      companyName: "Cohex",
+    });
   });
   it.each([true, false])(
     "remembers settings retries without undoing later settings (unchanged: %s)",
@@ -174,6 +186,8 @@ describe("company office settings", () => {
       expect(replay.body).toEqual({
         officeAddress: "Calle 30 # 10-20",
         officeNeighborhood: { id: catalog.place.estadio, name: "El Estadio" },
+        supportPhone: null,
+        companyName: "Cohex",
       });
       expect(await database.db.select().from(companySettings)).toEqual(before);
       expect(

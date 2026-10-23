@@ -26,6 +26,7 @@ export const actionLabels: Record<AuditEvent["action"], string> = {
   updated: "Editado",
   deactivated: "Desactivado",
   reactivated: "Reactivado",
+  link_replaced: "Enlace reemplazado",
 };
 
 export const fieldLabels: Record<string, string> = {
@@ -38,6 +39,8 @@ export const fieldLabels: Record<string, string> = {
   address: "Dirección",
   officeAddress: "Dirección de la oficina",
   officeNeighborhoodId: "Barrio de la oficina",
+  supportPhone: "Teléfono de soporte",
+  companyName: "Nombre de la empresa",
   neighborhoodId: "Barrio",
   rateZoneId: "Zona tarifaria",
   municipalityId: "Municipio",

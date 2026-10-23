@@ -1,9 +1,13 @@
 # Integral Remediation and Completion Plan
 
 **Detailed execution companion:** [integral-execution-backlog.md](integral-execution-backlog.md)
-records the current 81-task snapshot, each task's work/RED/dependencies/exit, held branches,
-the two latest PR #32 failures and operational obligations beyond the checkbox count.
-It supplements, not replaces, the canonical feature artifacts and task IDs.
+records 81 cataloged tasks (38 still open in the local execution tree; base `94a7e24`), each task's
+work/RED/dependencies/exit, historical integration receipts and operational obligations.
+Its [§5 prerequisite queue](integral-execution-backlog.md#5-execution-waves-and-dependency-order),
+revised 2026-10-20 (America/Bogota), governs the current schedule and separates controlled
+test deployments from production readiness. The dated execution checkpoints below are
+historical; they do not establish current remote PR/CI state. The companion supplements,
+not replaces, canonical feature artifacts and task IDs.
 
 ## Current diagnostic slice and reserved follow-up — 2026-10-19 UTC
 

@@ -66,6 +66,7 @@ export const exportColumns = [
   "Pagos por cuenta del cliente",
   "Intentos",
   "Motivo de la última novedad",
+  "Notificado",
 ] as const;
 
 type Cell = string | number | null;
@@ -104,7 +105,7 @@ export async function findExportRecords(
 
   if (rows.length === 0) return [];
 
-  const shipmentIds = rows.map((r) => r.shipment.id);
+  const exportedShipments = db.select({ id: shipments.id }).from(shipments).where(where);
 
   const [appliedRecords, events] = await Promise.all([
     db
@@ -116,7 +117,7 @@ export async function findExportRecords(
       .innerJoin(couriers, eq(couriers.id, courierRecords.courierId))
       .where(
         and(
-          inArray(courierRecords.shipmentId, shipmentIds),
+          inArray(courierRecords.shipmentId, exportedShipments),
           eq(courierRecords.outcome, "applied"),
           isNull(courierRecords.revertedAt),
         ),
@@ -129,12 +130,25 @@ export async function findExportRecords(
         occurredAt: shipmentEvents.occurredAt,
       })
       .from(shipmentEvents)
-      .where(inArray(shipmentEvents.shipmentId, shipmentIds))
+      .where(inArray(shipmentEvents.shipmentId, exportedShipments))
       .orderBy(desc(shipmentEvents.occurredAt), desc(shipmentEvents.recordedAt)),
   ]);
 
+  const recordsByShipment = new Map<string, (typeof appliedRecords)[number][]>();
+  for (const entry of appliedRecords) {
+    const records = recordsByShipment.get(entry.record.shipmentId);
+    if (records) records.push(entry);
+    else recordsByShipment.set(entry.record.shipmentId, [entry]);
+  }
+  const latestStatusTimes = new Map<string, Date>();
+  for (const event of events) {
+    if (event.toStatus === null) continue;
+    const key = `${event.shipmentId}:${event.toStatus}`;
+    if (!latestStatusTimes.has(key)) latestStatusTimes.set(key, event.occurredAt);
+  }
+
   return rows.map((row) => {
-    const records = appliedRecords.filter((r) => r.record.shipmentId === row.shipment.id);
+    const records = recordsByShipment.get(row.shipment.id) ?? [];
     const delivery = records.findLast((r) => r.record.kind === "delivery");
     const returnRecord = records.findLast((r) => r.record.kind === "return");
     const lastException = records.findLast((r) => r.record.kind === "exception");
@@ -150,9 +164,8 @@ export async function findExportRecords(
           ? returnRecord.record.occurredAt
           : lastException && row.shipment.status === "exception"
             ? lastException.record.occurredAt
-            : (events.find(
-                (e) => e.shipmentId === row.shipment.id && e.toStatus === row.shipment.status,
-              )?.occurredAt ?? row.shipment.registeredAt);
+            : (latestStatusTimes.get(`${row.shipment.id}:${row.shipment.status}`) ??
+              row.shipment.registeredAt);
 
     const courier =
       delivery?.courierName ??
@@ -242,6 +255,7 @@ export function exportTable(records: Awaited<ReturnType<typeof findExportRecords
       d.disbursementTotal,
       d.attemptCount,
       d.exceptionReason,
+      instant(s.notifiedAt),
     ]),
   ];
 }

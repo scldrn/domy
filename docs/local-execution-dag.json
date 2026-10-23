@@ -1,0 +1,818 @@
+{
+  "updated": "2026-10-22",
+  "timezone": "America/Bogota",
+  "source": "docs/integral-execution-backlog.md",
+  "validation_mode": "local_only",
+  "unlock_rule": "Every required node must be verified by the orchestrator; task executor_qa and orchestrator_qa must both reference successful evidence. RED-only tasks use their explicit RED acceptance, not an invented passing implementation. Task markers alone never unlock a node.",
+  "nodes": {
+    "001/T136": {
+      "kind": "task",
+      "requires": [],
+      "state": "verified",
+      "executor_qa": "specs/001-shipment-registration/rpc-boundaries-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1150 tests/100 E2E/build exit0; source 0c356fec6fd3de1daf6df72b359664eff202ad7d88e752b5905f017046f92a6f"
+    },
+    "001/T129": {
+      "kind": "task",
+      "requires": [],
+      "state": "verified",
+      "executor_qa": "specs/001-shipment-registration/dependency-audit-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1215 tests/106 first-attempt E2E/build exit0; source 7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d"
+    },
+    "001/T152": {
+      "kind": "task",
+      "requires": [
+        "verified-privacy-prerequisites"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/001-shipment-registration/reporting-privacy-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained",
+      "previous_verification": {
+        "executor_qa": "specs/001-shipment-registration/reporting-privacy-results.md",
+        "orchestrator_qa": "docs/local-orchestration.md; N2 check/1150 tests/100 E2E/build exit0; source 0c356fec6fd3de1daf6df72b359664eff202ad7d88e752b5905f017046f92a6f"
+      }
+    },
+    "verified-privacy-prerequisites": {
+      "kind": "local_integration_gate",
+      "requires": [],
+      "state": "verified",
+      "evidence": "3 PostgreSQL-backed files, 74 tests passed; .git/local-orchestration/prerequisites.log; root inspected native entry points"
+    },
+    "001/T132": {
+      "kind": "task",
+      "requires": [
+        "001/T136"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/001-shipment-registration/account-idempotency-results.md; specs/001-shipment-registration/account-client-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1215 tests/106 first-attempt E2E/build exit0; source 7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d"
+    },
+    "003/T135": {
+      "kind": "task",
+      "requires": [
+        "001/T132"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/003-courier-app/account-link-readiness-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1241 tests/121 first-attempt awake E2E/build exit0; source 1e348e85e314145433fedeb4d027245bcac36c386cd10f67fa80dff273389dbd; original failures retained"
+    },
+    "001/T137": {
+      "kind": "task",
+      "requires": [
+        "001/T136",
+        "001/T132"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/001-shipment-registration/form-draft-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1241 tests/121 first-attempt awake E2E/build exit0; source 1e348e85e314145433fedeb4d027245bcac36c386cd10f67fa80dff273389dbd; original failures retained"
+    },
+    "003/T092": {
+      "kind": "task",
+      "requires": [
+        "003/T135",
+        "001/T137"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/003-courier-app/courier-logic-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
+    },
+    "003/T083": {
+      "kind": "task",
+      "requires": [
+        "003/T092"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/003-courier-app/courier-accessibility-results.md; N1 36/36 browser and 22/22 focused web tests",
+      "orchestrator_qa": "Root source/visual review and independent Luna/max audit; local check/1281 tests/129 first-attempt E2E/build PASS. Final source 3b51b24f3a7781b21c8e7fdeaf77a6843b9fd156a131204eba3f3d31674823fe; unit-source provenance records only later E2E-case additions. No Sleep or warnings."
+    },
+    "003/T081": {
+      "kind": "task",
+      "requires": [
+        "001/T132",
+        "001/T136",
+        "003/T135",
+        "001/T137"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/003-courier-app/role-matrix-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
+    },
+    "003/T082": {
+      "kind": "task",
+      "requires": [
+        "verified-courier-runtime"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/003-courier-app/custody-invariants-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1215 tests/106 first-attempt E2E/build exit0; source 7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d"
+    },
+    "003/T089": {
+      "kind": "task",
+      "requires": [
+        "001/T132",
+        "001/T136",
+        "003/T135",
+        "001/T137"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/003-courier-app/courier-contract-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
+    },
+    "003/T090": {
+      "kind": "task",
+      "requires": [
+        "001/T132",
+        "001/T136",
+        "003/T135",
+        "001/T137"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/003-courier-app/courier-security-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
+    },
+    "003/T091": {
+      "kind": "task",
+      "requires": [
+        "001/T132",
+        "001/T136",
+        "003/T135",
+        "001/T137"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/003-courier-app/courier-scale-results.md",
+      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
+    },
+    "002/T064": {
+      "kind": "task",
+      "requires": [
+        "001/T136",
+        "001/T132",
+        "003/T135",
+        "001/T137"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/002-routes-dispatch/documentation-results.md; root N1 task/history preservation,26 local links,ancestry,diffcheck",
+      "orchestrator_qa": "Independent Luna/max review plus root final inspection; stale date corrected and re-reviewed; documentation only"
+    },
+    "003/T084": {
+      "kind": "task",
+      "requires": [
+        "003/T083",
+        "003/T081",
+        "003/T089",
+        "003/T090"
+      ],
+      "state": "verified",
+      "executor_qa": "Run d prepare/private envDir:false build/seal and2 live verifications PASS; owned app SIGTERM prepared/null and restart with stable resources/credentials/VAPID/build. specs/003-courier-app/local-target-rehearsal-results.md.",
+      "orchestrator_qa": "Root reviewed exact source/diff and README/quickstart; own lint/types/format, native HTTPS verifier exit0, independent Docker/PID/TLS/CSP audit PASS. Application provenance matches T0831281tests/129E2E; only launcher source changed.",
+      "evidence": "Synthetic trusted-TLS LAN candidate verified locally; no actual phone trust/access/acceptance, provider or production proof."
+    },
+    "G0": {
+      "kind": "authorized_test_environment",
+      "requires": [
+        "001/T129",
+        "001/T132",
+        "001/T136",
+        "001/T137",
+        "001/T152",
+        "002/T064",
+        "003/T135",
+        "003/T092",
+        "003/T083",
+        "003/T081",
+        "003/T082",
+        "003/T089",
+        "003/T090",
+        "003/T091",
+        "003/T084",
+        "OP-test-target"
+      ],
+      "state": "verified",
+      "evidence": "Access restored on detached run e after independent liveQA; owner must install new e CA and use e synthetic credentials.43/81 catalog unchanged; physical scenarios pending."
+    },
+    "OP-test-target": {
+      "kind": "owner_and_environment_evidence",
+      "requires": [
+        "001/T129",
+        "001/T132",
+        "001/T136",
+        "001/T137",
+        "001/T152",
+        "002/T064",
+        "003/T135",
+        "003/T092",
+        "003/T083",
+        "003/T081",
+        "003/T082",
+        "003/T089",
+        "003/T090",
+        "003/T091",
+        "OP-target-source-reviewed"
+      ],
+      "state": "verified",
+      "evidence": "Active phone-20261021-e at same LAN origin; new publicCA and synthetic credentials replace d handoff. No physical result inferred.",
+      "executor_qa": "Run e prepare/private build/seal passed; detached native spawn+unref serves PPID1/PGID=PID/noTTY. N1 verifier log reports complete; wrapper exit1 due readonly zsh status and child exit not captured; retained without rerun.",
+      "orchestrator_qa": "Root independent native verify exit0 captured directly; own GET200 valid CA/IP TLS and root-e-resource-audit.json PASS. Source SHA unchanged0f075fa48ab8c2b3a202a711ccb2a14f16d84881fbb202478df35c730b3d70f5."
+    },
+    "003/T093": {
+      "kind": "task",
+      "requires": [
+        "G0",
+        "003/T083"
+      ],
+      "state": "in_progress",
+      "executor_qa": null,
+      "orchestrator_qa": null,
+      "evidence": "Access reported Android/iOS. Root browser login/navigation and standard/high-contrast actual360/390CSS checks PASS. N1 and rootN2 approved4 independent device fixtures/16shipments/4routes, native-only histories and no courier records. Physical camera/offline/restart/timings/dark/device metadata remain pending; no closure. Separate agent-browser route completed; N1/root N2 audits PASS: 8 unique records, 3 deliveries/1 exception, COP 75000, finished route, uploaded private JPEG with 200/401/403/403 access matrix. Four phone fixtures remain untouched. All physical rows pending; no closure."
+    },
+    "003/T087": {
+      "kind": "task",
+      "requires": [
+        "003/T093"
+      ],
+      "state": "pending",
+      "executor_qa": null,
+      "orchestrator_qa": null
+    },
+    "003/T088": {
+      "kind": "task",
+      "requires": [
+        "003/T087",
+        "G0"
+      ],
+      "state": "pending",
+      "executor_qa": null,
+      "orchestrator_qa": null
+    },
+    "004-design": {
+      "kind": "artifact_alignment_and_analysis",
+      "requires": [
+        "owner-deferred-003-physical"
+      ],
+      "state": "verified",
+      "evidence": "specs/004-tracking-merchant-link/artifact-alignment-results.md; R12\u2013R16 aligned after two independent Luna/max analyses and root source/diff review; no remaining design CRITICAL/HIGH. 35 IDs unchanged, physical deferral retained, no implementation pass inferred.",
+      "executor_qa": "Two independent read-only source/contract reviews and rereviews; 24FR/5buildableSC coverage; checklist52/52 requirements gates unchanged.",
+      "orchestrator_qa": "Root aligned artifacts, inspected code/diff, validated prerequisite script, canonical35taskIDs/relative links and acyclic DAG; git diff --check PASS."
+    },
+    "004/T001": {
+      "kind": "task",
+      "requires": [
+        "004-design"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/public-origin-results.md; meaningful envRED, final20domain+14env tests/check PASS; native privatebuild origin/sentinel probe PASS.",
+      "orchestrator_qa": "Root inspected source/caller/privatebuild boundaries; frozen source adb2e974 461files: check, all1311 tests,2firstattemptcourierE2E,build PASS; independent native config/privatebuild/sentinel probe PASS; source before/after equal.",
+      "evidence": "public-origin-results.md; local configuration only, not publicpage/provider/phone/deployment acceptance."
+    },
+    "004/T002": {
+      "kind": "task",
+      "requires": [
+        "004/T001"
+      ],
+      "state": "verified",
+      "executor_qa": "foundational-red-results.md; native N1 intended RED exit1, 4/4 assertion failures; clean focused format/lint/types, no harness failure.",
+      "orchestrator_qa": "Root source review and independent native reproduction exit1 with same4 intended failures on source ceefb587 (464files), plus focused checks; explicit RED-only deliverable.",
+      "evidence": "specs/004-tracking-merchant-link/foundational-red-results.md; tests authored and verified RED, protection/schema not implemented or passing."
+    },
+    "004/T003": {
+      "kind": "task",
+      "requires": [
+        "004/T001"
+      ],
+      "state": "verified",
+      "executor_qa": "foundational-red-results.md; native N1 intended RED exit1, 5/5 assertion failures; clean focused format/lint/types, no harness failure.",
+      "orchestrator_qa": "Root source review and independent native reproduction exit1 with same5 intended failures on source ceefb587 (464files), plus focused checks; explicit RED-only deliverable.",
+      "evidence": "specs/004-tracking-merchant-link/foundational-red-results.md; tests authored and verified RED, protection/schema not implemented or passing."
+    },
+    "D6-existing-data": {
+      "kind": "authorized_read_only_inventory",
+      "requires": [
+        "004-design"
+      ],
+      "state": "verified",
+      "evidence": "Local-only read-only inventory: domy-postgres-1 PG18.0.6, shipments0/merchants1/records0/photos0, neither code column, applied0004 vs repository0008. Isolated nonempty upgrade/fresh schema required; no dev/LAN/production migration authorized. Production inventory remains OP-release evidence.",
+      "executor_qa": "Independent Luna native docker/psql BEGIN READ ONLY counts/schema/migration query exit0; no row contents or secrets.",
+      "orchestrator_qa": "Root own counts query and metadata query exit0, source journal inspection; artifact-alignment-results.md. Scoped approval only for disposable local migration QA after T002RED."
+    },
+    "004/T004": {
+      "kind": "task",
+      "requires": [
+        "004/T002",
+        "D6-existing-data"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/schema-migration-results.md; N1 code4/toolchain2 + scoped static checks PASS",
+      "orchestrator_qa": "Root reviewed generated DDL/domain/audit changes; independent 6/6 tests6.01s + scoped format/lint/server types PASS; reviewed-file hash manifest preserved."
+    },
+    "004/T005": {
+      "kind": "task",
+      "requires": [
+        "004/T004"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/secret-code-results.md; N1 unit/static/52integrationPASS",
+      "orchestrator_qa": "Root source+causal SQL-default-free fixture reviewed; own53/53tests9.98s+scopedformat/lint/servertypesPASS; exact reviewedfiles manifest preserved"
+    },
+    "004/T006": {
+      "kind": "task",
+      "requires": [
+        "004/T003"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/public-protection-results.md; 35 integrations/7units and final scoped static checks PASS",
+      "orchestrator_qa": "Independent final 42/42 native HTTP/privacy/limiter tests6.10s; ESLint/types PASS; app fd30aa449b010f84ae1c8298d6d3b249bc7462cfb54bd4a1318b57c25eb8f39d"
+    },
+    "004/T007": {
+      "kind": "task",
+      "requires": [
+        "004/T001",
+        "004/T003"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/foundation-integration-results.md; focused RED/GREEN + combined4/4realE2E18.4s/staticPASS",
+      "orchestrator_qa": "Root reviewed final code; full check/1376tests/133firstattemptE2E7.7min/build PASS; sourcec13b486c19aa4f472b400b3caf235bb1568c8136b04eca261c5455d6d115b80e481files unchanged",
+      "previous_verification": {
+        "executor_qa": "specs/004-tracking-merchant-link/public-layout-results.md; RED then3E2E/13unit/webtypes/scopedstatic PASS",
+        "orchestrator_qa": "Root source review and own3/3firstattemptE2E13.3s+13unit/webtypes/lint/format PASS; sourcefca79157660c5afb63fc161d377307253eb135cf9941d570db6facffa9d7d90a unchanged479files"
+      },
+      "reopened_reason": "Independent audit P2: TanStack case/percent-encoded public aliases bypass literal SW guard. Correct and verify aliases before closure."
+    },
+    "004/T008": {
+      "kind": "task",
+      "requires": [
+        "004/T004"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/foundation-integration-results.md; focused RED/GREEN + combined4/4realE2E18.4s/staticPASS",
+      "orchestrator_qa": "Root reviewed final code; full check/1376tests/133firstattemptE2E7.7min/build PASS; sourcec13b486c19aa4f472b400b3caf235bb1568c8136b04eca261c5455d6d115b80e481files unchanged"
+    },
+    "004-foundations": {
+      "kind": "local_integration_gate",
+      "requires": [
+        "004/T001",
+        "004/T002",
+        "004/T003",
+        "004/T004",
+        "004/T005",
+        "004/T006",
+        "004/T007",
+        "004/T008"
+      ],
+      "state": "verified",
+      "evidence": "specs/004-tracking-merchant-link/foundation-integration-results.md; root full frozen-source check/test/e2e/buildPASS; complete N1/N2 for T001\u2013T008, R17 independent design rereview passed"
+    },
+    "004/T009": {
+      "kind": "task",
+      "requires": [
+        "004-foundations"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/tracking-red-results.md; corrected intendedRED +scopedstaticPASS",
+      "orchestrator_qa": "Root source/contract/harness review and independent corrected RED: T00972collected72fail305ms, T0118collected7fail1pass5.79s; scopedformat/lint/domain-servertypesPASS"
+    },
+    "004/T010": {
+      "kind": "task",
+      "requires": [
+        "004-foundations"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/queue-red-results.md;33existingPASS8intendedRED; scopedstaticPASS",
+      "orchestrator_qa": "Rootdiffreview+independent41collected33PASS8intendedassertionRED112ms; format/lint/typesPASS"
+    },
+    "004/T011": {
+      "kind": "task",
+      "requires": [
+        "004-foundations"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/tracking-red-results.md; corrected intendedRED +scopedstaticPASS",
+      "orchestrator_qa": "Root source/contract/harness review and independent corrected RED: T00972collected72fail305ms, T0118collected7fail1pass5.79s; scopedformat/lint/domain-servertypesPASS"
+    },
+    "004/T012": {
+      "kind": "task",
+      "requires": [
+        "004-foundations"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/tracking-browser-red-results.md; corrected5intendedRED/scopedstaticPASS",
+      "orchestrator_qa": "Rootdiffreview+independentcorrected5intendedUIfailures; nofixture/setupfailures; scopedformat/lint/webtypesPASS"
+    },
+    "004/T013": {
+      "kind": "task",
+      "requires": [
+        "004/T009"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/tracking-projection-results.md;118/118 tests+scopedstatic/alltypesPASS",
+      "orchestrator_qa": "Rootfinaldiff/allowlist/provenancereview; own118/118295ms+format/lint/alltypesPASS; hashesrecordedinreceipt"
+    },
+    "004/T014": {
+      "kind": "task",
+      "requires": [
+        "004/T010"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/queue-helper-results.md;41/41+scopedstatic/allworkspacetypesPASS",
+      "orchestrator_qa": "Rootdiff+own41/41tests81ms/scopedformatlint/domaintypesPASS; routes.sha a7a7665ca6012ba06ea6b6418ceb8fe30481628907420e2cc0a90f64fe02eeae"
+    },
+    "004/T015": {
+      "kind": "task",
+      "requires": [
+        "004/T011",
+        "004/T013",
+        "004/T014",
+        "004/T006"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/tracking-api-results.md;18server+118domain/scopedstatic/alltypesPASS",
+      "orchestrator_qa": "Rootfinalsource/query/provenanceaudit+own18nativePG9.05s/118domain/formatlintalltypesPASS"
+    },
+    "004/T016": {
+      "kind": "task",
+      "requires": [
+        "004/T012",
+        "004/T015"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/tracking-browser-results.md;8/8 focusedE2E/staticPASS; documented postrunnerwrappererror",
+      "orchestrator_qa": "Rootfinaldiff+fullcheck/1472tests/138firstattemptE2E8.9min/buildPASS; cold2803.4ms;492file49e15ee7unchangedbefore/mid/after"
+    },
+    "004/T023": {
+      "kind": "task",
+      "requires": [
+        "004/T009",
+        "004/T016",
+        "004-merchant-contracts"
+      ],
+      "state": "verified",
+      "executor_qa": "Independent Luna/max final-source review+132collected14intendedRED118PASS232ms/scopedformatlintPASS; merchant-projection-red-results.md",
+      "orchestrator_qa": "Root finalfixture/privacy/allowlist review+own132collected14intendedRED118PASS343ms/scopedlint/alltypesPASS; source4a5bb3b5"
+    },
+    "004/T024": {
+      "kind": "task",
+      "requires": [
+        "004/T016",
+        "004-merchant-contracts"
+      ],
+      "state": "verified",
+      "executor_qa": "specs/004-tracking-merchant-link/merchant-api-red-results.md;9collected6intendedRED3baselinePASS/scopedstatic/servertypesPASS",
+      "orchestrator_qa": "Rootdiff/harnessaudit+independent9collected6intended404fail3pass10.34s; scopedformat/lint/server+allworkspacetypesPASS"
+    },
+    "004/T025": {
+      "kind": "task",
+      "requires": [
+        "004/T016",
+        "004-merchant-contracts"
+      ],
+      "state": "verified",
+      "executor_qa": "merchant-browser-red-results.md;3intendedRED/no setupfail/scopedstaticalltypesPASS; blockednoticeassertion refinement then finalstatic",
+      "orchestrator_qa": "Root finalsource82d7d26c review+3intendedmissingcontentRED7.2/6.2/5.4s/scopedformatlintalltypesPASS; laterassertionsnotclaimedexecuted"
+    },
+    "004/T026": {
+      "kind": "task",
+      "requires": [
+        "004/T023"
+      ],
+      "state": "verified",
+      "executor_qa": "merchant-projection-results.md;410domainPASS+formatlintalltypes; permanentint4REDretainedandfixed",
+      "orchestrator_qa": "Rootfinalsourceaudit+410PASS510ms/formatlintalltypesPASS;30nativePG12.83sPASS unchangedhelper/server; hashesinreceipt"
+    },
+    "004/T027": {
+      "kind": "task",
+      "requires": [
+        "004/T024",
+        "004/T026"
+      ],
+      "state": "verified",
+      "executor_qa": "merchant-api-results.md;59focusedserver/412fulldomain/scopedstaticalltypesPASS; dateexpected-failure-loglostexplicit",
+      "orchestrator_qa": "Rootsource/contract/provenance/photo/replayreview+738fullserver144.51s/412domain904ms/formatlinttypesPASS;12sourcesidenticalbeforeafter"
+    },
+    "004/T028": {
+      "kind": "task",
+      "requires": [
+        "004/T025",
+        "004/T027"
+      ],
+      "state": "verified",
+      "executor_qa": "merchant-browser-results.md; portal3/3N1PASS23.8s+recovery1/1PASS14.0s;358web/staticPASS; historical failures retained",
+      "orchestrator_qa": "Root final source/contracts/focus audit+fullcheck/1511tests/142firstattemptE2E9.3min/buildPASS;506file55c58134unchangedbeforemidafter;cold2852.2ms"
+    },
+    "004/T029": {
+      "kind": "task",
+      "requires": [
+        "004/T025",
+        "004/T027"
+      ],
+      "state": "verified",
+      "executor_qa": "merchant-browser-results.md; portal3/3N1PASS23.8s+recovery1/1PASS14.0s;358web/staticPASS; historical failures retained",
+      "orchestrator_qa": "Root final source/contracts/focus audit+fullcheck/1511tests/142firstattemptE2E9.3min/buildPASS;506file55c58134unchangedbeforemidafter;cold2852.2ms"
+    },
+    "004/T017": {
+      "kind": "task",
+      "requires": [
+        "004/T016",
+        "004/T028",
+        "004/T029"
+      ],
+      "state": "verified",
+      "executor_qa": "notification-composer-red-results.md;3 intended missing-export RED154ms/scoped static PASS on final deterministic UUID fixture",
+      "orchestrator_qa": "Root fixture/contract/source review;own3 intended RED191ms/formatlintdomaintypesPASS;source9979659a"
+    },
+    "004/T018": {
+      "kind": "task",
+      "requires": [
+        "004/T016",
+        "004/T028",
+        "004/T029"
+      ],
+      "state": "verified",
+      "executor_qa": "notification-api-red-results.md;10collected1baselinePASS9intendedRED5.82s/scopedstaticPASS;initialratefixturefailurepreserved",
+      "orchestrator_qa": "Rootsource/contract/fixtureaudit+own1PASS9intendedRED5.93s/formatlintservertypesPASS;source79ee9154"
+    },
+    "004/T019": {
+      "kind": "task",
+      "requires": [
+        "004/T016",
+        "004/T028",
+        "004/T029"
+      ],
+      "state": "verified",
+      "executor_qa": "notification-browser-red-results.md;3intendedmissingpageRED5.9/5.6/5.3s/scopedstaticPASS;tracesretained",
+      "orchestrator_qa": "Rootsource/harness/fallbackreview+own3intendedRED5.7/5.6/5.3s/formatlintwebtypesPASS;sourceec73e8f7"
+    },
+    "004/T020": {
+      "kind": "task",
+      "requires": [
+        "004/T017"
+      ],
+      "state": "verified",
+      "executor_qa": "notification-domain-results.md;full422domain/24files+formatlintrecursive typesPASS;missingexport/UUIDcase/dateword/actionabledateREDretained",
+      "orchestrator_qa": "Rootsource/contract/filter/thresholdreview+own422PASS480ms/scopedstaticrecursive typesPASS;5ownedhashesunchanged"
+    },
+    "004/T021": {
+      "kind": "task",
+      "requires": [
+        "004/T018",
+        "004/T020"
+      ],
+      "state": "verified",
+      "executor_qa": "notification-api-results.md; followup detail65native tests/6files12.04s/scopedformatlint/servertypesPASS; recursive types blocked solely ungenerated concurrent T022 route",
+      "orchestrator_qa": "Root reviewed bounded notified changes:null projection; own65native14.22s/scopedformatlint/servertypesPASS; sourcee9878c49/test82e7e741; causalRED retained; storedreceipt unchanged",
+      "previous_verification": {
+        "kind": "task",
+        "requires": [
+          "004/T018",
+          "004/T020"
+        ],
+        "state": "verified",
+        "executor_qa": "notification-api-results.md;43affectedserverPASS10.05s/423domain/scopedstaticrecursive typesPASS;causalREDretained",
+        "orchestrator_qa": "Rootsource/receipt/actor/exportreview;fullfirst753PASS2obsoleteassertfailretained;only2testsupdated;final43PASS14.80s/423domain/statictypesPASS;513fileba13222eunchanged;fullstorygatespending"
+      }
+    },
+    "004/T022": {
+      "kind": "task",
+      "requires": [
+        "004/T019",
+        "004/T020",
+        "004/T021",
+        "004/T028",
+        "004/T029",
+        "004-notification-delivery-design"
+      ],
+      "state": "verified",
+      "executor_qa": "notification-ui-results.md; presentation/core unit424domain/382web/static/types/build PASS; native8cases20.9s PASS after preserved exact-card selector correction",
+      "orchestrator_qa": "Root full source/gesture/storage/audit review; focused8native21.9s; finalcheck/1561tests/150native9.4min/build PASS retries0; cold2860.6ms; unchanged522sourceedc9e6f1; all original RED/failure/interruption logs retained"
+    },
+    "004/T030": {
+      "kind": "task",
+      "requires": [
+        "004/T016",
+        "004/T022",
+        "004/T028",
+        "004/T029"
+      ],
+      "state": "verified",
+      "executor_qa": "public-permissions-results.md;140native/5files13.81s/scopedformatlint/recursivetypesPASS;realPG+S3;no runtimechange",
+      "orchestrator_qa": "Root contract/source/role/readonly/immutabilityreview;own140native/5files18.03s/static/typesPASS;source985ab683unchanged"
+    },
+    "004/T031": {
+      "kind": "task",
+      "requires": [
+        "004/T016",
+        "004/T027"
+      ],
+      "state": "verified",
+      "executor_qa": "public-codes-scan-results.md;2firstattemptnativePASS5.12s/1000codes2000negatives/160positives+60-61reset;scopedstaticPASS",
+      "orchestrator_qa": "Rootwholefile/limit/nativepeer/sourceaudit+own2firstattemptnativePASS6.47s/scopedformatlintservertypesPASS; e2ae01cc unchanged"
+    },
+    "004/T032": {
+      "kind": "task",
+      "requires": [
+        "004/T016",
+        "004/T022",
+        "004/T028",
+        "004/T029"
+      ],
+      "state": "verified",
+      "executor_qa": "public-accessibility-results.md;3nativePASS32.9s/static/types;integrated keyboard correction35/35repeat5retries0PASS2.8min;all RED/interruption retained",
+      "orchestrator_qa": "Root source/contracts/nativefocus audit;3nativePASS34.3s;final check/1566tests/153E2E9.7min/retries0/buildPASS;unchanged523fileSHA2a885083;first152PASS1FAILretained"
+    },
+    "004/T033": {
+      "kind": "task",
+      "requires": [
+        "004/T030",
+        "004/T031",
+        "004/T032"
+      ],
+      "state": "verified",
+      "executor_qa": "public-go-live-documentation-results.md;README origin/support/individual-consent docs;diffcheck/32relative linksPASS;no runtime change",
+      "orchestrator_qa": "Root actualschema/Vite/settings/constitutionreview + independentread-onlyaudit;own diffcheck/32linksPASS;READMEcb265004stable;OPconsentevidence remains pending"
+    },
+    "OP-release-evidence": {
+      "kind": "operational_provider_restore_consent_evidence",
+      "requires": [
+        "004/T033"
+      ],
+      "state": "in_progress",
+      "evidence": "release-readiness-results.md + local-target-current-network-results.md + local-database-restore-results.md: current public-b LAN candidate verified at192.168.58.219:8445; source catalog SHA2a885083 unchanged. Local synthetic OP-02 N1 and independent root restore pass31 full table hashes/66 FK definitions/schema/sequence/COP totals, migration no-op, restored accounts and one-effect UUID replay. First harness failures retained. Scheduled client-owned backups/RPO/RTO/retention/alerts/provider/object recovery, representative upgrade, individual consent and physical evidence remain incomplete. OP in progress; G1 pending. Latest 2026-10-23: solo local-image-upgrade-results.md records exact 540-file source36ef1cd6, 1626 tests/154 zero-retry E2E/check/build and new arm64 image; representative 0007\u21920009 upgrade now passes with 29 old-table hashes, account/session/COP preservation, identical replay and fresh DB. Only the earlier representative-upgrade gap is resolved; providers/schedules/consent/physical evidence remain pending. No independent-agent review or production approval. Repository consolidation sourced604a287 passes local check/1626tests/155zero-retryE2E/build; rebuilt image runtime bytes equal the prior upgrade-tested image. Operational provider/consent/physical gates remain pending."
+    },
+    "G1": {
+      "kind": "authorized_test_environment",
+      "requires": [
+        "004/T030",
+        "004/T031",
+        "004/T032",
+        "004/T033",
+        "OP-release-evidence"
+      ],
+      "state": "pending",
+      "evidence": null
+    },
+    "004/T034": {
+      "kind": "task",
+      "requires": [
+        "G1"
+      ],
+      "state": "pending",
+      "executor_qa": null,
+      "orchestrator_qa": null
+    },
+    "004/T035": {
+      "kind": "task",
+      "requires": [
+        "004/T034",
+        "003/T088"
+      ],
+      "state": "pending",
+      "executor_qa": null,
+      "orchestrator_qa": null
+    },
+    "G2": {
+      "kind": "production_approval_required",
+      "requires": [
+        "004/T035",
+        "OP-release-evidence",
+        "OP-acceptance"
+      ],
+      "state": "pending",
+      "evidence": null
+    },
+    "OP-acceptance": {
+      "kind": "owner_and_physical_acceptance",
+      "requires": [
+        "004/T034"
+      ],
+      "state": "pending",
+      "evidence": null
+    },
+    "verified-courier-runtime": {
+      "kind": "existing_runtime_regression_gate",
+      "requires": [],
+      "state": "verified",
+      "evidence": "Root inspected actual invariant harness and existing record/photo/auth corrections; integrated local631 server and100 browser tests plus check/build passed on source0c356fec."
+    },
+    "OP-target-source-reviewed": {
+      "kind": "local_target_source_review",
+      "requires": [],
+      "state": "verified",
+      "executor_qa": "N1 final format/lint/types, pure CLI/state13 and dry-run PASS; source6dbb6d44511f035f5cddec0638ed52122032e15d41dde6158336a7997322d322; preserved runtimeREDs.",
+      "orchestrator_qa": "Root reconstructed exact8c09 and reviewed combineddiff af2a39fba8115d544c5b705eb952bdf9d84a373a2b5f9bd6c291a2b31ffc60d7; own ESLint/types/formatPASS, actual extracted signIn14 boundaries and shutdown2 callback casesPASS.",
+      "previous_source_review": {
+        "state": "verified",
+        "executor_qa": "specs/003-courier-app/local-target-source-results.md; own N1 scoped format/lint/types/import-state/dry-run/diff all exit0",
+        "orchestrator_qa": "Root source review, native pure CLI/quoting and final workspace check/build PASS; launcher c10d43b8be3ce8270c0ad1d1a85beaba4520ba5b2cb87b9e6f224d4a374dd347; runtime unexecuted"
+      },
+      "evidence": "Source approved for owned c stop preserving volumes and fresh run d rehearsal. Actual c CtrlC cause uncertain; real corrected shutdown/restart required. No runtime acceptance.",
+      "source_review_history": [
+        {
+          "state": "verified",
+          "executor_qa": "specs/003-courier-app/local-target-rehearsal-results.md; N1 formatting/lint/types/CLI-state/dry-run and native read-only names PASS; actual runtime RED retained",
+          "orchestrator_qa": "Root independently confirmed owned network ID/name mismatch, reconstructed exact c10d source and reviewed only 3 name-format replacements plus truthful messages; own ESLint/types PASS. Corrected script f4d70f52c288a494d84a4f83c8ab3ee528105992cd9e9c036139f30b381ad1be.",
+          "evidence": "Corrected source approved for scoped cleanup and fresh synthetic rehearsal only; no runtime acceptance yet."
+        },
+        {
+          "state": "verified",
+          "executor_qa": "N1 scoped format/lint/types, 13 CLI/state expectations, pure dry-run and native Compose help PASS; local-target-rehearsal-results.md.",
+          "orchestrator_qa": "Root exact reverse reconstruction matches f4d source; root-health-fix.diff contains only native --wait --wait-timeout 90. Independent ESLint and server typecheck exit 0. Launcher 8c095316ace74d1e9e25a0f98f342e238c6197a76359f89b4eb333788b551d1d.",
+          "evidence": "Source approved for owned run b cleanup preserving volumes, then fresh run c local rehearsal. No runtime acceptance."
+        }
+      ]
+    },
+    "owner-deferred-003-physical": {
+      "kind": "owner_approved_development_sequence",
+      "requires": [
+        "G0",
+        "003/T083",
+        "003/T092"
+      ],
+      "state": "verified",
+      "evidence": "2026-10-21 owner: omite y continuemos. Defer physical003 execution for local004 development only; preserve T093/T087/T088 unchecked and final-release dependencies. No physical pass, constitution amendment or production permission inferred.",
+      "executor_qa": "Explicit owner sequencing instruction recorded in OWNER-REQUESTS.md; not a test result.",
+      "orchestrator_qa": "Root confirmed verified technical baseline, 21 physical rows still Not run and T093/T087/T088 unchecked; local-only development exception recorded."
+    },
+    "004-merchant-contracts": {
+      "kind": "artifact_analysis_gate",
+      "requires": [],
+      "state": "verified",
+      "evidence": "Explicit owner support-notice decision supersedes selective redaction; spec/research/model/contract/tasks independently re-reviewed noHIGH/CRITICAL;30 relative links valid. merchant-artifact-alignment-results.md."
+    },
+    "004-notification-delivery-design": {
+      "kind": "artifact_analysis_gate",
+      "requires": [
+        "004/T020"
+      ],
+      "state": "verified",
+      "evidence": "notification-delivery-design-results.md;R21/ComplexityTracking independently reviewed noHIGH/CRITICAL;root incorporated prepared rediscovery/replacement and per-action phase protection;runtime not yet proven"
+    }
+  },
+  "topological_order": [
+    "001/T136",
+    "001/T129",
+    "verified-privacy-prerequisites",
+    "001/T152",
+    "001/T132",
+    "003/T135",
+    "001/T137",
+    "003/T092",
+    "003/T083",
+    "003/T081",
+    "verified-courier-runtime",
+    "003/T082",
+    "003/T089",
+    "003/T090",
+    "003/T091",
+    "002/T064",
+    "003/T084",
+    "OP-target-source-reviewed",
+    "OP-test-target",
+    "G0",
+    "owner-deferred-003-physical",
+    "004-design",
+    "004/T001",
+    "004/T002",
+    "004/T003",
+    "D6-existing-data",
+    "004/T004",
+    "004/T005",
+    "004/T006",
+    "004/T007",
+    "004/T008",
+    "004-foundations",
+    "004/T009",
+    "004/T010",
+    "004/T011",
+    "004/T012",
+    "004/T013",
+    "004/T014",
+    "004/T015",
+    "004/T016",
+    "004-merchant-contracts",
+    "004/T023",
+    "004/T024",
+    "004/T025",
+    "004/T026",
+    "004/T027",
+    "004/T028",
+    "004/T029",
+    "004/T017",
+    "004/T018",
+    "004/T019",
+    "004/T020",
+    "004-notification-delivery-design",
+    "004/T021",
+    "004/T022",
+    "004/T030",
+    "004/T031",
+    "004/T032",
+    "004/T033",
+    "OP-release-evidence",
+    "G1",
+    "004/T034",
+    "003/T093",
+    "003/T087",
+    "003/T088",
+    "004/T035",
+    "OP-acceptance",
+    "G2"
+  ]
+}
