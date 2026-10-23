@@ -93,4 +93,3 @@ remains preserved as historical evidence; it is superseded by the final 154-test
 unchanged 3000 ms budget. The focused CSP regression also passed in the final root N2 run with
 zero policy violations. These repository gates do not establish Caddy headers, container
 runtime behavior, physical-phone behavior, or production serving.
-

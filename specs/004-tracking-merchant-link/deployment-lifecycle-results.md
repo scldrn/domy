@@ -1,6 +1,7 @@
 # OP-01 application lifecycle implementation — N1 baseline and N2 correction
 
-**Date:** 2026-10-22  
+**Date:** 2026-10-22
+
 **Scope:** Local source implementation, its N1 focused native HTTP/Testcontainers verification,
 and the N2 lifecycle correction and focused verification below. This receipt does not close
 OP-01 or claim the four local quality gates, built-browser CSP behavior, a container or Caddy

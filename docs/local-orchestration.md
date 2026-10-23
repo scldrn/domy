@@ -1472,4 +1472,3 @@ strict public probes pass on the first attempt. Source523/SHA2a885083 unchanged.
 The [recovery handoff](local-recovery-runbook.md) and [deployment-artifact design](local-deployment-artifact-plan.md)
 identify the remaining production packaging/proxy/lifecycle work. Artifact implementation
 is a separate local batch after design alignment; G1 and physical/final gates remain pending.
-
