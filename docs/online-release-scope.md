@@ -42,7 +42,8 @@ Do not clear browser storage or reinstall over pending work.
 
 ## Remaining delivery work
 
-Review the connected tracking/merchant journey and consolidate the release handoff.
+The connected API review and release handoff documentation are complete locally;
+the native HTTPS evidence and its physical-device limits are recorded above.
 Real provider configuration, origin/TLS, private storage, backups and required privacy
 evidence belong to the owner's deployment process; local tests do not certify them.
 Physical public/mobile-data scenarios remain unverified unless separately observed.
