@@ -26,7 +26,9 @@ async function fillDelivery(page: Page, merchant: string, neighborhood: string) 
 }
 
 async function registerAndOpen(page: Page) {
-  await page.getByRole("button", { name: "Registrar envío" }).click();
+  const pendingRetry = page.getByRole("button", { name: "Reintentar solicitud pendiente" });
+  if ((await pendingRetry.count()) > 0) await pendingRetry.click();
+  else await page.getByRole("button", { name: "Registrar envío" }).click();
   const toast = page.getByText(/Envío [0-9A-Z]{4}-[0-9A-Z]{4} registrado/);
   await expect(toast).toBeVisible();
   await page.getByRole("button", { name: "Ver envío" }).click();
@@ -127,6 +129,7 @@ test("keeps the values after a failed save and registers once on retry (FR-038)"
   await page.getByRole("button", { name: "Registrar envío" }).click();
   await expect(page.getByText(/No hay conexión con el servidor/)).toBeVisible();
   await expect(page.getByLabel("Nombre del destinatario")).toHaveValue("Laura Gómez");
+  await expect(page.getByLabel("Nombre del destinatario")).toBeDisabled();
   await page.context().setOffline(false);
   await registerAndOpen(page);
 });
@@ -174,6 +177,7 @@ for (const delayedResponse of [
       });
     }
     try {
+      let retainedFirstUnfilteredOptionId: string | undefined;
       if (delayedResponse === "initial merchant response") {
         // Start a fresh query cache with every real merchant response held while typing.
         await page.reload();
@@ -185,10 +189,20 @@ for (const delayedResponse of [
         // Prime real unfiltered results: wait until options are loaded before keyboard navigation.
         await expect(merchantCombobox).toHaveAttribute("data-ready", "");
         await page.keyboard.press("ArrowDown");
-        await expect(page.getByRole("option", { name: /Amy Tecnology/ })).toHaveAttribute(
-          "data-highlighted",
-          "",
+        const firstUnfilteredOption = page.getByRole("option").first();
+        await expect(firstUnfilteredOption).toBeVisible();
+        const firstUnfilteredOptionId = await firstUnfilteredOption.getAttribute("id");
+        const firstUnfilteredOptionName = (await firstUnfilteredOption.innerText()).trim();
+        expect(firstUnfilteredOptionName).not.toBe("");
+        if (firstUnfilteredOptionId === null) {
+          throw new Error("The first real option has no stable identity.");
+        }
+        expect(firstUnfilteredOptionId).toMatch(/^[A-Za-z0-9_-]+$/u);
+        retainedFirstUnfilteredOptionId = firstUnfilteredOptionId;
+        const retainedFirstUnfilteredOption = page.locator(
+          `[role="option"][id="${retainedFirstUnfilteredOptionId}"]`,
         );
+        await expect(retainedFirstUnfilteredOption).toHaveAttribute("data-highlighted", "");
       }
       await page.keyboard.type("bullish");
       if (delayedResponse === "initial merchant response") {
@@ -198,10 +212,13 @@ for (const delayedResponse of [
       await expect(page.getByRole("option", { name: /Bullish Hype/ })).toBeVisible();
       if (delayedResponse === "merchant search") {
         await expect.poll(() => responseRequested).toBe(true);
-        await expect(page.getByRole("option", { name: /Amy Tecnology/ })).toHaveAttribute(
-          "data-highlighted",
-          "",
+        if (retainedFirstUnfilteredOptionId === undefined) {
+          throw new Error("The first real option identity was not retained.");
+        }
+        const retainedFirstUnfilteredOption = page.locator(
+          `[role="option"][id="${retainedFirstUnfilteredOptionId}"]`,
         );
+        await expect(retainedFirstUnfilteredOption).toHaveAttribute("data-highlighted", "");
         releaseResponse();
       }
       // T141: late results need actual list navigation, not assumed auto-highlighting.

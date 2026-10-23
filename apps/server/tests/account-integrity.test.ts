@@ -35,13 +35,24 @@ beforeEach(async () => {
 });
 
 /** Trusted real HTTP requests, not the library's privileged server-side API (R18). */
-async function request(path: string, body?: unknown, cookie = owner.cookie, method?: string) {
+async function request(
+  path: string,
+  body?: unknown,
+  cookie = owner.cookie,
+  method?: string,
+  actorId = owner.user.id,
+) {
+  // T132 fixtures represent a new owner intent unless explicitly supplied by a replay test.
+  if (path.startsWith("admin/") && typeof body === "object" && body !== null) {
+    body = { [path === "admin/create-user" ? "id" : "actionId"]: crypto.randomUUID(), ...body };
+  }
   return t.app.request(
     new Request(`http://localhost:3000/api/auth/${path}`, {
       method: method ?? (body === undefined ? "GET" : "POST"),
       headers: {
         origin: "http://localhost:3000",
         cookie,
+        "X-Domy-Actor-Id": actorId,
         ...(body === undefined ? {} : { "content-type": "application/json" }),
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -151,6 +162,8 @@ describe("concurrent account invariants (T130, FR-032, R18)", () => {
                   "admin/set-role",
                   { userId: owner.user.id, role: "dispatcher" },
                   second.cookie,
+                  undefined,
+                  second.user.id,
                 ),
               ];
         const responses = await afterContention(pending, pid, release);
@@ -184,6 +197,7 @@ describe("concurrent account invariants (T130, FR-032, R18)", () => {
             method: "PUT",
             cookie: owner.cookie,
             body: { actionId: crypto.randomUUID(), courierId },
+            actorId: owner.user.id,
           }),
           request("admin/set-role", { userId: courierUser.user.id, role: "dispatcher" }),
         ],
@@ -212,6 +226,8 @@ describe("concurrent account invariants (T130, FR-032, R18)", () => {
               "admin/update-user",
               { userId: dispatcher.user.id, data: { name: "Revoked actor must not edit" } },
               second.cookie,
+              undefined,
+              second.user.id,
             ),
           ],
           pid,

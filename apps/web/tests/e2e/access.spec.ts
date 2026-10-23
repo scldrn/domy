@@ -50,7 +50,7 @@ test("gives each role its own access (scenario 13)", async ({ ownerPage, browser
 
   const dispatcher = await signInAs(browser, `coordinadora${run}@example.com`);
   await expect(dispatcher.getByRole("heading", { name: "Tablero de despacho" })).toBeVisible();
-  await expect(dispatcher.getByRole("link", { name: "Clientes" })).toBeVisible();
+  await expect(dispatcher.getByRole("link", { name: "Clientes", exact: true })).toBeVisible();
   await expect(dispatcher.getByRole("link", { name: "Usuarios" })).toHaveCount(0);
   await expect(dispatcher.getByRole("link", { name: "Auditoría" })).toHaveCount(0);
   await dispatcher.goto("/tarifario");

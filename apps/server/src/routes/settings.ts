@@ -10,8 +10,7 @@ import { AppError } from "../lib/errors.ts";
 import { validate } from "../lib/validate.ts";
 
 /**
- * The company's settings (feature 003, FR-041): the office address, read by the office and
- * changed by the owner only (tasks.md T057).
+ * The company's office and support settings (features 003 and 004), changed by the owner only.
  */
 async function loadSettings(db: Executor): Promise<CompanySettings> {
   const [row] = await db
@@ -19,6 +18,8 @@ async function loadSettings(db: Executor): Promise<CompanySettings> {
       officeAddress: companySettings.officeAddress,
       neighborhoodId: neighborhoods.id,
       neighborhoodName: neighborhoods.name,
+      supportPhone: companySettings.supportPhone,
+      companyName: companySettings.companyName,
     })
     .from(companySettings)
     .leftJoin(neighborhoods, eq(neighborhoods.id, companySettings.officeNeighborhoodId));
@@ -28,6 +29,8 @@ async function loadSettings(db: Executor): Promise<CompanySettings> {
       row?.neighborhoodId && row.neighborhoodName
         ? { id: row.neighborhoodId, name: row.neighborhoodName }
         : null,
+    supportPhone: row?.supportPhone ?? null,
+    companyName: row?.companyName ?? "Cohex",
   };
 }
 
@@ -40,14 +43,16 @@ export const settingsRoutes = new Hono<AppEnv>()
       c,
       { type: "company_settings", id: companySettingsId, actionId },
       async (tx) => {
-        const [hood] = await tx
-          .select({ id: neighborhoods.id })
-          .from(neighborhoods)
-          .where(eq(neighborhoods.id, input.officeNeighborhoodId));
-        if (!hood)
-          throw new AppError("invalid_request", {
-            fields: { officeNeighborhoodId: "Elige un barrio de la lista." },
-          });
+        if (input.officeNeighborhoodId !== undefined) {
+          const [hood] = await tx
+            .select({ id: neighborhoods.id })
+            .from(neighborhoods)
+            .where(eq(neighborhoods.id, input.officeNeighborhoodId));
+          if (!hood)
+            throw new AppError("invalid_request", {
+              fields: { officeNeighborhoodId: "Elige un barrio de la lista." },
+            });
+        }
         await tx.insert(companySettings).values({}).onConflictDoNothing();
         const [before] = await tx
           .select()

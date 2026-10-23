@@ -66,6 +66,11 @@ export const recordFlagLabels: Record<RecordFlagKind, string> = {
 /** A photo that has not arrived 24 hours after its record counts as missing (FR-023). */
 const photoWaitMs = 24 * 60 * 60 * 1000;
 
+/** True until the record has waited a full 24 hours for its photo metadata (FR-023). */
+export function isWithinPhotoWait(recordedAt: Date, now: Date): boolean {
+  return now.getTime() - recordedAt.getTime() < photoWaitMs;
+}
+
 export function recordFlags(
   input: {
     /** The latest applied delivery, return, or completed errand, with its proof photos. */
@@ -81,7 +86,7 @@ export function recordFlags(
 ): RecordFlagKind[] {
   const flags: RecordFlagKind[] = [];
   if (input.proof) {
-    const waiting = now.getTime() - input.proof.recordedAt.getTime() < photoWaitMs;
+    const waiting = isWithinPhotoWait(input.proof.recordedAt, now);
     const arrived = input.proof.photos.some((photo) => photo.uploaded);
     const onTheWay = waiting && input.proof.photos.some((photo) => !photo.uploaded);
     if (onTheWay || (input.pendingPhotos ?? 0) > 0) flags.push("photo_pending");

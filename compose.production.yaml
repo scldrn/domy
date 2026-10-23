@@ -1,0 +1,131 @@
+services:
+  postgres:
+    image: postgres:18@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+    restart: unless-stopped
+    env_file:
+      - "${DOMY_DB_ENV_FILE:?Set DOMY_DB_ENV_FILE to the private database environment file}"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    networks:
+      - database
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    logging: &rotated-logs
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  app:
+    image: "${DOMY_APP_IMAGE:?Set DOMY_APP_IMAGE to the reviewed candidate image}"
+    restart: unless-stopped
+    init: true
+    env_file:
+      - "${DOMY_APP_ENV_FILE:?Set DOMY_APP_ENV_FILE to the private application environment file}"
+    environment:
+      NODE_ENV: production
+      API_PORT: "3000"
+      BETTER_AUTH_TELEMETRY: "false"
+      BETTER_AUTH_TELEMETRY_DEBUG: "false"
+      APP_URL: "${DOMY_PUBLIC_ORIGIN:?Set the canonical HTTPS public origin}"
+      PUBLIC_BASE_URL: "${DOMY_PUBLIC_ORIGIN:?Set the canonical HTTPS public origin}"
+      DOMY_TRUSTED_PROXY_IP: "${DOMY_CADDY_PROXY_IP:?Set the exact Caddy IP on the proxy/app network}"
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      proxy-app:
+        ipv4_address: "${DOMY_APP_PROXY_IP:?Set the app's inspected proxy/app address}"
+      database: {}
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m,uid=1000,gid=1000
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health/ready').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+    logging: *rotated-logs
+
+  migrate:
+    image: "${DOMY_APP_IMAGE:?Set DOMY_APP_IMAGE to the reviewed candidate image}"
+    profiles: ["migrate"]
+    init: true
+    env_file:
+      - "${DOMY_MIGRATOR_ENV_FILE:?Set DOMY_MIGRATOR_ENV_FILE to the private migration environment file}"
+    command: ["node", "src/db/migrate.ts"]
+    working_dir: /workspace/apps/server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - database
+    restart: "no"
+    logging: *rotated-logs
+
+  caddy:
+    image: caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+    restart: unless-stopped
+    environment:
+      DOMY_CADDY_SITE: "${DOMY_CADDY_SITE:?Set the canonical Caddy hostname}"
+    ports:
+      - target: 80
+        published: "${DOMY_HTTP_HOST_PORT:-80}"
+        host_ip: "${DOMY_HTTP_BIND:-0.0.0.0}"
+        protocol: tcp
+      - target: 443
+        published: "${DOMY_HTTPS_HOST_PORT:-443}"
+        host_ip: "${DOMY_HTTPS_BIND:-0.0.0.0}"
+        protocol: tcp
+    volumes:
+      - "${DOMY_CADDYFILE:-./Caddyfile}:/etc/caddy/Caddyfile:ro"
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      edge:
+        ipv4_address: "${DOMY_CADDY_EDGE_IP:?Set the inspected Caddy edge address}"
+      proxy-app:
+        ipv4_address: "${DOMY_CADDY_PROXY_IP:?Set the exact Caddy proxy/app address}"
+    stop_grace_period: 30s
+    logging: *rotated-logs
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: "${DOMY_EDGE_SUBNET:?Set a reviewed edge subnet}"
+  proxy-app:
+    ipam:
+      config:
+        - subnet: "${DOMY_PROXY_APP_SUBNET:?Set a reviewed proxy/app subnet}"
+  database:
+    internal: true
+    ipam:
+      config:
+        - subnet: "${DOMY_DATABASE_SUBNET:?Set a reviewed database subnet}"

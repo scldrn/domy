@@ -29,6 +29,7 @@ import {
   handovers,
   merchants,
   neighborhoods,
+  recordPhotos,
   routes,
   routeStops,
   routeTasks,
@@ -40,7 +41,6 @@ import { applyCourierRecord } from "../lib/courier-records.ts";
 import { AppError } from "../lib/errors.ts";
 import { validate } from "../lib/validate.ts";
 import { auditedChange } from "../lib/master-data.ts";
-import { uploadPhoto } from "./photos.ts";
 
 /**
  * The courier app's API (feature 003, contracts/http-api.md): the route snapshot, records,
@@ -246,6 +246,9 @@ async function loadSummary(db: Executor, courierId: string, route: CourierRoute 
   );
 }
 
+/** Photos are JPEG, reduced on the phone (research R6). */
+const photoType = "image/jpeg";
+
 export const courierAppRoutes = new Hono<AppEnv>()
   .use(requireRole("courier"))
   .get("/push-config", async (c) => {
@@ -360,6 +363,27 @@ export const courierAppRoutes = new Hono<AppEnv>()
   })
   // A photo after its record (FR-009, FR-023); repeating it is harmless.
   .put("/photos/:id", validate("param", idParam), async (c) => {
+    const db = c.get("db");
     const courier = await signedInCourier(c);
-    return uploadPhoto(c, c.req.valid("param").id, courier.id);
+    const [photo] = await db
+      .select({ id: recordPhotos.id, storageKey: recordPhotos.storageKey })
+      .from(recordPhotos)
+      .innerJoin(courierRecords, eq(courierRecords.id, recordPhotos.recordId))
+      .where(
+        and(eq(recordPhotos.id, c.req.valid("param").id), eq(courierRecords.courierId, courier.id)),
+      );
+    if (!photo) throw new AppError("not_found", { message: "No encontramos esa foto." });
+    if (c.req.header("content-type") !== photoType) {
+      throw new AppError("invalid_request", { message: "La foto debe ser una imagen JPEG." });
+    }
+    const image = new Uint8Array(await c.req.arrayBuffer());
+    if (image.byteLength === 0) {
+      throw new AppError("invalid_request", { message: "La foto llegó vacía." });
+    }
+    await c.get("storage").putPhoto(photo.storageKey, image);
+    await db
+      .update(recordPhotos)
+      .set({ uploadedAt: c.get("clock")(), byteSize: image.byteLength })
+      .where(eq(recordPhotos.id, photo.id));
+    return c.body(null, 204);
   });

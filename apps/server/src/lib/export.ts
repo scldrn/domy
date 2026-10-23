@@ -66,6 +66,7 @@ export const exportColumns = [
   "Pagos por cuenta del cliente",
   "Intentos",
   "Motivo de la última novedad",
+  "Notificado",
 ] as const;
 
 type Cell = string | number | null;
@@ -242,6 +243,7 @@ export function exportTable(records: Awaited<ReturnType<typeof findExportRecords
       d.disbursementTotal,
       d.attemptCount,
       d.exceptionReason,
+      instant(s.notifiedAt),
     ]),
   ];
 }

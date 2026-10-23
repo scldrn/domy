@@ -1,6 +1,5 @@
 import { bogotaToday } from "./bogota-time.ts";
 import type { CourierRecordKind, RecordOutcome } from "./courier-records.ts";
-import { addCop } from "./money.ts";
 
 /**
  * "Mi día" (feature 003, FR-037): the courier's day from their own records, computed the same
@@ -63,16 +62,11 @@ export function daySummary(
   );
   const of = (kind: CourierRecordKind) => counted.filter((record) => record.kind === kind);
   const total = (list: SummaryRecord[], pick: (record: SummaryRecord) => number) =>
-    list.reduce((sum, record) => addCop(sum, pick(record)), 0);
+    list.reduce((sum, record) => sum + pick(record), 0);
   const deliveries = of("delivery");
-  const cash = addCop(
-    saved?.cash ?? 0,
-    total(deliveries, (record) => record.cashAmount),
-  );
-  const disbursements = addCop(
-    saved?.disbursements ?? 0,
-    total(of("disbursement"), (record) => record.disbursementAmount),
-  );
+  const cash = (saved?.cash ?? 0) + total(deliveries, (record) => record.cashAmount);
+  const disbursements =
+    (saved?.disbursements ?? 0) + total(of("disbursement"), (record) => record.disbursementAmount);
   return {
     date: day.date,
     deliveries: (saved?.deliveries ?? 0) + deliveries.length,
@@ -80,14 +74,10 @@ export function daySummary(
     returns: (saved?.returns ?? 0) + of("return").length,
     pendingStops: day.pendingStops,
     cash,
-    companyTransfer: addCop(
-      saved?.companyTransfer ?? 0,
-      total(deliveries, (record) => record.companyTransferAmount),
-    ),
-    merchantTransfer: addCop(
-      saved?.merchantTransfer ?? 0,
-      total(deliveries, (record) => record.merchantTransferAmount),
-    ),
+    companyTransfer:
+      (saved?.companyTransfer ?? 0) + total(deliveries, (record) => record.companyTransferAmount),
+    merchantTransfer:
+      (saved?.merchantTransfer ?? 0) + total(deliveries, (record) => record.merchantTransferAmount),
     disbursements,
     cashToHandOver: cash - disbursements,
   };

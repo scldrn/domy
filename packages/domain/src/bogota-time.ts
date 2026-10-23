@@ -5,10 +5,22 @@
 const offset = "-05:00";
 const offsetMs = 5 * 60 * 60 * 1000;
 const dayMs = 24 * 60 * 60 * 1000;
+const merchantServiceDateCount = 30;
 
 /** The Colombian calendar day (YYYY-MM-DD) of an instant. */
 export function bogotaToday(now: Date): string {
   return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+}
+
+/** Inclusive 30-calendar-day merchant window ending on today's Bogotá service date. */
+export function merchantServiceDateWindow(now: Date): {
+  firstDate: string;
+  lastDate: string;
+} {
+  const lastDate = bogotaToday(now);
+  const firstDay = new Date(`${lastDate}T00:00:00.000Z`);
+  firstDay.setUTCDate(firstDay.getUTCDate() - (merchantServiceDateCount - 1));
+  return { firstDate: firstDay.toISOString().slice(0, 10), lastDate };
 }
 
 /** First instant of a Colombian day and first instant of the next one. */

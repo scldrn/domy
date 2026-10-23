@@ -5,15 +5,20 @@ import {
   accountTargetInput,
   accountUpdateInput,
   passwordSignInInput,
+  userRole,
   type UserRole,
 } from "@domy/domain";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
-import type { z } from "zod";
+import { z } from "zod";
+import { isDeepStrictEqual } from "node:util";
+import { isAPIError, originCheckMiddleware } from "better-auth/api";
+import type { JSONParsed } from "hono/utils/types";
 import type { AppEnv } from "../app.ts";
-import { createAuth } from "../auth.ts";
-import { couriers, sessions, users } from "../db/schema/index.ts";
+import { createAuth, type Auth } from "../auth.ts";
+import { accountActionReceipts, couriers, sessions, users } from "../db/schema/index.ts";
 import { recordAudit } from "../lib/audit.ts";
+import { assertAccountActor } from "../lib/account-actor.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { AppError } from "../lib/errors.ts";
 import { diffValues } from "../lib/master-data.ts";
@@ -58,6 +63,15 @@ async function bodyOf<Schema extends z.ZodType>(
   return { request, body: result.data };
 }
 
+/** Forward only normalized native fields, never the client intent discriminator (R19). */
+function nativeRequest(request: Request, body: Record<string, unknown>): Request {
+  return new Request(request.url, {
+    method: request.method,
+    headers: request.headers,
+    body: JSON.stringify(body),
+  });
+}
+
 /** A native failing response must roll back before it can leave the transaction (R18). */
 class AuthResponseRollback extends Error {
   readonly response: Response;
@@ -73,21 +87,99 @@ type AccountOperation =
   | { kind: "role"; userId: string; role: UserRole }
   | { kind: "deactivate" | "reactivate" | "end_sessions"; userId: string };
 
+// R19/T132: validate unknown native JSON and strip all fields outside this public allowlist.
+type NativeUser = JSONParsed<Awaited<ReturnType<Auth["api"]["createUser"]>>["user"]>;
+const safeAccount = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.email(),
+  emailVerified: z.boolean(),
+  createdAt: z.iso.datetime({ offset: true }),
+  updatedAt: z.iso.datetime({ offset: true }),
+  image: z.string().nullable().optional(),
+  role: userRole.optional(),
+  banned: z.boolean().nullable(),
+  banReason: z.string().nullable().optional(),
+  banExpires: z.iso.datetime({ offset: true }).nullable().optional(),
+}) satisfies z.ZodType<
+  Pick<
+    NativeUser,
+    | "id"
+    | "name"
+    | "email"
+    | "emailVerified"
+    | "createdAt"
+    | "updatedAt"
+    | "image"
+    | "role"
+    | "banned"
+    | "banReason"
+    | "banExpires"
+  >
+>;
+const safeAccountEnvelope = z.object({ user: safeAccount });
+const safeSessionEnding = z.object({ success: z.literal(true) }) satisfies z.ZodType<
+  Awaited<ReturnType<Auth["api"]["revokeUserSessions"]>>
+>;
+
+function safeOutcome(kind: AccountOperation["kind"], input: unknown) {
+  return kind === "end_sessions"
+    ? safeSessionEnding.parse(input)
+    : kind === "profile"
+      ? safeAccount.parse(input)
+      : safeAccountEnvelope.parse(input);
+}
+
 /** T130/T131: native account writes, invariant facts and audit have one PG boundary. */
 async function forwardAudited(
   c: Context<AppEnv>,
   request: Request,
   operation: AccountOperation,
+  intentId: string,
+  publicInput: Record<string, unknown>,
 ): Promise<Response> {
   try {
     return await c.get("db").transaction(async (tx) => {
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtextextended('domy:account-administration', 0))`,
       );
-      const auth = createAuth({ ...c.get("authConfig"), db: tx });
+      const auth = createAuth({ ...c.get("authConfig"), db: tx, logger: c.get("logger") });
       const actor = await auth.api.getSession({ headers: request.headers });
       if (!actor || actor.user.banned === true) throw new AppError("unauthenticated");
       if (actor.user.role !== "owner") throw new AppError("forbidden");
+
+      // Use the native public primitive even for cached responses: cookies must not bypass CSRF.
+      try {
+        const nativeContext = {
+          request,
+          headers: request.headers,
+          context: await auth.$context,
+        };
+        await originCheckMiddleware(nativeContext);
+      } catch (error) {
+        if (isAPIError(error))
+          throw new AuthResponseRollback(Response.json(error.body, { status: error.statusCode }));
+        throw error;
+      }
+      // A different tab can replace the shared cookie after this intent was persisted.
+      assertAccountActor(request.headers.get("X-Domy-Actor-Id"), actor.user.id);
+      const [receipt] = await tx
+        .select()
+        .from(accountActionReceipts)
+        .where(eq(accountActionReceipts.clientIntentId, intentId));
+      if (receipt) {
+        if (
+          receipt.actorUserId !== actor.user.id ||
+          receipt.operation !== operation.kind ||
+          (operation.kind !== "create" && receipt.targetUserId !== operation.userId) ||
+          !isDeepStrictEqual(receipt.input, publicInput)
+        )
+          throw new AppError("idempotency_conflict");
+        // Never replay Set-Cookie, native mutations, state guards or historical session deletion.
+        return Response.json(safeOutcome(operation.kind, receipt.response), {
+          status: receipt.status,
+        });
+      }
 
       const [before] =
         operation.kind === "create"
@@ -131,6 +223,8 @@ async function forwardAudited(
           : [];
       const response = await auth.handler(request);
       if (!response.ok) throw new AuthResponseRollback(response);
+      const nativeJson: unknown = await response.clone().json();
+      const outcome = safeOutcome(operation.kind, nativeJson);
 
       const [after] = await tx
         .select()
@@ -169,9 +263,22 @@ async function forwardAudited(
           changes,
           actorUserId: actor.user.id,
           occurredAt: c.get("clock")(),
+          clientEventId: intentId,
         });
       }
-      return response;
+      await tx.insert(accountActionReceipts).values({
+        clientIntentId: intentId,
+        actorUserId: actor.user.id,
+        operation: operation.kind,
+        targetUserId: after.id,
+        input: publicInput,
+        response: outcome,
+        status: response.status,
+        occurredAt: c.get("clock")(),
+      });
+      const headers = new Headers(response.headers);
+      headers.delete("content-length");
+      return Response.json(outcome, { status: response.status, headers });
     });
   } catch (error) {
     if (error instanceof AuthResponseRollback) return error.response;
@@ -217,27 +324,69 @@ export const authRoutes = new Hono<AppEnv>()
   })
   .post("/admin/create-user", requireRole("owner"), async (c) => {
     const { request, body } = await bodyOf(c, accountCreateInput);
-    return forwardAudited(c, request, { kind: "create", email: body.email });
+    const { id, password: _password, ...publicInput } = body;
+    return forwardAudited(
+      c,
+      nativeRequest(request, { ...publicInput, password: body.password }),
+      { kind: "create", email: body.email },
+      id,
+      publicInput,
+    );
   })
   .post("/admin/update-user", requireRole("owner"), async (c) => {
     const { request, body } = await bodyOf(c, accountUpdateInput);
-    return forwardAudited(c, request, { kind: "profile", userId: body.userId });
+    const { actionId, ...nativeInput } = body;
+    return forwardAudited(
+      c,
+      nativeRequest(request, nativeInput),
+      { kind: "profile", userId: body.userId },
+      actionId,
+      body.data,
+    );
   })
   .post("/admin/set-role", requireRole("owner"), async (c) => {
     const { request, body } = await bodyOf(c, accountRoleInput);
-    return forwardAudited(c, request, { kind: "role", ...body });
+    const { actionId, ...nativeInput } = body;
+    return forwardAudited(
+      c,
+      nativeRequest(request, nativeInput),
+      { kind: "role", ...nativeInput },
+      actionId,
+      { role: body.role },
+    );
   })
   .post("/admin/ban-user", requireRole("owner"), async (c) => {
     const { request, body } = await bodyOf(c, accountTargetInput);
-    return forwardAudited(c, request, { kind: "deactivate", ...body });
+    const { actionId, ...nativeInput } = body;
+    return forwardAudited(
+      c,
+      nativeRequest(request, nativeInput),
+      { kind: "deactivate", ...nativeInput },
+      actionId,
+      {},
+    );
   })
   .post("/admin/unban-user", requireRole("owner"), async (c) => {
     const { request, body } = await bodyOf(c, accountTargetInput);
-    return forwardAudited(c, request, { kind: "reactivate", ...body });
+    const { actionId, ...nativeInput } = body;
+    return forwardAudited(
+      c,
+      nativeRequest(request, nativeInput),
+      { kind: "reactivate", ...nativeInput },
+      actionId,
+      {},
+    );
   })
   .post("/admin/revoke-user-sessions", requireRole("owner"), async (c) => {
     const { request, body } = await bodyOf(c, accountTargetInput);
-    return forwardAudited(c, request, { kind: "end_sessions", ...body });
+    const { actionId, ...nativeInput } = body;
+    return forwardAudited(
+      c,
+      nativeRequest(request, nativeInput),
+      { kind: "end_sessions", ...nativeInput },
+      actionId,
+      {},
+    );
   })
   .get("/admin/list-users", requireRole("owner"), (c) => c.get("auth").handler(c.req.raw))
   // Keep the native recovery callback as well as its form submission (FR-030).

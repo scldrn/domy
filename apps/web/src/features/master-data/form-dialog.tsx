@@ -86,11 +86,13 @@ export function FormDialog({
         >
           {children}
           {errors.length > 0 && (
-            <ul role="alert" className="text-body-m text-error">
-              {errors.map((message) => (
-                <li key={message}>{message}</li>
-              ))}
-            </ul>
+            <div role="alert" className="text-body-m text-error">
+              <ul>
+                {errors.map((message) => (
+                  <li key={message}>{message}</li>
+                ))}
+              </ul>
+            </div>
           )}
           <DialogFooter>
             <DialogClose render={<Button variant="outline" type="button" />}>Volver</DialogClose>

@@ -1,0 +1,27 @@
+{
+	admin off
+	log {
+		output stdout
+		format filter {
+			wrap json
+			request delete
+			error delete
+		}
+	}
+}
+
+{$DOMY_CADDY_SITE} {
+	log {
+		output stdout
+		format filter {
+			wrap json
+			request delete
+			resp_headers delete
+			error delete
+		}
+	}
+	encode zstd gzip
+	reverse_proxy app:3000 {
+		header_up X-Domy-Client-IP {http.request.remote.host}
+	}
+}

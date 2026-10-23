@@ -31,6 +31,7 @@ are `camelCase`.
 | 409 | `invalid_transition` | Lifecycle forbids the change (e.g., edit after pickup) |
 | 409 | `duplicate_alias` | Alias already identifies another record (FR-027) |
 | 409 | `last_owner` | Deactivating or demoting the last active owner (FR-032) |
+| 409 | `actor_changed` | The authenticated account differs from the account that created a pending account mutation |
 | 422 | `confirmation_required` | Fee above COP 100.000 or COD amount above COP 2.000.000 sent without `confirmed: true` (FR-037) |
 | 423 | `account_locked` | Sign-in during lockout; includes `retryAt` (FR-033) |
 
@@ -76,8 +77,47 @@ safe UI behavior: documented native 4xx retain Better Auth's `{ code, message }`
 status/headers, translated by the existing web auth adapter. Domy validation/invariant
 errors use its Spanish `{ error: … }` envelope; unexpected native/SQL faults propagate
 to the same sanitized generic 500 path. Origin/CSRF/cookie rules remain native.
-These are target guarantees for T130/T131/T150, not evidence of current implementation;
-account action-id/client identity conformance remains tracked separately by T132.
+T132 adds required client creation `id` and mutation `actionId` UUIDs to the strict
+inputs above. They identify the intent, not native Better Auth user primary keys.
+Names are trimmed and valid emails lowercased; password constraints remain native.
+Each of the six native owner account mutations also requires `X-Domy-Actor-Id`, a UUID
+captured from the client's session snapshot. The same header is required by
+`PUT /api/couriers/accounts/:userId` in feature 003. A missing or malformed header returns
+`400 invalid_request`; a different authenticated account returns `409 actor_changed` with
+a Spanish message and no actor identifiers. The header binds an intent to its saved actor;
+the session cookie, owner role and native Origin/CSRF checks still authorize the request.
+Sign-in, password, session reads, account lists and other endpoints do not require it.
+
+The same actor/operation/target/normalized public input replays its first validated safe
+2xx JSON/status with no further effects, including unchanged operations. Reusing an
+intent with changed public input, target, operation or actor returns
+`409 idempotency_conflict`. Creation retries with valid input ignore password differences
+without storing or comparing passwords or their derivatives. Strict input validation
+still precedes receipt lookup: a malformed retry or lost authorization can be refused
+even when an earlier attempt committed, so that refusal does not disprove its receipt.
+Match creation by intent and public input,
+returning its original native user identity, never selecting a native user PK from `id`.
+Current active-owner authorization and native Origin/CSRF checks run before replay;
+target-state guards run only for a new action. Replays do not emit stored Set-Cookie
+headers and cannot end sessions established after the original session-ending action.
+
+Success preserves native forms: create/role/ban/unban `{ user }`, update the user object,
+revoke `{ success: true }`. User projection allows only id, name, email, emailVerified,
+createdAt, updatedAt, image, role, banned, banReason and banExpires, validated at runtime
+against native types. Receipts contain no credentials, tokens or opaque native fields.
+Native writes, changed-only audit and successful receipt are one atomic transaction;
+failed native responses roll back without consuming an intent.
+
+Browser intents persist before sending, scoped by actor/operation/target. Unknown outcomes
+retain identity; matching ACK rotates it. Short cross-tab locks protect persistence without
+serializing network calls; malformed/unavailable storage blocks sending. Multi-step account
+creation/edit/link preserves acknowledged phases and its link UUID across reload/retry.
+Passwords stay in memory and undergo local creation validation before sending. Retain
+identities for ambiguous 4xx refusals as well as network/server failures. Only the native
+400 `USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL`, proven to execute after receipt lookup and
+roll back, permits releasing a failed identity; a workflow additionally requires zero
+current acknowledged phases. A changed pending input requires resolving its existing intent;
+it cannot overwrite it silently.
 
 ## Shipments
 
@@ -107,6 +147,63 @@ account action-id/client identity conformance remains tracked separately by T132
 | --- | --- | --- |
 | `POST /api/bulk/preview` | Owner, dispatcher | `{ merchantId, pickupPointId?, rows: { cells: string[], neighborhoodId? }[] }` (≤ 200 rows, columns per [bulk-template.md](bulk-template.md); `neighborhoodId` is a place the dispatcher chose for that row) → `{ rows: BulkPreviewRow[] }`, each with `input` (the registration without `id`), `calculatedFee`, `neighborhoodMatch { id, name, municipality, similarity } \| null`, `duplicateOf: string[]`, `errors: Record<string, string>`, `confirmations: ("neighborhood" \| "duplicate" \| "amount")[]`, `status: "ready" \| "needs_confirmation" \| "invalid"`; unknown columns or more than 200 rows → `400` with the explanation |
 | `POST /api/bulk/confirm` | Owner, dispatcher | `{ batchId, merchantId, rows: ShipmentCreateInput[] }` (only confirmed rows; `batchId` and row `id`s generated by the client) → `201 { batchId, created: { row, id, trackingNumber }[] }`; all rows are created or none, and a failure returns `400` with fields `rows.<n>.<field>` (FR-020); the same `batchId` again returns `200` with the first result (FR-042) |
+
+### Browser draft and retry contract
+
+The browser stores shipment and edit drafts in tab-scoped `sessionStorage`. New single/edit
+envelopes contain the form values, edit `baseVersion`, and an optional pending final request. Values are checked
+against the UI form shape, which permits incomplete input; the final shipment request schema
+is applied only when the user submits. Merchant and neighborhood options preserve extra
+runtime API fields while validating the fields consumed by the form. Synthetic empty
+municipality/rate-zone IDs in edit view models are accepted.
+
+Before `POST /api/shipments` or `PATCH /api/shipments/:id`, the browser persists the exact
+validated request, its UUID/action UUID, and displayed form values. An uncertain response or
+reload freezes editing and retries that same payload. A 2xx ACK is accepted only when its
+shipment ID matches the pending request; then the pending envelope is replaced in one
+storage write with a fresh UUID before another request can use the form. Missing or malformed
+storage blocks initialization; failed writes preserve in-memory values and block networking
+until an explicit save retry succeeds.
+
+At read and write boundaries, require the pending identity and target to match the envelope
+and route. Rebuild the request from its form with the existing mapper and require the canonical
+payload to match; never show values A while replaying payload B or let a later automatic form
+write replace the exact pending snapshot. Keep mismatches for local recovery without sending
+them. Bulk confirmations must match the visible merchant and every row merchant. While pending,
+keep values visible but disabled and pause pricing and pickup-default effects. Before the first
+send, use shared domain rules for COD and manual-fee reasons and wait for the current quote when
+its inputs are complete. Preserve the pending identity when mapping server field errors; generic
+`400` responses do not release it automatically. On `400 invalid_request`, keep the request and
+form values disabled, offer the exact pending envelope for local download, and require the user to
+review shipment history before explicitly preparing a new intent. Persist the new UUID before
+unlocking fields; apply the same rule to a rejected bulk confirmation while preserving its source
+rows. A concurrent tab with the old identity may already have committed despite this response.
+
+Edit keys are stable per shipment. A pending update retains and replays its original `version`
+even after the server advances. An unsent draft with an unknown or stale `baseVersion` is held
+until the user downloads it and explicitly loads the current shipment; its values are never
+silently applied to a newer version. The only legacy versioned key read is the one matching the
+currently loaded shipment; other historical keys are left untouched and require assisted
+recovery. Pending form values remain visible but disabled. On a definitive `version_conflict`,
+keep the exact request and form values until the current record is fetched and clearing the
+pending marker succeeds; then require the explicit download and reload decision.
+
+Legacy `{ id, values }` shipment/edit envelopes remain readable, but cannot prove whether an
+old request was sent or reconstruct its exact final payload. Preserve the original raw copy,
+do not auto-save it or reuse its UUID for a new request, explain possible prior submission,
+and require an informed user decision before preparing a new UUID. Malformed, wrong-shaped,
+or unknown top-level fields remain available for local download and explicit discard.
+
+Before `POST /api/bulk/confirm`, the browser persists the exact validated `BulkConfirmInput`
+with its `batchId`, row IDs, order, accepted values, and remaining source rows. An uncertain
+response or reload retries that exact payload. A 2xx response must match the pending batch
+and every ordered row identity before the snapshot is released. It then restores only the
+saved remaining rows. Legacy bulk envelopes without pending IDs are uncertain; preserve a
+local copy and require informed confirmation before creating a fresh attempt. These
+browser-storage rules do not add an HTTP header, endpoint, or server persistence requirement.
+Keep duplicate results and storage/error recovery in the shipment form's normal content
+flow. The sticky action area remains compact and limited to the primary submit control so
+large duplicate lists cannot occlude form fields.
 
 ## Master data
 

@@ -1,6 +1,5 @@
 import {
   CreateBucketCommand,
-  DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
   NoSuchKey,
@@ -21,8 +20,6 @@ export type PhotoStorage = {
   putPhoto: (key: string, image: Uint8Array) => Promise<void>;
   /** The image, or null when the object is gone (12-month retention, FR-036). */
   getPhoto: (key: string) => Promise<Uint8Array<ArrayBuffer> | null>;
-  /** Cleans up an orphaned object if metadata write fails. */
-  deletePhoto: (key: string) => Promise<void>;
   /** Creates the bucket if missing: development and tests; production provisions its own. */
   ensureBucket: () => Promise<void>;
 };
@@ -52,14 +49,6 @@ export function createStorage(config: StorageConfig): PhotoStorage {
         return object.Body ? new Uint8Array(await object.Body.transformToByteArray()) : null;
       } catch (error) {
         if (error instanceof NoSuchKey) return null;
-        throw error;
-      }
-    },
-    deletePhoto: async (key) => {
-      try {
-        await client.send(new DeleteObjectCommand({ Bucket, Key: key }));
-      } catch (error) {
-        if (error instanceof NoSuchKey) return;
         throw error;
       }
     },

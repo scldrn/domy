@@ -332,3 +332,67 @@ Feature 002 shipped on 2026-10-14 (#4–#11). What this feature reuses or must f
   for scripts, planned for the production host, must allow the service worker, the
   manifest, and photo previews (`worker-src 'self'`, `manifest-src 'self'`,
   `img-src 'self' blob:`).
+
+## R18. T135 account-link readiness
+
+- **Finding IV-26**: `AccountDialog` queried `GET /api/couriers?active=true`, so a courier
+  deactivated after being linked disappeared from the edit options. `linkedCourier(undefined,
+  accountId)` also collapsed an unknown list to `null`. The dialog initialized its controlled
+  selection before that list arrived and did not update it when the real response arrived;
+  an untouched form could therefore compare the authoritative current courier with a stale
+  `Sin vincular` selection and submit an unlink. The native link endpoint still rejects a new
+  target that is inactive, so preserving an unchanged relationship must not weaken that rule.
+- **Decision**: use the unfiltered courier projection, which includes active and inactive
+  relationships; refresh it on opening Edit; block courier-affecting save/selection while the
+  response is pending or failed; and show a Spanish retry after a real load failure. Keep
+  `undefined` for an unknown relationship and `null` for a known-unlinked account or an
+  explicit unlink. Show an existing inactive courier as the selected relationship, but omit
+  other inactive couriers from eligible targets. T132's workflow remains unchanged: matching
+  original and desired courier IDs skip the link phase, while explicit changes preserve the
+  existing action ID and pending workflow. Its lost-ACK and partial-create cases stay in the
+  existing browser suite.
+- **Unit RED** (`pnpm --filter @domy/web exec vitest run
+  src/features/users/account-dialog.test.ts`): 1 of 3 tests passed; the unknown-versus-null
+  assertion and the request assertion for omitted `active` failed on the current client. The
+  inactive relationship lookup passed (exit 1, 2026-10-20).
+- **Held-GET browser RED**: `env -u NO_COLOR SENTRY_DSN='' VITE_SENTRY_DSN='' pnpm --filter
+  @domy/web exec playwright test tests/e2e/courier-account-readiness.spec.ts -g 'does not
+  unlink'` used real PostgreSQL, a real owner session and UI/API-created courier/account.
+  The test held the actual courier-list GET until Edit was open, released the 200 response,
+  then saved without changing fields. The final real `GET /api/couriers` had no `account` for
+  the expected courier, proving the untouched edit unlinked it (exit 1, one test; the dialog
+  axe scan before save passed). Private output: `.git/local-orchestration/account-web-held-get-red.log`.
+- **Verification**: keep real browser/API/PostgreSQL coverage for an inactive existing
+  relationship, failed GET with retry, and explicit unlink/relink. Preserve the existing
+  `account-idempotency.spec.ts` recovery cases and full accessibility scans.
+- **GREEN** (`env -u NO_COLOR SENTRY_DSN='' VITE_SENTRY_DSN='' pnpm --filter @domy/web exec
+  playwright test tests/e2e/courier-account-readiness.spec.ts
+  tests/e2e/account-idempotency.spec.ts tests/e2e/access.spec.ts`): 22/22 first-attempt
+  Chromium cases passed against the built app and real PostgreSQL. The detailed executor
+  receipt, unit/static checks, retained RED evidence and shared typecheck limitation are in
+  [account-link-readiness-results.md](account-link-readiness-results.md).
+
+## R19. T083 courier review actions within three taps
+
+- **Finding IV-27**: the real 360 px courier journey required four taps for an ordinary
+  delivery (open stop, open form, review, save) and five for an exception (open stop, open
+  form, choose reason, review, save). Pickup took two taps. The focused Playwright RED used
+  the built app, seeded authenticated sessions, and real API/PostgreSQL records in both
+  standard and high-contrast schemes. It reached and saved all three actions before failing
+  only the exact counts: expected `2/3/3`, observed `2/4/5` in both cases (exit 1, 2/2).
+  Private log: `.git/local-orchestration/t083-tap-count-red.log`.
+- **Decision**: preserve FR-017's complete pre-save summary and explicit confirmation while
+  removing a redundant screen transition. Opening delivery goes directly to a review sheet
+  that shows the shipment, proposed editable received-by name, result, applicable amounts,
+  and the skippable photo control; its primary button explicitly confirms and saves. On an
+  eligible picked-up shipment, show the three existing domain reasons as direct actions;
+  choosing one opens the full exception review with that reason already selected by the
+  courier. The review retains optional notes/photos, correction, and final confirmation. A
+  reason is never defaulted and no selection saves a record. Thus the normal delivery and
+  exception paths are each stop → review/explicit reason → confirmation (three taps from
+  “Mi ruta”); editing or adding optional evidence may add actions. Pickup remains stop →
+  confirm. Record payloads and the HTTP contract do not change.
+- **Alternatives considered**: retain the separate `Revisar` action (which demonstrably
+  exceeds FR-038); remove confirmation (violates FR-017); or make an exception reason
+  implicit (violates FR-013). The selected layout preserves the current record safeguards
+  and uses only `Destinatario ausente`, `Dirección errada`, and `Rechazado`.

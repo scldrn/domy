@@ -25,6 +25,7 @@ describe("audit-formatting (Finding IV-25, 001/T140)", () => {
     expect(actionLabels["updated"]).toBe("Editado");
     expect(actionLabels["deactivated"]).toBe("Desactivado");
     expect(actionLabels["reactivated"]).toBe("Reactivado");
+    expect(actionLabels["link_replaced"]).toBe("Enlace reemplazado");
   });
 
   it("translates all reachable audit field names to Spanish without raw English or camelCase", () => {

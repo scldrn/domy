@@ -199,6 +199,43 @@ Design 3, PostgreSQL through Drizzle, Better Auth, and business rules in a share
 
 ## Technical Context
 
+### T136 and T152 local execution alignment — 2026-10-20
+
+The owner requires all validation in this run to execute locally, without remote CI
+configuration, invocation or waiting. Preserve the four local quality gates and the
+separate executor/orchestrator reviews; do not claim publication or deployment evidence.
+
+For T136 (Constitution V), inventory real Hono response types before replacing the
+caller-selected `unwrap<T>(Promise<Response>)` assertion with inference bound to the
+endpoint's native `ClientResponse`. Remove unchecked consumer arguments and derive
+lookup projections from endpoints. Preserve Hono route chaining and inferred JSON
+returns through shared route/handover helpers. Re-export native Better Auth types only
+as types; its HTTP passthrough remains unknown until runtime validation against schemas
+checked against the native library response contract. Keep domain validation shared.
+Permanent compile-time mismatch checks must fail before the correction and protect
+against generic Response/type erasure; runtime tests retain Spanish errors, structured
+details, 204 and network behavior. Do not implement account replay T132 in this slice.
+
+For T152 (FR-041, research R14, Constitution IX), implement the native SDK error-only
+policy in each app's reporting configuration and entry point. Preserve T153's safe
+diagnostics and error delivery while excluding SDK-added personal/secret context and
+non-error envelopes. Prove real-app/real-PG, native-browser and compiled lazy-browser
+RED/GREEN against local capture, including disabled reporting. No shared reporting
+framework, API/DB change, new dependency or external telemetry is authorized.
+
+For the installed Sentry 11.1.0 SDK's default streaming lifecycle, omit the deprecated
+`beforeSendTransaction` option: the SDK ignores it and warns. Do not replace it with
+`beforeSendSpan`, whose native callback must return a span rather than discard one. Retain
+`tracesSampleRate: 0`; focused native server/browser regressions must attempt a real span,
+prove that no span envelope is delivered, and preserve sanitized error delivery.
+
+Scoped design analysis: both existing corrective tasks cover the observed boundary
+violations. All nine constitutional principles remain required: direct installed
+primitives, intact pending work, shared domain rules, unchanged transactions, inferred
+and validated boundaries, permanent RED, Spanish accessible UX, scoped files and safe
+diagnostics. Resolve any newly discovered design inconsistency before implementation;
+the known implementation defects are the work these tasks explicitly repair.
+
 ### T153 diagnostic correction boundary
 
 Implement research R14's bounded diagnostic projection directly in
@@ -268,7 +305,7 @@ merchants; 7 user stories, 44 functional requirements, about 15 screens
 | Principle | How this plan complies | Status |
 | --- | --- | --- |
 | I. Simplicity First | One server process (Hono also serves the built web app), one PostgreSQL, no queue or cache. Three workspace packages as ratified. Fuzzy search, idempotency, and audit use database features. No wrappers around Drizzle, Hono, or Better Auth | ✅ |
-| II. Zero Data Loss in the Field | Every creation carries a client-generated `id` and every other mutation a client-generated `actionId`, so each has exactly one effect (FR-042); updates and voiding also use `version`. Events have `occurred_at` and `recorded_at`, and `client_event_id` is reserved for the courier app (feature 003). Dispatch panel forms survive failures and expired sessions (FR-038). The device-persistence rules apply to feature 003 | ✅ |
+| II. Zero Data Loss in the Field | Every creation carries a client-generated `id` and every other mutation a client-generated `actionId`, so each has exactly one effect (FR-042); updates and voiding also use `version`. Events have `occurred_at` and `recorded_at`, and `client_event_id` is reserved for the courier app (feature 003). Shipment and bulk form drafts survive failures and expired sessions (FR-038), with validated storage and the exact bulk mutation retained across an uncertain response. The device-persistence rules apply to feature 003 | ✅ |
 | III. Single Source of Truth | Lifecycle, fee rule, payment modes, delivery windows, flags, tracking numbers, and Zod schemas live in `packages/domain`, imported by server and web. Status changes only through the declared lifecycle. Money is integer COP; timestamps are UTC | ✅ |
 | IV. Transactional Integrity & Traceability | Shipment change and `shipment_events` row in one transaction. Checks for payment mode, kind fields, and voiding. Append-only rate card and events. No deletes | ✅ |
 | V. Type Safety at Every Boundary | Strict TypeScript with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. Zod on every request, env, and file input. Hono RPC types with no duplicate API types | ✅ |
@@ -390,3 +427,117 @@ justified inside the principles:
 | --- | --- | --- |
 | Testcontainers in tests | Constitution VI requires integration tests on real PostgreSQL, isolated per test file | A shared development database makes tests order-dependent; PGlite is not the production engine |
 | `DOMY_FAKE_NOW` clock override (development and test only) | Deterministic validation of time-based flags (FR-022, SC-005) in manual and end-to-end tests | Waiting for real clock times is not reproducible |
+
+
+### T132 local execution alignment — 2026-10-20
+
+Implement research R19 on top of verified T130/T131 and T136 boundaries. Add
+`apps/server/src/db/schema/account-actions.ts`, export its receipt table, and generate
+its Drizzle migration with `pnpm db:generate`; never hand-edit generated output. Retain
+one native auth configuration and its transaction-bound executor. Runtime-validate and
+allowlist success JSON against native Auth API types. Invoke native Origin/CSRF primitive
+before receipt replay, revalidate current owner, bind intent and public normalized input,
+and return cached safe success before target guards without replaying response cookies.
+Keep last-owner/link-role guards, mutations, changed-only audit and receipts atomic.
+
+Frontend account API/dialog own Zod-validated persistent intent/workflow metadata in
+localStorage under actor-specific keys, with short Web Locks for cross-tab coordination.
+Persist before network; preserve uncertainty and phase ACKs; match late ACKs by UUID.
+Creation/link retries use the native created-user ID and one durable link action UUID.
+No passwords or credential/session derivatives enter persistent metadata.
+
+Test first: actual PostgreSQL A→B→A (ban/profile/role/unban), no-op and concurrent
+retries, actor/operation/target/input conflict, creation mapping, rollback, current actor
+revalidation, native Origin refusal and self-revoke/relogin replay. Browser/unit coverage
+must exercise lost ACK/reload, cross-tab coordination, blocked storage, actor isolation,
+late ACK and partial workflow resumption. All validation is local, and orchestrator
+independently audits changes and the four gates before closing canonical T132.
+Constitution I–IX: one receipt table solves existing exactly-once requirements; no new
+layer/service/dependency; no secret persistence; direct native auth, generated schema,
+strict DTOs, deterministic transactional tests and Spanish failure messages.
+
+### T132 actor-binding refinement — 2026-10-20
+
+Require the client session snapshot UUID in `X-Domy-Actor-Id` for the six native owner
+account mutations and `PUT /api/couriers/accounts/:userId`. Validate it against the
+cookie-authenticated actor. Native handlers perform this check after Origin/CSRF and
+active-owner validation inside the existing transaction, before receipt lookup. The link
+handler checks `c.get("user").id` before `auditedChange`; its authenticated identity is
+stable for that request, and the guard must precede its existing receipt lookup. Missing
+or malformed headers return safe `400 invalid_request`; a changed actor returns Spanish
+`409 actor_changed` without identifiers or effects. The header does not grant access or
+replace role, session, Origin, or CSRF checks. Other reads and auth endpoints do not need
+it. A small shared validator keeps the rule consistent without changing the audit helper,
+adding a transaction, or changing the receipt schema.
+
+### T137 validated shipment drafts — 2026-10-20
+
+Validate session-storage envelopes and shipment/edit form values with strict Zod schemas at
+the read boundary. Form drafts may be incomplete, so do not run the final shipment create
+schema while restoring them. Merchant and neighborhood selections validate the fields the
+form consumes and preserve complete runtime API objects, including fields omitted by their
+static `Pick` types; nested empty municipality/rate-zone IDs from `fromShipment` are valid
+view-model data. Preserve malformed, wrong-shaped, or unknown-field raw data for local
+download and explicit discard.
+
+Before a single create or edit request, persist the exact validated request payload, its
+mutation UUID/action UUID, and the visible form values in one pending envelope. An ambiguous
+failure freezes the form behind an exact retry control. Do not send a different payload with
+that UUID. Validate the response's shipment ID before replacing the pending envelope in one
+storage write with a fresh UUID and next values. If storage refuses rotation, retain or
+remove the old pending snapshot only through the explicit best-effort storage operations;
+never enable a new network mutation with the old UUID. A storage read refusal blocks form
+initialization; a write refusal preserves in-memory values and blocks networking until an
+explicit retry succeeds.
+
+Bind pending identity and target to the envelope and route at both read and write boundaries.
+Reconstruct the pending input from the saved visible form with the existing mapper and compare
+canonical payloads; bulk form and row merchants must agree with the batch. While pending, keep
+form values visible but disabled and pause pricing, pickup-default and other auto-fill writes
+that could change them. Before the first request, validate COD with the shared domain rule,
+wait for the current fee quote when its inputs are complete, and validate manual-fee reasons
+with the shared reason schema. Map server field errors back to visible fields while preserving
+the exact pending identity. A `400 invalid_request` does not automatically prove that a concurrent
+tab with the same UUID had no effect. Keep the saved request and fields disabled until the user
+downloads the exact payload, reviews shipment history, and explicitly prepares a fresh intent.
+Persist that new intent before unlocking fields; bulk recovery follows the same rule and preserves
+its source rows.
+
+At the same read boundary, bind each pending ID/action ID and target to its envelope and
+route, then rebuild the pending request from the saved form with the existing mapper. Retain a
+well-shaped payload that differs from its visible form as raw recovery data and never send it.
+Bulk drafts also require the visible merchant and each row merchant to match the pending
+confirmation input.
+
+Edit drafts use a stable per-shipment key and persist the source `baseVersion`. An exact pending
+update keeps its original request version and remains retryable even if the server has advanced
+the shipment. An unsent edit with a missing or stale base version is held for local download and
+an explicit reload from the current shipment before another mutation; never silently rebase the
+old values. Keep pending form values visible but disabled while their exact request is uncertain.
+A definitive `version_conflict` remains attached to the saved values until the current record has
+been fetched and the pending marker can be cleared durably; then require the same explicit download
+and reload decision. Read only the legacy versioned key that matches the currently loaded shipment.
+Do not scan or overwrite other historical version keys; older unmatched keys remain outside the
+automatic recovery path.
+
+The valid legacy `{ id, values }` shape remains readable, but it has no record of whether a
+request was sent or its exact final payload. Do not silently auto-save or reuse its UUID for
+a new request. Keep the raw envelope available for local download, explain that an earlier
+submission may already exist, and require an explicit informed decision that starts a new
+UUID after the user checks the shipment history. This preserves legacy field values without
+claiming retroactive exactly-once recovery.
+
+Bulk confirmation stores the exact validated `BulkConfirmInput`, plus the remaining source
+rows, including batch and row UUIDs, order, and accepted values, before sending. A reload or
+uncertain response retries that exact payload; after a valid ACK it restores only the saved
+remaining rows. It cannot silently re-preview a committed row under new identities. Only a
+well-formed ACK with the matching batch and ordered row identities clears the pending
+payload. A valid legacy bulk draft without pending batch IDs is explicitly uncertain: retain
+its raw copy and require informed confirmation before creating a fresh attempt. This uses
+the current form hook and route, reuses domain request schemas, and adds no endpoint, table,
+dependency, or generalized persistence layer.
+
+Keep lengthy warnings, duplicate tracking-number lists, form errors, and storage recovery
+instructions in normal document flow. Reserve the sticky footer for the primary form action
+so a high-count duplicate result cannot cover fields or block ordinary keyboard and pointer
+access. Preserve the complete duplicate list and existing recovery actions.

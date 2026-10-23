@@ -122,7 +122,7 @@ export async function finishTask(
 type TestApp = {
   request: (
     path: string,
-    init?: { method?: string; cookie?: string; body?: unknown },
+    init?: { method?: string; cookie?: string; body?: unknown; actorId?: string },
   ) => Promise<Response>;
 };
 
@@ -169,8 +169,14 @@ export async function send<T = Record<string, unknown>>(
   path: string,
   body?: unknown,
   method = body === undefined ? "GET" : "POST",
+  actorId?: string,
 ): Promise<{ status: number; body: T }> {
-  const response = await t.request(path, { method, cookie, body });
+  const response = await t.request(path, {
+    method,
+    cookie,
+    body,
+    ...(actorId !== undefined && { actorId }),
+  });
   return { status: response.status, body: (await response.json().catch(() => ({}))) as T };
 }
 

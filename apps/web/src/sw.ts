@@ -4,8 +4,9 @@ import {
   createHandlerBoundToURL,
   precacheAndRoute,
 } from "workbox-precaching";
-import { NavigationRoute, registerRoute } from "workbox-routing";
+import { registerRoute } from "workbox-routing";
 import { courierPushMessage, noticeText } from "@domy/domain";
+import { isPublicPagePath } from "./lib/public-route";
 
 /**
  * The service worker of the installable app (feature 003, research R2): it keeps the built
@@ -21,7 +22,12 @@ cleanupOutdatedCaches();
 
 // Every page of the app is the same shell; the API is always the network's.
 registerRoute(
-  new NavigationRoute(createHandlerBoundToURL("index.html"), { denylist: [/^\/api\//] }),
+  ({ request, sameOrigin, url }) =>
+    request.mode === "navigate" &&
+    sameOrigin &&
+    !url.pathname.startsWith("/api/") &&
+    !isPublicPagePath(url.pathname),
+  createHandlerBoundToURL("index.html"),
 );
 
 // FR-040: ignore malformed transport data; never display untrusted text or recipient data.

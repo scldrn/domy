@@ -4,11 +4,13 @@ import { userRole } from "./enums.ts";
 /** FR-030/032 and research R18: only the declared administrative HTTP inputs. */
 const name = z
   .string()
+  .trim()
   .refine((value) => value.trim().length > 0, "Escribe el nombre de la cuenta.");
-const email = z.email("Escribe un correo válido.");
+const email = z.email("Escribe un correo válido.").toLowerCase();
 const userId = z.uuid("El identificador de la cuenta no es válido.");
 
 export const accountCreateInput = z.strictObject({
+  id: z.uuid("El identificador de la acción no es válido."),
   name,
   email,
   password: z
@@ -20,6 +22,7 @@ export const accountCreateInput = z.strictObject({
 export type AccountCreateInput = z.input<typeof accountCreateInput>;
 
 export const accountUpdateInput = z.strictObject({
+  actionId: z.uuid("El identificador de la acción no es válido."),
   userId,
   data: z
     .strictObject({ name: name.optional(), email: email.optional() })
@@ -30,8 +33,8 @@ export const accountUpdateInput = z.strictObject({
 });
 export type AccountUpdateInput = z.input<typeof accountUpdateInput>;
 
-export const accountRoleInput = z.strictObject({ userId, role: userRole });
-export const accountTargetInput = z.strictObject({ userId });
+export const accountRoleInput = z.strictObject({ actionId: z.uuid(), userId, role: userRole });
+export const accountTargetInput = z.strictObject({ actionId: z.uuid(), userId });
 
 // Type-check the fields our wrapper reads; Better Auth validates its remaining native
 // options. Bad password attempts are not account creation: do not enforce 8 chars here.

@@ -11,32 +11,37 @@ a short-lived branch, so the specification and implementation of every feature l
 
 | Feature | State |
 | --- | --- |
-| 001 Shipment registration | T141 merged as `321ef93` (PR #29), with clean prior/post-merge CI. Account checkpoint `0504631` remains local/unmerged; T150–T153 add explicit privacy work. No global sign-off |
+| 001 Shipment registration | Implemented on `main`; integral audit identifies additional conformance defects. T141 corrected/verified locally, not published; other T128–T149 remain open; historical convergence is not current global sign-off |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | Implemented on `main` (#4–#11), with 003 custody extensions; audit adds T063/T064 for aggregate overflow and traceability. Earlier test/review evidence remains in `specs/002-routes-dispatch/quickstart-results.md` |
-| 003 Courier app | Setup, foundations and US1–US7 are on `main`. T131 is complete locally on `003-fix-session-recovery-readiness` (955 tests/92 first-attempt e2e); publication/latest-head CI and merge remain required. PR #30 is held separately. Final closure, physical T087/T093 and audit T133–T135 remain open |
+| 003 Courier app | Setup, foundations and US1–US7 are on `main`. [PR #28](https://github.com/scldrn/domy/pull/28) merged as `9006db3`; post-merge CI 39081231438 is clean (948 tests/90 first-attempt e2e). T131, final closure and physical T087/T093 remain pending; audit adds T133–T135 for photo lifecycle, immutable upload and account-link form readiness |
 | 004 Tracking page and merchant link | Specified, planned, tasked, and analyzed; implementation not started |
 
 ## Next step
 
-### Session recovery and stabilization work — 2026-10-19 UTC
+### Current narrow diagnostic work — 2026-10-19 UTC
 
-Main is at `33e4797` (T141 merged via PR #29 `321ef93`, T153 merged via PR #33 `fedbb63`, T154 merged via PR #32 `33e4797`).
-The authoritative tracking document is [docs/integral-execution-backlog.md](integral-execution-backlog.md)
-with 81 canonical task entries across Features 001–004.
+The exhaustive current handoff is [the detailed execution backlog](integral-execution-backlog.md):
+81 open canonical task entries(27/2/17/35), preserved implementation states, exact next
+steps/dependencies/tests/exit criteria, CI failures, historical regressions and operational
+acceptance. This is a snapshot, not81 unstarted implementations or a readiness certificate.
 
-Branch `003-fix-session-recovery-readiness` (PR #31) resolves 003 T131: cancels session reads on
-native offline events and Query cancellation, forwards AbortSignal, and cleans up listeners,
-allowing cached route and stop navigation to proceed without waiting indefinitely on interrupted requests.
-With T131 verified locally, the branch is rebased onto `main` (`33e4797`), inheriting the modal-notification
-scan stabilization from T154.
+T141 is merged (`321ef93`, PR #29). The current branch is `001-fix-error-diagnostics`:
+T153 has real application/PostgreSQL RED, aligned design, and 21 focused green cases.
+All four local gates pass: check,967 tests(242/531/194),91 first-attempt e2e(5.1minutes)
+and build. Final review/convergence/publication remain; no T153 task closure or global
+sign-off is claimed. The accessibility correction is separately published in PR #32
+(`f4feb8c`); CI39285191879 failed with95 passed/one failed/one flaky and build skipped.
+The retained traces show a fixed lockout-time expectation versus a progressing clock and
+expanded notifications intercepting a disbursement button. The second causal sequence
+still needs investigation; no unchanged rerun or merge is authorized by a later local pass.
+PR #31/#30 remain held for reconciliation and fresh gates;
+the account-integrity commit `0504631` remains preserved locally.
 
-PR #30 (`682bc97`) remains held pending reconciliation with `main` and separate transport verification.
-Account-integrity commit `0504631` (T130/T150/T151 work) remains preserved locally.
-Development mail bearer token logging is tracked under Phase 19 as T155.
-Decisions D1 (spreadsheet-safe CSV) and D2 (courier photos of own work in app) are resolved by the owner.
-Owner authorization for per-slice publication and squash merge upon clean gates is in effect.
-All following execution sections are historical receipts.
+A further native development recovery probe confirms secret-bearing email URL logging
+without provider configuration. IV-41 is appended as 001 T155, not hidden inside T153.
+No actual customer data/external delivery was used, and no fix is claimed yet.
+The paragraphs below are historical execution receipts, not the current branch/status.
 
 ### Authorized remediation — execution checkpoint
 

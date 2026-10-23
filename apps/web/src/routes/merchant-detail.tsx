@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, getRouteApi, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { getMerchant, updateMerchant, updatePickupPoint } from "@/features/master-data/api";
 import { MerchantDialog } from "@/features/master-data/merchants/merchant-dialog";
+import { MerchantLinkControls } from "@/features/master-data/merchants/merchant-link-controls";
 import { PickupPointDialog } from "@/features/master-data/merchants/pickup-point-dialog";
 import { ApiError } from "@/lib/api-client";
 
@@ -36,10 +37,12 @@ export const Route = createFileRoute("/_panel/clientes/$merchantId")({
 
 const plural = (count: number) =>
   count === 1 ? "1 envío abierto" : `${String(count)} envíos abiertos`;
+const panelRoute = getRouteApi("/_panel");
 
 /** A merchant with its aliases and pickup points (FR-026, FR-029). */
 function MerchantDetailPage() {
   const { merchantId } = Route.useParams();
+  const { user } = panelRoute.useRouteContext();
   const queryClient = useQueryClient();
   const queryKey = ["master", "merchant", merchantId];
   const merchant = useQuery({ queryKey, queryFn: () => getMerchant(merchantId) });
@@ -111,6 +114,14 @@ function MerchantDetailPage() {
         <dt className="text-on-surface-variant">Envíos abiertos</dt>
         <dd>{data.openShipments}</dd>
       </dl>
+
+      <MerchantLinkControls
+        actorId={user.id}
+        isActive={data.isActive}
+        linkCode={data.linkCode}
+        merchantId={data.id}
+        merchantName={data.name}
+      />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">

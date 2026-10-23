@@ -140,12 +140,13 @@ describe("Spreadsheet-safe CSV serialization (001/T128 IV-01)", () => {
 });
 
 describe("GET /api/shipments/export delivery columns (003/T085)", () => {
-  it("exports empty table with 37 headers when there are no shipments", async () => {
+  it("exports empty table with 38 headers when there are no shipments", async () => {
     const res = await t.request("/api/shipments/export?format=csv", { cookie: owner.cookie });
     const rows = await parseCsv(res);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toEqual([...exportColumns]);
-    expect(rows[0]).toHaveLength(37);
+    expect(rows[0]).toHaveLength(38);
+    expect(rows[0]?.at(-1)).toBe("Notificado");
   });
 
   it("includes delivery columns: status date, courier, receiver, amounts, attempts, last exception reason", async () => {

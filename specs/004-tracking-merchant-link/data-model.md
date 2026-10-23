@@ -28,10 +28,22 @@ optional) and `company_name` (text, default "Cohex") (FR-009).
 **Enumerations**: feature 001's `shipment_event_type` gains `notified`; its `audit_action`
 gains `link_replaced`.
 
-A notification writes one `notified` shipment event per shipment; the request's `actionId` is
-the `client_event_id` of the first one. Re-sending the same shipments later (the dispatcher
+A nonempty notification writes one `notified` shipment event per shipment; the request's
+`actionId` is the `client_event_id` of the first one. That first event also retains
+non-secret operation and sorted distinct batch shipment IDs; its actor binds replay.
+Empty batches are rejected before writes. Same action/actor/operation/ID set returns
+204 without effects; changed actor/payload conflicts. Validate the whole batch before
+writing, rather than filtering it into an accepted empty result. No codes in event
+metadata. Updates and all events share one transaction (research R15). Re-sending the same shipments later (the dispatcher
 chose "all the shipments of the date") writes new events and keeps the first
-`notified_at`.
+`notified_at` and `notified_by`.
+
+The authenticated `ShipmentDetail` wire view alone adds `trackingCode`, nullable
+UTC ISO `notifiedAt` and nullable actor-UUID `notifiedBy`. Base shipment lists and
+summaries do not gain these bearer/notification fields. Notification intents send
+the optional captured-actor header described in the HTTP contract; UUID casing
+does not change receipt identity or the compared sorted batch set. Existing
+receipt tables remain scoped to their resource areas; no global registry is added.
 
 ## Derived views (packages/domain)
 
@@ -39,22 +51,64 @@ chose "all the shipments of the date") writes new events and keeps the first
 
 | Field | Present when |
 | --- | --- |
-| `merchantName`, `trackingNumber`, `kind`, `serviceDate`, `window`, `neighborhood`, `support` | Always, unless expired |
-| `statusText` | Always, from the table of spec FR-005 |
+| `expired: false`, `merchantName`, `trackingNumber`, `kind`, `serviceDate`, `window`, `support` | Always, unless expired; nested wire shapes in contracts/http-api.md R18 |
+| `neighborhood` | Non-carrier destination, unless expired; nullable where the kind has no destination |
+| `carrierName`, `destinationTown` | Carrier handoff at every non-expired status, replacing its neighborhood |
+| `statusText` | Always, FR-005 with the explicit kind-specific FR-008 happy-path wording (R17) |
 | `reasonText` | Status `exception` without a return decided |
-| `deliveriesBefore` | Status `picked_up` on a route in progress; for a reverse pickup, status `dispatched` |
+| `deliveriesBefore` | On an in-progress route: ordinary eligible shipments only while `picked_up`; reverse pickups only while `dispatched` with a pending pickup, never after pickup; errands omitted (FR-006/FR-008, R17) |
 | `courier: { firstName, phone }` | Status `dispatched` or `picked_up` on a route in progress, no handover pending |
 | `amountToPay` | COD amount > 0 and status not `delivered`, `returned`, or `voided` |
-| `deliveredTo`, `deliveredAt` | Status `delivered` (for a carrier handoff: carrier name and destination town) |
+| `deliveredTo`, `deliveredAt` | Status `delivered` with a verified effective instant: effective record received-by name/time, never intended recipient name; omit both if provenance is unavailable; carrier handoff uses the specified carrier/town destination (R17/R18) |
 | `expired: true` | 7 days after the final status (research R5); then only `support` accompanies it |
 
-**Merchant view** (`merchantShipmentView`, FR-019, FR-020): for a date, each shipment's
-tracking number, merchant reference, recipient's name, neighborhood, status, window, fee
-(`feeToConfirm` while `fee_needs_review`), COD amount, and tracking link; day totals by
-status, of fees, of COD amounts, and of amounts collected by payment method; and, per
-shipment, received-by name, status time, photo ids with availability, amount collected,
-exception reason and note, and attempts. Never: recipient's phone, courier's phone,
-balances.
+**Merchant day view** (`merchantDayView`, FR-019) returns only merchant-approved list
+fields and service-date totals. **Merchant shipment view** (`merchantShipmentView`,
+FR-020) adds current status time, effective receiver/collection, proof-photo state, and
+current-exception detail. Their exact strict wire shapes and aggregate rules are in
+[contracts/http-api.md §Merchant wire shapes](contracts/http-api.md#merchant-wire-shapes)
+and [research R19](research.md#r19-merchant-day-and-shipment-detail-contract). The
+server selects bounded projections; full shipment/route/record views are not inputs or
+responses.
+
+Never expose a recipient/courier phone, recipient address, courier/author identity,
+location, payment account/payee, disbursement, balance, correction history, reverted
+receiver/collection, photo storage key, or raw tracking code. The tracking link itself
+is explicitly required by FR-019 and contains the bearer code in its URL.
+
+Current exception and attempt notes expose only null (absent/blank source) or
+`Para conocer más detalles, contacta con soporte.` (nonblank source), per the
+explicit owner decision of 2026-10-22. This replaces selective redaction for all
+notes, including benign ones. Stored text stays unchanged; note projection needs
+no private phones/addresses or additional directory queries. See
+[research R19](research.md#r19-merchant-day-and-shipment-detail-contract).
+
+**Notification list** retains every merchant with work, including inactive ones,
+and includes its existing `isActive` flag. The web disables opening/copying a
+message for an inactive merchant until activation; POST can still acknowledge
+an earlier successful open/copy after deactivation.
 
 **Notification list** (FR-015): per merchant with shipments on the date, the shipments with
-`notified_at` null counted as "sin notificar".
+`notified_at` null counted as "sin notificar". Each row carries the existing
+`status: ShipmentStatus` as well as `notifiedAt` and the contracted display/link
+fields. The shared composer filters voided entries in every mode and notified
+entries by default; the explicit all-date mode includes notified entries. The
+20/21 compact threshold is calculated after this eligibility filter.
+
+## Upgrade, settings and evidence boundaries (2026-10-21)
+
+Existing merchants and shipments receive independent stable 22-character codes during
+the additive upgrade, before effective unique/not-null enforcement. Preserve every
+pre-existing field, event, relationship and human tracking number; replay must not
+rotate codes. New creations use Node crypto.randomBytes(16); SQL backfill/default
+strategy is reviewed under research R13 and verified on nonempty isolated prior schema.
+
+Support settings PATCH is partial: absent office/contact fields remain unchanged;
+explicit null clears supportPhone. Company name defaults to Cohex and cannot be blank.
+No support-only edit should require an office address. Existing office pair integrity,
+owner-only mutation, audited changes and no-op receipts remain unchanged.
+
+Merchant detail and direct photo access share the merchant ownership, active-code and
+30-day Bogotá service-date predicates. Photo retention is a separate provider policy,
+not permission for the bearer endpoint to expose older work. Deactivating a merchant
+invalidates its merchant link only; its shipment tracking links keep their own expiry.

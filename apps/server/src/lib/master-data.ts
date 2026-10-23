@@ -104,7 +104,10 @@ export async function auditedCreate(
         actorUserId: c.get("user").id,
         occurredAt: c.get("clock")(),
         changes: Object.fromEntries(
-          Object.entries(values).map(([key, value]) => [key, [null, value]]),
+          Object.entries(values)
+            // Merchant bearer codes are credentials, not audit data (004/T004, R13).
+            .filter(([key]) => key !== "linkCode" && key !== "link_code")
+            .map(([key, value]) => [key, [null, value]]),
         ),
       });
       return true;
@@ -134,13 +137,20 @@ export async function auditedChange(
   c: Context<AppEnv>,
   entity: { type: AuditEntity; id: string; actionId: string },
   apply: (tx: Executor) => Promise<Record<string, [unknown, unknown]> | AuditChange[] | null>,
+  assertReplay?: (tx: Executor) => Promise<void>,
 ): Promise<void> {
   const db: Db = c.get("db");
-  if (await findAuditAction(db, entity.actionId)) return;
+  if (await findAuditAction(db, entity.actionId)) {
+    await assertReplay?.(db);
+    return;
+  }
   await db
     .transaction(async (tx) => {
       await lockEntity(tx, entity.type, entity.id);
-      if (await findAuditAction(tx, entity.actionId)) return;
+      if (await findAuditAction(tx, entity.actionId)) {
+        await assertReplay?.(tx);
+        return;
+      }
       const result = await apply(tx);
       const events: AuditChange[] = Array.isArray(result)
         ? result
@@ -161,9 +171,12 @@ export async function auditedChange(
         });
       }
     })
-    .catch((error: unknown) => {
+    .catch(async (error: unknown) => {
       // The same action applied by a concurrent retry.
-      if (isUniqueViolation(error, "audit_events_client_event_id_key")) return;
+      if (isUniqueViolation(error, "audit_events_client_event_id_key")) {
+        await assertReplay?.(db);
+        return;
+      }
       throw error;
     });
 }

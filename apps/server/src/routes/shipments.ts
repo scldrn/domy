@@ -614,7 +614,7 @@ export const shipmentRoutes = new Hono<AppEnv>()
 
     const registeredAt = c.get("clock")();
     const values = await prepareShipment(db, input, { userId: user.id, registeredAt });
-    const { created } = await insertShipments(db, [values]);
+    const created = await insertShipments(db, [values]);
     return c.json(await loadShipment(db, input.id), created ? 201 : 200);
   })
   // Possible duplicates (FR-013): the same reference or, without one, the same phone.
@@ -1113,23 +1113,14 @@ export const shipmentRoutes = new Hono<AppEnv>()
           })
         : {};
 
-    // T147: The fee and rate-zone snapshots are preserved unless pricing inputs explicitly change.
-    // If the destination neighborhood or service level is changed, fee is recalculated with the
-    // rate card in force at registration (scenario 1); a new rate zone or service level discards
-    // an earlier override (scenario 5). Non-pricing edits (e.g. instructions, phone) change neither.
-    const neighborhoodChanged =
-      input.recipientNeighborhoodId !== undefined &&
-      input.recipientNeighborhoodId !== current.recipientNeighborhoodId;
-    const serviceLevelChanged =
-      input.serviceLevel !== undefined && input.serviceLevel !== current.serviceLevel;
-    const pricingChanged = neighborhoodChanged || serviceLevelChanged;
-
-    let rateZoneId = current.rateZoneId;
-    if (neighborhoodChanged) {
-      const place = await pricingPlace(db, current.kind, input.recipientNeighborhoodId ?? null);
-      rateZoneId = place?.rateZone.id ?? null;
-    }
+    // The fee is recalculated with the rate card in force at registration (scenario 1); a new
+    // rate zone or service level discards an earlier override (scenario 5).
+    const neighborhoodId = input.recipientNeighborhoodId ?? current.recipientNeighborhoodId;
+    const place = await pricingPlace(db, current.kind, neighborhoodId);
+    const rateZoneId = place?.rateZone.id ?? null;
     const serviceLevel = input.serviceLevel ?? current.serviceLevel;
+    const pricingChanged =
+      rateZoneId !== current.rateZoneId || serviceLevel !== current.serviceLevel;
     const pricing = pricingChanged
       ? calculateFee({
           kind: current.kind,

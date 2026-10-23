@@ -32,7 +32,7 @@ function Settings() {
     <div className="flex max-w-2xl flex-col gap-6">
       <PageHeader
         title="Configuración"
-        description="La dirección donde se reciben y recogen paquetes en oficina."
+        description="Administra la oficina y los datos de soporte para tus clientes."
       />
       {settings.isPending && <Skeleton className="h-64" />}
       {settings.isError && (
@@ -44,10 +44,16 @@ function Settings() {
         </p>
       )}
       {settings.data && (
-        <OfficeForm
-          key={`${settings.data.officeAddress ?? ""}|${settings.data.officeNeighborhood?.id ?? ""}`}
-          settings={settings.data}
-        />
+        <>
+          <OfficeForm
+            key={`${settings.data.officeAddress ?? ""}|${settings.data.officeNeighborhood?.id ?? ""}`}
+            settings={settings.data}
+          />
+          <SupportForm
+            key={`${settings.data.supportPhone ?? ""}|${settings.data.companyName}`}
+            settings={settings.data}
+          />
+        </>
       )}
     </div>
   );
@@ -117,6 +123,87 @@ function OfficeForm({ settings }: { settings: CompanySettings }) {
       <FieldError>{error}</FieldError>
       <Button type="submit" disabled={form.formState.isSubmitting} className="self-start">
         Guardar configuración
+      </Button>
+    </form>
+  );
+}
+
+function SupportForm({ settings }: { settings: CompanySettings }) {
+  const id = useId();
+  const queryClient = useQueryClient();
+  const [actionId, setActionId] = useState(() => crypto.randomUUID());
+  const [error, setError] = useState<string | null>(null);
+  const form = useForm({
+    defaultValues: {
+      supportPhone: settings.supportPhone ?? "",
+      companyName: settings.companyName,
+    },
+  });
+  const submit = form.handleSubmit(async (values) => {
+    const parsed = companySettingsInput.safeParse({
+      actionId,
+      supportPhone: values.supportPhone === "" ? null : values.supportPhone,
+      companyName: values.companyName,
+    });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Revisa los datos de soporte.");
+      return;
+    }
+    setError(null);
+    try {
+      await updateCompanySettings(parsed.data);
+      setActionId(crypto.randomUUID());
+      await queryClient.invalidateQueries({ queryKey: ["company-settings"] });
+      await queryClient.invalidateQueries({ queryKey: ["master", "audit-events"] });
+      toast.success("Configuración guardada");
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "No pudimos guardar los datos de soporte. Intenta de nuevo.",
+      );
+    }
+  });
+
+  return (
+    <form
+      onSubmit={(event) => void submit(event)}
+      className="flex flex-col gap-4 rounded-md border border-outline-variant bg-sheet p-6"
+    >
+      <div>
+        <h2 className="text-title-l text-on-surface">Atención al cliente</h2>
+        <p className="mt-1 text-body-m text-on-surface-variant">
+          Estos datos aparecerán en los enlaces de seguimiento.
+        </p>
+      </div>
+      <Field>
+        <FieldLabel htmlFor={`${id}-company-name`}>Nombre de la empresa</FieldLabel>
+        <Input
+          id={`${id}-company-name`}
+          autoComplete="organization"
+          {...form.register("companyName")}
+          disabled={form.formState.isSubmitting}
+        />
+      </Field>
+      <Field>
+        <FieldLabel htmlFor={`${id}-support-phone`}>Celular de soporte</FieldLabel>
+        <Input
+          id={`${id}-support-phone`}
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel-national"
+          maxLength={10}
+          aria-describedby={`${id}-phone-help`}
+          {...form.register("supportPhone")}
+          disabled={form.formState.isSubmitting}
+        />
+        <p id={`${id}-phone-help`} className="text-body-s text-on-surface-variant">
+          Escribe 10 dígitos, sin indicativo del país.
+        </p>
+      </Field>
+      <FieldError>{error}</FieldError>
+      <Button type="submit" disabled={form.formState.isSubmitting} className="self-start">
+        Guardar datos de soporte
       </Button>
     </form>
   );

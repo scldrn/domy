@@ -362,3 +362,48 @@ describe("authentication with courier data", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("account mutation actor transport (001/T132)", () => {
+  it("forwards the expected actor and explains a changed session", async () => {
+    const actorId = id(2);
+    const fetcher = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
+      Promise.resolve(
+        Response.json(
+          { error: { code: "actor_changed", message: "La sesión cambió." } },
+          { status: 409 },
+        ),
+      ),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    const { authCall } = await import("./session");
+
+    await expect(
+      authCall(
+        "admin/ban-user",
+        { userId: id(3), actionId: id(4) },
+        { "X-Domy-Actor-Id": actorId },
+      ),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "actor_changed",
+      message:
+        "La sesión cambió de cuenta. Reabre la cuenta original para recuperar o continuar el cambio pendiente.",
+    });
+    expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).get("X-Domy-Actor-Id")).toBe(actorId);
+    expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).get("content-type")).toBe(
+      "application/json",
+    );
+  });
+
+  it("does not require or add an actor header to unrelated authentication calls", async () => {
+    const fetcher = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
+      Promise.resolve(Response.json({ success: true })),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    const { authCall } = await import("./session");
+
+    await authCall("reset-password", { token: "synthetic", newPassword: "new-password" });
+
+    expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).has("X-Domy-Actor-Id")).toBe(false);
+  });
+});

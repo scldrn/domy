@@ -23,10 +23,13 @@ import { Route as settingsRouteImport } from './routes/settings'
 import { Route as accountRouteImport } from './routes/account'
 import { Route as historyRouteImport } from './routes/history'
 import { Route as couriersRouteImport } from './routes/couriers'
+import { Route as notifyMerchantsRouteImport } from './routes/notify-merchants'
 import { Route as routesBoardRouteImport } from './routes/routes-board'
 import { Route as rateCardRouteImport } from './routes/rate-card'
 import { Route as carriersRouteImport } from './routes/carriers'
 import { Route as usersRouteImport } from './routes/users'
+import { Route as merchantPageRouteImport } from './routes/merchant-page'
+import { Route as trackingRouteImport } from './routes/tracking'
 import { Route as courierDayRouteImport } from './routes/courier-day'
 import { Route as courierPendingRouteImport } from './routes/courier-pending'
 import { Route as merchantDetailRouteImport } from './routes/merchant-detail'
@@ -105,6 +108,11 @@ const couriersRoute = couriersRouteImport.update({
   path: '/mensajeros',
   getParentRoute: () => panelLayoutRoute,
 } as any)
+const notifyMerchantsRoute = notifyMerchantsRouteImport.update({
+  id: '/notificar',
+  path: '/notificar',
+  getParentRoute: () => panelLayoutRoute,
+} as any)
 const routesBoardRoute = routesBoardRouteImport.update({
   id: '/rutas',
   path: '/rutas',
@@ -124,6 +132,16 @@ const usersRoute = usersRouteImport.update({
   id: '/usuarios',
   path: '/usuarios',
   getParentRoute: () => panelLayoutRoute,
+} as any)
+const merchantPageRoute = merchantPageRouteImport.update({
+  id: '/cliente/$code',
+  path: '/cliente/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const trackingRoute = trackingRouteImport.update({
+  id: '/seguimiento/$code',
+  path: '/seguimiento/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const courierDayRoute = courierDayRouteImport.update({
   id: '/mensajero/mi-dia',
@@ -184,10 +202,13 @@ export interface FileRoutesByFullPath {
   '/cuenta': typeof accountRoute
   '/historial': typeof historyRoute
   '/mensajeros': typeof couriersRoute
+  '/notificar': typeof notifyMerchantsRoute
   '/rutas': typeof routesBoardRoute
   '/tarifario': typeof rateCardRoute
   '/transportadoras': typeof carriersRoute
   '/usuarios': typeof usersRoute
+  '/cliente/$code': typeof merchantPageRoute
+  '/seguimiento/$code': typeof trackingRoute
   '/mensajero/mi-dia': typeof courierDayRoute
   '/mensajero/pendientes': typeof courierPendingRoute
   '/clientes/$merchantId': typeof merchantDetailRoute
@@ -211,10 +232,13 @@ export interface FileRoutesByTo {
   '/cuenta': typeof accountRoute
   '/historial': typeof historyRoute
   '/mensajeros': typeof couriersRoute
+  '/notificar': typeof notifyMerchantsRoute
   '/rutas': typeof routesBoardRoute
   '/tarifario': typeof rateCardRoute
   '/transportadoras': typeof carriersRoute
   '/usuarios': typeof usersRoute
+  '/cliente/$code': typeof merchantPageRoute
+  '/seguimiento/$code': typeof trackingRoute
   '/mensajero/mi-dia': typeof courierDayRoute
   '/mensajero/pendientes': typeof courierPendingRoute
   '/clientes/$merchantId': typeof merchantDetailRoute
@@ -241,10 +265,13 @@ export interface FileRoutesById {
   '/_panel/cuenta': typeof accountRoute
   '/_panel/historial': typeof historyRoute
   '/_panel/mensajeros': typeof couriersRoute
+  '/_panel/notificar': typeof notifyMerchantsRoute
   '/_panel/rutas': typeof routesBoardRoute
   '/_panel/tarifario': typeof rateCardRoute
   '/_panel/transportadoras': typeof carriersRoute
   '/_panel/usuarios': typeof usersRoute
+  '/cliente/$code': typeof merchantPageRoute
+  '/seguimiento/$code': typeof trackingRoute
   '/_courier/mensajero/mi-dia': typeof courierDayRoute
   '/_courier/mensajero/pendientes': typeof courierPendingRoute
   '/_panel/clientes/$merchantId': typeof merchantDetailRoute
@@ -270,10 +297,13 @@ export interface FileRouteTypes {
     | '/cuenta'
     | '/historial'
     | '/mensajeros'
+    | '/notificar'
     | '/rutas'
     | '/tarifario'
     | '/transportadoras'
     | '/usuarios'
+    | '/cliente/$code'
+    | '/seguimiento/$code'
     | '/mensajero/mi-dia'
     | '/mensajero/pendientes'
     | '/clientes/$merchantId'
@@ -297,10 +327,13 @@ export interface FileRouteTypes {
     | '/cuenta'
     | '/historial'
     | '/mensajeros'
+    | '/notificar'
     | '/rutas'
     | '/tarifario'
     | '/transportadoras'
     | '/usuarios'
+    | '/cliente/$code'
+    | '/seguimiento/$code'
     | '/mensajero/mi-dia'
     | '/mensajero/pendientes'
     | '/clientes/$merchantId'
@@ -326,10 +359,13 @@ export interface FileRouteTypes {
     | '/_panel/cuenta'
     | '/_panel/historial'
     | '/_panel/mensajeros'
+    | '/_panel/notificar'
     | '/_panel/rutas'
     | '/_panel/tarifario'
     | '/_panel/transportadoras'
     | '/_panel/usuarios'
+    | '/cliente/$code'
+    | '/seguimiento/$code'
     | '/_courier/mensajero/mi-dia'
     | '/_courier/mensajero/pendientes'
     | '/_panel/clientes/$merchantId'
@@ -347,6 +383,8 @@ export interface RootRouteChildren {
   signInRoute: typeof signInRoute
   recoverRoute: typeof recoverRoute
   resetPasswordRoute: typeof resetPasswordRoute
+  merchantPageRoute: typeof merchantPageRoute
+  trackingRoute: typeof trackingRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -449,6 +487,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof couriersRouteImport
       parentRoute: typeof panelLayoutRoute
     }
+    '/_panel/notificar': {
+      id: '/_panel/notificar'
+      path: '/notificar'
+      fullPath: '/notificar'
+      preLoaderRoute: typeof notifyMerchantsRouteImport
+      parentRoute: typeof panelLayoutRoute
+    }
     '/_panel/rutas': {
       id: '/_panel/rutas'
       path: '/rutas'
@@ -476,6 +521,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/usuarios'
       preLoaderRoute: typeof usersRouteImport
       parentRoute: typeof panelLayoutRoute
+    }
+    '/cliente/$code': {
+      id: '/cliente/$code'
+      path: '/cliente/$code'
+      fullPath: '/cliente/$code'
+      preLoaderRoute: typeof merchantPageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/seguimiento/$code': {
+      id: '/seguimiento/$code'
+      path: '/seguimiento/$code'
+      fullPath: '/seguimiento/$code'
+      preLoaderRoute: typeof trackingRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_courier/mensajero/mi-dia': {
       id: '/_courier/mensajero/mi-dia'
@@ -570,6 +629,7 @@ interface panelLayoutRouteChildren {
   accountRoute: typeof accountRoute
   historyRoute: typeof historyRoute
   couriersRoute: typeof couriersRoute
+  notifyMerchantsRoute: typeof notifyMerchantsRoute
   routesBoardRoute: typeof routesBoardRoute
   rateCardRoute: typeof rateCardRoute
   carriersRoute: typeof carriersRoute
@@ -591,6 +651,7 @@ const panelLayoutRouteChildren: panelLayoutRouteChildren = {
   accountRoute: accountRoute,
   historyRoute: historyRoute,
   couriersRoute: couriersRoute,
+  notifyMerchantsRoute: notifyMerchantsRoute,
   routesBoardRoute: routesBoardRoute,
   rateCardRoute: rateCardRoute,
   carriersRoute: carriersRoute,
@@ -613,6 +674,8 @@ const rootRouteChildren: RootRouteChildren = {
   signInRoute: signInRoute,
   recoverRoute: recoverRoute,
   resetPasswordRoute: resetPasswordRoute,
+  merchantPageRoute: merchantPageRoute,
+  trackingRoute: trackingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

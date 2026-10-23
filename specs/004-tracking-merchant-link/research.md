@@ -39,17 +39,18 @@ statuses, custody, stops, photos, and settings by features
   `publicTrackingView(shipment, context, now)`, returns exactly the fields of FR-003–FR-008,
   FR-010, and FR-014 for each status and kind: public status text (FR-005), reason text,
   "entregas antes de la tuya", courier's first name and phone (only when FR-007 allows), COD
-  amount to pay, expiry. The public endpoint serializes only its result. A second function,
-  `merchantShipmentView`, does the same for the merchant page (FR-019, FR-020).
+  amount to pay, expiry. The public endpoint serializes only its result. Merchant access
+  uses two bounded projections: `merchantDayView` for the shipment list and service-date
+  totals, and `merchantShipmentView` for one shipment's detail (FR-019, FR-020).
 - **Rationale**: SC-004 is verified by unit tests over every status and kind; nothing can
   leak by adding a column to a query (Constitution III and IX).
 
 ## R4. "Entregas antes de la tuya"
 
-- **Decision**: `deliveriesBefore(stops, shipmentId)` in `packages/domain/src/routes.ts`
+- **Decision**: `deliveriesBefore(stops, shipmentId, kind: ShipmentKind): number | null` in `packages/domain/src/routes.ts`
   counts pending delivery and return stops placed before the shipment's pending delivery
   stop in the route's order (before its pending pickup stop for a reverse pickup not yet
-  picked up).
+  picked up; reverse pickups have no queue after pickup).
 - **Rationale**: FR-006 with the stop order of feature 002; completed stops are skipped
   whatever their position (EC-06).
 
@@ -66,10 +67,10 @@ statuses, custody, stops, photos, and settings by features
 
 - **Decision**: a fixed-window limit of 60 requests per minute per client address on
   `/api/public/*`, kept in memory in `apps/server/src/lib/rate-limit.ts`; a limited request
-  gets `429` with a Spanish message. The client address is the value of
-  `X-Forwarded-For` set by Caddy, which replaces any value sent by the client (no trusted
-  proxies configured); the server listens only on the internal Docker network, so every
-  request passes through Caddy. Unknown, deactivated, and replaced codes all return the same `404`.
+  gets `429` with a Spanish message. The client address is the
+  native Node adapter transport peer; arbitrary forwarded headers are ignored. A future
+  Caddy deployment requires its own verified network/peer topology under OP-01/G1;
+  this repository does not currently prove that topology. Unknown, deactivated, and replaced codes all return the same `404`.
   Public responses carry `Cache-Control: no-store` and `X-Robots-Tag: noindex`, and the
   public web routes are served with `X-Robots-Tag: noindex`.
 - **Rationale**: FR-011, FR-012. One server process (Principle I) makes an in-memory counter
@@ -87,10 +88,13 @@ statuses, custody, stops, photos, and settings by features
 ## R8. The WhatsApp message
 
 - **Decision**:
-  - `composeMerchantMessage(merchant, shipments, baseUrl)` in
+  - `composeMerchantMessage(merchant, shipments, baseUrl, includeNotified = false)` in
     `packages/domain/src/merchant-message.ts` builds the Spanish text: a greeting with the
     merchant's name, one entry per shipment (recipient, neighborhood, tracking number, link),
-    and the merchant link; above 20 shipments, the count and the merchant link only.
+    and the merchant link; above 20 eligible shipments, the count and the merchant link only.
+    Notification-list rows include the existing domain `status`; the composer excludes
+    voided rows in both modes and already-notified rows by default. The explicit
+    all-date option sets `includeNotified` to true, without duplicating filters in UI.
   - "Enviar por WhatsApp" opens `https://wa.me/57{phone}?text={message}` in the same tap,
     so the browser does not block it; "Copiar mensaje" uses the clipboard. In both cases the
     page then sends `POST /api/notifications` with an `actionId`, retried until it
@@ -115,8 +119,10 @@ statuses, custody, stops, photos, and settings by features
 ## R10. Photos on the merchant page
 
 - **Decision**: `GET /api/public/merchant/:code/photos/:photoId` streams the object from the
-  storage of feature 003 after checking that the photo belongs to a shipment of that
-  merchant; there is no other public way to reach a photo.
+  storage of feature 003 only after validating the active merchant code, merchant ownership,
+  the shared 30-day Bogotá service-date window, and that the photo is proof on the shipment's
+  effective current delivery/return record. A missing object is `404`; this is the only public
+  way to reach a photo, and detail responses return neither photo bytes nor storage keys/URLs.
 - **Rationale**: FR-020, FR-022; business master §4.5 (photos only on the merchant link).
 
 ## R11. Settings and privacy
@@ -127,3 +133,353 @@ statuses, custody, stops, photos, and settings by features
   of their data MUST be collected before go-live (Constitution VII, v1.2.0; Ley 1581 de
   2012) and is part of the go-live checklist.
 - **Rationale**: FR-009; Constitution IX.
+
+## R12. Public origin and development sequencing (2026-10-21)
+
+The owner defers physical 003 acceptance for local 004 development only. Technical
+001–003 contracts are prerequisites; pending physical/final closure still gates release.
+Shared Zod validation accepts only HTTP(S) origins, with no credentials, non-root path,
+query or fragment. Production requires an explicit HTTPS PUBLIC_BASE_URL; development
+and tests may fall back to APP_URL. Production PUBLIC_BASE_URL and APP_URL must
+normalize to the same origin for this single deployment. Normalize to URL.origin.
+Vite production bundles may still target local HTTP development/test previews;
+production runtime validation and the release rehearsal enforce HTTPS and exact
+build/runtime agreement. Vite exposes only this
+validated value; E2E and phone builds/runtime pass their actual dynamic origin.
+Never expose other environment values or include sentinel secrets in a built bundle.
+
+## R13. Additive secret-code upgrade
+
+Inventory the actual authorized local target read-only before schema work. Test fresh
+install and nonempty prior-schema upgrade in disposable PostgreSQL, preserving old
+fields, history, identities and links. Backfill independent random codes before effective
+unique/not-null enforcement; migration replay cannot rotate them. Use standard generated
+Drizzle migrations, not manual edits to generated SQL. New server creations use Node
+crypto.randomBytes(16). On pinned PostgreSQL 18, the compatibility SQL default hashes the concatenated raw
+bytes of two independent core gen_random_uuid() values with built-in sha256, takes
+16 digest bytes, and base64url-encodes without padding. This uses 244 random input
+bits to derive a 128-bit output; a single UUIDv4 would offer only 122 random bits.
+A volatile ADD COLUMN default is evaluated per old row before effective NOT NULL
+and UNIQUE enforcement, and keeps seed/direct insertions compatible. Node randomBytes
+is the ordinary API generator; this SQL expression is the migration/compatibility
+fallback, not a second business rule. Both use the shared token format contract.
+Verify real generated DDL, nonempty upgrade, fresh generation parity and replay;
+no handwritten generated SQL or pgcrypto extension needed. Codes never enter
+audit/event snapshots.
+
+Primary references: [PostgreSQL 18 binary-string functions](https://www.postgresql.org/docs/18/functions-binarystring.html)
+and [ALTER TABLE defaults](https://www.postgresql.org/docs/18/ddl-alter.html).
+These support the design; actual generated DDL and upgrade tests remain required.
+
+## R14. Public transport, logs and worker boundaries
+
+The historical R6 Caddy topology is a deployment assumption, not current evidence.
+Derive the client address from the real Node adapter peer. Ignore arbitrary XFF and
+similar headers; any later proxy mode needs an explicitly trusted peer and isolation
+proof. Use a bounded, cleaned single-process map and deterministic clock in tests.
+Redact public bearer path segments at the shared request/error logging boundary.
+Keep useful route/status diagnostics; never copy bearer codes to logs, telemetry or
+creation history. Test encoded/malformed paths and all public failures as well as 200.
+Skip new worker registration on public URLs AND deny both public navigation prefixes
+in an existing controller. Do not unregister the courier worker or clear pending work.
+
+## R15. Notification receipts and delivery order
+
+Tracking and merchant pages/rotation must work before notification browser delivery.
+Pure composer RED can precede the portal, but no accepted story sends dead links.
+Reject empty shipmentIds; validate a nonempty distinct batch atomically. The first
+notified event holds actionId, actor and non-secret operation/sorted shipment IDs.
+Serialize competing action IDs, compare actor/payload on replay, reject mismatch, and
+write all marks/events transactionally. A repeat include-all request uses a new UUID
+and preserves first notifiedAt. No new receipt table is needed for nonempty batches.
+Opening/copying a message is recorded; sending is always a human external action.
+
+New browser notification intents carry the same optional `X-Domy-Actor-Id`
+guard as merchant-link replacement, checked before effects/replay. Existing
+authenticated callers may omit it; malformed UUID validation and actor mismatch
+reuse the existing guard. Canonical UUID case/order define the receipt batch set.
+The receipt is anchored in the existing shipment-event namespace and rejects a
+foreign shipment operation; this does not redesign other areas' receipt tables.
+Detail additions stay on `ShipmentDetail`: tracking code, UTC nullable notified
+instant and nullable actor UUID, without broadening shipment list responses.
+
+Notification GET includes merchant `isActive` without hiding inactive work.
+New sharing actions are disabled until activation, consistent with the existing
+merchant-link control and its invalid inactive link. Already opened/copied marks
+remain recordable after deactivation. Notification events write both occurredAt
+and recordedAt from the same injected server instant, not the database wall clock.
+
+## R16. Projection and support settings precision
+
+Carrier/town destination is public at every non-expired carrier-handoff status.
+Inactive merchant links do not invalidate individual tracking links. Merchant detail
+and direct photos share the same 30-day Bogotá date/ownership/code restrictions.
+Support settings are independently editable through partial owner PATCH: preserve
+omitted fields, nullable clearable phone, nonempty companyName default Cohex; retain
+office pair validity and native no-op/audit/replay behavior. Rotation receipts bind
+actor/operation/merchant, never retain bearer secrets in audit changes, and replay
+without rotating again.
+
+## R17. Public wording, receiver provenance and queue inputs
+
+- **Decision:** apply FR-008 kind-specific happy-path wording before the matching
+  generic FR-005 phrase. A delivered reverse pickup says “Entregado al remitente a
+  las {time}”; it does not invent a combined recipient phrase. Carrier handoff and
+  errand retain their explicit kind wording. Exception/return/void rules remain
+  those in FR-005. This reconciles existing approved requirements; it adds no scope.
+- **Receiver privacy:** `deliveredTo` uses only the effective delivery record's
+  `received_by_name`, never `shipments.recipient_name`. The approved receiver
+  exception does not authorize intended-recipient disclosure. Reverse-pickup
+  statusText and actual receiver provenance remain distinct. Carrier destination
+  wording uses its carrier/town as already specified. Deliberately different
+  recipient/receiver fixture names must prove the source; a stale reverted record
+  must not supply the effective delivery or expiry timestamp.
+- **Queue seam:** stops contain both pickup and delivery tasks, so the helper needs
+  shipment kind explicitly. A reverse pickup anchors only at its pending pickup;
+  after pickup it returns null even if a delivery task remains. Ordinary eligible
+  deliveries anchor at their pending delivery. Errands and missing applicable
+  pending tasks return null. Count each earlier stop once if it
+  contains pending delivery/return work; ignore completed/failed work and pickup-only
+  stops. The projection/caller gates active route and FR-006 status before exposing
+  a count: reverse pickups qualify only while dispatched, other eligible kinds
+  while picked_up. Route status is not duplicated as another helper argument. Missing or
+  inactive routes expose no queue. Return-decided exception states expose no queue.
+- **Rationale:** spec FR-004–FR-008, Constitution VII's bounded receiver exception,
+  the actual RouteStopPlan task model, effective record/revert history, and the
+  independent read-only W15 analysis. No future implementation is accepted by this
+  artifact alignment; full foundations must pass before T009–T012 start.
+
+## R18. Public nested wire shape before RED delegation
+
+Use the explicit PublicTracking wire table in contracts/http-api.md: a discriminated
+full/expired union, configured support phone/company name, nullable ISO window bounds,
+name-only destination, and contextual keys omitted outside their approved states.
+The shape introduces no new business disclosure; it resolves serialization names
+before independent domain/HTTP/browser tests. Receiver provenance/kind wording and
+queue eligibility remain R17. T013 owns the actual shared Zod schema; tests must not
+create competing product API types.
+
+### R18 state/kind and deadline precision
+
+Reverse pickup uses its FR-008 pre-pickup wording for registered/assigned/dispatched,
+then the remitente wording after pickup. Errands have no pickup operation: their
+registered/assigned states are Programada, dispatched/picked_up are En curso and
+delivered is Realizada, consistent with the canonical dispatched-to-delivered
+errand transition. Exceptional/returned/voided states retain FR-005 wording.
+Reprogrammed public dates use Spanish long calendar dates (for example “2 de octubre
+de 2026”); the delivery date is rendered separately via the shared UI formatter.
+A final link remains full at exactly occurredAt+7days and expires strictly after
+that instant; now<=deadline is full, now>deadline is expired. Device/provider proof
+is separate from these deterministic test boundaries.
+
+### R18 incomplete legacy provenance guard
+
+For a delivered row with incomplete legacy provenance, never fabricate a delivery
+instant or reuse a reverted record. Emit deliveredAt/deliveredTo together only
+when a valid effective final event or qualifying applied, non-reverted delivery
+record supplies the instant. Otherwise omit both metadata keys and use safe
+untimed wording: “Entregado” or “Entregado al remitente”; carrier destination and
+“Realizada” remain kind-specific. An absent final instant cannot start a guessed
+expiry deadline. This defensive case does not alter normal, fully sourced FR-005
+wording or authorize any additional identity disclosure.
+
+The EC-04 off-route/office guard precedes happy-path wording for package kinds,
+including reverse pickup: picked-up packages without an in-progress route, or held
+at the office, read “Reprogramado para {serviceDate}” and expose no courier or
+queue. FR-008 does not label an off-route package as on its way. For delivered
+legacy rows, the same verified effective instant is used for delivery metadata
+and expiry; a qualifying non-reverted applied delivery record can supply that
+instant when its event instant is unavailable.
+
+## R19. Merchant day and shipment detail contract
+
+`merchantDayView` projects the merchant's service-date shipment cohort into the list
+and aggregate response. `merchantShipmentView` projects one authorized shipment into
+its detail response. Keep their strict output schemas and inputs separate: list rows
+never carry receiver data, photos, exception notes, or attempts. Server queries pass
+bounded fields rather than full shipments, routes, or courier-record history.
+
+The list exposes only merchant-approved tracking details: id, human tracking number,
+kind/status/service date, merchant reference, recipient name, neighborhood name,
+delivery window, confirmed fee or `fee: null` with `feeToConfirm: true`, COD amount,
+and an absolute `trackingLink` formed from validated `PUBLIC_BASE_URL` plus the
+existing `/seguimiento/{trackingCode}` route. Do not return the raw tracking code.
+Recipient name and neighborhood are explicitly required by FR-019; recipient phone,
+address, courier identity/contact and other merchant data are not.
+
+`MerchantDay.totals` has canonical status keys; the cohort counts and all monetary
+aggregates exclude voided shipments, with `byStatus.voided` fixed at zero while
+voided rows remain visible in the list. `confirmedFees` sums only non-voided fees
+whose `feeNeedsReview` is false; provisional fee values are never returned or summed,
+and `feeToConfirmCount` reports non-voided rows needing confirmation. `codToCollect`
+sums positive COD amounts only for non-final shipments, as in FR-014, without
+subtracting collections or netting balances. `collectedByMethod` sums only an
+effective current applied, non-reverted delivery record for shipments in this
+service-date cohort, excluding voided shipments; it is based on shipment service
+date, not record occurred date.
+Every monetary value is a safe-integer COP amount; every count is a nonnegative integer.
+
+Reuse `isFinal` from `packages/domain/src/shipment-lifecycle.ts` for COD eligibility,
+and `addCop`/`aggregateMoney` from the shared domain money helpers for checked sums
+and output validation. Do not reuse `daySummary`: it groups courier records by their
+Bogotá `occurredAt` date, while this view groups shipments by `serviceDate`.
+
+Detail `statusAt` is the UTC `occurredAt` when the current status took effect: use the
+effective applied, non-reverted delivery/return/exception record when it establishes
+the current status, otherwise the latest appended event that actually changes or
+restores the shipment to that status (`fromStatus !== toStatus`, including a
+qualifying `record_reverted` restoration). A same-status reassignment, office
+receipt, edit, or handover does not start a new state and must not reset its time.
+Use `registeredAt` only for an initial registered state; a later restoration to
+registered uses its qualifying event, never the original registration time.
+Return null if no qualifying current
+source exists; never substitute `updatedAt` or a reverted record. `receivedByName`
+comes only from the effective current delivery record for delivered shipments or
+return record for returned shipments; otherwise it is null. Per-shipment `collected`
+is the effective current delivery's cash/company-transfer/merchant-transfer amounts and their total,
+or all zero without an effective current delivery. Never fall back to the intended
+recipient or to reverted, unapplied, or historical correction values.
+
+Detail photos contain only ids and `pending`, `uploaded`, or `unavailable` status
+for proof-kind photos on the effective current delivery/return record. An unuploaded
+photo is pending only during the 24-hour wait after `recordedAt`; afterward it is
+unavailable. Uploaded metadata does not guarantee that the retained object still
+exists: the direct photo endpoint streams it and returns 404 when absent, and the UI
+replaces that image with the unavailable message. Do not probe/download photo bytes
+while building a detail projection or return storage keys/URLs. T026 reuses the
+existing pending-photo timing rule from `packages/domain/src/shipment-flags.ts` and
+`apps/server/src/lib/record-views.ts`, or extracts a shared helper if necessary;
+it must not add a third independent 24-hour threshold.
+
+Only when the current shipment status is `exception`, detail includes its current
+reason and note plus every applied, non-reverted delivery/exception attempt. Each
+attempt exposes only kind, occurred time, the existing FR-005 `exceptionReasonText`
+mapping in `packages/domain/src/public-tracking.ts` (nullable), and note (nullable).
+Do not introduce competing public reason wording. Reverted and unapplied records and
+historical correction snapshots are excluded; no courier/author identity, phone,
+location, payment details, photo keys,
+or record ids are exposed. Reuse `deliveryAttempts` in
+`packages/domain/src/courier-records.ts` and corrected current record values.
+
+### Owner decision: merchant notes (2026-10-22)
+
+The owner explicitly chose: “Mostrar un aviso de contacto con soporte en lugar de
+la nota”. This supersedes the earlier provisional selective-redaction policy.
+For the current exception and every included delivery/exception attempt, project
+any nonblank note as the exact fixed notice `Para conocer más detalles, contacta con soporte.`.
+Null, empty, and whitespace-only notes project as null. Even benign notes are
+replaced; no original substring, phone, address, or contact URL is returned.
+Keep the existing nullable `note` field and constrain its nonnull value to that
+literal in the strict schema. Reason labels and eligible attempts remain unchanged.
+
+Use one canonical projection helper for this rule. Stored notes remain unchanged;
+perform no writes or input logging. No recipient/courier phones, pickup/recipient
+addresses, normalization, span mapping, or directory lookup is needed for note
+projection. Do not load those private fields solely for this feature. T023 covers
+sensitive and benign text, null/empty/whitespace notes, current and historical
+attempts, exact notice-only schemas, and source-input immutability. The public UI
+renders the notice and retains the configured support contact action.
+
+## R20. Public loading and measurement precision
+
+A real cold-browser trace showed the API starting after the lazy tracking component
+loaded. Route-loader query prefetch overlaps that same typed request with component
+loading; it adds no second query contract and changes no protected guard. The
+first strict measurements (3090.7/3109.6 ms) also included the assertion helper's
+retry/backoff completion. Preserve the same before-navigation monotonic start and
+3000 ms limit, but capture readiness from a native animation-frame visibility wait
+before the retained exact-text assertion. The local measurement protocol is in
+plan.md. This changes measurement precision, not the SC-003 budget or the tested
+anonymous cold-network conditions. An expired response still polls while visible:
+a revert may make that open link current again under FR-010/FR-013.
+
+## R21. Durable notification marks and one eligibility rule
+
+The message and marked shipment IDs must use the same domain eligibility rule.
+Extract the existing composer filter into a shared pure helper when wiring T022;
+both composer and web counts/selection consume it. Do not copy its notified/voided
+predicate into the UI or add a second message representation.
+
+Before opening/copying, synchronously persist the validated actor/action/merchant/
+service-date/shipment-ID intent in a `prepared` phase under one native localStorage key per action. The service date restores the affected list during prepared recovery. Store no message,
+recipient text, phone or bearer code. Separate keys avoid cross-tab shared-array
+overwrite; the immutable UUID is reused by every retry. Storage failure blocks
+the action with an actionable Spanish error, rather than losing its later mark.
+
+Only `ready` intents may enter automatic synchronization. Opening WhatsApp must happen in the originating tap without waiting for a network
+or asynchronous storage operation. A blocked popup or failed clipboard must not
+create a notification mark; discard only that never-sent local intent. After a
+successful open/copy, persist the same intent as `ready` before submitting its mark
+with the captured-actor header. If that second storage write fails or the browser
+closes before it, keep the prepared intent, show recovery guidance and do not
+automatically mark it: opening/copying was not durably confirmed. An explicit
+repeat open/copy may replace this validated, never-submitted prepared action;
+rediscover prepared intents on later panel mounts so guidance survives a crash,
+not only a caught storage error. Persist a replacement before removing only its
+superseded prepared key. Serialize ready transitions and conditional discard/ACK
+for the same action with the native per-action browser lock, following the existing
+account-intent pattern. Acquire these locks after the popup/copy operation; never
+await a lock before opening WhatsApp. Re-read the expected phase/action under the
+lock so a late cleanup cannot erase another tab's ready intent.
+Ready/uncertain submitted actions must keep their original UUID and payload.
+This phase distinction prevents another tab or reload from marking before the
+external action succeeds. An uncertain
+response retains the exact intent. Automatic retry in the existing authenticated
+panel resumes on open/reconnection and while mounted, surviving route navigation
+and reload. It processes only the current actor's keys; another account cannot
+adopt them. Do not erase pending intents on auth/identity/network errors.
+
+Validate stored JSON and key/actor/action consistency before networking. Corrupt
+or unavailable storage gets Spanish recovery guidance without deletion or raw
+metadata logging. Remove only the exact acknowledged action key. Real API replay
+provides exactly-once effects even if two tabs retry simultaneously. Invalidating
+the existing query cache refreshes notified times/counts after acknowledgment.
+No automatic WhatsApp sending or delivery acknowledgment is introduced.
+
+## R22. Opt-in trusted proxy identity for OP-01 (2026-10-22)
+
+Direct requests continue to use the native Node transport peer; forwarded headers
+remain ignored by default. OP-01 may opt in to one exact `DOMY_TRUSTED_PROXY_IP`
+value, validated as one IPv4 or IPv6 address with no CIDR, port, zone identifier,
+list, or empty-string mode. An unset value preserves the direct behavior. An
+invalid configured value fails environment validation and never enables proxy
+trust. `apps/server/src/index.ts` passes the parsed optional address through
+`AppDeps.trustedProxyIp` to a pure server helper, proposed as
+`resolveClientAddress(nativePeer, trustedProxyIp, canonicalHeader)` in
+`apps/server/src/lib/client-address.ts`.
+
+The helper returns a canonical validated client address only when the native peer
+is a valid IP equal to the configured trusted peer and the canonical header has
+exactly one valid address. Normalize IPv4-mapped IPv6 on both sides before peer
+comparison and before returning the client identity. Reject malformed addresses,
+comma-separated or duplicate header values, ports, CIDR notation and zone IDs.
+The adapter must pass the header to this helper only when exactly one raw header
+field was received; comma-folded duplicates must be rejected as multiple values.
+Otherwise use the normalized native peer; if it is absent or invalid, use the
+existing `unknown` bucket. For a malformed or multiple canonical header received
+from the trusted proxy, that fallback is the proxy peer itself, so affected clients
+share its bounded 60-per-minute bucket. Do not infer identity from
+`Forwarded`, `X-Forwarded-For`, or `X-Real-IP` under any configuration.
+
+Caddy must replace `X-Domy-Client-IP` with the address from its client transport.
+The synthetic OP-01 lab isolates edge, proxy/app, and database networks: edge
+`172.31.253.0/29` (Caddy `.2`, clients `.3` and `.4`), proxy/app
+`172.31.254.0/29` (Caddy `.2`, app `.3`), and internal DB
+`172.31.252.0/29`. The app and database ports stay unpublished. These lab
+addresses are not production subnet choices. Verify the exact trusted peer and
+single-endpoint topology before trusting the header. Keep direct-mode forged-header
+tests; add opt-in parser/peer tests and an actual Caddy request proving client A's
+61st request receives 429 while client B remains allowed. Also test header
+replacement, malformed/multiple fallback, other-peer rejection, backend
+unpublished, and privacy markers in app/proxy logs. This is transport identity
+for rate limiting only; it does not change public API schemas or business rules.
+
+### R22 request-log privacy refinement (2026-10-23)
+
+The proxy/privacy marker contract also covers unmatched non-public paths and the
+client-supplied `X-Request-Id` header. App logs use only registered route templates
+or a fixed unmatched-route class and server-generated correlation IDs. Raw provider
+SDK failures and `String(error)` output are excluded; only bounded safe failure
+metadata may be logged. Native-server regressions must place distinct markers in
+path, query, request ID, another header, body, and provider error input, verify none
+appears in application logs, and retain safe status/route/duration/correlation fields.

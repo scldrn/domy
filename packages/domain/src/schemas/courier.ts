@@ -11,7 +11,7 @@ import { collectedTotal, type DaySummary } from "../day-summary.ts";
 import { routeStatuses, stopKinds, taskStatuses } from "../routes.ts";
 import { shipmentStatuses } from "../shipment-lifecycle.ts";
 import { packageSizes, shipmentKinds, type ShipmentKind } from "./enums.ts";
-import { aggregateMoney, calendarDate, money, reason } from "./shipment.ts";
+import { calendarDate, money, reason } from "./shipment.ts";
 
 /**
  * The courier app's requests and answers (feature 003, contracts/http-api.md). The phone
@@ -427,10 +427,10 @@ const courierDaySummary = z.object({
   exceptions: z.number().int().nonnegative(),
   returns: z.number().int().nonnegative(),
   pendingStops: z.number().int().nonnegative(),
-  cash: aggregateMoney,
-  companyTransfer: aggregateMoney,
-  merchantTransfer: aggregateMoney,
-  disbursements: aggregateMoney,
+  cash: money,
+  companyTransfer: money,
+  merchantTransfer: money,
+  disbursements: money,
   cashToHandOver: z.number().int(),
 }) satisfies z.ZodType<DaySummary>;
 
