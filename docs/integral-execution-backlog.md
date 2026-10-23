@@ -1,5 +1,14 @@
 # Integral Execution Backlog and Delivery Contract
 
+**Owner scope decision — 2026-10-23:** offline operation is not required for the
+immediate client release. Stop its physical acceptance/diagnostics as release gates;
+continue connected delivery. Preserve existing implementation, data and regression
+coverage. The [online release decision](online-release-scope.md) records verified
+iPhone online results and the failed/deferred offline observation. The original five
+open task IDs and 76/81 count retain their full historical scope; they are not a
+remaining implementation estimate for this narrower release. Deployment stays with
+the owner. This decision supersedes offline prerequisites below for this release.
+
 **Canonical repository consolidation — 2026-10-23:** owner-requested cleanup
 consolidates the candidate for `main` through one squash PR. Source `d604a287`
 passes all four local gates: 1,626 tests, 155 zero-retry browser scenarios, check
