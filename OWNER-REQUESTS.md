@@ -8,6 +8,15 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
+**Salida con conexión — decisión del propietario, 2026-10-23:** «No necesito que
+el sistema funcione sin conexión [...] no es algo que el cliente necesita en este
+momento». Se retiran de esta salida las pruebas físicas sin conexión y su diagnóstico;
+se continúa con la entrega para uso con internet. Se conserva el código, los datos
+pendientes y las pruebas automatizadas. El fallo observado en iPhone queda aplazado,
+sin declararlo aprobado. [Alcance vigente y evidencia](docs/online-release-scope.md).
+El 94% corresponde al catálogo original, no al desarrollo restante de esta salida.
+Infraestructura y despliegue siguen a cargo del propietario.
+
 **Consolidación del repositorio — 2026-10-23:** pediste dejar el repositorio y
 GitHub limpios, con una sola versión. La entrega canónica es `main`, mediante una
 PR squash; se retiran las ramas incorporadas conservando un respaldo recuperable.

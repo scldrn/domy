@@ -19,6 +19,17 @@ a short-lived branch, so the specification and implementation of every feature l
 
 ## Next step
 
+### Online release prioritized by owner — 2026-10-23
+
+The owner explicitly removes offline operation from the immediate client release.
+Stop physical offline testing/diagnostics as release prerequisites and continue the
+connected delivery review. Existing code, outbox data and regression coverage remain.
+The [scope decision and phone evidence](online-release-scope.md) supersede older
+instructions requiring offline acceptance for this release. iPhone online deliveries,
+photos and collections were verified natively; offline reopening failed and is deferred,
+not passed. The original 76/81 catalog is historical scope accounting, not a remaining
+implementation percentage for the online release. Deployment remains owner-operated.
+
 ### Canonical repository consolidation — 2026-10-23
 
 The owner requested one clean local/GitHub source. Use `main` after the single

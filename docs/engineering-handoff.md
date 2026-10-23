@@ -4,7 +4,10 @@
 
 Updated 2026-10-23. The owner handles infrastructure procurement and production
 deployment. Engineering supplies the code, local verification evidence and runbooks.
-Physical-phone acceptance remains deferred by the owner.
+The owner explicitly excludes offline operation from the immediate release; see
+[online release scope](online-release-scope.md). Stop offline phone testing as a
+release prerequisite. Preserve existing code, pending data and the failed observation.
+Connected physical acceptance is partial, as detailed in that decision receipt.
 
 The canonical release source is `main` in [scldrn/domy](https://github.com/scldrn/domy).
 This handoff accompanies the single consolidation PR; its temporary branch is
@@ -34,7 +37,7 @@ its exact scope and preserved failures are in the
 [container results](../specs/004-tracking-merchant-link/deployment-container-results.md).
 The built image is Linux arm64; the production target platform is not selected.
 
-## Five canonical tasks still open
+## Five original catalog tasks still open
 
 | Task | Remaining acceptance |
 | --- | --- |
@@ -45,7 +48,9 @@ The built image is Linux arm64; the production target platform is not selected.
 | `004/T035` | Final integrated closure including the deferred physical tasks; technical gates already pass |
 
 These are **76/81 closed tasks (94%)**, not a production-readiness percentage.
-Opening the app on the reported phones does not supply the remaining scenario evidence.
+They retain the original wider scope; offline acceptance no longer blocks the
+owner-requested online release. Do not infer full scenario acceptance from the
+partial connected phone results or use this historical percentage as its forecast.
 
 ## Deployment handoff
 
