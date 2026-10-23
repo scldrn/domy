@@ -16,6 +16,8 @@ import {
   type RoutePlanShipment,
   type RouteStopPlan,
 } from "./routes.ts";
+import * as routeModule from "./routes.ts";
+import type { ShipmentKind } from "./schemas/enums.ts";
 
 let next = 0;
 const newId = () => `stop-${String(++next)}`;
@@ -398,5 +400,150 @@ describe("large route confirmation (FR-005)", () => {
     expect(largeRouteThreshold).toBe(15);
     expect(needsLargeRouteConfirmation(15)).toBe(false);
     expect(needsLargeRouteConfirmation(16)).toBe(true);
+  });
+});
+
+type DeliveriesBefore = (
+  stops: RouteStopPlan[],
+  shipmentId: string,
+  kind: ShipmentKind,
+) => number | null;
+
+type RoutesWithDeliveriesBefore = typeof routeModule & {
+  deliveriesBefore: DeliveriesBefore;
+};
+
+function hasDeliveriesBefore(module: typeof routeModule): module is RoutesWithDeliveriesBefore {
+  return "deliveriesBefore" in module && typeof module.deliveriesBefore === "function";
+}
+
+function countBefore(
+  stops: RouteStopPlan[],
+  shipmentId: string,
+  kind: ShipmentKind,
+): number | null | undefined {
+  if (!hasDeliveriesBefore(routeModule)) return undefined;
+  return routeModule.deliveriesBefore(stops, shipmentId, kind);
+}
+
+function queueTask(
+  shipmentId: string,
+  kind: RouteStopPlan["tasks"][number]["kind"],
+  status: RouteStopPlan["tasks"][number]["status"] = "pending",
+): RouteStopPlan["tasks"][number] {
+  return { shipmentId, kind, status };
+}
+
+function queueStop(
+  id: string,
+  kind: RouteStopPlan["kind"],
+  tasks: RouteStopPlan["tasks"],
+): RouteStopPlan {
+  return { id, kind, address: `Dirección ${id}`, neighborhoodId: null, tasks };
+}
+
+describe("deliveriesBefore (FR-006, FR-008, research R4/R17)", () => {
+  it("returns zero when the shipment's pending delivery is first", () => {
+    const stops = [
+      queueStop("shared-pickup", "pickup", [
+        queueTask("target", "pickup"),
+        queueTask("other-merchant-shipment", "pickup"),
+      ]),
+      queueStop("target-delivery", "delivery", [queueTask("target", "delivery")]),
+    ];
+
+    expect(countBefore(stops, "target", "delivery")).toBe(0);
+  });
+
+  it.each(["delivery", "carrier_handoff"] as const)(
+    "counts one pending delivery before a %s shipment's own delivery stop",
+    (kind) => {
+      const stops = [
+        queueStop("first-delivery", "delivery", [queueTask("other", "delivery")]),
+        queueStop("target-delivery", "delivery", [queueTask("target", "delivery")]),
+      ];
+
+      expect(countBefore(stops, "target", kind)).toBe(1);
+    },
+  );
+
+  it("counts each earlier pending delivery or return stop once and skips ineligible work", () => {
+    const stops = [
+      queueStop("earlier-delivery", "delivery", [queueTask("other-merchant-a", "delivery")]),
+      queueStop("grouped-delivery", "delivery", [
+        queueTask("shared-stop-a", "delivery"),
+        queueTask("shared-stop-b", "delivery"),
+      ]),
+      queueStop("pending-return", "return", [queueTask("returning", "return")]),
+      queueStop("completed-out-of-order", "delivery", [
+        queueTask("already-done", "delivery", "completed"),
+      ]),
+      queueStop("failed-return", "return", [queueTask("failed", "return", "failed")]),
+      queueStop("pickup-only", "pickup", [queueTask("pickup-only", "pickup")]),
+      queueStop("errand", "errand", [queueTask("errand", "errand")]),
+      queueStop("target-delivery", "delivery", [queueTask("target", "delivery")]),
+      queueStop("pending-after-target", "delivery", [queueTask("later", "delivery")]),
+    ];
+
+    expect(countBefore(stops, "target", "delivery")).toBe(3);
+  });
+
+  it("does not use a shared pickup as the anchor or count the target's own stop", () => {
+    const stops = [
+      queueStop("shared-pickup", "pickup", [
+        queueTask("target", "pickup"),
+        queueTask("other-merchant-shipment", "pickup"),
+      ]),
+      queueStop("other-merchant-delivery", "delivery", [
+        queueTask("other-merchant-shipment", "delivery"),
+      ]),
+      queueStop("shared-target-delivery", "delivery", [
+        queueTask("target", "delivery"),
+        queueTask("another-shipment", "delivery"),
+      ]),
+    ];
+
+    expect(countBefore(stops, "target", "delivery")).toBe(1);
+  });
+
+  it("counts a reverse pickup up to its pending pickup stop", () => {
+    const stops = [
+      queueStop("earlier-delivery", "delivery", [queueTask("other", "delivery")]),
+      queueStop("earlier-return", "return", [queueTask("returning", "return")]),
+      queueStop("target-pickup", "pickup", [queueTask("target", "pickup")]),
+      queueStop("target-delivery", "delivery", [queueTask("target", "delivery")]),
+    ];
+
+    expect(countBefore(stops, "target", "reverse_pickup")).toBe(2);
+  });
+
+  it("returns null for a reverse pickup after pickup even when delivery remains pending", () => {
+    const stops = [
+      queueStop("earlier-delivery", "delivery", [queueTask("other", "delivery")]),
+      queueStop("target-pickup", "pickup", [queueTask("target", "pickup", "completed")]),
+      queueStop("target-delivery", "delivery", [queueTask("target", "delivery")]),
+    ];
+
+    expect(countBefore(stops, "target", "reverse_pickup")).toBeNull();
+  });
+
+  it("returns null for errands, a missing anchor, or a completed own anchor", () => {
+    const pendingDelivery = queueStop("other-delivery", "delivery", [
+      queueTask("other", "delivery"),
+    ]);
+    const stopsWithoutErrandAnchor = [
+      pendingDelivery,
+      queueStop("target-errand", "errand", [queueTask("target", "errand")]),
+    ];
+    const stopsWithoutPendingDeliveryAnchor = [
+      pendingDelivery,
+      queueStop("completed-target-delivery", "delivery", [
+        queueTask("target", "delivery", "completed"),
+      ]),
+    ];
+
+    expect(countBefore(stopsWithoutErrandAnchor, "target", "errand")).toBeNull();
+    expect(countBefore([pendingDelivery], "missing", "delivery")).toBeNull();
+    expect(countBefore(stopsWithoutPendingDeliveryAnchor, "target", "delivery")).toBeNull();
   });
 });

@@ -123,7 +123,7 @@ async function applyRouteAction(
   apply: (tx: Executor, route: RouteRow, now: Date) => Promise<NewRouteEvent[]>,
   /** Another route the action changes, locked with this one in the shared order. */
   alsoLock?: string,
-): Promise<Response> {
+) {
   const db = c.get("db");
   if (await findRouteAction(db, input.actionId)) return c.json(await loadRouteDetail(db, routeId));
   const now = c.get("clock")();

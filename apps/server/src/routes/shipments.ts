@@ -237,6 +237,16 @@ async function loadRouteState(db: Executor, id: string) {
 
 async function loadDetail(db: Executor, id: string, now: Date): Promise<ShipmentDetail> {
   const shipment = await loadShipment(db, id);
+  const [notificationFields] = await db
+    .select({
+      trackingCode: shipments.trackingCode,
+      notifiedAt: shipments.notifiedAt,
+      notifiedBy: shipments.notifiedBy,
+    })
+    .from(shipments)
+    .where(eq(shipments.id, id));
+  if (!notificationFields)
+    throw new AppError("not_found", { message: "No encontramos ese envío." });
   const records = await loadShipmentRecords(db, id);
   const events = await db
     .select({ event: shipmentEvents, actor: { id: users.id, name: users.name } })
@@ -252,6 +262,9 @@ async function loadDetail(db: Executor, id: string, now: Date): Promise<Shipment
   );
   return {
     ...shipment,
+    trackingCode: notificationFields.trackingCode,
+    notifiedAt: notificationFields.notifiedAt?.toISOString() ?? null,
+    notifiedBy: notificationFields.notifiedBy,
     ...(await loadRouteState(db, id)),
     events: events
       .filter(
@@ -268,7 +281,7 @@ async function loadDetail(db: Executor, id: string, now: Date): Promise<Shipment
         recordedAt: event.recordedAt.toISOString(),
         reason: event.reason,
         changes:
-          event.type === "created" || !event.changes
+          event.type === "created" || event.type === "notified" || !event.changes
             ? null
             : Object.fromEntries(
                 Object.entries(changesOf(event)).map(([field, [before, after]]) => [
@@ -614,7 +627,7 @@ export const shipmentRoutes = new Hono<AppEnv>()
 
     const registeredAt = c.get("clock")();
     const values = await prepareShipment(db, input, { userId: user.id, registeredAt });
-    const created = await insertShipments(db, [values]);
+    const { created } = await insertShipments(db, [values]);
     return c.json(await loadShipment(db, input.id), created ? 201 : 200);
   })
   // Possible duplicates (FR-013): the same reference or, without one, the same phone.
@@ -1113,14 +1126,23 @@ export const shipmentRoutes = new Hono<AppEnv>()
           })
         : {};
 
-    // The fee is recalculated with the rate card in force at registration (scenario 1); a new
-    // rate zone or service level discards an earlier override (scenario 5).
-    const neighborhoodId = input.recipientNeighborhoodId ?? current.recipientNeighborhoodId;
-    const place = await pricingPlace(db, current.kind, neighborhoodId);
-    const rateZoneId = place?.rateZone.id ?? null;
+    // T147: The fee and rate-zone snapshots are preserved unless pricing inputs explicitly change.
+    // If the destination neighborhood or service level is changed, fee is recalculated with the
+    // rate card in force at registration (scenario 1); a new rate zone or service level discards
+    // an earlier override (scenario 5). Non-pricing edits (e.g. instructions, phone) change neither.
+    const neighborhoodChanged =
+      input.recipientNeighborhoodId !== undefined &&
+      input.recipientNeighborhoodId !== current.recipientNeighborhoodId;
+    const serviceLevelChanged =
+      input.serviceLevel !== undefined && input.serviceLevel !== current.serviceLevel;
+    const pricingChanged = neighborhoodChanged || serviceLevelChanged;
+
+    let rateZoneId = current.rateZoneId;
+    if (neighborhoodChanged) {
+      const place = await pricingPlace(db, current.kind, input.recipientNeighborhoodId ?? null);
+      rateZoneId = place?.rateZone.id ?? null;
+    }
     const serviceLevel = input.serviceLevel ?? current.serviceLevel;
-    const pricingChanged =
-      rateZoneId !== current.rateZoneId || serviceLevel !== current.serviceLevel;
     const pricing = pricingChanged
       ? calculateFee({
           kind: current.kind,

@@ -13,6 +13,8 @@ export const companySettings = pgTable(
     id: uuid().primaryKey().default(companySettingsId),
     officeAddress: text(),
     officeNeighborhoodId: uuid().references(() => neighborhoods.id),
+    supportPhone: text(),
+    companyName: text().notNull().default("Cohex"),
     updatedAt: updatedAt(),
   },
   (table) => [
@@ -25,5 +27,10 @@ export const companySettings = pgTable(
       sql`(${table.officeAddress} is null) = (${table.officeNeighborhoodId} is null)
         and (${table.officeAddress} is null or char_length(${table.officeAddress}) between 5 and 200)`,
     ),
+    check(
+      "company_settings_support_phone_check",
+      sql`${table.supportPhone} is null or ${table.supportPhone} ~ '^[0-9]{10}$'`,
+    ),
+    check("company_settings_company_name_check", sql`char_length(btrim(${table.companyName})) > 0`),
   ],
 );

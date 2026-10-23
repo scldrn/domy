@@ -1,6 +1,7 @@
 import {
   removeShipmentFromStops,
   routeProgress,
+  safeIntegerCop,
   shipmentFlag,
   shipmentPlaces,
   type Handover,
@@ -448,15 +449,18 @@ export function unassignedUpTo(date: string): SQL | undefined {
 
 /** COD to collect per route: the sum over the shipments currently on it (FR-018). */
 async function codToCollect(db: Executor, routeIds: string[]): Promise<Map<string, number>> {
+  if (routeIds.length === 0) return new Map();
   const rows = await db
     .select({
       routeId: shipments.routeId,
-      total: sql<number>`coalesce(sum(${shipments.codAmount}), 0)::int`,
+      total: sql<string | number>`coalesce(sum(${shipments.codAmount}), 0)::bigint`,
     })
     .from(shipments)
     .where(inArray(shipments.routeId, routeIds))
     .groupBy(shipments.routeId);
-  return new Map(rows.flatMap((row) => (row.routeId ? [[row.routeId, row.total] as const] : [])));
+  return new Map(
+    rows.flatMap((row) => (row.routeId ? [[row.routeId, safeIntegerCop(row.total)] as const] : [])),
+  );
 }
 
 /**

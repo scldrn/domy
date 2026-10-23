@@ -11,7 +11,7 @@ import { collectedTotal, type DaySummary } from "../day-summary.ts";
 import { routeStatuses, stopKinds, taskStatuses } from "../routes.ts";
 import { shipmentStatuses } from "../shipment-lifecycle.ts";
 import { packageSizes, shipmentKinds, type ShipmentKind } from "./enums.ts";
-import { calendarDate, money, reason } from "./shipment.ts";
+import { aggregateMoney, calendarDate, money, phone, reason } from "./shipment.ts";
 
 /**
  * The courier app's requests and answers (feature 003, contracts/http-api.md). The phone
@@ -285,16 +285,33 @@ export type OfficeReceiptInput = z.input<typeof officeReceiptInput>;
 export const clearReviewInput = z.object({ actionId, note });
 export type ClearReviewInput = z.input<typeof clearReviewInput>;
 
-/** `PATCH /api/settings` (FR-041): the office, the single place that can hold packages. */
-export const companySettingsInput = z.object({
-  actionId,
-  officeAddress: z
-    .string({ error: "Escribe la dirección de la oficina." })
-    .trim()
-    .min(5, "Escribe la dirección de la oficina.")
-    .max(200, "La dirección no puede pasar de 200 caracteres."),
-  officeNeighborhoodId: z.uuid("Elige el barrio de la oficina."),
-});
+/** `PATCH /api/settings` (FR-009, FR-041): independently editable office and support settings. */
+export const companySettingsInput = z
+  .object({
+    actionId,
+    officeAddress: z
+      .string({ error: "Escribe la dirección de la oficina." })
+      .trim()
+      .min(5, "Escribe la dirección de la oficina.")
+      .max(200, "La dirección no puede pasar de 200 caracteres.")
+      .optional(),
+    officeNeighborhoodId: z.uuid("Elige el barrio de la oficina.").optional(),
+    supportPhone: phone.nullable().optional(),
+    companyName: z
+      .string({ error: "Escribe el nombre de la empresa." })
+      .trim()
+      .min(1, "Escribe el nombre de la empresa.")
+      .optional(),
+  })
+  .superRefine((settings, context) => {
+    if ((settings.officeAddress === undefined) !== (settings.officeNeighborhoodId === undefined)) {
+      context.addIssue({
+        code: "custom",
+        path: [settings.officeAddress === undefined ? "officeAddress" : "officeNeighborhoodId"],
+        message: "Actualiza la dirección y el barrio de la oficina al mismo tiempo.",
+      });
+    }
+  });
 export type CompanySettingsInput = z.input<typeof companySettingsInput>;
 
 /** `POST /api/courier/notices/acknowledge`: "Entendido" for the notices shown (FR-027). */
@@ -427,10 +444,10 @@ const courierDaySummary = z.object({
   exceptions: z.number().int().nonnegative(),
   returns: z.number().int().nonnegative(),
   pendingStops: z.number().int().nonnegative(),
-  cash: money,
-  companyTransfer: money,
-  merchantTransfer: money,
-  disbursements: money,
+  cash: aggregateMoney,
+  companyTransfer: aggregateMoney,
+  merchantTransfer: aggregateMoney,
+  disbursements: aggregateMoney,
   cashToHandOver: z.number().int(),
 }) satisfies z.ZodType<DaySummary>;
 
@@ -478,4 +495,6 @@ export type CourierRecord = {
 export type CompanySettings = {
   officeAddress: string | null;
   officeNeighborhood: Named | null;
+  supportPhone: string | null;
+  companyName: string;
 };

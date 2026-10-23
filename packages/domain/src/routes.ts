@@ -132,6 +132,37 @@ export function buildStops(shipments: RoutePlanShipment[], newId: () => string):
 }
 
 /**
+ * Pending delivery/return stops before the public queue anchor (feature 004, FR-006/FR-008,
+ * research R4/R17). Route and shipment-state eligibility is checked by the caller.
+ */
+export function deliveriesBefore(
+  stops: Pick<RouteStopPlan, "kind" | "tasks">[],
+  shipmentId: string,
+  kind: ShipmentKind,
+): number | null {
+  if (kind === "errand") return null;
+
+  const anchorKind = kind === "reverse_pickup" ? "pickup" : "delivery";
+  const anchorIndex = stops.findIndex(
+    (existing) =>
+      existing.kind === anchorKind &&
+      existing.tasks.some(
+        (task) =>
+          task.shipmentId === shipmentId && task.kind === anchorKind && task.status === "pending",
+      ),
+  );
+  if (anchorIndex === -1) return null;
+
+  return stops
+    .slice(0, anchorIndex)
+    .filter(
+      (existing) =>
+        (existing.kind === "delivery" || existing.kind === "return") &&
+        existing.tasks.some((task) => task.kind === existing.kind && task.status === "pending"),
+    ).length;
+}
+
+/**
  * A shipment added to a route (FR-011): it joins the pending pickup stop of its place, or a
  * new pickup stop goes at the end right before its new delivery stop. A shipment already
  * picked up brings only its delivery stop (FR-014).
