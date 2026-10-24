@@ -107,9 +107,22 @@ In production `.env` also needs:
   subscription.
 
 The server refuses to start in production without any of them. `SENTRY_DSN` and
-`VITE_SENTRY_DSN` (read when the web app is built) turn on error reporting. Run
-`pnpm db:seed` once, on the first installation, to create the catalog, the office address, and
-the first owner account.
+`VITE_SENTRY_DSN` (read when the web app is built) turn on error reporting. Run the seed
+once, on the first installation and after the migrations, to create the catalog, the office
+address, and the first owner account. With the production Compose stack, from a private
+terminal:
+
+```bash
+docker compose -f compose.production.yaml run --rm --no-deps app node src/db/seed/index.ts
+```
+
+It reuses the `app` service's image and environment file and prints the owner's password
+once. `--rm` removes the container, so the password does not stay in Docker's logs; never run
+the seed as a long-lived service. The account is `propietario@example.com`: hand the password
+over in person, then change both the email and the password at the first sign-in. Running the
+seed again is harmless: once an owner exists it creates no account and duplicates no data. The
+seeded rates of Amy Tecnology are inferred and must be confirmed before go-live
+(OWNER-REQUESTS.md).
 
 Before sharing public tracking links, set the real support phone and company name
 in Settings. Collect each courier's authorization for public first-name/phone disclosure
