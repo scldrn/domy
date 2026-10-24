@@ -541,3 +541,12 @@ Keep lengthy warnings, duplicate tracking-number lists, form errors, and storage
 instructions in normal document flow. Reserve the sticky footer for the primary form action
 so a high-count duplicate result cannot cover fields or block ordinary keyboard and pointer
 access. Preserve the complete duplicate list and existing recovery actions.
+
+## Release review alignment — 2026-10-23 (001/T156)
+
+Native password requests wait in bounded memory before acquiring one of two sign-in
+slots; PostgreSQL advisory locks preserve cross-process account serialization without
+holding connections while waiting. Trusted native/proxy client identity is forwarded to
+Better Auth. Production startup rejects the sample secret and missing recovery provider;
+process failures drain with sanitized diagnostics. Shared dependency security patches
+are pinned and revalidated. See ../../docs/release-change-review-results.md.

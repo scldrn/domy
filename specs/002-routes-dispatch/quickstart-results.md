@@ -109,3 +109,14 @@ in the accent color, and 48 px targets everywhere, including the compact actions
 - [ ] SC-001, SC-004, and SC-006 timed with the dispatcher during the owner's acceptance.
 - [ ] A content security policy for scripts and styles, tested against the built app on the
       production host (research R13).
+
+## Addendum — 2026-10-23 (T064)
+
+The results above are kept as dated evidence of 2026-10-13. Since then, the scenarios marked
+⚙ no longer set a task directly: they complete stops through real courier records of feature
+003. The integration helpers `pickUp` and `finishTask` in `apps/server/tests/setup/routes.ts`
+send a courier record of the route's courier to `applyCourierRecord`
+(`apps/server/src/lib/courier-records.ts`), which applies the domain's decision to the
+shipment, task, custody, and history in one transaction. `placeOnRoute` remains a status-only
+fixture for other features and is not evidence of courier authorization over HTTP. CI
+retention of failed Playwright traces (PR #28, squash `9006db3`) is on `main`.

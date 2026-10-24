@@ -40,7 +40,46 @@ export async function signedInCourier(c: Context<AppEnv>): Promise<{ id: string 
   return courier;
 }
 
-/** Handles proof-photo upload with row-level serialization, immutability checks, and orphan cleanup. */
+/** JPEG files start with the SOI marker and the first segment's marker byte (SEC-6). */
+function isJpeg(image: Uint8Array): boolean {
+  return image.byteLength >= 3 && image[0] === 0xff && image[1] === 0xd8 && image[2] === 0xff;
+}
+
+/** A bucket failure or timeout is a catalogued 503 the phone retries, not a 500 (ROB-1, FR-023). */
+async function inBucket<T>(c: Context<AppEnv>, operation: () => Promise<T>, message?: string) {
+  try {
+    return await operation();
+  } catch {
+    c.get("logger").warn({ outcome: "failed" }, "Photo storage unavailable");
+    throw new AppError("storage_unavailable", message ? { message } : {});
+  }
+}
+
+/**
+ * Uploads of the same photo in this process run one after another, so a concurrent writer
+ * with different bytes can never overwrite the first acknowledged image (Finding IV-31, T134)
+ * while no database connection is held across the bucket call (ROB-1). The server runs as a
+ * single process, as the in-memory public rate limit already assumes (research R14).
+ */
+const photoUploads = new Map<string, Promise<unknown>>();
+
+async function oneAtATime<T>(photoId: string, task: () => Promise<T>): Promise<T> {
+  const previous = photoUploads.get(photoId) ?? Promise.resolve();
+  const run = previous.then(task, task);
+  const settled = run.catch(() => undefined);
+  photoUploads.set(photoId, settled);
+  try {
+    return await run;
+  } finally {
+    if (photoUploads.get(photoId) === settled) photoUploads.delete(photoId);
+  }
+}
+
+/**
+ * Handles proof-photo upload (FR-009, FR-023, Finding IV-31, ROB-1): authorize and check
+ * immutability with a plain read, write the bucket with no transaction open, then acknowledge
+ * in a short transaction that re-checks the row under FOR UPDATE.
+ */
 export async function uploadPhoto(
   c: Context<AppEnv>,
   photoId: string,
@@ -51,22 +90,36 @@ export async function uploadPhoto(
   const clock = c.get("clock");
   const logger = c.get("logger");
 
+  const notJpeg = "La foto debe ser una imagen JPEG.";
   if (c.req.header("content-type") !== photoType) {
-    throw new AppError("invalid_request", { message: "La foto debe ser una imagen JPEG." });
+    throw new AppError("invalid_request", { message: notJpeg });
   }
   const image = new Uint8Array(await c.req.arrayBuffer());
   if (image.byteLength === 0) {
     throw new AppError("invalid_request", { message: "La foto llegó vacía." });
   }
+  if (!isJpeg(image)) {
+    throw new AppError("invalid_request", { message: notJpeg });
+  }
 
-  await db.transaction(async (tx) => {
-    const query = tx
+  /** First-acknowledged proof-photo immutability: identical bytes are an idempotent success. */
+  async function assertSameImage(acknowledged: { storageKey: string; byteSize: number | null }) {
+    if (acknowledged.byteSize !== image.byteLength) {
+      throw new AppError("photo_immutable");
+    }
+    const existing = await inBucket(c, () => storage.getPhoto(acknowledged.storageKey));
+    if (!existing || !bytesEqual(existing, image)) {
+      throw new AppError("photo_immutable");
+    }
+  }
+
+  await oneAtATime(photoId, async () => {
+    const [photo] = await db
       .select({
         id: recordPhotos.id,
         storageKey: recordPhotos.storageKey,
         uploadedAt: recordPhotos.uploadedAt,
         byteSize: recordPhotos.byteSize,
-        courierId: courierRecords.courierId,
       })
       .from(recordPhotos)
       .innerJoin(courierRecords, eq(courierRecords.id, recordPhotos.recordId))
@@ -74,40 +127,35 @@ export async function uploadPhoto(
         courierIdFilter
           ? and(eq(recordPhotos.id, photoId), eq(courierRecords.courierId, courierIdFilter))
           : eq(recordPhotos.id, photoId),
-      )
-      .for("update");
-
-    const [photo] = await query;
+      );
     if (!photo) {
       throw new AppError("not_found", { message: "No encontramos esa foto." });
     }
-
-    // If already uploaded (first-acknowledged proof-photo immutability, Finding IV-31)
     if (photo.uploadedAt !== null) {
-      if (photo.byteSize !== image.byteLength) {
-        throw new AppError("photo_immutable", {
-          message: "Esta foto ya fue subida y no puede modificarse.",
-        });
-      }
-      const existing = await storage.getPhoto(photo.storageKey);
-      if (!existing || !bytesEqual(existing, image)) {
-        throw new AppError("photo_immutable", {
-          message: "Esta foto ya fue subida y no puede modificarse.",
-        });
-      }
-      // Identical byte replay: idempotent success without modifying uploadedAt or rewriting bytes
+      // Replay without mutating uploadedAt or rewriting bytes (FR-023 / IV-31).
+      await assertSameImage(photo);
       return;
     }
 
-    // First acknowledged upload: write to S3, then persist metadata
-    await storage.putPhoto(photo.storageKey, image);
+    await inBucket(c, () => storage.putPhoto(photo.storageKey, image));
 
+    let winner: { byteSize: number | null } | undefined;
     try {
-      await tx
-        .update(recordPhotos)
-        .set({ uploadedAt: clock(), byteSize: image.byteLength })
-        .where(eq(recordPhotos.id, photo.id));
+      winner = await db.transaction(async (tx) => {
+        const [current] = await tx
+          .select({ uploadedAt: recordPhotos.uploadedAt, byteSize: recordPhotos.byteSize })
+          .from(recordPhotos)
+          .where(eq(recordPhotos.id, photo.id))
+          .for("update");
+        if (current?.uploadedAt) return current;
+        await tx
+          .update(recordPhotos)
+          .set({ uploadedAt: clock(), byteSize: image.byteLength })
+          .where(eq(recordPhotos.id, photo.id));
+        return undefined;
+      });
     } catch (dbError) {
+      // Nothing acknowledges the object we just wrote: remove it (DATA-3).
       try {
         await storage.deletePhoto(photo.storageKey);
       } catch {
@@ -115,6 +163,8 @@ export async function uploadPhoto(
       }
       throw dbError;
     }
+    // Another writer acknowledged the photo first: same rules as a replay.
+    if (winner) await assertSameImage({ ...photo, byteSize: winner.byteSize });
   });
 
   return c.body(null, 204);
@@ -141,10 +191,7 @@ export const photoRoutes = new Hono<AppEnv>()
         id: recordPhotos.id,
         storageKey: recordPhotos.storageKey,
         uploadedAt: recordPhotos.uploadedAt,
-        recordId: recordPhotos.recordId,
         courierId: courierRecords.courierId,
-        shipmentId: courierRecords.shipmentId,
-        recordRouteId: courierRecords.routeId,
         shipmentStatus: shipments.status,
         custodyCourierId: shipments.custodyCourierId,
         shipmentRouteId: shipments.routeId,
@@ -161,56 +208,26 @@ export const photoRoutes = new Hono<AppEnv>()
     if (user.role === "courier") {
       const courier = await signedInCourier(c);
 
-      // Decision D2 / 003 FR-036:
-      // Courier photo access is restricted to the courier's own photos of work currently present
-      // in the app / active on their route or custody.
-      // Unauthorized couriers receive 403 Forbidden.
+      // 003 FR-036 / owner decision D2: a courier sees only their own photos (the author of
+      // the record), and only of work still in their app: the shipment is on their in-progress
+      // route, or they hold it and it is not final. Anyone else gets 403.
       let authorized = false;
-
-      // 1. Is the shipment currently in this courier's custody off-route?
-      if (
-        row.custodyCourierId === courier.id &&
-        !["delivered", "returned", "voided"].includes(row.shipmentStatus)
-      ) {
-        authorized = true;
-      }
-
-      // 2. Is the shipment currently on an active (in_progress) route of this courier?
-      if (!authorized && row.shipmentRouteId) {
-        const [activeShipmentRoute] = await db
-          .select({ id: routes.id })
-          .from(routes)
-          .where(
-            and(
-              eq(routes.id, row.shipmentRouteId),
-              eq(routes.courierId, courier.id),
-              eq(routes.status, "in_progress"),
-            ),
-          );
-        if (activeShipmentRoute) {
-          authorized = true;
-        }
-      }
-
-      // 3. Or did the courier upload the photo themselves for current work on their active route?
-      if (
-        !authorized &&
-        row.courierId === courier.id &&
-        row.recordRouteId &&
-        row.shipmentRouteId === row.recordRouteId
-      ) {
-        const [activeRecordRoute] = await db
-          .select({ id: routes.id })
-          .from(routes)
-          .where(
-            and(
-              eq(routes.id, row.recordRouteId),
-              eq(routes.courierId, courier.id),
-              eq(routes.status, "in_progress"),
-            ),
-          );
-        if (activeRecordRoute) {
-          authorized = true;
+      if (row.courierId === courier.id) {
+        authorized =
+          row.custodyCourierId === courier.id &&
+          !["delivered", "returned", "voided"].includes(row.shipmentStatus);
+        if (!authorized && row.shipmentRouteId) {
+          const [activeRoute] = await db
+            .select({ id: routes.id })
+            .from(routes)
+            .where(
+              and(
+                eq(routes.id, row.shipmentRouteId),
+                eq(routes.courierId, courier.id),
+                eq(routes.status, "in_progress"),
+              ),
+            );
+          authorized = Boolean(activeRoute);
         }
       }
 
@@ -223,7 +240,11 @@ export const photoRoutes = new Hono<AppEnv>()
       throw new AppError("not_found", { message: "La foto todavía no ha llegado." });
     }
 
-    const image = await c.get("storage").getPhoto(row.storageKey);
+    const image = await inBucket(
+      c,
+      () => c.get("storage").getPhoto(row.storageKey),
+      "No pudimos cargar la foto. Intenta de nuevo.",
+    );
     if (!image) {
       throw new AppError("not_found", { message: "Esta foto ya no está disponible." });
     }

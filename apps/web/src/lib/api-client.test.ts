@@ -103,6 +103,39 @@ describe("RPC response boundary (001/T136)", () => {
     });
   });
 
+  // ROB-4: a request that never answers ends as the same network error after 30 s.
+  it("turns a request that never answers into a network error after 30 s", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const signals: AbortSignal[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(
+          (_input: RequestInfo | URL, init?: RequestInit) =>
+            new Promise<Response>((_, reject) => {
+              if (init?.signal) signals.push(init.signal);
+              init?.signal?.addEventListener("abort", () => {
+                reject(new DOMException("The operation was aborted.", "AbortError"));
+              });
+            }),
+        ),
+      );
+      const outcome = unwrap(api.api.municipalities.$get()).then(
+        () => "resolved",
+        (error: unknown) => error,
+      );
+
+      await vi.advanceTimersByTimeAsync(29_999);
+      expect(await Promise.race([outcome, Promise.resolve("pending")])).toBe("pending");
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(signals).toHaveLength(1);
+      expect(await outcome).toMatchObject({ status: 0, code: "network_error" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("preserves transport failures without manufacturing success", async () => {
     const error = new ApiError(0, { code: "network_error", message: "Revisa tu internet." });
     await expect(unwrap(Promise.reject(error))).rejects.toBe(error);

@@ -31,6 +31,7 @@ import { notifyCourier } from "./notices.ts";
 import { refreshRouteStatus } from "./route-status.ts";
 import { recordRouteEvents, touchRoute, removeFromPlan } from "./route-store.ts";
 import { photoKey } from "./storage.ts";
+import { isUniqueViolation } from "./validate.ts";
 
 /**
  * Applying a courier record (feature 003, research R5). The record is stored by its
@@ -171,6 +172,23 @@ function recordColumns(input: CourierRecordInput) {
 }
 
 export async function applyCourierRecord(
+  db: Db,
+  input: CourierRecordInput,
+  requestedBy: Omit<RecordAuthor, "courierId"> & { courierId?: string },
+): Promise<RecordResult> {
+  try {
+    return await applyOnce(db, input, requestedBy);
+  } catch (error) {
+    // C003-4, FR-019: the same id sent concurrently about another shipment shares no lock with
+    // the first; once that one commits, its stored outcome is the answer.
+    if (!isUniqueViolation(error, "courier_records_pkey")) throw error;
+    const stored = await storedOutcome(db, input.id);
+    if (!stored) throw error;
+    return stored;
+  }
+}
+
+async function applyOnce(
   db: Db,
   input: CourierRecordInput,
   requestedBy: Omit<RecordAuthor, "courierId"> & { courierId?: string },

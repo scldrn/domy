@@ -439,3 +439,159 @@ describe("synchronize", () => {
     expect(await db.count("outbox")).toBe(0);
   });
 });
+
+/** ROB-2/C003-2 and ROB-4: a photo or a stalled request never blocks records or the route. */
+describe("synchronize robustness", () => {
+  const fresh = { ...snapshot, serverTime: "2026-10-01T15:05:00.000Z" };
+  async function queueWithPhoto() {
+    await queue(1);
+    await db.put("photos", {
+      id: id(301),
+      recordId: id(1),
+      kind: "proof",
+      image: new Blob(["jpeg"], { type: "image/jpeg" }),
+    });
+  }
+  function photoFetcher(photo: () => Promise<Response>) {
+    return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      await Promise.resolve();
+      const path = pathOf(input);
+      if (path.endsWith("/records")) return acknowledged(init);
+      if (path.includes("/photos/")) return photo();
+      return json(fresh);
+    });
+  }
+  const photoIds = async () => (await db.getAll("photos")).map((photo) => photo.id);
+  const routeFetched = (fetcher: ReturnType<typeof photoFetcher>) =>
+    fetcher.mock.calls.some(([path]) => pathOf(path).endsWith("/api/courier/route"));
+
+  // FR-009 "a photo problem MUST never block a record"; FR-020/FR-022 the route still refreshes.
+  it.each([
+    ["HTTP 500", 500, () => Response.json({ error: { message: "Error." } }, { status: 500 })],
+    [
+      "HTTP 503 storage_unavailable",
+      503,
+      () =>
+        Response.json(
+          { error: { code: "storage_unavailable", message: "Fotos no disponibles." } },
+          { status: 503 },
+        ),
+    ],
+    [
+      "a network failure",
+      0,
+      () => {
+        throw new TypeError("fetch failed");
+      },
+    ],
+  ] as const)(
+    "W3 keeps a photo after %s for a later retry and still refreshes the route and acknowledges records",
+    async (_label, status, answer) => {
+      await queueWithPhoto();
+      const fetcher = photoFetcher(() => Promise.resolve().then(answer));
+
+      await expect(run(fetcher)).rejects.toMatchObject({ status });
+
+      expect(routeFetched(fetcher)).toBe(true);
+      expect((await db.get("snapshot", "current"))?.serverTime).toBe(fresh.serverTime);
+      expect(await remaining()).toEqual([]);
+      expect(await photoIds()).toEqual([id(301)]);
+    },
+  );
+
+  // A conflict is not an acknowledgment of these bytes: retain them (Constitution II).
+  it("C003-2 retains a conflicting photo while committing records and refreshing the route", async () => {
+    await queueWithPhoto();
+    const fetcher = photoFetcher(() =>
+      Promise.resolve(
+        Response.json(
+          { error: { code: "photo_immutable", message: "Esta foto ya fue subida." } },
+          { status: 409 },
+        ),
+      ),
+    );
+
+    await expect(run(fetcher)).rejects.toMatchObject({ status: 409 });
+
+    expect(routeFetched(fetcher)).toBe(true);
+    expect((await db.get("snapshot", "current"))?.serverTime).toBe(fresh.serverTime);
+    expect(await remaining()).toEqual([]);
+    expect(await photoIds()).toEqual([id(301)]);
+  });
+
+  describe("ROB-4 timeouts", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+    /** Waits on IndexedDB's real macrotasks without moving the faked clock. */
+    async function until(condition: () => boolean) {
+      while (!condition())
+        await new Promise((resolve) => {
+          setImmediate(resolve);
+        });
+    }
+    /** A request that never answers, but honors its abort signal as real fetch does. */
+    const stalled = (init?: RequestInit) =>
+      new Promise<Response>((_, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(init.signal?.reason as Error);
+        });
+      });
+
+    it("turns a records request that never answers into a network error after 20 s", async () => {
+      await queue(1);
+      const fetcher = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => stalled(init));
+      const outcome = run(fetcher).then(
+        () => "resolved",
+        (error: unknown) => error,
+      );
+
+      await until(() => fetcher.mock.calls.length > 0);
+      await vi.advanceTimersByTimeAsync(19_999);
+      expect(await Promise.race([outcome, Promise.resolve("pending")])).toBe("pending");
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(await outcome).toBeInstanceOf(SyncError);
+      expect(await outcome).toMatchObject({ status: 0 });
+      expect(await remaining()).toEqual([id(1)]);
+    });
+
+    it("gives up on a request that ignores its abort signal", async () => {
+      await queue(1);
+      const fetcher = vi.fn(() => new Promise<Response>(() => undefined));
+      const outcome = run(fetcher).then(
+        () => "resolved",
+        (error: unknown) => error,
+      );
+
+      await until(() => fetcher.mock.calls.length > 0);
+      await vi.advanceTimersByTimeAsync(19_999);
+      expect(await Promise.race([outcome, Promise.resolve("pending")])).toBe("pending");
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(await outcome).toMatchObject({ status: 0 });
+    });
+
+    it("waits up to 60 s for a photo upload, then keeps it and refreshes the route", async () => {
+      await queueWithPhoto();
+      const fetcher = photoFetcher(() => new Promise<Response>(() => undefined));
+      const outcome = run(fetcher).then(
+        () => "resolved",
+        (error: unknown) => error,
+      );
+
+      await until(() => fetcher.mock.calls.some(([path]) => pathOf(path).includes("/photos/")));
+      await vi.advanceTimersByTimeAsync(59_999);
+      expect(routeFetched(fetcher)).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(await outcome).toMatchObject({ status: 0 });
+      expect(routeFetched(fetcher)).toBe(true);
+      expect(await remaining()).toEqual([]);
+      expect(await photoIds()).toEqual([id(301)]);
+    });
+  });
+});

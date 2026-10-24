@@ -203,6 +203,29 @@ describe("courierRecordInput", () => {
   });
 });
 
+describe("courierRecordInput bounds (ROB-5)", () => {
+  it("refuses a disbursement above the largest storable peso amount", () => {
+    const disbursement = { ...base, kind: "disbursement", payee: "Tienda X" };
+    expect(courierRecordInput.safeParse({ ...disbursement, amount: 2_147_483_647 }).success).toBe(
+      true,
+    );
+    const parsed = courierRecordInput.safeParse({ ...disbursement, amount: 3_000_000_000 });
+    expect(parsed.error?.issues[0]?.message).toBe(
+      "El valor no puede superar $ 2.147.483.647 pesos.",
+    );
+  });
+  it("refuses a location accuracy beyond any position on Earth", () => {
+    const pickup = (accuracyM: number) =>
+      courierRecordInput.safeParse({
+        ...base,
+        kind: "pickup",
+        location: { latitude: 6.2, longitude: -75.5, accuracyM },
+      }).success;
+    expect(pickup(150_000)).toBe(true);
+    expect(pickup(3_000_000_000)).toBe(false);
+  });
+});
+
 describe("courierRecordsBatch", () => {
   it("carries the phone's time and 1 to 50 records in the order they happened", () => {
     const records = Array.from({ length: 51 }, (_, n) => ({

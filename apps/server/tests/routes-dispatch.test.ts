@@ -1,5 +1,7 @@
 import type { RouteDetail, ShipmentDetail } from "@domy/domain";
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { couriers } from "../src/db/schema/index.ts";
 import { createTestApp } from "./setup/app.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
 import { startDatabase, type TestDatabase } from "./setup/database.ts";
@@ -96,6 +98,44 @@ describe("POST /api/routes/:id/dispatch (FR-009)", () => {
     expect(again.body.version).toBe(first.body.version);
     expect(again.body.events.filter((event) => event.type === "dispatched")).toHaveLength(1);
   });
+
+  it("answers two simultaneous identical dispatches as one (FR-020)", async () => {
+    const route = await routeWith(1, courier);
+    const body = { actionId: crypto.randomUUID(), version: route.version };
+    const results = await Promise.all([
+      send<RouteDetail>(t, cookie, `/api/routes/${route.id}/dispatch`, body),
+      send<RouteDetail>(t, cookie, `/api/routes/${route.id}/dispatch`, body),
+    ]);
+    expect(results.map((result) => result.status)).toEqual([200, 200]);
+    const detail = (await send<RouteDetail>(t, cookie, `/api/routes/${route.id}`)).body;
+    expect(detail.events.filter((event) => event.type === "dispatched")).toHaveLength(1);
+  });
+
+  it("answers two simultaneous identical removals as one (FR-020)", async () => {
+    const route = await routeWith(2, courier);
+    const shipmentId = route.stops[0]?.tasks[0]?.shipmentId ?? "";
+    const body = { actionId: crypto.randomUUID(), version: route.version };
+    const path = `/api/routes/${route.id}/shipments/${shipmentId}/remove`;
+    const results = await Promise.all([
+      send<RouteDetail>(t, cookie, path, body),
+      send<RouteDetail>(t, cookie, path, body),
+    ]);
+    expect(results.map((result) => result.status)).toEqual([200, 200]);
+    const detail = (await send<RouteDetail>(t, cookie, `/api/routes/${route.id}`)).body;
+    expect(detail.events.filter((event) => event.type === "shipment_removed")).toHaveLength(1);
+  });
+
+  it("refuses dispatching to a courier deactivated after assignment", async () => {
+    const route = await routeWith(1, courier);
+    await database.db.update(couriers).set({ isActive: false }).where(eq(couriers.id, courier));
+    const result = await routeAction(t, cookie, route, "/dispatch");
+    expect(result.status).toBe(400);
+    expect(result.body).toMatchObject({
+      error: { code: "invalid_request", fields: { courierId: "Elige un mensajero activo." } },
+    });
+    const detail = (await send<RouteDetail>(t, cookie, `/api/routes/${route.id}`)).body;
+    expect(detail.status).toBe("draft");
+  });
 });
 
 describe("POST /api/routes/:id/join (FR-009, US1 scenario 5)", () => {
@@ -144,6 +184,19 @@ describe("POST /api/routes/:id/join (FR-009, US1 scenario 5)", () => {
     expect(notInProgress.body).toMatchObject({ error: { code: "route_not_in_progress" } });
     const fromInProgress = await routeAction(t, cookie, current, "/join", { toRouteId: draft.id });
     expect(fromInProgress.status).toBe(409);
+  });
+
+  it("joins only into the route in progress of the same courier (US1 scenario 7)", async () => {
+    const other = await createCourier(database.db, "Ana Gómez");
+    const othersRoute = (await routeAction(t, cookie, await routeWith(1, other), "/dispatch")).body;
+    const waiting = await routeWith(1, courier);
+    const refused = await routeAction(t, cookie, waiting, "/join", { toRouteId: othersRoute.id });
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({
+      error: { code: "invalid_request", fields: { toRouteId: expect.any(String) } },
+    });
+    const detail = (await send<RouteDetail>(t, cookie, `/api/routes/${waiting.id}`)).body;
+    expect(detail.status).toBe("draft");
   });
 
   it("asks to confirm a route that would carry more than 15 shipments (FR-005)", async () => {

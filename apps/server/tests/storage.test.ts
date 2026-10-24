@@ -1,3 +1,4 @@
+import { createServer, type Socket } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createStorage, photoKey } from "../src/lib/storage.ts";
 import { startStorage, type TestStorage } from "./setup/storage.ts";
@@ -46,6 +47,26 @@ describe("photo storage", () => {
     const intruder = createStorage({ ...s3.config, secretAccessKey: "otra-clave" });
     await expect(intruder.getPhoto("photos/any/any.jpg")).rejects.toThrow();
   });
+
+  it("gives up on a bucket that accepts the connection but never answers (ROB-1)", async () => {
+    const sockets: Socket[] = [];
+    const silent = createServer((socket) => sockets.push(socket));
+    await new Promise<void>((resolve) => silent.listen(0, "127.0.0.1", resolve));
+    const address = silent.address();
+    if (!address || typeof address === "string") throw new Error("No port");
+    try {
+      const stalled = createStorage(
+        { ...s3.config, endpoint: `http://127.0.0.1:${String(address.port)}` },
+        { requestTimeoutMs: 300, connectionTimeoutMs: 300 },
+      );
+      const started = Date.now();
+      await expect(stalled.putPhoto("photos/any/any.jpg", new Uint8Array([1]))).rejects.toThrow();
+      expect(Date.now() - started).toBeLessThan(5_000);
+    } finally {
+      for (const socket of sockets) socket.destroy();
+      await new Promise((resolve) => silent.close(resolve));
+    }
+  }, 30_000);
 
   it("creating the bucket again changes nothing", async () => {
     await expect(s3.storage.ensureBucket()).resolves.toBeUndefined();

@@ -231,3 +231,11 @@ the backend is not published, and privacy markers do not enter app or proxy logs
 This is a new OP-01 assurance item; it does not reopen verified feature tasks
 without an observed regression. Runtime source and deployment artifacts remain
 unimplemented by this documentation alignment.
+
+## Release review alignment — 2026-10-23 (004/T036)
+
+Reuse the fixed-window native-peer limiter for password requests with a separate budget.
+Group IPv6 subscribers by /64; preserve the hard map cap and refusal of new clients
+when all retained buckets are live. Do not evict live entries and reset their budgets.
+Public response schemas and private bearer handling are unchanged. See
+../../docs/release-change-review-results.md.

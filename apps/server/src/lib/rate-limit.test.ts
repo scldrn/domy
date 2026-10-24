@@ -48,21 +48,40 @@ describe("public API rate limit (R6, R14)", () => {
     expect(state.buckets.has("new")).toBe(true);
   });
 
-  it("fails closed at capacity without evicting active client buckets", () => {
+  it("refuses new clients at capacity without resetting an exhausted live budget", () => {
+    const state = createState();
+    for (let request = 0; request < 60; request++) {
+      expect(allowPublicRequest(state, "client-0", 0)).toBe(true);
+    }
+    for (let client = 1; client < MAX_PUBLIC_RATE_LIMIT_CLIENTS; client++) {
+      expect(allowPublicRequest(state, `client-${String(client)}`, client)).toBe(true);
+    }
+    expect(allowPublicRequest(state, "overflow", MAX_PUBLIC_RATE_LIMIT_CLIENTS)).toBe(false);
+    expect(state.buckets.has("overflow")).toBe(false);
+    expect(allowPublicRequest(state, "client-0", MAX_PUBLIC_RATE_LIMIT_CLIENTS)).toBe(false);
+    expect(state.buckets.size).toBe(MAX_PUBLIC_RATE_LIMIT_CLIENTS);
+  });
+
+  it("shares one budget across the addresses of one IPv6 /64", () => {
+    const state = createState();
+
+    for (let request = 0; request < 60; request++) {
+      expect(allowPublicRequest(state, `2001:db8:1:2::${request.toString(16)}`, 0)).toBe(true);
+    }
+
+    expect(allowPublicRequest(state, "2001:db8:1:2:ffff:ffff:ffff:ffff", 0)).toBe(false);
+    expect(state.buckets.size).toBe(1);
+    expect(allowPublicRequest(state, "2001:db8:1:3::1", 0)).toBe(true);
+  });
+
+  it("lets a new /64 in after 10,000 addresses of another /64", () => {
     const state = createState();
 
     for (let client = 0; client < MAX_PUBLIC_RATE_LIMIT_CLIENTS; client++) {
-      expect(allowPublicRequest(state, `client-${String(client)}`, 0)).toBe(true);
+      allowPublicRequest(state, `2001:db8:aaaa:1:${client.toString(16)}::1`, 0);
     }
 
-    expect(allowPublicRequest(state, "overflow", 1)).toBe(false);
-    expect(state.buckets.has("overflow")).toBe(false);
-    expect(state.buckets.size).toBe(MAX_PUBLIC_RATE_LIMIT_CLIENTS);
-    expect(allowPublicRequest(state, "client-0", 1)).toBe(true);
-    expect(state.buckets.get("client-0")?.requests).toBe(2);
-
-    expect(allowPublicRequest(state, "overflow", PUBLIC_RATE_LIMIT_WINDOW_MS)).toBe(true);
-    expect(state.buckets.has("client-0")).toBe(false);
     expect(state.buckets.size).toBe(1);
+    expect(allowPublicRequest(state, "2001:db8:bbbb:1::1", 0)).toBe(true);
   });
 });

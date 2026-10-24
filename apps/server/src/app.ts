@@ -84,6 +84,15 @@ function setPublicResponseHeaders(c: Context<AppEnv>): void {
   c.header("X-Robots-Tag", "noindex");
 }
 
+/**
+ * Release review DEPLOY-5: the API and health probes own their prefixes, so an unknown path
+ * under them is a JSON 404, never the web app's shell.
+ */
+function isServerPath(path: string): boolean {
+  const root = path.split("/")[1]?.toLowerCase();
+  return root === "api" || root === "health";
+}
+
 /** Research R14/R22: read the native transport peer; forwarding trust is explicit and opt-in. */
 function nativePeerAddress(c: Context<AppEnv>): string | undefined {
   try {
@@ -109,13 +118,13 @@ export function createApp(deps: AppDeps) {
     : undefined;
   const publicSafeWebAssets: MiddlewareHandler<AppEnv> | undefined = serveWebAssets
     ? async (c, next) => {
-        if (isPublicApiPath(c.req.path)) return next();
+        if (isServerPath(c.req.path)) return next();
         return serveWebAssets(c, next);
       }
     : undefined;
   const publicSafeWebIndex: MiddlewareHandler<AppEnv> | undefined = serveWebIndex
     ? async (c, next) => {
-        if (isPublicApiPath(c.req.path)) return next();
+        if (isServerPath(c.req.path)) return next();
         return serveWebIndex(c, next);
       }
     : undefined;
@@ -189,6 +198,12 @@ export function createApp(deps: AppDeps) {
         },
       }),
     )
+    // Release review SEC-4: API answers carry recipients' data; no browser or shared cache keeps
+    // them. A route's own stricter policy (photos) stays; static web assets are untouched.
+    .use("/api/*", async (c, next) => {
+      await next();
+      if (!c.res.headers.has("Cache-Control")) c.header("Cache-Control", "no-store");
+    })
     .use(
       "/api/*",
       bodyLimit({
@@ -216,11 +231,12 @@ export function createApp(deps: AppDeps) {
       setPublicResponseHeaders(c);
     })
     .onError(handleError)
-    .notFound((c) =>
-      isPublicApiPath(c.req.path)
-        ? handleError(new AppError("link_not_found"), c)
-        : c.text("404 Not Found", 404),
-    )
+    .notFound((c) => {
+      if (isPublicApiPath(c.req.path)) return handleError(new AppError("link_not_found"), c);
+      // DEPLOY-5: the catalogued JSON error for unknown API and health paths.
+      if (isServerPath(c.req.path)) return handleError(new AppError("not_found"), c);
+      return c.text("404 Not Found", 404);
+    })
     .route("/api/auth", authRoutes)
     .route("/api/notifications", notificationRoutes)
     .route("/api/shipments", shipmentRoutes)

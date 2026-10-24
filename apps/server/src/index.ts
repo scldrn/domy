@@ -7,7 +7,7 @@ import { createDb } from "./db/client.ts";
 import { readEnv } from "./env.ts";
 import { createClock } from "./lib/clock.ts";
 import { createMailer } from "./lib/email.ts";
-import { setErrorReporter } from "./lib/errors.ts";
+import { errorForLog, setErrorReporter } from "./lib/errors.ts";
 import { createLogger } from "./lib/logger.ts";
 import { reportingPrivacy } from "./lib/reporting-privacy.ts";
 import { registerGracefulShutdown, type RuntimeState } from "./lib/runtime-lifecycle.ts";
@@ -78,3 +78,31 @@ server.listen(env.API_PORT, () => {
   logger.info({ port: env.API_PORT }, "server listening");
 });
 registerGracefulShutdown({ server, db, runtime, logger });
+
+// Release review ROB-6: Ctrl-C drains like the orchestrator's SIGTERM; an unexpected failure is
+// logged without its text (it may hold recipients' data) and drains with exit code 1, so the
+// container restarts instead of running on in an unknown state. A hung drain cannot outlive
+// the compose stop grace period.
+const FATAL_EXIT_DEADLINE_MS = 15_000;
+process.on("SIGINT", () => process.emit("SIGTERM", "SIGTERM"));
+function drainAfterFailure(kind: "uncaught_exception" | "unhandled_rejection", error: unknown) {
+  process.exitCode = 1;
+  logger.fatal(
+    {
+      kind,
+      error:
+        error instanceof Error
+          ? errorForLog(error)
+          : { type: "Error", message: "Unexpected application error." },
+    },
+    "unexpected process failure; draining",
+  );
+  setTimeout(() => process.exit(1), FATAL_EXIT_DEADLINE_MS).unref();
+  process.emit("SIGTERM", "SIGTERM");
+}
+process.on("uncaughtException", (error) => {
+  drainAfterFailure("uncaught_exception", error);
+});
+process.on("unhandledRejection", (reason) => {
+  drainAfterFailure("unhandled_rejection", reason);
+});

@@ -13,6 +13,7 @@ import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { isDeepStrictEqual } from "node:util";
 import { isAPIError, originCheckMiddleware } from "better-auth/api";
+import { getConnInfo } from "@hono/node-server/conninfo";
 import type { JSONParsed } from "hono/utils/types";
 import type { AppEnv } from "../app.ts";
 import { createAuth, type Auth } from "../auth.ts";
@@ -20,8 +21,10 @@ import { accountActionReceipts, couriers, sessions, users } from "../db/schema/i
 import { recordAudit } from "../lib/audit.ts";
 import { assertAccountActor } from "../lib/account-actor.ts";
 import { requireRole } from "../lib/auth-guard.ts";
+import { resolveClientAddress } from "../lib/client-address.ts";
 import { AppError } from "../lib/errors.ts";
 import { diffValues } from "../lib/master-data.ts";
+import { allowRequest, type PublicRateLimitState } from "../lib/rate-limit.ts";
 
 /**
  * The rules Better Auth does not have, around its endpoints (research R5): the per-account
@@ -44,12 +47,42 @@ function locked(until: Date): AppError {
   });
 }
 
+/** The bounded client identity of the request: native peer, or the trusted proxy's header. */
+function clientAddressOf(c: Context<AppEnv>): string {
+  let peer: string | undefined;
+  try {
+    const address = getConnInfo(c).remote.address;
+    peer = typeof address === "string" && address ? address : undefined;
+  } catch {
+    // app.request has no transport binding; the resolver maps it to the unknown peer.
+  }
+  return resolveClientAddress(
+    peer,
+    c.get("trustedProxyIp"),
+    c.req.raw.headers.get("X-Domy-Client-IP") ?? undefined,
+  );
+}
+
+/**
+ * SEC-8: Better Auth reads the client address only from X-Domy-Client-IP (src/auth.ts), so the
+ * header it sees is always the one resolved here: the proxy's value only when
+ * DOMY_TRUSTED_PROXY_IP names the exact peer, otherwise the native peer. A header sent by the
+ * client itself never reaches it.
+ */
+function forAuth(c: Context<AppEnv>, request: Request): Request {
+  const headers = new Headers(request.headers);
+  const address = clientAddressOf(c);
+  if (address === "unknown") headers.delete("X-Domy-Client-IP");
+  else headers.set("X-Domy-Client-IP", address);
+  return new Request(request, { headers });
+}
+
 /** The request's JSON body, leaving the original request intact for Better Auth. */
 async function bodyOf<Schema extends z.ZodType>(
   c: Context<AppEnv>,
   schema: Schema,
 ): Promise<{ request: Request; body: z.output<Schema> }> {
-  const request = c.req.raw.clone();
+  const request = forAuth(c, c.req.raw.clone());
   const input: unknown = await c.req.json().catch(() => undefined);
   const result = schema.safeParse(input);
   if (!result.success) {
@@ -286,6 +319,56 @@ async function forwardAudited(
   }
 }
 
+/**
+ * SEC-1: password checks are bounded before they touch PostgreSQL, so an anonymous flood can
+ * never hold the connection pool. Each client address (an IPv6 /64) has a fixed-window budget;
+ * in-process requests without a transport peer ("unknown", only app.request) have none, but
+ * still pass the global bound below.
+ */
+const signInPolicy = { maxRequests: 20, windowMs: 60_000, maxClients: 10_000 };
+const signInBudgets: PublicRateLimitState = { buckets: new Map(), nextCleanupAt: 0 };
+/** At most this many sign-ins hold a pooled connection at once; the rest wait in memory. */
+const maxActiveSignIns = 2;
+/** Waiters beyond this are refused at once rather than queued without bound. */
+const maxWaitingSignIns = 64;
+let activeSignIns = 0;
+const signInWaiters: (() => void)[] = [];
+/** FR-033/T146: one account's attempts run in order, waiting in memory, not on a connection. */
+const accountTurns = new Map<string, { tail: Promise<void>; waiting: number }>();
+
+async function withSignInSlot<T>(run: () => Promise<T>): Promise<T> {
+  if (activeSignIns < maxActiveSignIns) activeSignIns++;
+  else {
+    if (signInWaiters.length >= maxWaitingSignIns) throw new AppError("rate_limited");
+    // The finishing sign-in hands its slot over directly, so the count stays unchanged.
+    await new Promise<void>((resolve) => signInWaiters.push(resolve));
+  }
+  try {
+    return await run();
+  } finally {
+    const next = signInWaiters.shift();
+    if (next) next();
+    else activeSignIns--;
+  }
+}
+
+async function inAccountTurn<T>(email: string, run: () => Promise<T>): Promise<T> {
+  const turn = accountTurns.get(email) ?? { tail: Promise.resolve(), waiting: 0 };
+  if (turn.waiting >= maxWaitingSignIns) throw new AppError("rate_limited");
+  const previous = turn.tail;
+  let release = () => {};
+  turn.tail = new Promise<void>((resolve) => (release = resolve));
+  turn.waiting++;
+  accountTurns.set(email, turn);
+  await previous;
+  try {
+    return await run();
+  } finally {
+    release();
+    if (--turn.waiting === 0) accountTurns.delete(email);
+  }
+}
+
 export const authRoutes = new Hono<AppEnv>()
   .use(async (c, next) => {
     // R18/T130: Hono can decode a static path before dispatch. Only canonical ASCII
@@ -295,39 +378,54 @@ export const authRoutes = new Hono<AppEnv>()
   })
   // Five consecutive failures lock password sign-in for 15 minutes; open sessions stay.
   .post("/sign-in/email", async (c) => {
+    const client = clientAddressOf(c);
+    if (
+      client !== "unknown" &&
+      !allowRequest(signInBudgets, client, performance.now(), signInPolicy)
+    ) {
+      throw new AppError("rate_limited");
+    }
     const { request, body } = await bodyOf(c, passwordSignInInput);
-    // FR-033: one account's password checks and failure counters have one order.
-    const outcome = await c.get("db").transaction(async (tx) => {
-      await tx.execute(
-        sql`select pg_advisory_xact_lock(hashtextextended(${`domy:sign-in:${body.email.toLowerCase()}`}, 0))`,
-      );
-      const now = c.get("clock")();
-      const [user] = await tx
-        .select()
-        .from(users)
-        .where(eq(sql`lower(${users.email})`, body.email.toLowerCase()));
-      if (user?.lockedUntil && user.lockedUntil > now) return locked(user.lockedUntil);
+    const email = body.email.toLowerCase();
+    // FR-033: one account's password checks and failure counters have one order: in this
+    // process through its turn, across processes through the advisory lock, which is only
+    // tried so a connection never waits on it (SEC-1).
+    const outcome = await inAccountTurn(email, () =>
+      withSignInSlot(() =>
+        c.get("db").transaction(async (tx) => {
+          const [turn] = await tx.execute<{ acquired: boolean }>(
+            sql`select pg_try_advisory_xact_lock(hashtextextended(${`domy:sign-in:${email}`}, 0)) as acquired`,
+          );
+          if (turn?.acquired !== true) return new AppError("rate_limited");
+          const now = c.get("clock")();
+          const [user] = await tx
+            .select()
+            .from(users)
+            .where(eq(sql`lower(${users.email})`, body.email.toLowerCase()));
+          if (user?.lockedUntil && user.lockedUntil > now) return locked(user.lockedUntil);
 
-      const auth = createAuth({ ...c.get("authConfig"), db: tx, logger: c.get("logger") });
-      const response = await auth.handler(request);
-      if (!user) return response;
-      if (response.status === 401) {
-        const failures = user.failedSignInCount + 1;
-        const lockedUntil = failures >= maxFailures ? new Date(now.getTime() + lockMs) : null;
-        await tx
-          .update(users)
-          .set({ failedSignInCount: lockedUntil ? 0 : failures, lockedUntil })
-          .where(eq(users.id, user.id));
-        // Return the refusal so the counter commits before Hono handles the error.
-        if (lockedUntil) return locked(lockedUntil);
-      } else if (response.ok && (user.failedSignInCount > 0 || user.lockedUntil)) {
-        await tx
-          .update(users)
-          .set({ failedSignInCount: 0, lockedUntil: null })
-          .where(eq(users.id, user.id));
-      }
-      return response;
-    });
+          const auth = createAuth({ ...c.get("authConfig"), db: tx, logger: c.get("logger") });
+          const response = await auth.handler(request);
+          if (!user) return response;
+          if (response.status === 401) {
+            const failures = user.failedSignInCount + 1;
+            const lockedUntil = failures >= maxFailures ? new Date(now.getTime() + lockMs) : null;
+            await tx
+              .update(users)
+              .set({ failedSignInCount: lockedUntil ? 0 : failures, lockedUntil })
+              .where(eq(users.id, user.id));
+            // Return the refusal so the counter commits before Hono handles the error.
+            if (lockedUntil) return locked(lockedUntil);
+          } else if (response.ok && (user.failedSignInCount > 0 || user.lockedUntil)) {
+            await tx
+              .update(users)
+              .set({ failedSignInCount: 0, lockedUntil: null })
+              .where(eq(users.id, user.id));
+          }
+          return response;
+        }),
+      ),
+    );
     if (outcome instanceof AppError) throw outcome;
     return outcome;
   })
@@ -397,13 +495,17 @@ export const authRoutes = new Hono<AppEnv>()
       {},
     );
   })
-  .get("/admin/list-users", requireRole("owner"), (c) => c.get("auth").handler(c.req.raw))
+  .get("/admin/list-users", requireRole("owner"), (c) =>
+    c.get("auth").handler(forAuth(c, c.req.raw)),
+  )
   // Keep the native recovery callback as well as its form submission (FR-030).
-  .on("GET", ["/get-session", "/reset-password/:token"], (c) => c.get("auth").handler(c.req.raw))
+  .on("GET", ["/get-session", "/reset-password/:token"], (c) =>
+    c.get("auth").handler(forAuth(c, c.req.raw)),
+  )
   .on(
     "POST",
     ["/sign-out", "/request-password-reset", "/reset-password", "/change-password"],
-    (c) => c.get("auth").handler(c.req.raw),
+    (c) => c.get("auth").handler(forAuth(c, c.req.raw)),
   )
   .all("*", () => {
     throw new AppError("not_found");

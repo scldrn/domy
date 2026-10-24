@@ -554,6 +554,35 @@ describe("notifications integration (004/T018, FR-015–FR-018, R15)", () => {
     });
   });
 
+  it("records an already copied notification when voiding precedes its delayed acknowledgment (FR-017)", async () => {
+    const shipment = await register();
+    const list = await t.request("/api/notifications?date=2026-10-01", {
+      cookie: dispatcher.cookie,
+    });
+    expect(list.status).toBe(200);
+    const selected = objectBody.parse(await list.json());
+    expect(JSON.stringify(selected)).toContain(shipment.id);
+    // Opening/copying the message happens before its POST; a later void cannot erase that fact.
+    const voided = await t.request(`/api/shipments/${shipment.id}/void`, {
+      method: "POST",
+      cookie: dispatcher.cookie,
+      body: {
+        actionId: crypto.randomUUID(),
+        version: shipment.version,
+        reason: "Cancelado después de copiar",
+      },
+    });
+    expect(voided.status).toBe(200);
+    const actionId = crypto.randomUUID();
+    expect((await postNotification(dispatcher.cookie, actionId, [shipment.id])).status).toBe(204);
+    const state = await notificationState([shipment.id]);
+    expect(state.fields[0]?.notifiedBy).toBe(dispatcher.user.id);
+    expect(state.fields[0]?.notifiedAt).toBe(t.now().toISOString());
+    expect(state.events).toHaveLength(1);
+    expect((await postNotification(dispatcher.cookie, actionId, [shipment.id])).status).toBe(204);
+    expect(await notificationState([shipment.id])).toEqual(state);
+  });
+
   it("exports the Notificado column for shipment rows", async () => {
     await register();
     const response = await t.request("/api/shipments/export?format=csv", { cookie: owner.cookie });

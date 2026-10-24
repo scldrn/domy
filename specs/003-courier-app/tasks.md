@@ -1245,3 +1245,7 @@ T136 revalidation: check, 1,626 tests, 155 zero-retry E2E and build pass on fina
 frozen source; [receipt](../../docs/repository-consolidation-results.md). The owner
 requires local-only validation, superseding the historical remote-CI prerequisite.
 No physical task is closed by this transport consolidation.
+
+## Release change review — 2026-10-23
+
+- [X] T137 Review pending-photo integrity, storage/request bounds, own-photo access and concurrent record replay. Retain conflicting photo bytes and previously persisted work; no offline physical prerequisite for this release. Native regressions and full local gates required. See ../../docs/release-change-review-results.md.

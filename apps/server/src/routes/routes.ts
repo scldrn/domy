@@ -144,9 +144,17 @@ async function applyRouteAction(
         );
       await refreshRouteStatus(tx, routeId, { actorUserId: c.get("user").id, now });
     })
-    .catch((error: unknown) => {
+    .catch(async (error: unknown) => {
       if (error instanceof Unchanged) return;
       if (isUniqueViolation(error, "route_events_client_event_id_key")) return;
+      // A concurrent retry of this same action won the version: it counts as applied
+      // (FR-020), as `saveChange` does for shipments.
+      if (
+        error instanceof AppError &&
+        error.code === "version_conflict" &&
+        (await findRouteAction(db, input.actionId)) === routeId
+      )
+        return;
       throw error;
     });
   return c.json(await loadRouteDetail(db, routeId));
@@ -642,6 +650,8 @@ export const routeRoutes = new Hono<AppEnv>()
         return await applyRouteAction(c, id, input, async (tx, route, now) => {
           requireStatus(route, ["draft"], "Solo se despachan rutas en preparación.");
           if (!route.courierId) throw new AppError("courier_required");
+          // FR-009: the courier may have been deactivated after the route was assigned.
+          await requireActiveCourier(tx, route.courierId);
           if ((await loadPlan(tx, id)).length === 0) throw new AppError("route_empty");
           const user = c.get("user");
           await tx
@@ -807,6 +817,14 @@ export const routeRoutes = new Hono<AppEnv>()
         if (target.status !== "in_progress") {
           throw new AppError("route_not_in_progress", {
             message: `La Ruta ${String(target.number)} ya no está en curso.`,
+          });
+        }
+        // FR-009, US1 scenario 7: only into the route its own courier has in progress.
+        if (!route.courierId || target.courierId !== route.courierId) {
+          throw new AppError("invalid_request", {
+            fields: {
+              toRouteId: `La Ruta ${String(target.number)} es de otro mensajero; solo se une a la ruta en curso del mismo mensajero.`,
+            },
           });
         }
         const carried = await tx

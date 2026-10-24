@@ -1,78 +1,69 @@
 # Engineering handoff
 
-## Scope and candidate
+## Scope and current candidate
 
-Updated 2026-10-23. The owner handles infrastructure procurement and production
-deployment. Engineering supplies the code, local verification evidence and runbooks.
-The owner explicitly excludes offline operation from the immediate release; see
-[online release scope](online-release-scope.md). Stop offline phone testing as a
-release prerequisite. Preserve existing code, pending data and the failed observation.
-Connected physical acceptance is partial, as detailed in that decision receipt.
+Updated 2026-10-23. The owner handles infrastructure and deployment. Engineering
+supplies the reviewed code, local validation and tracked deployment/recovery tools.
+Immediate delivery requires internet; physical offline acceptance is excluded by the
+[owner's decision](online-release-scope.md). Existing offline code, data and tests remain.
 
-The canonical release source is `main` in [scldrn/domy](https://github.com/scldrn/domy).
-This handoff accompanies the single consolidation PR; its temporary branch is
-removed after squash. The verified 540-file source identity is
-`d604a2876d27da5ffae669c4be9db899b17c2ba183a7b3f1f99fe2cee855e599`.
-The owner requested solo execution; implementation and separate final inspection
-were performed by root, without an independent-agent claim. See the
-[consolidation receipt](repository-consolidation-results.md) for source recovery,
-branch review, retained first failures and publication verification.
+The current candidate follows `main` in [scldrn/domy](https://github.com/scldrn/domy).
+Its source/configuration/test/tool SHA-256 is
+`a2c9c55a564a837811de8c4c8c2c0b0875630450f6ac378b02257e5afbc19152` (550 files; documentation excluded).
+See the [release change review](release-change-review-results.md) for new versus
+historical work, rejected changes, original failures and final solo review.
+The [prior consolidation receipt](repository-consolidation-results.md) retains its
+own earlier source and image; it is not the current runtime validation.
 
 ## Verified locally
 
 | Validation | Result |
 | --- | --- |
 | `pnpm check` | Formatting, lint and strict types pass |
-| `pnpm test` | 1626 tests pass: 424 domain, 820 server, 382 web |
-| `pnpm test:e2e --retries=0` | 155 pass; cold tracking 2866.1 ms, below 3000 ms |
-| `pnpm build` | Pass |
-| Docker image | Build and separate structural probe pass; UID 1000, exact source files, 10 migrations, built web assets |
-| Historical-schema upgrade, prior image with identical runtime files | PASS: 8→10 migrations, 29 old-table hashes preserved, session access, no-op replay and unchanged fresh DB |
-| Fresh database/storage on prior image | Earlier two-level proof: 31 tables, 66 validated FKs, exact journal and private bucket access; see its dated receipt |
+| `pnpm test` | 1,686 pass: 426 domain, 870 server, 390 web |
+| `pnpm test:e2e --retries=0` | 155 pass, zero retries; cold tracking 2875.1 ms < 3000 ms |
+| `pnpm build` | Web bundle, actual service worker and server types pass |
+| `pnpm audit` | Zero reported vulnerabilities, including development packages |
+| Docker build/runtime | Linux arm64, UID 1000, fresh migrations, seven native health/routing/access checks and graceful exit 0 |
+| Image/source inspection | 154 exact source/configuration hashes match; native imports and patched Zod pass |
+| Backup/restore scripts | Native PostgreSQL regression passes; separate restore preserves data/counts/COP and refuses live/system/existing databases |
 
-The before/after source manifests match. First failed runs and corrections remain
-in the receipts; no retry or timing-budget relaxation supplies these passes.
-The earlier image’s fresh local HTTPS/proxy/privacy rehearsal passed both QA levels;
-its exact scope and preserved failures are in the
-[container results](../specs/004-tracking-merchant-link/deployment-container-results.md).
-The built image is Linux arm64; the production target platform is not selected.
+The frozen before/after source manifests match. No identical production files or
+complete function bodies of 80+ tokens were found across 273 production modules.
+No new migration was added. The prior [historical-schema upgrade](../specs/004-tracking-merchant-link/local-image-upgrade-results.md)
+remains evidence for its original image; this new image was tested on a fresh database.
+No remote CI was invoked or awaited. All required local gates passed without changing
+assertions, retry policy or performance budgets.
 
-## Five original catalog tasks still open
+## Original acceptance catalog
 
-| Task | Remaining acceptance |
+| Task | Original wider acceptance still open |
 | --- | --- |
-| `003/T093` | Real-phone courier usability, offline/reopen behavior, tap counts and timings |
-| `003/T087` | All 21 courier quickstart scenarios on Android and iPhone |
-| `003/T088` | Final courier closure after required acceptance; technical gates already pass |
-| `004/T034` | All 14 tracking/merchant quickstart scenarios on real mobile data |
-| `004/T035` | Final integrated closure including the deferred physical tasks; technical gates already pass |
+| `003/T093` | Full real-phone courier usability, offline/reopen, tap counts and timings |
+| `003/T087` | All 21 original courier scenarios on both operating systems |
+| `003/T088` | Final courier closure for that original full scope |
+| `004/T034` | All 14 public/merchant scenarios on real phones/mobile data |
+| `004/T035` | Final integrated closure for that original full scope |
 
-These are **76/81 closed tasks (94%)**, not a production-readiness percentage.
-They retain the original wider scope; offline acceptance no longer blocks the
-owner-requested online release. Do not infer full scenario acceptance from the
-partial connected phone results or use this historical percentage as its forecast.
+The original 76/81 count is historical catalog accounting, not online-release
+readiness. Offline acceptance does not block the owner-requested connected release.
+The four additional release-review convergence tasks are verified locally. Partial
+phone reports, API probes and Chromium do not certify unobserved physical scenarios.
 
 ## Deployment handoff
 
-The tracked artifacts are `Dockerfile`, `compose.production.yaml` and `Caddyfile`.
-The owner supplies the real origin, private service configuration and reviewed image
-pins for the target platform. The synthetic lab's CA, credentials, bucket and private
-`.git` helpers are local test resources, not production configuration or clone tooling.
+Use tracked `Dockerfile`, `compose.production.yaml`, `Caddyfile`,
+`scripts/backup.sh`, `scripts/restore.sh`, the [artifact plan](local-deployment-artifact-plan.md)
+and [recovery runbook](local-recovery-runbook.md).
 
-Use the [artifact plan](local-deployment-artifact-plan.md) and
-[recovery runbook](local-recovery-runbook.md). Historical-schema image upgrade now
-[passes locally](../specs/004-tracking-merchant-link/local-image-upgrade-results.md).
-The exact candidate image is
-`sha256:2ea640a3da2bf4dba313d85eca1baf8f0e929dd72752f92bd6418612006c2e7b`
-(`domy:consolidated-d604a287`). Its 282 runtime files and dependency layers
-match the previously rehearsed image byte-for-byte; the earlier upgrade receipt
-retains its actual image/source identity. The
-[consolidation receipt](repository-consolidation-results.md) supersedes earlier
-gate counts/source identities; the
-[regression receipt](../specs/001-shipment-registration/solo-production-regression-results.md)
-retains the preceding implementation evidence. Actual provider retention,
-recovery email/push, scheduled backups, individual courier consent and operational
-acceptance remain owner deployment obligations; local evidence does not certify them.
-Repository publication follows the owner’s cleanup request through one squash PR
-using local gates and skip annotations. No production deployment, infrastructure
-purchase or remote CI operation is included.
+Local reviewed image: `domy:release-review-a2c9c55a`;
+immutable ID `sha256:3e7039d675c4d3c864872c86e51761c0cd7007df518a48dbc1d7272bbbf423f9`.
+It was built for the synthetic origin `https://domy-release-review.test` on Linux arm64.
+Build the same reviewed source for the real canonical HTTPS origin and target platform;
+this synthetic image/configuration is not a ready-configured production environment.
+
+The owner supplies real origin/TLS, secrets, private storage/retention, recovery email,
+push configuration, scheduled backups and privacy/operational evidence. The PostgreSQL
+tools do not schedule jobs or recover photo objects. Local synthetic credentials, CA
+and `.git` helpers must not become production configuration. No production deployment
+or infrastructure purchase was performed.

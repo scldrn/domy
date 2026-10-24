@@ -8,6 +8,7 @@ import {
   type RecordOutcome,
 } from "../courier-records.ts";
 import { collectedTotal, type DaySummary } from "../day-summary.ts";
+import { maxCop } from "../money.ts";
 import { routeStatuses, stopKinds, taskStatuses } from "../routes.ts";
 import { shipmentStatuses } from "../shipment-lifecycle.ts";
 import { packageSizes, shipmentKinds, type ShipmentKind } from "./enums.ts";
@@ -57,10 +58,12 @@ const receivedByName = z
   .trim()
   .min(2, "Escribe el nombre de quien recibe, de al menos 2 letras.")
   .max(100, "El nombre de quien recibe no puede pasar de 100 caracteres.");
+/** No position on Earth is farther than this from another (ROB-5: also below int4 storage). */
+const maxAccuracyM = 20_000_000;
 const location = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
-  accuracyM: z.number().int().min(0),
+  accuracyM: z.number().int().min(0).max(maxAccuracyM),
 });
 
 function photos<const Kinds extends readonly [PhotoKind, ...PhotoKind[]]>(kinds: Kinds) {
@@ -121,7 +124,9 @@ const disbursement = z.object({
   amount: z
     .number({ error: "Escribe el valor del pago." })
     .int("Usa pesos enteros, sin decimales.")
-    .positive("El pago debe ser mayor que cero."),
+    .positive("El pago debe ser mayor que cero.")
+    // ROB-5: the largest storable peso amount, as `money` (FR-011).
+    .max(maxCop, "El valor no puede superar $ 2.147.483.647 pesos."),
   payee: z
     .string({ error: "Escribe a quién se pagó." })
     .trim()
