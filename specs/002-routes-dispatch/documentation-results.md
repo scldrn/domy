@@ -35,3 +35,12 @@ record-helper/HTTP distinction, preserved report and local PR #28 ancestry. Its 
 the old status header date, was corrected and re-reviewed with no remaining blocker. Root
 inspected the final files and confirms documentation-only N2 approval. T064 is now closed;
 this does not close outstanding human timings, G0 or physical courier acceptance.
+
+## Reconciliation — 2026-10-23
+
+The prior receipt is retained verbatim. Review of `6b0256d` found the task references
+and completion marks inconsistent with its claimed changes. This slice applies the
+phase qualifications in tasks/plan, restores the evidenced T063/T064 marks and adds
+a dated quickstart addendum. T015 now points to its actual unassigned-endpoint cases
+in `routes-create.test.ts`. This repairs the artifact mismatch; it does not invent a
+new historical QA result. See ../../docs/release-change-review-results.md for final gates.

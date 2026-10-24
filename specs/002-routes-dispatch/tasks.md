@@ -91,7 +91,7 @@ and history
 
 ### Tests for User Story 1 ⚠️ write first, must fail
 
-- [X] T015 [P] [US1] Integration tests in `apps/server/tests/shipments-unassigned.test.ts` (FR-001): only `registered` shipments with `service_date ≤` the date, with pickup point, rate zone, neighborhood, delivery window, COD amount, and flags; filters by rate zone and merchant
+- [X] T015 [P] [US1] Integration tests in `apps/server/tests/routes-create.test.ts`, block `GET /api/shipments/unassigned` (planned as `shipments-unassigned.test.ts`; the cases landed in `routes-create.test.ts`) (FR-001): only `registered` shipments with `service_date ≤` the date, with pickup point, rate zone, neighborhood, delivery window, COD amount, and flags; filters by rate zone and merchant
 - [X] T016 [P] [US1] Integration tests in `apps/server/tests/routes-create.test.ts` covering spec US1 scenarios 1, 5, 6, 9: stops built per FR-005, shipments become `assigned`, route number unique per service date, `422 past_service_date`, the date rule of FR-003, `409 shipment_not_registered` for a shipment already on a route, `422 confirmation_required` beyond 15 shipments, two simultaneous creations that include the same shipment leave it on exactly one route (FR-004), a repeated create with the same `id` yields one route (FR-020), `created` event with author and time (FR-002, FR-022)
 - [X] T017 [P] [US1] Integration tests in `apps/server/tests/routes-order-courier.test.ts` covering spec US1 scenarios 2 and 8 at the API level: `PUT /stop-order` accepts a valid order, returns `409 invalid_stop_order` for a delivery before its pickup and for a moved completed stop, `409 version_conflict` on a stale version, a repeated `actionId` has no second effect; `PATCH` sets and changes the courier of a route in preparation without a reason and records it (FR-006, FR-008, FR-021)
 - [X] T018 [P] [US1] Integration tests in `apps/server/tests/routes-dispatch.test.ts` covering spec US1 scenarios 3, 4, 7: route `in_progress`, shipments `dispatched`, `dispatched` event; `422 courier_required`; `422 route_empty` for a route with no shipments; `409 courier_busy` with the current route number, including a route in progress from an earlier day and two simultaneous dispatches to the same courier (FR-009)
@@ -110,8 +110,8 @@ and history
 
 ### Alignment for User Story 1 (analysis of 2026-10-13, constitution 2.0.0)
 
-- [X] T057 [US1] Declare the 15-shipment confirmation threshold of FR-005 once, in `packages/domain/src/routes.ts`, and use it in `apps/server/src/routes/routes.ts` and `apps/web/src/routes/routes-board.tsx` in place of their own constants (Constitution III); the confirmation cases of T016 and T019 keep passing
-- [X] T058 [US1] Bring the route screens to `docs/design-system.md` (FR-024, Constitution VII): `PageHeader` with the page's actions (§8), the empty states of FR-027 with `EmptyState` (§8), sheets and data tables (§7), the supporting pane layout for route building (§5), and the route state mark in a new `apps/web/src/components/route-status-mark.tsx` (§3.3, §8), across `apps/web/src/routes/routes-board.tsx`, `apps/web/src/routes/route-detail.tsx`, and `apps/web/src/features/routes/*`, until T019 and its accessibility audit pass
+- [X] T057 [US1] (Phase 3 T057: threshold) Declare the 15-shipment confirmation threshold of FR-005 once, in `packages/domain/src/routes.ts`, and use it in `apps/server/src/routes/routes.ts` and `apps/web/src/routes/routes-board.tsx` in place of their own constants (Constitution III); the confirmation cases of T016 and T019 keep passing
+- [X] T058 [US1] (Phase 3 T058: route UI) Bring the route screens to `docs/design-system.md` (FR-024, Constitution VII): `PageHeader` with the page's actions (§8), the empty states of FR-027 with `EmptyState` (§8), sheets and data tables (§7), the supporting pane layout for route building (§5), and the route state mark in a new `apps/web/src/components/route-status-mark.tsx` (§3.3, §8), across `apps/web/src/routes/routes-board.tsx`, `apps/web/src/routes/route-detail.tsx`, and `apps/web/src/features/routes/*`, until T019 and its accessibility audit pass
 
 **Checkpoint**: a route can be built, ordered, assigned, and dispatched
 
@@ -223,8 +223,8 @@ nothing picked up; verify statuses and history
 
 They run before T055 and T056, which close the phase.
 
-- [X] T057 [P] Contract test `apps/server/tests/routes-contract.test.ts`: every endpoint of contracts/http-api.md is registered with its method, and every registered route of `/api/routes`, `/api/handovers`, and the shipment endpoints this feature adds is documented; every error code of the contract's table exists with its HTTP status; the body of every endpoint matches the documented shape (RoutesBoard, RouteDetail, Handover, `{ shipment, handover }`, the `ShipmentDetail` additions, the error body)
-- [X] T058 [P] Performance test `apps/server/tests/routes-scale.test.ts` on a busy day over a large history (research R13): the routes board, "Sin asignar", a route's detail, and a shipment's detail answer within the budget, and creating, ordering, and dispatching a route of 15 shipments too
+- [X] T057 [P] (Phase 8 T057: contracts) Contract test `apps/server/tests/routes-contract.test.ts`: every endpoint of contracts/http-api.md is registered with its method, and every registered route of `/api/routes`, `/api/handovers`, and the shipment endpoints this feature adds is documented; every error code of the contract's table exists with its HTTP status; the body of every endpoint matches the documented shape (RoutesBoard, RouteDetail, Handover, `{ shipment, handover }`, the `ShipmentDetail` additions, the error body)
+- [X] T058 [P] (Phase 8 T058: performance) Performance test `apps/server/tests/routes-scale.test.ts` on a busy day over a large history (research R13): the routes board, "Sin asignar", a route's detail, and a shipment's detail answer within the budget, and creating, ordering, and dispatching a route of 15 shipments too
 - [X] T059 [P] Security test `apps/server/tests/routes-security.test.ts`: malformed identifiers and bodies are refused with `400` and never answer `500`; oversized lists and bodies are refused; fields outside the schema change nothing; a cross-site form post (not `application/json`) is refused; errors never expose SQL or stack traces; reasons with markup are stored and returned as text; the production headers forbid framing and MIME sniffing (research R13)
 - [X] T060 [P] Web unit tests next to the code for the pure logic of the routes screens (labels, messages, the custody text, the reason rule)
 - [X] T061 Usability and interface review: walk the whole workflow (feature 001 registration through every route action) at 1440, 1024, and 600 px, in light and dark schemes, and with the keyboard only; check every screen against `docs/design-system.md` and the usability heuristics; fix what fails, test-first when it is behavior; record the findings in `specs/002-routes-dispatch/quickstart-results.md`
@@ -258,7 +258,7 @@ US3, US4, and US5 are independent of each other.
 ### Parallel Opportunities
 
 - Foundational: T002 and T003 together (T004 and T005 extend the same test file, in order); T008–T010 together
-- US1: T015–T019 together; T024–T026 together; T057 before T058 (both edit `routes-board.tsx`)
+- US1: T015–T019 together; T024–T026 together; Phase 3 T057 before Phase 3 T058 (both edit `routes-board.tsx`)
 - After US1: US2; after T030: US3, US4, and US5 in parallel
 - Polish: T052–T054 together
 
@@ -305,7 +305,7 @@ Each slice lands on `main` through its own short-lived branch and pull request:
 
 | Branch | Tasks |
 | --- | --- |
-| `002-us1-routes` | Phases 1–3, including T057–T058 |
+| `002-us1-routes` | Phases 1–3, including Phase 3 T057–T058 |
 | `002-us2-routes-board` | Phase 4 |
 | `002-us3-adjust-route` | Phase 5 |
 | `002-us4-reassign` | Phase 6 |
@@ -336,5 +336,9 @@ landed together with User Story 1, in the same branch.
 
 ## Phase 10: Convergence
 
-- [ ] T063 CRITICAL Prevent route projections from overflowing valid aggregate COP values. First reproduce IV-13 with two accepted COD shipments of COP 1,200,000,000: route creation currently commits but returns 500 and board reads fail at `SUM(...)::int`. Coordinate representability with 001 T138; preserve integer accuracy, route/board response schemas and replay behavior, and test create/detail/board/dispatch summaries without silently narrowing accepted business amounts (FR-018, Constitution III/V; contradicts).
-- [ ] T064 MEDIUM Repair ambiguous task references and obsolete authoritative documentation identified in IV-32 without rewriting historical task IDs or completion evidence. Explicitly map the two occurrences each of T057/T058 by phase and description, use unambiguous references thereafter, and align current quickstart/status summaries with real courier records and the already merged PR #28. Preserve original historical results as dated evidence (plan: traceable task execution, Constitution VIII; partial).
+- [X] T063 CRITICAL Prevent route projections from overflowing valid aggregate COP values. First reproduce IV-13 with two accepted COD shipments of COP 1,200,000,000: route creation currently commits but returns 500 and board reads fail at `SUM(...)::int`. Coordinate representability with 001 T138; preserve integer accuracy, route/board response schemas and replay behavior, and test create/detail/board/dispatch summaries without silently narrowing accepted business amounts (FR-018, Constitution III/V; contradicts).
+- [X] T064 MEDIUM Repair ambiguous task references and obsolete authoritative documentation identified in IV-32 without rewriting historical task IDs or completion evidence. Explicitly map the two occurrences each of T057/T058 by phase and description, use unambiguous references thereafter, and align current quickstart/status summaries with real courier records and the already merged PR #28. Preserve original historical results as dated evidence (plan: traceable task execution, Constitution VIII; partial).
+
+## Release change review — 2026-10-23
+
+- [X] T065 Review dispatch active-courier checks, same-courier route join and concurrent UUID replay; prove native regressions and full local gates. Preserve aggregate and prior task evidence. See ../../docs/release-change-review-results.md.

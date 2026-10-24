@@ -30,10 +30,35 @@ export class ApiError extends Error {
 const networkErrorMessage =
   "No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.";
 
+/** ROB-4: a request that never answers ends as a network error instead of hanging. */
+export const apiTimeoutMs = 30_000;
+
+/**
+ * Aborts after `apiTimeoutMs`, and with the caller's own signal. The timer is left to run
+ * so that it also bounds reading the body; aborting after it was read is harmless.
+ */
+function timeoutSignal(signal: AbortSignal | null | undefined): AbortSignal {
+  const controller = new AbortController();
+  const abortFromCaller = () => {
+    controller.abort(signal?.reason);
+  };
+  setTimeout(() => {
+    signal?.removeEventListener("abort", abortFromCaller);
+    controller.abort(new DOMException("The request timed out.", "TimeoutError"));
+  }, apiTimeoutMs);
+  if (signal?.aborted) controller.abort(signal.reason);
+  else signal?.addEventListener("abort", abortFromCaller, { once: true });
+  return controller.signal;
+}
+
 async function fetchWithClock(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   let response: Response;
   try {
-    response = await fetch(input, { ...init, credentials: "include" });
+    response = await fetch(input, {
+      ...init,
+      credentials: "include",
+      signal: timeoutSignal(init?.signal),
+    });
   } catch {
     throw new ApiError(0, { code: "network_error", message: networkErrorMessage });
   }

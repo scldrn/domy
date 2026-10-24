@@ -533,3 +533,7 @@ T139/T146 were reopened after real RED, corrected and reclosed on the unchanged
 See [regression results](solo-production-regression-results.md). The same engineer
 performed implementation and a separate final inspection, per the owner’s solo
 instruction; no independent-agent approval or physical acceptance is claimed.
+
+## Release change review — 2026-10-23
+
+- [X] T156 Review and validate release hardening of native sign-in resource bounds, trusted client identity, startup/configuration and process failures; patch audited dependencies. Preserve account invariants and all security/error contracts; local full gates required. See ../../docs/release-change-review-results.md.

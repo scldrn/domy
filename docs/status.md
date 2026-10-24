@@ -11,13 +11,25 @@ a short-lived branch, so the specification and implementation of every feature l
 
 | Feature | State |
 | --- | --- |
-| 001 Shipment registration | 27 integral catalog tasks verified locally; latest T139/T146 regression closure is recorded below. Final corrections remain uncommitted |
+| 001 Shipment registration | 27 integral catalog tasks verified locally; latest T139/T146 regression closure is recorded below. Consolidated and release-review validated |
 | Panel identity (design) | On `main` (`c363847`); rules in [design-system.md](design-system.md) |
 | 002 Routes and dispatch | 2 integral catalog tasks verified locally, including aggregate overflow and traceability; retain historical feature receipts |
 | 003 Courier app | 14/17 integral catalog tasks verified locally; T093/T087 physical acceptance and dependent T088 closure remain open |
 | 004 Tracking page and merchant link | 33/35 tasks verified locally; T034 physical acceptance and dependent T035 closure remain open |
 
 ## Next step
+
+
+### Release-change review completed locally — 2026-10-23
+
+The new runtime changes relative to `6b0256d` were reviewed and corrected before
+integration: preserve conflicting photo bytes and live rate-limit buckets, retain
+FR-017 delayed notification acknowledgments, and reconcile stale documentation.
+Check, 1,686 tests, 155 zero-retry browser cases, build, all-dependency audit and the
+new Docker fresh-runtime proof pass on frozen source `a2c9c55a` (550 files).
+The [current handoff](engineering-handoff.md) and [review receipt](release-change-review-results.md)
+supersede older source/image and uncommitted-work paragraphs below. No deployment,
+remote CI or new physical acceptance is claimed.
 
 ### Online release prioritized by owner — 2026-10-23
 

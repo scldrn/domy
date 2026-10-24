@@ -41,7 +41,13 @@ export function createAuth(options: AuthConfig & { db: Executor; logger: Logger 
     baseURL: options.baseUrl,
     basePath: "/api/auth",
     database: drizzleAdapter(options.db, { provider: "pg", schema, usePlural: true }),
-    advanced: { database: { generateId: "uuid" } },
+    advanced: {
+      database: { generateId: "uuid" },
+      // SEC-8: Better Auth only sees a Request, never the socket. routes/auth.ts always sets
+      // this header to the resolved client address (the trusted proxy's value only when
+      // DOMY_TRUSTED_PROXY_IP is the peer, else the native peer); X-Forwarded-For is ignored.
+      ipAddress: { ipAddressHeaders: ["x-domy-client-ip"] },
+    },
     // R18/T150: native 4xx keep their response; unexpected faults reach Hono's
     // sanitized error handler, not the library's raw SQL/credential console logger.
     onAPIError: {

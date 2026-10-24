@@ -382,7 +382,8 @@ type CourierErrorCode =
   | "record_not_revertible"
   | "office_not_configured"
   | "photo_immutable"
-  | "occurred_in_future";
+  | "occurred_in_future"
+  | "storage_unavailable";
 
 const errorStatuses = {
   no_exception_to_decide: 409,
@@ -391,6 +392,7 @@ const errorStatuses = {
   office_not_configured: 409,
   photo_immutable: 409,
   occurred_in_future: 422,
+  storage_unavailable: 503,
 } satisfies Record<CourierErrorCode, number>;
 
 type RoleSession = { cookie: string; userId: string };
@@ -597,7 +599,7 @@ describe("Courier App HTTP contract", () => {
     });
     expect(photoRecords.response.status).toBe(200);
     const imageA = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
-    const imageB = new Uint8Array([0xff, 0xd8, 0x00, 0xd9]);
+    const imageB = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
     const upload = (image: Uint8Array) =>
       t.app.request(`/api/courier/photos/${photoId}`, {
         method: "PUT",

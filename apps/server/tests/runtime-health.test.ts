@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { getRequestListener } from "@hono/node-server";
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app.ts";
 import { createDb, type Db } from "../src/db/client.ts";
@@ -105,6 +106,36 @@ describe("runtime health and CSP over native HTTP", () => {
       expect(response.status).toBe(200);
       expect(response.headers.get("cache-control")).toContain("no-store");
       expect(await response.json()).toEqual({ status: "ready" });
+    });
+  });
+
+  // Release review DEPLOY-3: a database behind the shipped migrations journal is not ready.
+  it("reports unavailable while a shipped migration is not applied", async () => {
+    const app = createRuntimeTestApp(database.db);
+    const [latest] = await database.db.execute<{ id: number; hash: string; created_at: string }>(
+      sql`select id, hash, created_at from drizzle.__drizzle_migrations order by id desc limit 1`,
+    );
+    if (!latest) throw new Error("Expected applied migrations");
+    await database.db.execute(
+      sql`delete from drizzle.__drizzle_migrations where id = ${latest.id}`,
+    );
+
+    try {
+      await withNativeServer(app, async (origin) => {
+        const response = await fetch(`${origin}/health/ready`);
+        expect(response.status).toBe(503);
+        expect(response.headers.get("cache-control")).toContain("no-store");
+        expect(await response.json()).toEqual({ status: "unavailable" });
+      });
+    } finally {
+      await database.db.execute(
+        sql`insert into drizzle.__drizzle_migrations (id, hash, created_at)
+            values (${latest.id}, ${latest.hash}, ${latest.created_at})`,
+      );
+    }
+
+    await withNativeServer(app, async (origin) => {
+      expect((await fetch(`${origin}/health/ready`)).status).toBe(200);
     });
   });
 

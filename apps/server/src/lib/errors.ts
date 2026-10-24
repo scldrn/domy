@@ -70,6 +70,8 @@ const errorCatalog = {
   ],
   account_locked: [423, "La cuenta está bloqueada temporalmente."],
   photo_immutable: [409, "Esta foto ya fue subida y no puede modificarse."],
+  // The photo bucket failed or timed out: the phone keeps the photo and retries (FR-023, ROB-1).
+  storage_unavailable: [503, "No pudimos guardar la foto. Se volverá a intentar."],
   conflict: [409, "Conflicto con el estado actual del recurso."],
 } as const satisfies Record<string, readonly [ContentfulStatusCode, string]>;
 

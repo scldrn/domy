@@ -231,3 +231,7 @@ feature by feature (decision #35 in the business master).
   several tasks; they are sequential on purpose
 - Verify each test fails before implementing; commit after each task or logical group
 - Every task must leave `pnpm check` clean
+
+## Release change review — 2026-10-23
+
+- [X] T036 Review shared bounded request limiting and IPv6 prefix keys without evicting live public buckets. Preserve public privacy, status and rate-limit contracts; full local gates required. See ../../docs/release-change-review-results.md.

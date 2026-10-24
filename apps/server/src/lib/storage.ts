@@ -32,12 +32,24 @@ export function photoKey(photo: { recordId: string; photoId: string }): string {
   return `photos/${photo.recordId}/${photo.photoId}.jpg`;
 }
 
-export function createStorage(config: StorageConfig): PhotoStorage {
+/** Bounds on each bucket call, so a stalled bucket fails instead of hanging a request (ROB-1). */
+export type StorageTimeouts = { requestTimeoutMs?: number; connectionTimeoutMs?: number };
+
+export function createStorage(
+  config: StorageConfig,
+  { requestTimeoutMs = 10_000, connectionTimeoutMs = 3_000 }: StorageTimeouts = {},
+): PhotoStorage {
   const client = new S3Client({
     endpoint: config.endpoint,
     region: config.region,
     forcePathStyle: config.forcePathStyle,
     credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+    // Without throwOnRequestTimeout the handler only logs a warning and keeps waiting.
+    requestHandler: {
+      requestTimeout: requestTimeoutMs,
+      connectionTimeout: connectionTimeoutMs,
+      throwOnRequestTimeout: true,
+    },
   });
   const Bucket = config.bucket;
   return {

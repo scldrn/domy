@@ -77,6 +77,13 @@ worker; offline cases use independent courier accounts and disposable test data.
 
 ## Production
 
+Use the [current engineering handoff](docs/engineering-handoff.md),
+[release review](docs/release-change-review-results.md) and tracked
+`Dockerfile`/`compose.production.yaml`/`Caddyfile` for the reviewed container path.
+The immediate release requires internet; see the [owner's scope decision](docs/online-release-scope.md).
+Set matching canonical HTTPS `APP_URL` and `PUBLIC_BASE_URL` at runtime and build
+the web app with that public origin. Replace the sample authentication secret.
+
 One Node.js process serves the API and the built web app from the same origin.
 
 ```bash
@@ -103,6 +110,20 @@ The server refuses to start in production without any of them. `SENTRY_DSN` and
 `VITE_SENTRY_DSN` (read when the web app is built) turn on error reporting. Run
 `pnpm db:seed` once, on the first installation, to create the catalog, the office address, and
 the first owner account.
+
+Before sharing public tracking links, set the real support phone and company name
+in Settings. Collect each courier's authorization for public first-name/phone disclosure
+and retain its evidence; feature approval alone is not personal consent. Merchant links
+are private bearer links and must be shared only with the intended merchant. See the
+[handoff](docs/engineering-handoff.md) for the remaining provider/privacy checks.
+
+For a PostgreSQL backup, `scripts/backup.sh TARGET_DIR` writes a private custom-format
+dump and checksum. `scripts/restore.sh DUMP_FILE NEW_DATABASE` verifies it and restores
+into a new database, refusing existing/live/system databases. Set
+`DOMY_COMPOSE_ENV_FILE` to the reviewed Compose interpolation file, or use
+`DOMY_DB_CONTAINER` for an explicitly selected local rehearsal container. These tools
+do not schedule backups or recover photo objects; follow the
+[recovery runbook](docs/local-recovery-runbook.md) for the full operator procedure.
 
 ## Workspace
 

@@ -14,10 +14,23 @@ const storage = {
   S3_ACCESS_KEY_ID: "llave",
   S3_SECRET_ACCESS_KEY: "secreto",
 };
+// A synthetic pair in web-push's format (release review DEPLOY-7 validates it in production).
+const vapidPublicKey =
+  "BJE65yRBCb2khVrYJ1CyS9KlN1NmxiZLVda2LH0TLxEmHSnxrlKyUYtU3xtq9ZybkO90qN8zaQkSySw7U1rqpOY";
+const vapidPrivateKey = "blsND5hnYa_6ZmGTX6oki9XN5PYe1KeU4ig03LMDaq0";
 const push = {
-  VAPID_PUBLIC_KEY: "publica",
-  VAPID_PRIVATE_KEY: "privada",
+  VAPID_PUBLIC_KEY: vapidPublicKey,
+  VAPID_PRIVATE_KEY: vapidPrivateKey,
   VAPID_SUBJECT: "mailto:soporte@example.com",
+};
+const production = {
+  ...base,
+  ...storage,
+  ...push,
+  APP_URL: "https://domy.example",
+  PUBLIC_BASE_URL: "https://domy.example",
+  RESEND_API_KEY: "re_synthetic_key",
+  NODE_ENV: "production",
 };
 
 /** Photo storage and phone notifications (feature 003, research R6 and R8). */
@@ -132,21 +145,14 @@ describe("parseEnv", () => {
     expect(result.success ? "" : result.error).toMatch(/S3_BUCKET/);
     expect(result.success ? "" : result.error).toMatch(/VAPID_PUBLIC_KEY/);
     expect(result.success ? "" : result.error).toMatch(/PUBLIC_BASE_URL/);
-    const complete = parseEnv({
-      ...base,
-      ...storage,
-      ...push,
-      APP_URL: "https://domy.example",
-      PUBLIC_BASE_URL: "https://DOMY.example:443/",
-      NODE_ENV: "production",
-    });
+    const complete = parseEnv({ ...production, PUBLIC_BASE_URL: "https://DOMY.example:443/" });
     expect(complete.success && complete.data.storage).toMatchObject({
       bucket: "cohex-fotos",
       forcePathStyle: false,
     });
     expect(complete.success && complete.data.push).toEqual({
-      publicKey: "publica",
-      privateKey: "privada",
+      publicKey: vapidPublicKey,
+      privateKey: vapidPrivateKey,
       subject: "mailto:soporte@example.com",
     });
     expect(
@@ -179,6 +185,50 @@ describe("parseEnv", () => {
         NODE_ENV: "production",
       }).success,
     ).toBe(false);
+  });
+
+  // Release review SEC-3: the .env.example placeholder never signs production sessions.
+  it("refuses the .env.example placeholder secret in production only", () => {
+    const placeholder = "replace-with-at-least-32-random-characters";
+    const result = parseEnv({ ...production, BETTER_AUTH_SECRET: placeholder });
+    expect(result.success).toBe(false);
+    expect(result.success ? "" : result.error).toMatch(/BETTER_AUTH_SECRET/);
+    expect(result.success ? "" : result.error).not.toContain(placeholder);
+    expect(parseEnv({ ...base, BETTER_AUTH_SECRET: placeholder }).success).toBe(true);
+    expect(parseEnv(production).success).toBe(true);
+  });
+
+  // Release review DEPLOY-8: recovery email is required in production, reported by readEnv.
+  it("requires the Resend key in production", () => {
+    const { RESEND_API_KEY: _omitted, ...withoutKey } = production;
+    const result = parseEnv(withoutKey);
+    expect(result.success).toBe(false);
+    expect(result.success ? "" : result.error).toMatch(/RESEND_API_KEY/);
+    expect(parseEnv({ ...production, RESEND_API_KEY: "" }).success).toBe(false);
+    expect(parseEnv(base).success).toBe(true);
+  });
+
+  // Release review DEPLOY-7: web-push's key format, checked before the first notification.
+  it.each([
+    ["VAPID_PUBLIC_KEY", "publica"],
+    ["VAPID_PUBLIC_KEY", vapidPublicKey.slice(1)],
+    ["VAPID_PUBLIC_KEY", `${vapidPublicKey.slice(0, -1)}=`],
+    ["VAPID_PUBLIC_KEY", `A${vapidPublicKey.slice(1)}`],
+    ["VAPID_PRIVATE_KEY", "privada"],
+    ["VAPID_PRIVATE_KEY", `${vapidPrivateKey}A`],
+    ["VAPID_PRIVATE_KEY", vapidPrivateKey.replace("_", "/")],
+    ["VAPID_SUBJECT", "soporte@example.com"],
+    ["VAPID_SUBJECT", "http://example.com"],
+    ["VAPID_SUBJECT", "mailto:soporte"],
+  ])("refuses a malformed %s in production: %s", (key, value) => {
+    const result = parseEnv({ ...production, [key]: value });
+    expect(result.success).toBe(false);
+    expect(result.success ? "" : result.error).toContain(key);
+    expect(result.success ? "" : result.error).not.toContain(value);
+  });
+
+  it("accepts an https VAPID subject in production", () => {
+    expect(parseEnv({ ...production, VAPID_SUBJECT: "https://cohex.example" }).success).toBe(true);
   });
 
   it("refuses part of the notification keys", () => {

@@ -1,7 +1,7 @@
 import type { RouteDetail, Shipment } from "@domy/domain";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { companySettings, recordPhotos, routes } from "../src/db/schema/index.ts";
+import { companySettings, recordPhotos, routes, shipments } from "../src/db/schema/index.ts";
 import { photoKey } from "../src/lib/storage.ts";
 import { createTestApp } from "./setup/app.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
@@ -205,6 +205,20 @@ describe("PUT /api/courier/photos/:id and /api/photos/:id", () => {
     });
     expect(png.status).toBe(400);
   });
+
+  it("refuses a body that is not a JPEG even when labelled image/jpeg (SEC-6)", async () => {
+    const { photoId } = await deliveryWithPhoto();
+    const png = new Uint8Array(2048).fill(7);
+    png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    for (const body of [png, new Uint8Array([0xff, 0xd8])]) {
+      const response = await upload(ana, photoId, body);
+      expect(response.status).toBe(400);
+      expect(((await response.json()) as { error: { message: string } }).error.message).toBe(
+        "La foto debe ser una imagen JPEG.",
+      );
+    }
+    expect((await photoRow(photoId))?.uploadedAt).toBeNull();
+  });
 });
 
 describe("GET /api/photos/:id", () => {
@@ -296,10 +310,11 @@ describe("GET /api/photos/:id", () => {
     });
     expect(response.status).toBe(403);
 
-    // Beto (the current assigned courier) and office retain access
+    // Beto now carries the route but did not take the photo: a courier sees only their own
+    // records (003 FR-036, owner decision D2); the office retains access.
     expect(
       (await t.app.request(`/api/photos/${photoId}`, { headers: { cookie: beto.cookie } })).status,
-    ).toBe(200);
+    ).toBe(403);
     expect((await t.app.request(`/api/photos/${photoId}`, { headers: { cookie } })).status).toBe(
       200,
     );
@@ -353,6 +368,63 @@ describe("GET /api/photos/:id", () => {
     expect(endedResp.status).toBe(403);
 
     // Office can still access
+    expect((await t.app.request(`/api/photos/${photoId}`, { headers: { cookie } })).status).toBe(
+      200,
+    );
+  });
+
+  it("refuses the courier who received the package through a handover: only the author sees it (FR-036 / D2)", async () => {
+    // Ana's route stays in progress with a second shipment.
+    const shipment: Shipment = await registerShipment(t, cookie, catalog);
+    const extra: Shipment = await registerShipment(t, cookie, catalog);
+    const anaRoute: RouteDetail = await createRoute(t, cookie, {
+      shipmentIds: [shipment.id, extra.id],
+      courierId: ana.id,
+    });
+    await routeAction(t, cookie, anaRoute, "/dispatch");
+    const photoId = crypto.randomUUID();
+    await sendRecords(t, ana, [
+      { shipmentId: shipment.id, kind: "pickup" },
+      {
+        shipmentId: shipment.id,
+        kind: "exception",
+        reason: "recipient_absent",
+        photos: [{ id: photoId, kind: "exception" }],
+      },
+    ]);
+    expect((await upload(ana, photoId, jpeg())).status).toBe(204);
+
+    // The office sends a new attempt on Beto's route; Beto confirms the handover.
+    const beto = await courierWithAccount(t, database.db, "Beto Gómez");
+    const betoRoute: RouteDetail = await createRoute(t, cookie, {
+      shipmentIds: [(await registerShipment(t, cookie, catalog)).id],
+      courierId: beto.id,
+    });
+    await routeAction(t, cookie, betoRoute, "/dispatch");
+    const decision = await t.app.request(`/api/shipments/${shipment.id}/exception-decision`, {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({
+        actionId: crypto.randomUUID(),
+        decision: "new_attempt",
+        routeId: betoRoute.id,
+      }),
+    });
+    expect(decision.status).toBe(200);
+    const confirmation = await sendRecords(t, beto, [
+      { kind: "handover_confirmation", shipmentId: shipment.id },
+    ]);
+    expect(confirmation.body.results).toEqual([expect.objectContaining({ outcome: "applied" })]);
+    const [held] = await database.db
+      .select({ custodyCourierId: shipments.custodyCourierId, routeId: shipments.routeId })
+      .from(shipments)
+      .where(eq(shipments.id, shipment.id));
+    expect(held).toEqual({ custodyCourierId: beto.id, routeId: betoRoute.id });
+
+    // Beto holds the package on his in-progress route, but the photo is Ana's record.
+    expect(
+      (await t.app.request(`/api/photos/${photoId}`, { headers: { cookie: beto.cookie } })).status,
+    ).toBe(403);
     expect((await t.app.request(`/api/photos/${photoId}`, { headers: { cookie } })).status).toBe(
       200,
     );

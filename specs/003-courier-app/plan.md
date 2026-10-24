@@ -865,3 +865,14 @@ No production listener, Testcontainers host, domain rule or schema changes.
 The owner requires one clean GitHub/main and local-only QA; use a single squash
 PR with skip annotations, no remote workflow invocation or waiting. See
 [consolidation plan](../../docs/repository-consolidation-plan.md).
+
+## Release review alignment — 2026-10-23 (003/T137)
+
+Under the constitutional single-process topology, serialize each photo ID in memory,
+perform bounded S3 operations without holding a database connection, and acknowledge
+metadata in a short transaction. Preserve first-acknowledged image immutability and
+own-record/current-work authorization. Pending photos remain on every refusal, including
+409; route refresh and accepted record acknowledgment proceed after non-auth photo
+failures. Fetch/body deadlines preserve persisted UUIDs and work on retry. Storage-bound
+input validation and concurrent record replay have native regressions. No physical
+offline acceptance is required for this release. See ../../docs/release-change-review-results.md.

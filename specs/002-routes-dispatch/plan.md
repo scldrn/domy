@@ -78,9 +78,9 @@ corrections, now in the tasks.
 - Trunk-Based Development changes how the work lands, not the design: one short-lived
   branch per user story (tasks.md, Implementation Strategy).
 - Principle III: the 15-shipment confirmation threshold was written in both server and web;
-  T057 moves it to `packages/domain`.
+  Phase 3 T057 moves it to `packages/domain`.
 - Principle VII: the route screens predate the panel identity of `docs/design-system.md`
-  (2026-10-01), which now also defines route state marks; T058 applies it.
+  (2026-10-01), which now also defines route state marks; Phase 3 T058 applies it.
 - Principle VIII: `lib/route-store.ts`, written in User Story 1, is now in the project
   structure below.
 

@@ -31,15 +31,52 @@ type Fetch = typeof fetch;
 type Entry = { key: number; item: OutboxItem };
 const errorBody = z.object({ error: z.object({ message: z.string() }) });
 
-async function request(fetcher: Fetch, path: string, init?: RequestInit): Promise<Response> {
+/** ROB-4: a stalled request fails like a lost connection instead of holding the sync forever. */
+export const requestTimeoutMs = 20_000;
+/** A ~200 KB photo on a weak signal needs longer (FR-009). */
+export const photoTimeoutMs = 60_000;
+
+/**
+ * One request and its JSON body (null when empty), both bounded by `timeoutMs`. The race also
+ * covers a fetcher that ignores its signal.
+ */
+async function request(
+  fetcher: Fetch,
+  path: string,
+  init?: RequestInit,
+  timeoutMs = requestTimeoutMs,
+): Promise<unknown> {
+  const controller = new AbortController();
+  const aborted = new Promise<never>((_, reject) => {
+    controller.signal.addEventListener("abort", () => {
+      reject(new SyncError(0, "Sin conexión."));
+    });
+  });
+  const timer = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+  try {
+    return await Promise.race([exchange(fetcher, path, init, controller.signal), aborted]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function exchange(
+  fetcher: Fetch,
+  path: string,
+  init: RequestInit | undefined,
+  signal: AbortSignal,
+): Promise<unknown> {
   let response: Response;
   try {
-    response = await fetcher(path, { ...init, credentials: "include" });
+    response = await fetcher(path, { ...init, credentials: "include", signal });
   } catch {
     throw new SyncError(0, "Sin conexión.");
   }
+  const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const parsed = errorBody.safeParse(await response.json().catch(() => null));
+    const parsed = errorBody.safeParse(body);
     throw new SyncError(
       response.status,
       parsed.success
@@ -48,7 +85,7 @@ async function request(fetcher: Fetch, path: string, init?: RequestInit): Promis
       response.headers.get("date"),
     );
   }
-  return response;
+  return body;
 }
 
 /** Cursor keys and values belong to one read transaction, including items added during a sync. */
@@ -82,7 +119,7 @@ async function sendRecords(
       )
       .slice(0, maxRecordsPerRequest);
     if (batch.length === 0) return;
-    const response = await request(fetcher, "/api/courier/records", {
+    const body = await request(fetcher, "/api/courier/records", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -90,7 +127,7 @@ async function sendRecords(
         records: batch.map((entry) => entry.record),
       }),
     });
-    const parsed = courierRecordResults.safeParse(await response.json().catch(() => null));
+    const parsed = courierRecordResults.safeParse(body);
     if (!parsed.success)
       throw new SyncError(
         502,
@@ -125,7 +162,13 @@ async function sendAcknowledgments(
   }
 }
 
-/** A refused photo stays on the phone; other uploads and records still progress (FR-009). */
+/**
+ * A photo problem never blocks a record or the route refresh (FR-009, ROB-2): a refused (400,
+ * 404, 413) or failed (network, timeout, 5xx) upload stays on the phone for a later sync and
+ * is reported after the snapshot and outbox are committed. Only an ended session (401, 403)
+ * stops the sync. A 409 is not an acknowledgment of the local image: preserve its bytes and
+ * report the conflict after refreshing the route, just like other upload refusals.
+ */
 async function uploadPhotos(
   db: CourierDb,
   fetcher: Fetch,
@@ -136,7 +179,7 @@ async function uploadPhotos(
       item.type === "record" && !accepted.has(key) ? [item.record.id] : [],
     ),
   );
-  let refusal: SyncError | null = null;
+  let failure: SyncError | null = null;
   for (const value of await db.getAll("photos")) {
     const parsed = storedPhoto.safeParse(value);
     if (!parsed.success)
@@ -146,19 +189,23 @@ async function uploadPhotos(
     const photo = parsed.data;
     if (waiting.has(photo.recordId)) continue;
     try {
-      await request(fetcher, `/api/courier/photos/${photo.id}`, {
-        method: "PUT",
-        headers: { "content-type": "image/jpeg" },
-        body: photo.image,
-      });
+      await request(
+        fetcher,
+        `/api/courier/photos/${photo.id}`,
+        { method: "PUT", headers: { "content-type": "image/jpeg" }, body: photo.image },
+        photoTimeoutMs,
+      );
     } catch (error) {
-      if (!(error instanceof SyncError) || ![400, 404, 413].includes(error.status)) throw error;
-      refusal ??= error;
+      if (!(error instanceof SyncError) || error.status === 401 || error.status === 403)
+        throw error;
+      failure ??= error;
+      // Without a connection the next photos would only wait out their own timeouts.
+      if (error.status === 0) break;
       continue;
     }
     await db.delete("photos", photo.id);
   }
-  return refusal;
+  return failure;
 }
 
 /** Expiry keeps the route; withdrawal removes it, while neither removes pending work (FR-004). */
@@ -213,9 +260,8 @@ export async function synchronize(
     const accepted = new Set<number>();
     await sendRecords(db, fetcher, now, accepted);
     await sendAcknowledgments(db, fetcher, accepted);
-    const photoRefusal = await uploadPhotos(db, fetcher, accepted);
-    const response = await request(fetcher, "/api/courier/route");
-    const parsed = courierSnapshot.safeParse(await response.json().catch(() => null));
+    const photoFailure = await uploadPhotos(db, fetcher, accepted);
+    const parsed = courierSnapshot.safeParse(await request(fetcher, "/api/courier/route"));
     if (!parsed.success)
       throw new SyncError(
         502,
@@ -249,7 +295,7 @@ export async function synchronize(
       await tx.done.catch(() => undefined);
       throw error;
     }
-    if (photoRefusal) throw photoRefusal;
+    if (photoFailure) throw photoFailure;
     return snapshot;
   } catch (error) {
     if (error instanceof SyncError && (error.status === 401 || error.status === 403))

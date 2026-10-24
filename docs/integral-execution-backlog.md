@@ -1,5 +1,15 @@
 # Integral Execution Backlog and Delivery Contract
 
+
+**Release-change review — 2026-10-23:** reviewed new runtime changes from `6b0256d`,
+rejected photo deletion/live-bucket eviction and reconciled historical documentation.
+Check, 1,686 tests, 155 zero-retry E2E, build, dependency audit and new local Docker
+fresh-runtime checks pass on frozen 550-file source `a2c9c55a`. See the
+[review receipt](release-change-review-results.md) and [current handoff](engineering-handoff.md).
+Additional convergence tasks 001/T156, 002/T065, 003/T137 and 004/T036 are verified;
+they are outside the original 81-entry catalog. Its five original physical/final
+tasks retain their wider scope. No deployment or remote CI was performed.
+
 **Owner scope decision — 2026-10-23:** offline operation is not required for the
 immediate client release. Stop its physical acceptance/diagnostics as release gates;
 continue connected delivery. Preserve existing implementation, data and regression

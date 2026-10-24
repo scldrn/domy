@@ -25,6 +25,7 @@ every mutation.
 | 409 | `office_not_configured` | "Recibido en oficina" before the office address is set (FR-041) |
 | 409 | `photo_immutable` | Uploading photo bytes that differ in size or content from an already acknowledged photo under the same ID (FR-023, Finding IV-31, T134) |
 | 422 | `occurred_in_future` | A record on behalf with `occurredAt` later than now (FR-034) |
+| 503 | `storage_unavailable` | Photo storage failed or timed out; preserve pending bytes and retry (FR-023, T137) |
 
 ## Courier endpoints (role: courier)
 
@@ -171,3 +172,12 @@ Other destinations are `400 invalid_request` before persistence (Constitution IX
 `handover_confirmed` names confirmation by the receiving courier or dispatch; it does not
 reuse `shipment_updated`, which exclusively describes an edited shipment. Both affected
 couriers receive the confirmation notice (FR-027, research R9, T117).
+
+## Release robustness clarification — 2026-10-23 (T137)
+
+Photo storage failures/timeouts return `503 storage_unavailable` with a static Spanish
+retry message. Both upload paths reject a mislabeled non-JPEG body with 400 and retain
+the 1 MB ceiling. An acknowledged image is immutable; 409 never acknowledges different
+local bytes. Preserve the local photo and expose the refusal while refreshing the route.
+Only the record's own courier can read its photo while its work remains available.
+Native database/storage and browser request deadlines leave UUIDs/pending work intact.

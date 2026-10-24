@@ -8,6 +8,14 @@ y la fecha. Responde aquí mismo o en la conversación.
 
 ## Bloquean algo ahora
 
+
+**Revisión de cambios locales completada — 2026-10-23:** se revisaron las correcciones
+nuevas frente a `main`, se corrigieron dos cambios que debilitaban la conservación de
+fotos y los límites de solicitudes, y se conciliaron los documentos antiguos. Pasan
+check, **1.686 pruebas**, **155 escenarios web sin reintentos**, build, auditoría de
+dependencias sin avisos y la imagen nueva con arranque local. [Entrega vigente](docs/engineering-handoff.md).
+Se conserva el alcance con conexión y la responsabilidad de despliegue del propietario.
+
 **Salida con conexión — decisión del propietario, 2026-10-23:** «No necesito que
 el sistema funcione sin conexión [...] no es algo que el cliente necesita en este
 momento». Se retiran de esta salida las pruebas físicas sin conexión y su diagnóstico;
