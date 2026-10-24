@@ -139,6 +139,7 @@ describe("runtime health and CSP over native HTTP", () => {
     });
   });
 
+  // It starts its own PostgreSQL container, so it gets the hook budget (DEPLOY-9).
   it("returns a generic unavailable response when its isolated PostgreSQL server is stopped", async () => {
     const unavailableFixture = await startDatabase();
     const unavailableDb = createDb(unavailableFixture.url);
@@ -163,7 +164,7 @@ describe("runtime health and CSP over native HTTP", () => {
       await unavailableDb.$client.end({ timeout: 2 });
       if (!fixtureStopped) await unavailableFixture.stop();
     }
-  });
+  }, 120_000);
 
   it("returns a generic unavailable response immediately while draining", async () => {
     const runtime: RuntimeState = { draining: true, readinessProbe: undefined };

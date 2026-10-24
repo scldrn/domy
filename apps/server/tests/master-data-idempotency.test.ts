@@ -310,6 +310,82 @@ describe("master data concurrent creation (IV-28 / 001/T134)", () => {
     });
   });
 
+  // Every other auditedCreate caller keeps the same exactly-once creation (FR-042, F001-4).
+  const creations = {
+    pickup_point: {
+      table: "pickup_points",
+      path: () => `/api/merchants/${catalog.merchant.bullish}/pickup-points`,
+      body: () => ({
+        label: "Bodega Concurrente",
+        address: "Cra 70 # 1-60",
+        neighborhoodId: catalog.place.estadio,
+      }),
+    },
+    rate_zone: {
+      table: "rate_zones",
+      path: () => "/api/rate-zones",
+      body: () => ({ name: "Zona Concurrente" }),
+    },
+    neighborhood: {
+      table: "neighborhoods",
+      path: () => "/api/neighborhoods",
+      body: () => ({
+        name: "Barrio Concurrente",
+        municipalityId: catalog.municipality.medellin,
+        rateZoneId: catalog.zone.medellin,
+      }),
+    },
+    carrier: {
+      table: "carriers",
+      path: () => "/api/carriers",
+      body: () => ({ name: "Transportadora Concurrente" }),
+    },
+    rate_card_entry: {
+      table: "rate_card_entries",
+      path: () => "/api/rate-card/entries",
+      body: () => ({
+        kind: "zone_rate",
+        rateZoneId: catalog.zone.medellin,
+        amount: 14500,
+        effectiveFrom: bogotaToday(t.now()),
+      }),
+    },
+  } as const;
+
+  it.each(Object.keys(creations) as (keyof typeof creations)[])(
+    "returns 201 and 200 replay for same-ID concurrent %s creation rather than 500",
+    async (resource) => {
+      const { table, path, body } = creations[resource];
+      await withInsertBarrier(database, table, async (release) => {
+        const id = crypto.randomUUID();
+        const payload = { id, ...body() };
+        const req1 = send(t, owner.cookie, path(), payload);
+        const req2 = send(t, owner.cookie, path(), payload);
+
+        await new Promise((r) => setTimeout(r, 60));
+        await release();
+
+        const [res1, res2] = await Promise.all([req1, req2]);
+        const statuses = [res1.status, res2.status].sort();
+        expect(statuses).toEqual([200, 201]);
+        expect(res1.body).toMatchObject({ id });
+        expect(res2.body).toMatchObject({ id });
+
+        const stored = await database.db.execute(
+          sql`select id from ${sql.identifier(table)} where id = ${id}`,
+        );
+        expect(stored).toHaveLength(1);
+        const audits = await database.db
+          .select()
+          .from(auditEvents)
+          .where(eq(auditEvents.entityId, id));
+        expect(audits).toEqual([
+          expect.objectContaining({ entityType: resource, action: "created" }),
+        ]);
+      });
+    },
+  );
+
   it("rejects a different-ID duplicate name with 400 rather than swallowing as a replay", async () => {
     const id1 = crypto.randomUUID();
     const id2 = crypto.randomUUID();
