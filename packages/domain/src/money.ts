@@ -89,3 +89,24 @@ export function parseCop(input: string, max: number = maxCop): number | null {
 export const feeConfirmationThreshold = 100_000;
 /** Also the threshold of a collected total or a disbursement (feature 003, FR-011). */
 export const codConfirmationThreshold = 2_000_000;
+
+/**
+ * Whether amounts need an explicit confirmation before saving: a fee above
+ * `feeConfirmationThreshold` (feature 001, FR-037), or a COD amount, collected total, or
+ * disbursement above `codConfirmationThreshold` (feature 003, FR-011). On an edit, given the
+ * stored amounts as `previous`, only an amount that changed asks again (DESIGN-3).
+ */
+export function needsAmountConfirmation(
+  amounts: { fee?: number | undefined; codAmount?: number | null | undefined },
+  previous?: { fee: number; codAmount: number | null },
+): boolean {
+  const { fee, codAmount } = amounts;
+  const largeFee =
+    fee !== undefined && fee > feeConfirmationThreshold && (!previous || fee !== previous.fee);
+  const largeCod =
+    codAmount !== undefined &&
+    codAmount !== null &&
+    codAmount > codConfirmationThreshold &&
+    (!previous || codAmount !== previous.codAmount);
+  return largeFee || largeCod;
+}

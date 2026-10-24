@@ -1,3 +1,4 @@
+import { isFinal } from "@domy/domain";
 import { and, eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { z } from "zod";
@@ -213,9 +214,7 @@ export const photoRoutes = new Hono<AppEnv>()
       // route, or they hold it and it is not final. Anyone else gets 403.
       let authorized = false;
       if (row.courierId === courier.id) {
-        authorized =
-          row.custodyCourierId === courier.id &&
-          !["delivered", "returned", "voided"].includes(row.shipmentStatus);
+        authorized = row.custodyCourierId === courier.id && !isFinal(row.shipmentStatus);
         if (!authorized && row.shipmentRouteId) {
           const [activeRoute] = await db
             .select({ id: routes.id })

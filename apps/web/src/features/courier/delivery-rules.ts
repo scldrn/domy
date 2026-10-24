@@ -1,4 +1,8 @@
-import { codConfirmationThreshold, collectionProblem, type CourierTask } from "@domy/domain";
+import {
+  collectionProblem,
+  needsAmountConfirmation as needsConfirmation,
+  type CourierTask,
+} from "@domy/domain";
 
 /**
  * Who received a delivery, proposed and editable (feature 003, FR-008): the recipient; the
@@ -20,7 +24,7 @@ export function proposedReceivedBy(task: CourierTask): string {
 
 /** A collected total or a disbursement above COP 2.000.000 asks for confirmation (FR-011). */
 export function needsAmountConfirmation(amount: number): boolean {
-  return amount > codConfirmationThreshold;
+  return needsConfirmation({ codAmount: amount });
 }
 
 /** Shows the note field as required precisely when the shared collection rule finds a mismatch. */

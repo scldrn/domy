@@ -44,7 +44,12 @@ const transitions: Record<ShipmentStatus, readonly ShipmentStatus[]> = {
 };
 
 const editableStatuses: readonly ShipmentStatus[] = ["registered", "assigned", "dispatched"];
-const finalStatuses: readonly ShipmentStatus[] = ["delivered", "returned", "voided"];
+/** The statuses no operation leaves, except a correction or revert (DESIGN-2). */
+export const finalStatuses = [
+  "delivered",
+  "returned",
+  "voided",
+] as const satisfies readonly ShipmentStatus[];
 
 export function canTransition(from: ShipmentStatus, to: ShipmentStatus): boolean {
   return transitions[from].includes(to);
@@ -68,7 +73,7 @@ export function isEditable(status: ShipmentStatus): boolean {
 }
 
 export function isFinal(status: ShipmentStatus): boolean {
-  return finalStatuses.includes(status);
+  return (finalStatuses as readonly ShipmentStatus[]).includes(status);
 }
 
 export function canVoid(status: ShipmentStatus): boolean {

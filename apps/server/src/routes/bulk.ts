@@ -1,6 +1,5 @@
 import {
-  codConfirmationThreshold,
-  feeConfirmationThreshold,
+  needsAmountConfirmation,
   bogotaToday,
   bulkConfirmInput,
   bulkPreviewInput,
@@ -223,10 +222,7 @@ export const bulkRoutes = new Hono<AppEnv>()
             registeredAt,
             entries,
           });
-          if (
-            values.fee > feeConfirmationThreshold ||
-            (values.codAmount ?? 0) > codConfirmationThreshold
-          ) {
+          if (needsAmountConfirmation({ fee: values.fee, codAmount: values.codAmount })) {
             confirmations.push("amount");
           }
         } catch (error) {
@@ -268,9 +264,13 @@ export const bulkRoutes = new Hono<AppEnv>()
         .where(
           or(
             eq(shipments.bulkBatchId, batchId),
-            inArray(
-              shipments.id,
-              rows.map((row) => row.id),
+            // F001-5: a row id already created for this merchant is the same creation (FR-042).
+            and(
+              eq(shipments.merchantId, merchantId),
+              inArray(
+                shipments.id,
+                rows.map((row) => row.id),
+              ),
             ),
           ),
         );
@@ -341,6 +341,34 @@ export const bulkRoutes = new Hono<AppEnv>()
           });
         },
         async (tx, inserted) => {
+          // F001-5, FR-020: a row id that already names another merchant's shipment is not this
+          // batch's creation; refuse the whole batch, under the insert's lock, rather than report it.
+          const insertedIds = new Set(inserted.map((row) => row.id));
+          const skipped = values.filter((row) => !insertedIds.has(row.id)).map((row) => row.id);
+          if (skipped.length > 0) {
+            const foreign = await tx
+              .select({ id: shipments.id })
+              .from(shipments)
+              .where(and(inArray(shipments.id, skipped), ne(shipments.merchantId, merchantId)));
+            if (foreign.length > 0) {
+              const foreignIds = new Set(foreign.map((row) => row.id));
+              throw new AppError("invalid_request", {
+                message: "Algunas filas tienen errores; no se creó ningún envío.",
+                fields: Object.fromEntries(
+                  rows.flatMap((row, index) =>
+                    foreignIds.has(row.id)
+                      ? [
+                          [
+                            `rows.${String(index)}.id`,
+                            "Este identificador ya es de un envío de otro cliente. Prepara la carga de nuevo.",
+                          ],
+                        ]
+                      : [],
+                  ),
+                ),
+              });
+            }
+          }
           await tx
             .update(bulkBatches)
             .set({ createdCount: inserted.length })
