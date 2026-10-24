@@ -10,6 +10,7 @@ import {
   canVoid,
   isEditable,
   isFinal,
+  finalStatuses,
   shipmentStatuses,
   shipmentStatusLabels,
   type ShipmentStatus,
@@ -291,6 +292,10 @@ describe("shipment lifecycle", () => {
 
   it("treats delivered, returned, and voided as final", () => {
     expect(shipmentStatuses.filter(isFinal)).toEqual(["delivered", "returned", "voided"]);
+  });
+
+  it("exports the final statuses as exactly those isFinal accepts (DESIGN-2)", () => {
+    expect([...finalStatuses]).toEqual(shipmentStatuses.filter(isFinal));
   });
 
   it("allows voiding only from editable statuses", () => {

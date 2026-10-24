@@ -1,18 +1,18 @@
 import {
-  codConfirmationThreshold,
   recordOnBehalfInput,
   deliveryAttempts,
   exceptionDecisionInput,
   exceptionDecisionState,
   officeReceiptInput,
   officeReceiptStatus,
-  feeConfirmationThreshold,
+  needsAmountConfirmation,
   boardQuery,
   bogotaToday,
   calculateFee,
   codAmountError,
   feeQuoteInput,
   filterBoard,
+  finalStatuses,
   normalizeText,
   normalizeTrackingNumber,
   relocateShipment,
@@ -23,6 +23,7 @@ import {
   shipmentCreateInput,
   shipmentStatusLabels,
   shipmentUpdateInput,
+  statusOnJoiningRoute,
   shipmentVoidInput,
   shipmentExportQuery,
   shipmentReassignInput,
@@ -411,6 +412,11 @@ async function findSummaries(
   }));
 }
 
+/** SEC-7: what the office types is matched literally; `\` is PostgreSQL's LIKE escape. */
+function likeLiteral(text: string): string {
+  return text.replace(/[\\%_]/g, (char) => `\\${char}`);
+}
+
 /**
  * History search conditions (FR-024): `q` matches the tracking number, the merchant
  * reference, the merchant's name or alias, the recipient's name (with typos), or the
@@ -425,7 +431,7 @@ function searchConditions(db: Executor, query: Omit<ShipmentSearchQuery, "cursor
     q
       ? or(
           trackingNumber ? eq(shipments.trackingNumber, trackingNumber) : undefined,
-          ilike(shipments.merchantReference, `%${q}%`),
+          ilike(shipments.merchantReference, `%${likeLiteral(q)}%`),
           term
             ? inArray(
                 shipments.merchantId,
@@ -685,10 +691,7 @@ export const shipmentRoutes = new Hono<AppEnv>()
       date === today
         ? or(
             eq(shipments.serviceDate, date),
-            and(
-              lt(shipments.serviceDate, date),
-              notInArray(shipments.status, ["delivered", "returned", "voided"]),
-            ),
+            and(lt(shipments.serviceDate, date), notInArray(shipments.status, [...finalStatuses])),
           )
         : eq(shipments.serviceDate, date),
       [
@@ -1002,7 +1005,7 @@ export const shipmentRoutes = new Hono<AppEnv>()
               await transitionShipments(tx, {
                 ids: [id],
                 from: ["registered"],
-                to: target.status === "draft" ? "assigned" : "dispatched",
+                to: statusOnJoiningRoute(target.status),
                 routeId: target.id,
                 eventRouteId: target.id,
                 actorUserId: by.actorUserId,
@@ -1197,11 +1200,8 @@ export const shipmentRoutes = new Hono<AppEnv>()
     const codError = codAmountError(paymentMode, enteredCod);
     if (codError) throw new AppError("invalid_request", { fields: { codAmount: codError } });
     const codAmount = resolveCodAmount(paymentMode, fee, enteredCod);
-    if (
-      !confirmed &&
-      ((fee !== current.fee && fee > feeConfirmationThreshold) ||
-        (codAmount !== current.codAmount && codAmount > codConfirmationThreshold))
-    ) {
+    // FR-037: only a large amount this edit changes asks for confirmation again.
+    if (!confirmed && needsAmountConfirmation({ fee, codAmount }, current)) {
       throw new AppError("confirmation_required");
     }
 

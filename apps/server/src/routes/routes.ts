@@ -14,6 +14,7 @@ import {
   routeReassignInput,
   routesBoardQuery,
   shipmentStatusLabels,
+  statusOnJoiningRoute,
   stopOrderInput,
   validateStopOrder,
   type RoutesBoard,
@@ -456,7 +457,7 @@ export const routeRoutes = new Hono<AppEnv>()
         const moved = await transitionShipments(tx, {
           ids: registeredIds,
           from: ["registered"],
-          to: route.status === "draft" ? "assigned" : "dispatched",
+          to: statusOnJoiningRoute(route.status),
           routeId: id,
           eventRouteId: id,
           actorUserId: user.id,

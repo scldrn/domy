@@ -1,9 +1,8 @@
-import { addCop, formatCop, shipmentFlag, type BoardShipment } from "@domy/domain";
+import { addCop, formatCop, isFinal, shipmentFlag, type BoardShipment } from "@domy/domain";
 
 /** A piece of the board's opening sentence; strong pieces carry the numbers. */
 export type Segment = { text: string; strong?: boolean; tone?: "error" };
 
-const closed = new Set(["delivered", "returned", "voided"]);
 const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 
 /**
@@ -36,7 +35,7 @@ export function daySentence({
     if (kind === "at_risk") atRisk++;
   }
   const cod = all
-    .filter((shipment) => !closed.has(shipment.status))
+    .filter((shipment) => !isFinal(shipment.status))
     .reduce((sum, shipment) => addCop(sum, shipment.codAmount), 0);
 
   const segments: Segment[] = [];

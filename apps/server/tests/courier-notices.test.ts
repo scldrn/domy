@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import webPush from "web-push";
 import pino from "pino";
 import { sendNoticePushes } from "../src/lib/push.ts";
-import { courierNotices, pushSubscriptions } from "../src/db/schema/index.ts";
+import { courierNotices, courierRecords, pushSubscriptions } from "../src/db/schema/index.ts";
 import { createTestApp } from "./setup/app.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
 import { courierWithAccount, sendRecords, snapshot, type CourierAccount } from "./setup/courier.ts";
@@ -453,11 +453,21 @@ describe("push configuration and subscriptions (FR-040)", () => {
       },
       { shipmentId: shipment.id, kind: "delivery", cashAmount: 50_000 },
     ]);
-    expect(result.status).toBe(400);
+    // ROB-3 (FR-024, FR-026): the nameless delivery no longer fails the batch; like the first it
+    // is stored as not applied with its own notice, and both committed notices are pushed.
+    expect(result.status).toBe(200);
+    expect(result.body.results.map((entry) => entry.outcome)).toEqual([
+      "not_applied",
+      "not_applied",
+    ]);
+    expect((await database.db.select().from(courierRecords)).map((row) => row.outcome)).toEqual([
+      "not_applied",
+      "not_applied",
+    ]);
     expect((await notices()).filter((notice) => notice.type === "record_not_applied")).toHaveLength(
-      1,
+      2,
     );
-    await expect.poll(() => sent.mock.calls.length).toBe(1);
+    await expect.poll(() => sent.mock.calls.length).toBe(2);
   });
   it("preserves renewed subscription keys when an older push responds 410 (T115)", async () => {
     const deferred = Promise.withResolvers<never>();

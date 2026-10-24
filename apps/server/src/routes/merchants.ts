@@ -1,4 +1,5 @@
 import {
+  finalStatuses,
   merchantCreateInput,
   merchantLinkReplacementInput,
   merchantUpdateInput,
@@ -200,10 +201,7 @@ async function openShipments(db: Executor, merchantId: string): Promise<number> 
     .select({ open: count() })
     .from(shipments)
     .where(
-      and(
-        eq(shipments.merchantId, merchantId),
-        notInArray(shipments.status, ["delivered", "returned", "voided"]),
-      ),
+      and(eq(shipments.merchantId, merchantId), notInArray(shipments.status, [...finalStatuses])),
     );
   return row?.open ?? 0;
 }

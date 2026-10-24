@@ -1,4 +1,5 @@
 import {
+  canMoveBetweenRoutes,
   canVoid,
   formatTrackingNumber,
   isEditable,
@@ -168,12 +169,12 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
     await queryClient.invalidateQueries({ queryKey: ["shipment", shipment.trackingNumber] });
     await queryClient.invalidateQueries({ queryKey: ["routes-board"] });
   };
-  // A shipment on a route can move to another one (feature 002, FR-014).
+  // A shipment on a route can move to another one (feature 002, FR-014): a planned one with its
+  // stops, or a picked-up one through a handover (DESIGN-1). Unlike the server, the detail does
+  // not offer a package awaiting its return ("Novedad" with return decided) or one off-route.
   const movable =
     shipment.route !== null &&
-    (shipment.status === "assigned" ||
-      shipment.status === "dispatched" ||
-      shipment.status === "picked_up");
+    (canMoveBetweenRoutes(shipment.status) || shipment.status === "picked_up");
   const recipientPlace = shipment.recipientNeighborhood
     ? `${shipment.recipientNeighborhood.name}, ${shipment.recipientNeighborhood.municipality}`
     : null;

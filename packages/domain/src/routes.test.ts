@@ -3,6 +3,7 @@ import {
   addHeldShipmentToStops,
   addShipmentToStops,
   buildStops,
+  canMoveBetweenRoutes,
   canUndoDispatch,
   isRouteFinished,
   largeRouteThreshold,
@@ -12,10 +13,12 @@ import {
   removeShipmentFromStops,
   routeProgress,
   shipmentPlaces,
+  statusOnJoiningRoute,
   validateStopOrder,
   type RoutePlanShipment,
   type RouteStopPlan,
 } from "./routes.ts";
+import { shipmentStatuses } from "./shipment-lifecycle.ts";
 import * as routeModule from "./routes.ts";
 import type { ShipmentKind } from "./schemas/enums.ts";
 
@@ -545,5 +548,16 @@ describe("deliveriesBefore (FR-006, FR-008, research R4/R17)", () => {
     expect(countBefore(stopsWithoutErrandAnchor, "target", "errand")).toBeNull();
     expect(countBefore([pendingDelivery], "missing", "delivery")).toBeNull();
     expect(countBefore(stopsWithoutPendingDeliveryAnchor, "target", "delivery")).toBeNull();
+  });
+});
+
+describe("joining and moving between routes (feature 002 FR-014; DESIGN-1)", () => {
+  it("assigns a shipment joining a route in preparation and dispatches one joining a live route", () => {
+    expect(statusOnJoiningRoute("draft")).toBe("assigned");
+    expect(statusOnJoiningRoute("in_progress")).toBe("dispatched");
+  });
+
+  it("moves with its pending stops only a planned shipment, assigned or in route", () => {
+    expect(shipmentStatuses.filter(canMoveBetweenRoutes)).toEqual(["assigned", "dispatched"]);
   });
 });

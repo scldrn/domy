@@ -450,6 +450,25 @@ describe("replayRecords", () => {
     expect(replayRecords(snapshot, [delivery])).toEqual(snapshot);
   });
 
+  it("leaves a package delivery without who received it without effect, as the server keeps it (ROB-3)", () => {
+    const nameless: CourierRecordInput = {
+      id: id(204),
+      shipmentId: id(1),
+      kind: "delivery",
+      occurredAt: "2026-10-01T15:20:00.000Z",
+      cashAmount: 50_000,
+      companyTransferAmount: 0,
+      merchantTransferAmount: 0,
+      photos: [],
+    };
+    const state = replayRecords(snapshot, [pickup, nameless]);
+    expect(tasksOf(state).map((each) => [each.status, each.shipmentStatus])).toEqual([
+      ["completed", "picked_up"],
+      ["pending", "picked_up"],
+    ]);
+    expect(state.summary.cash).toBe(0);
+  });
+
   it("marks a pickup problem and an exception's failed delivery", () => {
     const problem = replayRecords(snapshot, [
       { ...pickup, id: id(202), kind: "problem", note: "No estaba listo" },

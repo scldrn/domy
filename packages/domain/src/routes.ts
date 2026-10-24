@@ -1,4 +1,5 @@
 import type { ShipmentKind } from "./schemas/enums.ts";
+import type { ShipmentStatus } from "./shipment-lifecycle.ts";
 import { normalizeText } from "./text-normalization.ts";
 
 /**
@@ -381,6 +382,23 @@ export function canUndoDispatch(stops: StopTasks[], anyPickedUp: boolean): boole
     !anyPickedUp &&
     stops.every((existing) => existing.tasks.every((task) => task.status === "pending"))
   );
+}
+
+/**
+ * The status a shipment not yet picked up takes on joining a route (FR-014): "Asignado"
+ * on a route in preparation, "En ruta" on one in progress (DESIGN-1).
+ */
+export function statusOnJoiningRoute(routeStatus: RouteStatus): "assigned" | "dispatched" {
+  return routeStatus === "draft" ? "assigned" : "dispatched";
+}
+
+/**
+ * A planned shipment, not yet picked up, moves to another route with its pending stops (FR-014).
+ * A package already picked up or awaiting its return moves instead through a handover
+ * (`isHeldForRouting`, feature 003 FR-025, FR-029); each caller states whether it offers that.
+ */
+export function canMoveBetweenRoutes(status: ShipmentStatus): boolean {
+  return status === "assigned" || status === "dispatched";
 }
 
 /** Creating or growing a route beyond this many shipments asks for confirmation (FR-005). */

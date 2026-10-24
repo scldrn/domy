@@ -244,6 +244,33 @@ describe("resolveCourierRecord", () => {
       });
     });
 
+    it("keeps a delivery without the name a package needs as not applied (ROB-3, FR-008, FR-024)", () => {
+      const nameless = { ...record("delivery"), delivery: { receivedByName: undefined } };
+      expect(resolveCourierRecord(pickedUp(), nameless)).toEqual({
+        outcome: "not_applied",
+        reason: "invalid_for_shipment",
+      });
+      expect(
+        resolveCourierRecord(pickedUp(), {
+          ...record("delivery"),
+          delivery: { receivedByName: "Laura Gómez" },
+        }),
+      ).toMatchObject({ outcome: "applied" });
+      // An errand names no one, and the state reasons still come first.
+      const errand = shipment({
+        kind: "errand",
+        pendingTasks: [task("errand-1", "errand", anaRoute)],
+      });
+      expect(resolveCourierRecord(errand, nameless)).toMatchObject({ outcome: "applied" });
+      expect(resolveCourierRecord(shipment(), nameless)).toEqual({
+        outcome: "not_applied",
+        reason: "not_picked_up",
+      });
+      expect(notAppliedReasonLabels.invalid_for_shipment).toBe(
+        "El registro no cumple lo que pide este envío.",
+      );
+    });
+
     it("ignores a delivery the courier already recorded", () => {
       const delivered = shipment({
         status: "delivered",

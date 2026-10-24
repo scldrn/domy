@@ -6,6 +6,7 @@ import {
   maxCop,
   maxFieldCop,
   minCop,
+  needsAmountConfirmation,
   parseCop,
   safeIntegerCop,
 } from "./money.ts";
@@ -95,5 +96,30 @@ describe("safeIntegerCop", () => {
     expect(() => safeIntegerCop("abc")).toThrow(RangeError);
     expect(() => safeIntegerCop(3_000_000_000, maxCop)).toThrow(RangeError);
     expect(() => safeIntegerCop(Number.MAX_SAFE_INTEGER + 1)).toThrow(RangeError);
+  });
+});
+
+describe("needsAmountConfirmation (feature 001 FR-037, feature 003 FR-011, DESIGN-3)", () => {
+  it("asks for a fee above COP 100.000, not at it", () => {
+    expect(needsAmountConfirmation({ fee: 100_000, codAmount: 0 })).toBe(false);
+    expect(needsAmountConfirmation({ fee: 100_001, codAmount: 0 })).toBe(true);
+  });
+
+  it("asks for a COD amount, collected total or disbursement above COP 2.000.000, not at it", () => {
+    expect(needsAmountConfirmation({ fee: 0, codAmount: 2_000_000 })).toBe(false);
+    expect(needsAmountConfirmation({ fee: 0, codAmount: 2_000_001 })).toBe(true);
+    expect(needsAmountConfirmation({ codAmount: 2_000_000 })).toBe(false);
+    expect(needsAmountConfirmation({ codAmount: 2_000_001 })).toBe(true);
+  });
+
+  it("on an edit, asks only for a large amount that changed", () => {
+    const previous = { fee: 150_000, codAmount: 3_000_000 };
+    expect(needsAmountConfirmation({ fee: 150_000, codAmount: 3_000_000 }, previous)).toBe(false);
+    expect(needsAmountConfirmation({ fee: 150_001, codAmount: 3_000_000 }, previous)).toBe(true);
+    expect(needsAmountConfirmation({ fee: 150_000, codAmount: 3_000_001 }, previous)).toBe(true);
+    expect(needsAmountConfirmation({ fee: 100_000, codAmount: 2_000_000 }, previous)).toBe(false);
+    expect(needsAmountConfirmation({ fee: 100_001, codAmount: 0 }, { fee: 0, codAmount: 0 })).toBe(
+      true,
+    );
   });
 });

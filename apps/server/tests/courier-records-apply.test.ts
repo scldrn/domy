@@ -253,13 +253,30 @@ describe("applyCourierRecord", () => {
     await dispatchedTo(ana, [shipment]);
     await apply(ana, { shipmentId: shipment.id, kind: "pickup" });
 
-    await expect(
-      apply(ana, { shipmentId: shipment.id, kind: "delivery", cashAmount: 50_000 }),
-    ).rejects.toMatchObject({
-      code: "invalid_request",
-      fields: { receivedByName: "Escribe el nombre de quien recibe, de al menos 2 letras." },
+    // ROB-3, FR-024/FR-026: the phone's record is kept as not applied, not refused, so its
+    // collection reaches the office; dispatch's own form is still refused (records-on-behalf).
+    const result = await apply(ana, {
+      shipmentId: shipment.id,
+      kind: "delivery",
+      cashAmount: 50_000,
     });
-    expect((await recordsOf(shipment.id)).map((each) => each.kind)).toEqual(["pickup"]);
+    expect(result.outcome).toBe("not_applied");
+    expect(await recordsOf(shipment.id)).toHaveLength(2);
+    expect(await recordsOf(shipment.id)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "pickup", outcome: "applied" }),
+        expect.objectContaining({
+          kind: "delivery",
+          outcome: "not_applied",
+          notAppliedReason: "invalid_for_shipment",
+          cashAmount: 50_000,
+        }),
+      ]),
+    );
+    expect(await shipmentRow(shipment.id)).toMatchObject({
+      status: "picked_up",
+      needsReview: true,
+    });
   });
 
   it("keeps a delivery collected differently even without its note: it happened (FR-024)", async () => {

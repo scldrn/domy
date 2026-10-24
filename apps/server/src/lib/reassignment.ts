@@ -1,9 +1,11 @@
 import {
   addShipmentToStops,
   addHeldShipmentToStops,
+  canMoveBetweenRoutes,
   isHeldForRouting,
   removeShipmentFromStops,
   shipmentStatusLabels,
+  statusOnJoiningRoute,
 } from "@domy/domain";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import type { Executor } from "../db/client.ts";
@@ -277,10 +279,8 @@ export async function moveShipment(
     });
     return;
   }
-  if (
-    !shipment.routeId ||
-    !(["assigned", "dispatched"] as const).some((status) => status === shipment.status)
-  ) {
+  // DESIGN-1: a held package moved above; here only a planned shipment on a route moves.
+  if (!shipment.routeId || !canMoveBetweenRoutes(shipment.status)) {
     throw new AppError("shipment_not_movable", {
       message:
         shipment.status === "registered"
@@ -310,7 +310,7 @@ export async function moveShipment(
     toStops,
     addShipmentToStops(toStops, planned, () => crypto.randomUUID()),
   );
-  const status = target.status === "draft" ? "assigned" : "dispatched";
+  const status = statusOnJoiningRoute(target.status);
   await tx
     .update(shipments)
     .set({

@@ -45,7 +45,8 @@ describe("sessions (FR-033a)", () => {
       .where(eq(sessions.userId, dispatcher.user.id));
     expect(after?.expiresAt.getTime()).toBe(expiresAt);
 
-    vi.setSystemTime(start + 30 * day + 1000);
+    // One second past the stored expiry, not past a start taken before sign-in (F001-2).
+    vi.setSystemTime(expiresAt + 1000);
     expect(await status(dispatcher.cookie)).toBe(401);
   });
 

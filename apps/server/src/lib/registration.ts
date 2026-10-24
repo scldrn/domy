@@ -1,6 +1,5 @@
 import {
-  codConfirmationThreshold,
-  feeConfirmationThreshold,
+  needsAmountConfirmation,
   bogotaToday,
   calculateFee,
   codAmountError,
@@ -206,10 +205,7 @@ export async function prepareShipment(
   }
   const codAmount = resolveCodAmount(input.paymentMode, input.fee, input.codAmount ?? 0);
 
-  if (
-    !input.confirmed &&
-    (input.fee > feeConfirmationThreshold || codAmount > codConfirmationThreshold)
-  ) {
+  if (!input.confirmed && needsAmountConfirmation({ fee: input.fee, codAmount })) {
     throw new AppError("confirmation_required");
   }
 
