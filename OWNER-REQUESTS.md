@@ -192,6 +192,16 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
    001 a 007, pero el repositorio solo tiene especificaciones de la 001 a la 004 (`specs/`) y
    ningún documento, rama ni tarea menciona una 005, 006 o 007. ¿Existen en otro lugar o el
    alcance es 001–004? Mientras tanto se verifica 001–004.
+10. **Avisos con fecha futura** (2026-10-24, F004-3): hoy se puede preparar el aviso de un
+    día futuro, pero el enlace del comercio solo muestra hasta hoy, así que con más de 20
+    envíos el comercio no ve los enlaces hasta ese día. ¿Limitamos la fecha del aviso a hoy o
+    antes, dejamos que el enlace del comercio muestre días futuros, o el mensaje lista
+    siempre los enlaces cuando la fecha es futura?
+11. **Plataforma y respaldos** (2026-10-24): elegir proveedor y arquitectura (la imagen se
+    probó en arm64), dominio y certificado, y para los respaldos el horario, cuántos guardar,
+    dónde se copian fuera del servidor, quién recibe la alerta si fallan y cómo se respaldan
+    las fotos. `scripts/backup.sh` y `scripts/restore.sh` existen y están probados, pero no se
+    programan solos. Detalle en `docs/verificacion-despliegue.md`.
 
 ## Decisiones visuales (son tuyas)
 
