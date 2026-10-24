@@ -6,6 +6,7 @@ import {
   pushSubscriptionInput,
   pushSubscriptionRemoveInput,
   daySummary,
+  finalStatuses,
   routeProgress,
   type CourierRoute,
   type CourierSnapshot,
@@ -36,7 +37,7 @@ import {
   pushSubscriptions,
 } from "../db/schema/index.ts";
 import { requireRole } from "../lib/auth-guard.ts";
-import { applyCourierRecord } from "../lib/courier-records.ts";
+import { applyCourierRecord, type RecordResult } from "../lib/courier-records.ts";
 import { AppError } from "../lib/errors.ts";
 import { validate } from "../lib/validate.ts";
 import { auditedChange } from "../lib/master-data.ts";
@@ -49,6 +50,15 @@ import { uploadPhoto } from "./photos.ts";
  */
 
 const idParam = z.object({ id: z.uuid() });
+
+/** A record's answer; one the server could not take carries why (ROB-3, contracts/http-api.md). */
+type CourierRecordResult =
+  | RecordResult
+  | {
+      id: string;
+      outcome: "not_applied";
+      error: { code: string; message: string; fields?: Record<string, string> };
+    };
 
 /** The courier linked to the signed-in account. */
 async function signedInCourier(c: Context<AppEnv>): Promise<{ id: string }> {
@@ -198,7 +208,7 @@ async function loadHeldOffRoute(db: Executor, courierId: string): Promise<HeldSh
       and(
         eq(shipments.custodyCourierId, courierId),
         isNull(shipments.routeId),
-        notInArray(shipments.status, ["delivered", "returned", "voided"]),
+        notInArray(shipments.status, [...finalStatuses]),
       ),
     )
     .orderBy(asc(shipments.serviceDate), asc(shipments.trackingNumber));
@@ -313,13 +323,18 @@ export const courierAppRoutes = new Hono<AppEnv>()
     const now = c.get("clock")();
     const courier = await signedInCourier(c);
     await db.update(couriers).set({ lastSyncedAt: now }).where(eq(couriers.id, courier.id));
-    const route = await loadCourierRoute(db, courier.id);
-    const [handoversToGive, heldOffRoute, notices, summary] = await Promise.all([
-      loadHandoversToGive(db, courier.id),
-      loadHeldOffRoute(db, courier.id),
-      loadNotices(db, courier.id),
-      loadSummary(db, courier.id, route, now),
-    ]);
+    // DATA-2: every part from one instant, so the snapshot never mixes two states.
+    const { route, handoversToGive, heldOffRoute, notices, summary } = await db.transaction(
+      async (tx) => {
+        const route = await loadCourierRoute(tx, courier.id);
+        const handoversToGive = await loadHandoversToGive(tx, courier.id);
+        const heldOffRoute = await loadHeldOffRoute(tx, courier.id);
+        const notices = await loadNotices(tx, courier.id);
+        const summary = await loadSummary(tx, courier.id, route, now);
+        return { route, handoversToGive, heldOffRoute, notices, summary };
+      },
+      { isolationLevel: "repeatable read", accessMode: "read only" },
+    );
     return c.json({
       serverTime: now.toISOString(),
       sessionExpiresAt: c.get("sessionExpiresAt").toISOString(),
@@ -339,22 +354,44 @@ export const courierAppRoutes = new Hono<AppEnv>()
     const courier = await signedInCourier(c);
     // The phone's clock corrected by its offset to the server's (FR-019, research R7).
     const offset = now.getTime() - new Date(deviceNow).getTime();
-    const results = [];
+    const results: CourierRecordResult[] = [];
     for (const record of records) {
       const occurredAt = new Date(new Date(record.occurredAt).getTime() + offset).toISOString();
-      results.push(
-        await applyCourierRecord(
-          db,
-          { ...record, occurredAt },
-          {
-            courierId: courier.id,
-            authorUserId: user.id,
-            onBehalf: false,
-            recordedAt: now,
-            noticeIds: c.get("noticeIds"),
+      try {
+        results.push(
+          await applyCourierRecord(
+            db,
+            { ...record, occurredAt },
+            {
+              courierId: courier.id,
+              authorUserId: user.id,
+              onBehalf: false,
+              recordedAt: now,
+              noticeIds: c.get("noticeIds"),
+            },
+          ),
+        );
+      } catch (error) {
+        if (!(error instanceof AppError)) throw error;
+        // ROB-3, C003-3, FR-024: last resort for a record that cannot be stored at all (its
+        // shipment does not exist: foreign key). A record that only does not fit its shipment is
+        // stored as `invalid_for_shipment` by the domain. This one is answered as not applied,
+        // nothing stored, so the phone drops it and the records after it still sync; the records
+        // before it already committed.
+        c.get("logger").warn(
+          { recordId: record.id, shipmentId: record.shipmentId, code: error.code },
+          "courier record not applied",
+        );
+        results.push({
+          id: record.id,
+          outcome: "not_applied",
+          error: {
+            code: error.code,
+            message: error.message,
+            ...(error.fields && { fields: error.fields }),
           },
-        ),
-      );
+        });
+      }
     }
     return c.json({ results });
   })

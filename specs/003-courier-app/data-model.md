@@ -12,7 +12,7 @@ Phase 1 of [plan.md](plan.md). Extends the data models of
 | --- | --- | --- |
 | `courier_record_kind` | `pickup`, `delivery`, `exception`, `problem`, `return`, `disbursement`, `handover_confirmation` | Recogida, Entrega, Novedad, Problema de recogida, Devolución, Pago por cuenta del cliente, Traspaso recibido |
 | `record_outcome` | `applied`, `duplicate`, `not_applied` | —, —, No aplicado |
-| `not_applied_reason` | `voided`, `delivered`, `returned`, `already_picked_up`, `not_picked_up`, `not_in_custody`, `no_task`, `no_handover` | Spanish text per reason in `packages/domain` |
+| `not_applied_reason` | `voided`, `delivered`, `returned`, `already_picked_up`, `not_picked_up`, `not_in_custody`, `no_task`, `no_handover`, `invalid_for_shipment` (2026-10-23, ROB-3: a well-formed record that does not fit the shipment, kept with its data) | Spanish text per reason in `packages/domain` |
 | `exception_reason` | `recipient_absent`, `wrong_address`, `rejected` | Destinatario ausente, Dirección errada, Rechazado |
 | `photo_kind` | `proof`, `transfer_receipt`, `disbursement_receipt`, `exception` | Prueba de entrega, Comprobante de transferencia, Comprobante de pago, Foto de la novedad |
 | `notice_type` | `route_dispatched`, `shipment_added`, `shipment_removed`, `shipment_voided`, `shipment_updated`, `stops_reordered`, `shipment_reassigned_in`, `shipment_reassigned_out`, `route_reassigned`, `dispatch_undone`, `handover_requested`, `handover_confirmed`, `handover_cancelled`, `exception_decided`, `office_received`, `record_corrected`, `record_reverted`, `record_not_applied` | Spanish text per type in `packages/domain` |

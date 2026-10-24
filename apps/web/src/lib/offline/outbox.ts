@@ -175,9 +175,13 @@ export function replayRecords(
             }
           : null;
     if (!shipment) continue;
+    // The server decides the same way, so a delivery that does not fit is "No aplicado" here too (ROB-3).
     const resolution = resolveCourierRecord(shipment, {
       kind: record.kind,
       courierId: me,
+      ...(record.kind === "delivery"
+        ? { delivery: { receivedByName: record.receivedByName } }
+        : {}),
     });
     if (resolution.outcome !== "applied") continue;
     // US7/FR-037: totals share precisely the route replay's applied outcomes, not inputs.

@@ -139,7 +139,10 @@ export async function loadState(
   };
 }
 
-/** The input checks that need the shipment; a well-formed record is never refused for state. */
+/**
+ * The input checks that need the shipment, for a record entered by dispatch (FR-034); the
+ * phone's record is never refused for them (`invalid_for_shipment`, ROB-3).
+ */
 function checkInput(input: CourierRecordInput, row: ShipmentRow): void {
   if (input.kind !== "delivery") return;
   const problem = receivedByNameProblem(row.kind, input.receivedByName);
@@ -225,7 +228,8 @@ async function applyOnce(
       : phoneRoute;
     if (by.onBehalf && new Date(input.occurredAt) > by.recordedAt)
       throw new AppError("occurred_in_future");
-    checkInput(input, row);
+    // ROB-3, FR-024: dispatch fixes its own form; the phone's record is kept as not applied.
+    if (by.onBehalf) checkInput(input, row);
     if (by.onBehalf && input.kind === "delivery") {
       const problem = collectionProblem(row.codAmount, input);
       if (problem) throw new AppError("invalid_request", { fields: { note: problem } });
@@ -237,6 +241,7 @@ async function applyOnce(
     const resolution = resolveCourierRecord(forRecord, {
       kind: input.kind,
       courierId: by.courierId,
+      ...(input.kind === "delivery" && { delivery: { receivedByName: input.receivedByName } }),
     });
 
     await tx.insert(courierRecords).values({

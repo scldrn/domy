@@ -51,6 +51,7 @@ export const notAppliedReasons = [
   "not_in_custody",
   "no_task",
   "no_handover",
+  "invalid_for_shipment",
 ] as const;
 export type NotAppliedReason = (typeof notAppliedReasons)[number];
 /** Why a record was kept without effect, for the courier's notice and the history (FR-026). */
@@ -63,6 +64,7 @@ export const notAppliedReasonLabels: Record<NotAppliedReason, string> = {
   not_in_custody: "El paquete no está en tu custodia.",
   no_task: "El envío no tiene esa parada pendiente en tu ruta.",
   no_handover: "No hay un traspaso pendiente para ti.",
+  invalid_for_shipment: "El registro no cumple lo que pide este envío.",
 };
 
 /** Every change to a courier's route that the courier must see (FR-027). */
@@ -217,9 +219,27 @@ const finalReasons: Partial<Record<ShipmentStatus, NotAppliedReason>> = {
   returned: "returned",
 };
 
+/**
+ * FR-008: a delivery names who received it unless the shipment is an errand. A name the record
+ * carries already passed the input schema (2–100 characters, `receivedByNameProblem`); what is
+ * left to decide against the shipment is its absence, as when an errand became a package.
+ */
+function lacksReceivedBy(shipmentKind: ShipmentKind, name: string | undefined): boolean {
+  return shipmentKind !== "errand" && (name === undefined || name.trim().length < 2);
+}
+
 export function resolveCourierRecord(
   shipment: ShipmentForRecord,
-  record: { kind: CourierRecordKind; courierId: string },
+  record: {
+    kind: CourierRecordKind;
+    courierId: string;
+    /**
+     * A delivery's fields checked against the shipment (ROB-3, FR-024): a well-formed record
+     * that does not fit it is kept as "No aplicado" rather than refused. Without them the check
+     * is skipped (a caller that only asks whether a kind of record would apply).
+     */
+    delivery?: { receivedByName: string | undefined };
+  },
 ): RecordResolution {
   const author = record.courierId;
   /** A pending task of these kinds on the author's route in progress. */
@@ -336,6 +356,8 @@ export function resolveCourierRecord(
         return byHolder("errand", { status: "delivered" });
       }
       if (shipment.status === "picked_up" && holds) {
+        if (record.delivery && lacksReceivedBy(shipment.kind, record.delivery.receivedByName))
+          return refuse("invalid_for_shipment");
         return byHolder("delivery", { status: "delivered", custody: custodyTo(null) });
       }
       return refuse(

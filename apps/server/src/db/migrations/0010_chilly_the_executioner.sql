@@ -1,0 +1,1 @@
+ALTER TYPE "public"."not_applied_reason" ADD VALUE 'invalid_for_shipment';
