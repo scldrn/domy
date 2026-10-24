@@ -644,7 +644,7 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `apps/server/src/lib/master-data.ts`, `apps/server/tests/master-data-idempotency.test.ts`.
 - **Exit:** Validated: concurrent edits record true serialized history with exactly one action receipt per request without duplicate fictitious changes.
 
-### 001/T136 — Real inferred RPC response boundaries
+### 001/T136 — Real inferred RPC response boundaries [COMPLETED]
 
 - **Why/state:** IV-33; CRITICAL architectural boundary debt, not evidence every response fails.
 - **Touchpoints:** `lib/api-client.ts`, every feature `api.ts`, Hono route inference,

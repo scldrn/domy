@@ -222,6 +222,15 @@ large duplicate lists cannot occlude form fields.
 | `GET /api/audit-events?entityType&entityId&cursor` | Owner | History of master data and user changes (FR-036) |
 | `GET /api/export/:dataset?format=csv` | Owner | `dataset` = `merchants`, `couriers`, `carriers`, `neighborhoods`, `rate-card`; CSV with Spanish headers (FR-025) |
 
+Every CSV export (this one and `GET /api/shipments/export?format=csv`) is spreadsheet-safe
+(IV-01, `toCsv` in `lib/export.ts`): a text cell whose first character is `=`, `+`, `-`,
+`@`, a tab, or a carriage return is written with a single apostrophe (`'`) prepended, so a
+spreadsheet shows it as text instead of evaluating it as a formula. Numeric cells are written
+as numbers and empty cells as nothing, so neither is prefixed. After that, a field
+containing `"`, `,`, a carriage return, or a line feed is enclosed in double quotes with each
+`"` doubled. The file is UTF-8 with a byte order mark and CRLF line endings. XLSX cells
+are written as typed values, never as formulas.
+
 There are no `DELETE` endpoints: records are deactivated through `PATCH { isActive: false }`
 (FR-017, FR-029).
 
