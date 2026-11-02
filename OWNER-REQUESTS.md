@@ -4,9 +4,22 @@ Preguntas y pendientes para Samuel (propietario de Domy) y, a través de él, pa
 lo mantiene al día: agrega cada pregunta cuando surge y la mueve a «Resueltas» con tu respuesta
 y la fecha. Responde aquí mismo o en la conversación.
 
-Última actualización: 2026-10-23 (America/Bogota).
+Última actualización: 2026-11-02 (America/Bogota).
 
 ## Bloquean algo ahora
+
+**Auditoría de producción — 2026-11-02:** los bloqueos de software están corregidos en `main`, con
+CI en verde. Falta lo que depende de ti: las pruebas físicas y los datos de esta lista. Detalle en
+[la auditoría](docs/production-readiness-audit-2026-11-02.md).
+
+**Riesgo por confirmar:** `glob` y `minimatch` (aviso moderado) siguen en producción sin arreglo
+compatible; solo los trae un plugin de Sentry que el servidor no carga. Propongo aceptarlo. ¿Estás
+de acuerdo?
+
+**Modo sin conexión — tu decisión del 2026-11-02:** la app del mensajero sí lo conserva, instalada o
+en el navegador del teléfono; el panel sigue solo en línea. Esto anula el aplazamiento del
+2026-10-23: la prueba física sin señal (T087, T093) y el fallo de reapertura en iPhone vuelven a
+bloquear la salida. Para probarlo hace falta HTTPS con un certificado de confianza en los teléfonos.
 
 
 **Revisión de cambios locales completada — 2026-10-23:** se revisaron las correcciones
@@ -192,6 +205,9 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
    001 a 007, pero el repositorio solo tiene especificaciones de la 001 a la 004 (`specs/`) y
    ningún documento, rama ni tarea menciona una 005, 006 o 007. ¿Existen en otro lugar o el
    alcance es 001–004? Mientras tanto se verifica 001–004.
+    **Actualización 2026-11-02:** existe la rama local `005-merchant-portal`, sin ningún commit
+    propio y con `specs/005-merchant-portal/` vacía. El portal del cliente con inicio de sesión
+    (I-08) está fuera de la Fase 1. ¿Es trabajo para después de la salida o entra en esta entrega?
 10. **Avisos con fecha futura** (2026-10-24, F004-3): hoy se puede preparar el aviso de un
     día futuro, pero el enlace del comercio solo muestra hasta hoy, así que con más de 20
     envíos el comercio no ve los enlaces hasta ese día. ¿Limitamos la fecha del aviso a hoy o
@@ -212,6 +228,8 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-11-02 | ¿Corregir los bloqueos de la auditoría en ramas cortas, con PR y fusión con CI verde? | «Sí, corrige todo». PR #44, #45, #46 y la de documentos |
+| 2026-11-02 | ¿Dónde se conserva el modo sin conexión? | «Descarta el modo sin conexion para la app web si para la movil»; aclarado como «App del mensajero sí», instalada o en el navegador del teléfono. El panel sigue solo en línea. Vuelve a exigir la prueba física sin señal |
 | 2026-10-19 | ¿Priorizar CSV seguro para Excel, neutralizando fórmulas y documentando la transformación? | «Sí, CSV seguro para Excel». Mantener los valores monetarios/fechas correctos y documentar la transformación del texto; decisión incorporada al documento de ejecución |
 | 2026-10-19 | ¿Mantener fotos del mensajero solo de su propio trabajo aún disponible en la app? | «Sí, solo trabajo vigente en la app». Conservar003 FR-036; falta definir/probar la frontera técnica sin impedir subir pruebas offline pendientes |
 | 2026-10-19 | ¿Autorizar commit, push, PR y squash por porción del plan integral, con revisión y compuertas locales/CI limpias? | «autorizo». Incluye cerrar T141 y continuar las 75 tareas por ramas pequeñas; excluye despliegues e infraestructura de producción y no resuelve las decisiones de CSV/fotos |

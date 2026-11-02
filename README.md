@@ -80,7 +80,8 @@ worker; offline cases use independent courier accounts and disposable test data.
 Use the [current engineering handoff](docs/engineering-handoff.md),
 [release review](docs/release-change-review-results.md) and tracked
 `Dockerfile`/`compose.production.yaml`/`Caddyfile` for the reviewed container path.
-The immediate release requires internet; see the [owner's scope decision](docs/online-release-scope.md).
+The courier app must work without signal; the dispatch panel requires internet (owner decision of
+2026-11-02, [scope record](docs/online-release-scope.md)).
 Set matching canonical HTTPS `APP_URL` and `PUBLIC_BASE_URL` at runtime and build
 the web app with that public origin. Replace the sample authentication secret.
 
@@ -120,7 +121,8 @@ It reuses the `app` service's image and environment file and prints the owner's 
 once. `--rm` removes the container, so the password does not stay in Docker's logs; never run
 the seed as a long-lived service. The account is `propietario@example.com`: hand the password
 over in person, then change both the email and the password at the first sign-in. Running the
-seed again is harmless: once an owner exists it creates no account and duplicates no data. The
+seed again creates no account and duplicates no data, but stop `app` first: it has a fixed network
+address, so `run` fails with "Address already in use" while it is up. The
 seeded rates of Amy Tecnology are inferred and must be confirmed before go-live
 (OWNER-REQUESTS.md).
 

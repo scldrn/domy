@@ -20,6 +20,11 @@ otro documento.
 - Decisión del propietario (`docs/online-release-scope.md`): la entrega inmediata es solo en
   línea. La aceptación física sin señal queda diferida y no bloquea; el código y las
   pruebas sin señal se conservan y no deben retroceder.
+- **Actualización 2026-11-02:** el propietario revierte esa decisión para la app del mensajero, que
+  debe funcionar sin señal; el panel sigue solo en línea. Lo marcado abajo como «Diferido (alcance
+  del propietario)» vuelve a estar abierto: 003/T087, 003/T131 y 003 US2. C003-5 se revisó en 003/T138:
+  cumple FR-023, sin cambio de código. Hallazgos posteriores en
+  [la auditoría](production-readiness-audit-2026-11-02.md).
 - Las «81 tareas» son el catálogo de `docs/integral-execution-backlog.md` (secciones 6 a 9),
   que remite a los hallazgos IV-01 a IV-41 de `docs/integral-verification.md`.
 
