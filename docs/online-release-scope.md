@@ -1,5 +1,11 @@
 # Online release scope
 
+> **Superseded by the owner on 2026-11-02:** offline operation stays required for the courier app,
+> whether installed or opened in the phone's browser. The dispatch panel stays online-only, as
+> 001 already specifies. The deferral below no longer applies: physical offline acceptance
+> (003/T087, T093) and the failed iPhone offline reopening again block go-live. This document
+> remains the record of the 2026-10-23 decision and its evidence.
+
 ## Owner decision — 2026-10-23
 
 The owner explicitly states that offline operation is not required by the client for
