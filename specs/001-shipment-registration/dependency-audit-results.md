@@ -311,3 +311,19 @@ source inventories: `batch2-actor-candidate-{before,after}.json`. No gate warnin
 was observed. Earlier failed/interrupted attempts remain historical evidence. Root
 approved this task's local closure after both QA levels; this does not certify physical
 Android/iPhone acceptance, provider configuration or production readiness.
+
+## Production-readiness audit — 2026-11-02 (T157)
+
+`pnpm audit --prod` failed on `main` `683bad1` with `better-auth` 1.7.6 (critical, high and low)
+and `seroval` 1.6.8 (two moderate). Domy's auth configuration has no Magic Link, OAuth or OAuth
+Proxy and stores no rate-limit records in the database, so by each advisory's own conditions the
+`better-auth` ones do not apply; they are patched anyway.
+
+`better-auth` stays at the first patched version. On 1.7.10, 1.7.14 and 1.7.15,
+`tests/account-integrity.test.ts` fails two cases: the rollback when native session deletion fails,
+and the check that raw SQL and credential parameters never reach the native logger.
+
+Remaining after the fix, proposed as accepted risk and pending the owner's confirmation: `glob` and `minimatch`
+(moderate) reach production only through `@sentry/bundler-plugins`, which `src/index.ts` does not
+load, and upgrading `@sentry/node` to 11.10.0 does not remove them; `deepmerge` (low) is
+development-only and has no patched version.
