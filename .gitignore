@@ -7,6 +7,9 @@
 # Machine-local Claude Code settings
 .claude/settings.local.json
 
+# Local client demo stack: its env file holds a private push key. Never commit.
+apps/server/demo/
+
 # Client source spreadsheets: contain personal and banking data. Never commit.
 docs/discovery/raw/
 

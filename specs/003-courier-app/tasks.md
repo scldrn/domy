@@ -1249,3 +1249,8 @@ No physical task is closed by this transport consolidation.
 ## Release change review — 2026-10-23
 
 - [X] T137 Review pending-photo integrity, storage/request bounds, own-photo access and concurrent record replay. Retain conflicting photo bytes and previously persisted work; no offline physical prerequisite for this release. Native regressions and full local gates required. See ../../docs/release-change-review-results.md.
+
+## Production-readiness audit — 2026-11-02
+
+- [X] T138 Review C003-5, reopened when the owner kept offline operation for the courier app: "the phone deletes a finished route's personal data only when it synchronizes". This conforms to FR-023. The server returns no route once it is not in progress, so the first sync after a route finishes replaces the snapshot and removes its personal data; `sync.test.ts` covers it. Before that sync, the phone either still holds unsent records, which FR-023 and Constitution II require it to keep, or cannot know the route finished, and FR-022 requires a loaded route to stay usable. A closed app cannot run a timer: Background Sync is rejected in research R4. No code change.
+- [X] T139 Make the end-to-end suite pass on the CI runner, whose suite takes 24.9 minutes against about 10 locally. `courier-account-readiness.spec.ts` asserted a checking state that lasted 38 ms; the test now holds that response until the state is seen. The 360 px path of `courier-accessibility.spec.ts` runs six full target scans in about 24 s locally, so it is marked slow. No assertion is removed and the application does not change. Evidence: run `41489234586`, the first run of these tests on GitHub.
