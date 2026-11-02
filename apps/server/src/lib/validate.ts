@@ -20,15 +20,15 @@ export function validate<Target extends keyof ValidationTargets, Schema extends 
   });
 }
 
-/** True when a database error is the violation of the given unique constraint. */
-export function isUniqueViolation(error: unknown, constraint: string): boolean {
+/** True when a database error is the violation of a unique constraint, or of the given one. */
+export function isUniqueViolation(error: unknown, constraint?: string): boolean {
   const cause = error instanceof Error && "cause" in error ? error.cause : error;
   return (
     typeof cause === "object" &&
     cause !== null &&
     "code" in cause &&
     cause.code === "23505" &&
-    "constraint_name" in cause &&
-    cause.constraint_name === constraint
+    (constraint === undefined ||
+      ("constraint_name" in cause && cause.constraint_name === constraint))
   );
 }
