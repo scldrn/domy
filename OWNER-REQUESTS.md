@@ -12,10 +12,6 @@ y la fecha. Responde aquí mismo o en la conversación.
 CI en verde. Falta lo que depende de ti: las pruebas físicas y los datos de esta lista. Detalle en
 [la auditoría](docs/production-readiness-audit-2026-11-02.md).
 
-**Riesgo por confirmar:** `glob` y `minimatch` (aviso moderado) siguen en producción sin arreglo
-compatible; solo los trae un plugin de Sentry que el servidor no carga. Propongo aceptarlo. ¿Estás
-de acuerdo?
-
 **Modo sin conexión — tu decisión del 2026-11-02:** la app del mensajero sí lo conserva, instalada o
 en el navegador del teléfono; el panel sigue solo en línea. Esto anula el aplazamiento del
 2026-10-23: la prueba física sin señal (T087, T093) y el fallo de reapertura en iPhone vuelven a
@@ -228,6 +224,7 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-11-02 | ¿Aceptar el riesgo de `glob` y `minimatch`, avisos moderados que solo trae un plugin de Sentry que el servidor no carga? | «Sí, lo acepto». Revisar cuando Sentry publique una versión sin ellos |
 | 2026-11-02 | ¿Corregir los bloqueos de la auditoría en ramas cortas, con PR y fusión con CI verde? | «Sí, corrige todo». PR #44, #45, #46 y la de documentos |
 | 2026-11-02 | ¿Dónde se conserva el modo sin conexión? | «Descarta el modo sin conexion para la app web si para la movil»; aclarado como «App del mensajero sí», instalada o en el navegador del teléfono. El panel sigue solo en línea. Vuelve a exigir la prueba física sin señal |
 | 2026-10-19 | ¿Priorizar CSV seguro para Excel, neutralizando fórmulas y documentando la transformación? | «Sí, CSV seguro para Excel». Mantener los valores monetarios/fechas correctos y documentar la transformación del texto; decisión incorporada al documento de ejecución |

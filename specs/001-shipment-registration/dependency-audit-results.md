@@ -323,7 +323,7 @@ Proxy and stores no rate-limit records in the database, so by each advisory's ow
 `tests/account-integrity.test.ts` fails two cases: the rollback when native session deletion fails,
 and the check that raw SQL and credential parameters never reach the native logger.
 
-Remaining after the fix, proposed as accepted risk and pending the owner's confirmation: `glob` and `minimatch`
+Remaining after the fix, accepted by the owner on 2026-11-02 until Sentry ships without them: `glob` and `minimatch`
 (moderate) reach production only through `@sentry/bundler-plugins`, which `src/index.ts` does not
 load, and upgrading `@sentry/node` to 11.10.0 does not remove them; `deepmerge` (low) is
 development-only and has no patched version.
