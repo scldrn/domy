@@ -47,6 +47,8 @@ for (const scheme of [
     dispatcherPage: office,
     ownerPage: owner,
   }) => {
+    // Six full scans of every control: about 24 s here and over 30 s on the CI runner (T139).
+    test.slow();
     const account = await ownSession(phone, owner);
     const packageForPickup = await register(office, {
       paymentMode: "merchant_account",

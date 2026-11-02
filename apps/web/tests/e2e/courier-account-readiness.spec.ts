@@ -163,6 +163,10 @@ test("blocks courier account saves after a real GET failure until retry succeeds
   let releaseInitialAttempt: (() => void) | undefined;
   let markFirstAttempt: (() => void) | undefined;
   let markAutomaticRetriesFailed: (() => void) | undefined;
+  let releaseManualRetry: (() => void) | undefined;
+  const manualRetryHeld = new Promise<void>((resolve) => {
+    releaseManualRetry = resolve;
+  });
   const initialAttempt = new Promise<void>((resolve) => {
     markFirstAttempt = resolve;
   });
@@ -188,6 +192,8 @@ test("blocks courier account saves after a real GET failure until retry succeeds
           if (attempts === 3) markAutomaticRetriesFailed?.();
           return;
         }
+        // The checking state lasts only as long as this response (T139).
+        await manualRetryHeld;
         await route.continue();
       },
     );
@@ -211,6 +217,7 @@ test("blocks courier account saves after a real GET failure until retry succeeds
     );
     await alert.getByRole("button", { name: "Reintentar" }).click();
     await expect(dialog.getByRole("status")).toContainText("Confirmando el mensajero vinculado");
+    releaseManualRetry?.();
     const response = await listResponse;
     expect(response.status()).toBe(200);
     await expect(alert).toHaveCount(0);
@@ -219,6 +226,7 @@ test("blocks courier account saves after a real GET failure until retry succeeds
     expect(await accessibilityViolations(page)).toEqual([]);
   } finally {
     releaseInitialAttempt?.();
+    releaseManualRetry?.();
     await page.close();
   }
 });
