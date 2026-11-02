@@ -386,6 +386,58 @@ describe("master data concurrent creation (IV-28 / 001/T134)", () => {
     },
   );
 
+  // T158: PostgreSQL can report a same-ID loser on a secondary unique constraint, because
+  // ON CONFLICT (id) guards only its arbiter. This trigger forces that otherwise narrow outcome.
+  it.each([
+    ["neighborhood", "neighborhoods_name_municipality_key"],
+    ["rate_zone", "rate_zones_name_key"],
+  ] as const)(
+    "replays a same-ID %s creation that loses on a secondary unique constraint",
+    async (resource, constraint) => {
+      const { table, path, body } = creations[resource];
+      await database.db.execute(
+        sql.raw(`
+        CREATE OR REPLACE FUNCTION test_secondary_conflict() RETURNS TRIGGER AS $$
+        BEGIN
+          PERFORM pg_advisory_xact_lock(88889);
+          IF EXISTS (SELECT 1 FROM "${table}" WHERE id = NEW.id) THEN
+            RAISE unique_violation USING CONSTRAINT = '${constraint}';
+          END IF;
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+        CREATE TRIGGER test_secondary_trg BEFORE INSERT ON "${table}"
+        FOR EACH ROW EXECUTE FUNCTION test_secondary_conflict();
+      `),
+      );
+      try {
+        await withInsertBarrier(database, table, async (release) => {
+          const payload = { id: crypto.randomUUID(), ...body() };
+          const requests = [
+            send(t, owner.cookie, path(), payload),
+            send(t, owner.cookie, path(), payload),
+          ];
+          await new Promise((r) => setTimeout(r, 60));
+          await release();
+          const responses = await Promise.all(requests);
+          expect(responses.map((response) => response.status).sort()).toEqual([200, 201]);
+          const audits = await database.db
+            .select()
+            .from(auditEvents)
+            .where(eq(auditEvents.entityId, payload.id));
+          expect(audits).toHaveLength(1);
+        });
+      } finally {
+        await database.db.execute(
+          sql.raw(`
+          DROP TRIGGER test_secondary_trg ON "${table}";
+          DROP FUNCTION test_secondary_conflict();
+        `),
+        );
+      }
+    },
+  );
+
   it("rejects a different-ID duplicate name with 400 rather than swallowing as a replay", async () => {
     const id1 = crypto.randomUUID();
     const id2 = crypto.randomUUID();

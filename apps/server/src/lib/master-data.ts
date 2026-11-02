@@ -45,29 +45,6 @@ export async function lockEntity(tx: Executor, type: AuditEntity, id: string): P
   await tx.select({ id: table.id }).from(table).where(eq(table.id, id)).for("update");
 }
 
-function primaryKeyConstraint(type: AuditEntity): string {
-  switch (type) {
-    case "user":
-      return "users_pkey";
-    case "company_settings":
-      return "company_settings_pkey";
-    case "merchant":
-      return "merchants_pkey";
-    case "pickup_point":
-      return "pickup_points_pkey";
-    case "courier":
-      return "couriers_pkey";
-    case "carrier":
-      return "carriers_pkey";
-    case "neighborhood":
-      return "neighborhoods_pkey";
-    case "rate_zone":
-      return "rate_zones_pkey";
-    case "rate_card_entry":
-      return "rate_card_entries_pkey";
-  }
-}
-
 /** `{ field: [old, new] }` for each field whose value changes. */
 export function diffValues(
   before: Record<string, unknown>,
@@ -113,8 +90,16 @@ export async function auditedCreate(
       return true;
     });
   } catch (error) {
-    if (isUniqueViolation(error, primaryKeyConstraint(entity.type))) {
-      return false;
+    // FR-042, T158: a same-ID loser can surface on any unique constraint, not only the primary
+    // key. Only a record already stored under this id makes the request a replay.
+    if (isUniqueViolation(error)) {
+      const table = entityTables[entity.type];
+      const [stored] = await c
+        .get("db")
+        .select({ id: table.id })
+        .from(table)
+        .where(eq(table.id, entity.id));
+      if (stored) return false;
     }
     throw error;
   }
