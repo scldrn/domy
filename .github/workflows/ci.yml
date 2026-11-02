@@ -20,7 +20,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Type-aware ESLint outgrows the runner's default heap of about 2 GB.
       - run: pnpm check
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
       - run: pnpm test
       - run: pnpm --filter @domy/web exec playwright install --with-deps chromium
       - run: pnpm test:e2e

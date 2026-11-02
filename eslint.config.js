@@ -11,6 +11,7 @@ export default tseslint.config(
       "**/playwright-report/",
       "apps/web/src/route-tree.gen.ts",
       "apps/server/src/db/migrations/",
+      "apps/server/demo/",
     ],
   },
   js.configs.recommended,
