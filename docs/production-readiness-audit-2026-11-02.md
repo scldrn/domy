@@ -19,7 +19,7 @@ Their resolution is under "Resolution" below. The sections after this one record
 | A-5 | Low | Readiness documents are stale: `engineering-handoff.md` (old source hash, image, 1,686 tests, "no new migration") and `status.md` (no PR #43). | Migration `0010` and 1,726 tests exist on `main`. | Rewrite both with the new candidate. |
 | A-6 | Low | `apps/server/demo/demo.env` holds a VAPID private key, is untracked and is not ignored, so `git add .` would publish it. | `git check-ignore`. | Ignore the folder. |
 
-Accepted risk to record if the owner agrees: `glob` and `minimatch` (moderate) and `deepmerge`
+Accepted risk, confirmed by the owner on 2026-11-02: `glob` and `minimatch` (moderate) and `deepmerge`
 (low). Upstream has no compatible fix. `glob` and `minimatch` reach production only through
 Sentry's bundler plugin, which the server entry point does not load; `deepmerge` is
 development-only.

@@ -16,7 +16,7 @@ limits. Earlier receipts describe their own sources, not this candidate.
 | GitHub Actions | Check, tests, e2e and build pass on each pull request of the audit; e2e has zero retries and no failure traces |
 | `pnpm test` | 1,728 pass locally: 433 domain, 904 server, 391 web |
 | `pnpm test:e2e --retries=0` | 155 pass locally, twice |
-| `pnpm audit --prod` | No critical, high or low advisories; `glob` and `minimatch` moderate, recorded in the 001 dependency results |
+| `pnpm audit --prod` | No critical, high or low advisories; `glob` and `minimatch` moderate, accepted by the owner; see the 001 dependency results |
 | Docker image | Builds for arm64 and amd64 from pinned digests; each target must rebuild with its real origin |
 | Production stack | Fresh migrate, seed and start behind Caddy HTTPS with S3-compatible test storage |
 | Browser journey on that stack | Panel, dispatch, courier pickup, offline reopening, offline delivery with photo, exactly-once sync, tracking, merchant page, export |
