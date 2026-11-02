@@ -537,3 +537,7 @@ instruction; no independent-agent approval or physical acceptance is claimed.
 ## Release change review — 2026-10-23
 
 - [X] T156 Review and validate release hardening of native sign-in resource bounds, trusted client identity, startup/configuration and process failures; patch audited dependencies. Preserve account invariants and all security/error contracts; local full gates required. See ../../docs/release-change-review-results.md.
+
+## Phase 20: Convergence — production-readiness audit of 2026-11-02
+
+- [X] T157 HIGH Resolve the advisories published after the release review: pin `better-auth` 1.7.7 for GHSA-965c-763c-88jm, GHSA-r4xp-prcw-77qf and GHSA-44jh-23m7-hpcf, and override `seroval` and `seroval-plugins` to 1.6.11. Do not move past 1.7.7 until `tests/account-integrity.test.ts` passes on the newer version, as 1.7.10, 1.7.14 and 1.7.15 fail its log-privacy and rollback cases (FR-041, R14). Evidence: `dependency-audit-results.md`.
