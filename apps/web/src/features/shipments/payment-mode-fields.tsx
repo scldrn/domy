@@ -4,6 +4,7 @@ import { MoneyInput } from "@/components/money-input";
 import { SegmentedControl } from "@/components/segmented-control";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { formatCop } from "@/lib/format";
+import { ChangedMark } from "./changed-mark";
 import type { ShipmentFormValues } from "./form-values";
 
 /** Payment mode and the COD amount it implies (FR-009). */
@@ -16,7 +17,7 @@ export function PaymentModeFields() {
         control={control}
         name="paymentMode"
         render={({ field }) => (
-          <Field>
+          <Field className="sm:col-span-2">
             <FieldLabel>Modalidad de pago</FieldLabel>
             <SegmentedControl
               label="Modalidad de pago"
@@ -33,7 +34,10 @@ export function PaymentModeFields() {
           name="codAmount"
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="codAmount">Valor a recaudar</FieldLabel>
+              <FieldLabel htmlFor="codAmount">
+                Valor a recaudar
+                <ChangedMark name="codAmount" />
+              </FieldLabel>
               <MoneyInput
                 id="codAmount"
                 value={field.value}

@@ -102,8 +102,8 @@ and passes axe in both themes.
 
 **Independent Test**: [spec.md](spec.md) US2.
 
-- [ ] T034 [US2] Propose "Nuevo envío" and "Editar envío" beside the board and record the decision (FR-003)
-- [ ] T035 [US2] Implement the approved form in `apps/web/src/routes/shipment-new.tsx`, `apps/web/src/routes/shipment-edit.tsx`, and `apps/web/src/features/shipments/*` fields; keep keyboard order and field errors (US2 scenario 1); `register-shipment.spec.ts`, `edit-void-shipment.spec.ts`, and the form-draft specs green
+- [X] T034 [US2] Propose "Nuevo envío" and "Editar envío" beside the board and record the decision (FR-003)
+- [X] T035 [US2] Implement the approved form in `apps/web/src/routes/shipment-new.tsx`, `apps/web/src/routes/shipment-edit.tsx`, and `apps/web/src/features/shipments/*` fields; keep keyboard order and field errors (US2 scenario 1); `register-shipment.spec.ts`, `edit-void-shipment.spec.ts`, and the form-draft specs green
 - [ ] T036 [US2] Propose "Registro masivo" and record the decision
 - [ ] T037 [US2] Implement it in `apps/web/src/routes/shipment-bulk.tsx` and `apps/web/src/features/bulk/`; `bulk-registration.spec.ts` green
 - [ ] T038 [US2] Propose "Detalle de envío" and record the decision

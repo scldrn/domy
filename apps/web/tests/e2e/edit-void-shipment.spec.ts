@@ -14,6 +14,12 @@ test("edits the COD amount and voids another shipment, both in the history (scen
     }),
   ).toBeVisible();
   await page.getByLabel("Valor a recaudar").fill("90.000");
+  // Before saving, the change is marked on its field and listed as before and after (feature 006).
+  await expect(page.getByText("Cambiado", { exact: true })).toBeVisible();
+  const changes = page.getByRole("region", { name: "Cambios" });
+  await expect(changes).toContainText("Valor a recaudar");
+  await expect(changes).toContainText("$ 85.000");
+  await expect(changes).toContainText("$ 90.000");
   await page.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(page).toHaveURL(new RegExp(`/envios/${edited.trackingNumber}$`));
   const history = page.getByRole("region", { name: "Historial de cambios" });

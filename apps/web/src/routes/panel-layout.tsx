@@ -352,16 +352,19 @@ function PanelLayout() {
                 Registro masivo
               </Link>
             )}
-            {pathname !== "/envios/nuevo" && (
-              <Link
-                to="/envios/nuevo"
-                className={cn(buttonVariants({ variant: "accent" }), "max-sm:size-12 max-sm:px-0")}
-              >
-                <Icon symbol={AddIcon} />
-                <span className="hidden sm:inline">Nuevo envío</span>
-                <span className="sr-only sm:hidden">Nuevo envío</span>
-              </Link>
-            )}
+            {/* On its own page it is the current page, not a second lime action (approved "Nuevo envío"). */}
+            <Link
+              to="/envios/nuevo"
+              aria-current={pathname === "/envios/nuevo" ? "page" : undefined}
+              className={cn(
+                buttonVariants({ variant: pathname === "/envios/nuevo" ? "outline" : "accent" }),
+                "max-sm:size-12 max-sm:px-0",
+              )}
+            >
+              <Icon symbol={AddIcon} />
+              <span className="hidden sm:inline">Nuevo envío</span>
+              <span className="sr-only sm:hidden">Nuevo envío</span>
+            </Link>
           </div>
           <PhoneDestinations role={user.role} pathname={pathname} />
         </header>

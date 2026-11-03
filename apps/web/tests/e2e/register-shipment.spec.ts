@@ -25,6 +25,9 @@ async function fillDelivery(page: Page, merchant: string, neighborhood: string) 
   await pick(page, "Barrio", neighborhood, neighborhood);
 }
 
+/** The fee as the form shows it; the summary beside the form repeats it (feature 006). */
+const payment = (page: Page) => page.getByRole("group", { name: "Pago y tarifa" });
+
 async function registerAndOpen(page: Page) {
   const pendingRetry = page.getByRole("button", { name: "Reintentar solicitud pendiente" });
   if ((await pendingRetry.count()) > 0) await pendingRetry.click();
@@ -55,7 +58,7 @@ test("registers a delivery on merchant account at the standard fee (scenario 1)"
     .getByRole("radio", { name: "Crédito del cliente" })
     .or(page.getByRole("button", { name: "Crédito del cliente" }))
     .click();
-  await expect(page.getByText("$ 13.000")).toBeVisible();
+  await expect(payment(page).getByText("$ 13.000")).toBeVisible();
   await registerAndOpen(page);
   await expect(page.getByText("Registrado", { exact: true })).toBeVisible();
   await expect(page.getByText("Creado", { exact: true })).toBeVisible();
@@ -64,7 +67,7 @@ test("registers a delivery on merchant account at the standard fee (scenario 1)"
 
 test("uses the merchant rate card (scenario 2)", async ({ dispatcherPage: page }) => {
   await fillDelivery(page, "Amy Tecnology", "Itagüí");
-  await expect(page.getByText("$ 10.700")).toBeVisible();
+  await expect(payment(page).getByText("$ 10.700")).toBeVisible();
 });
 
 test("derives the COD amount from the payment mode (scenario 3)", async ({
@@ -78,6 +81,10 @@ test("derives the COD amount from the payment mode (scenario 3)", async ({
 
   await page.getByRole("button", { name: "Flete al destinatario" }).click();
   await expect(page.getByText("Valor a recaudar: $ 13.000")).toBeVisible();
+  // The summary says what the courier collects, which the payment mode decides (feature 006).
+  const summary = page.getByRole("region", { name: "Resumen" });
+  await expect(summary).toContainText("El mensajero cobra$ 13.000");
+  await expect(summary).toContainText("Bullish Hype");
 });
 
 test("requires a manual fee with a reason for an errand (scenario 4)", async ({
@@ -104,13 +111,13 @@ test("adds the express surcharge and prices a carrier handoff by its place (scen
 }) => {
   await fillDelivery(page, "Bullish Hype", "Laureles");
   await page.getByRole("button", { name: "Exprés" }).click();
-  await expect(page.getByText("$ 17.500")).toBeVisible();
+  await expect(payment(page).getByText("$ 17.500")).toBeVisible();
 
   await page.getByRole("button", { name: "Entrega a transportadora" }).click();
   await page.getByRole("button", { name: "Estándar" }).click();
   await pick(page, "Punto de entrega a transportadora", "terminal norte", "Terminal del Norte");
   await page.getByRole("button", { name: "Crédito del cliente" }).click();
-  await expect(page.getByText("$ 15.000")).toBeVisible();
+  await expect(payment(page).getByText("$ 15.000")).toBeVisible();
   await page.getByRole("button", { name: "Registrar envío" }).click();
   await expect(page.getByText("Elige la transportadora.")).toBeVisible();
   await expect(page.getByText("Escribe el municipio de destino.")).toBeVisible();
@@ -262,7 +269,7 @@ for (const delayedResponse of [
         releaseResponse();
       }
       // Feature 001 FR-006: see the actual quote before saving, not a transient empty fee.
-      await expect(page.getByText("$ 13.000", { exact: true })).toBeVisible();
+      await expect(payment(page).getByText("$ 13.000", { exact: true })).toBeVisible();
       await page.getByRole("button", { name: "Registrar envío" }).focus();
       await page.keyboard.press("Enter");
       await expect(page.getByText(/Envío [0-9A-Z]{4}-[0-9A-Z]{4} registrado/)).toBeVisible();
