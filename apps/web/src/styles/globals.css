@@ -24,15 +24,15 @@
   --destructive: var(--md-sys-color-error);
   --border: var(--md-sys-color-outline-variant);
   --input: var(--md-sys-color-outline);
-  --ring: var(--md-sys-color-accent);
-  --radius: 0.875rem;
-  /* Navigation rail (design-system.md §7): dark slate, the current page on raised slate. */
+  --ring: var(--md-sys-color-accent-strong);
+  --radius: 1rem;
+  /* Navigation rail (design-system.md §7): pizarra, focus in lime. */
   --sidebar: var(--md-sys-color-rail);
   --sidebar-foreground: var(--md-sys-color-on-rail-variant);
   --sidebar-accent: var(--md-sys-color-rail-raised);
   --sidebar-accent-foreground: var(--md-sys-color-on-rail);
   --sidebar-border: var(--md-sys-color-rail-raised);
-  --sidebar-ring: var(--md-sys-color-rail-accent);
+  --sidebar-ring: var(--md-sys-color-accent);
 }
 
 @theme inline {
@@ -52,11 +52,11 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  /* Domy's one accent (design-system.md §3.1): focus and "now". Not shadcn's accent. */
+  /* Domy's one accent (design-system.md §3.1): lime, a fill or a mark, never text on a light
+     surface; accent-strong draws focus and thin accent lines there. Not shadcn's accent. */
   --color-accent: var(--md-sys-color-accent);
   --color-on-accent: var(--md-sys-color-on-accent);
-  --color-accent-container: var(--md-sys-color-accent-container);
-  --color-on-accent-container: var(--md-sys-color-on-accent-container);
+  --color-accent-strong: var(--md-sys-color-accent-strong);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -115,12 +115,17 @@
   --color-rail-raised: var(--md-sys-color-rail-raised);
   --color-on-rail: var(--md-sys-color-on-rail);
   --color-on-rail-variant: var(--md-sys-color-on-rail-variant);
-  --color-rail-accent: var(--md-sys-color-rail-accent);
+  --color-rail-line: var(--md-sys-color-rail-line);
+  --color-rail-success: var(--md-sys-color-rail-success);
+  --color-rail-warning: var(--md-sys-color-rail-warning);
+  --color-rail-error: var(--md-sys-color-rail-error);
+  --color-rail-info: var(--md-sys-color-rail-info);
+  --color-rail-tertiary: var(--md-sys-color-rail-tertiary);
 
-  /* Shape (design-system.md §6): marks 6, controls 10, sheets 14, dialogs 20. */
+  /* Shape (design-system.md §6): marks 6, controls 10, sheets 16, dialogs 20. */
   --radius-xs: 0.375rem;
   --radius-sm: 0.625rem;
-  --radius-md: 0.875rem;
+  --radius-md: 1rem;
   --radius-lg: 1.25rem;
   --radius-xl: 1.75rem;
 

@@ -237,14 +237,14 @@ export function DayRibbon({
                 ))}
               </div>
               {showNow && (
-                <span className="pointer-events-none absolute -top-1 -bottom-7 left-(--now) w-0.5 -translate-x-1/2 bg-accent" />
+                <span className="pointer-events-none absolute -top-1 -bottom-7 left-(--now) w-0.5 -translate-x-1/2 bg-accent-strong" />
               )}
             </div>
             <div className="relative h-7">
               {showNow && (
                 <span
                   className={cn(
-                    "absolute top-1.5 left-(--now) text-label-m whitespace-nowrap text-accent",
+                    "absolute top-1.5 left-(--now) text-label-m whitespace-nowrap text-accent-strong",
                     lateInDay ? "-ml-1.5 -translate-x-full" : "ml-1.5",
                   )}
                 >

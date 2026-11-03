@@ -12,7 +12,9 @@ for how M3 is applied in Domy; anything it does not cover defers to the official
 - **Icons**: [Material Symbols](https://fonts.google.com/icons) **Rounded** (Apache 2.0),
   imported as individual SVGs, never as an icon font (§7.1)
 - **Owner**: Samuel Calderón owns visual decisions.
-- **Last updated**: 2026-10-13
+- **Last updated**: 2026-11-02 (feature 006: lime accent, pizarra surfaces, the balanced
+  board, the panel's theme switch). Approved by the owner on 2026-11-02 («Apruebo en verde»: delivered
+  stays `success`, not lime) (feature 006, FR-001).
 
 ## 1. Principles for Domy
 
@@ -25,23 +27,27 @@ for how M3 is applied in Domy; anything it does not cover defers to the official
 4. **One primary action per screen** on the courier app, reachable with the thumb.
 5. **Offline is a normal state**, not an error: shown calmly and persistently (§8).
 
-For the dispatch panel, the identity adopted on 2026-10-01:
+For the dispatch panel, the identity adopted on 2026-10-01 and revised with the balanced
+board on 2026-11-02:
 
-6. **The day and the clock organize the board.** Delivery windows against "now" are the
-   board's first picture (§8, day ribbon); everything else is quieter.
+6. **Every hour on the page, the rest one click away.** What a person looks at or acts on
+   every hour stays visible; everything else sits behind a link, a side panel, or "Ver todos".
+   Long lists show a bounded first page. A screen that needs scrolling to be understood is
+   overloaded.
 7. **Tracking numbers read like parcel labels**: condensed, heavy, always the same.
-8. **Color means state.** Slate and paper carry the interface; strong color is reserved for
-   shipment states, plus one accent for focus and "now".
+8. **Color means state.** Pizarra and paper carry the interface; strong color is reserved for
+   shipment and route states, plus lime, the one accent, for action and focus.
 9. **Sentences before tiles.** A page opens with what the person needs to know, in a plain
    sentence, not a grid of numbers.
-10. **One bold element per screen**; the rest stays disciplined.
+10. **One bold element per screen**: one lime primary action. Pizarra blocks group live
+    summaries; a screen has at most two, and the first one is the screen's own summary.
 
 ## 2. Surfaces
 
 | Surface | Users | Primary window size class | Navigation |
 | --- | --- | --- | --- |
 | Courier app | Couriers | Compact (< 600 dp) | Navigation bar (bottom) |
-| Dispatch panel | Dispatcher, owner | Expanded and larger (≥ 840 dp); must remain usable at medium | Navigation rail (expanded), navigation drawer (large and larger) |
+| Dispatch panel | Dispatcher, owner | Expanded and larger (≥ 1024 px); readable down to 360 px | Pizarra navigation rail, 240 px with labels, collapsible to 76 px with icons only (expanded and larger); a horizontal destination row under the top bar at medium and compact |
 | Tracking page | Merchants, recipients | Compact first, any size | None: single page |
 | Merchant link (C-03) | Merchants | Compact first, any size | None: single page |
 
@@ -64,12 +70,22 @@ large 1200–1599, extra-large ≥ 1600.
   indigo `#2B3A8F`): sober and professional, it leaves strong color to the state colors
   (§3.3), and no local delivery competitor uses it (Rappi and DiDi orange, Mercado Libre
   yellow, Uber black, Servientrega green). The logo uses the seed exactly.
-- **Accent**: **Verde azulado `#1F7A8C`**, a custom color (§3.3) used only for the focus
-  indicator, the "now" line of the board, and the current page's icon in the navigation
-  rail. Selections use `secondary-container` (soft slate), so the accent stays rare.
+- **Pizarra surfaces**: the dark blocks (navigation rail, the board's summary and courier
+  list, the courier app's header and navigation bar, snackbars) come from a palette of the
+  seed's own hue at chroma 14, the tone of the approved board (`#141F2A` is tone 11).
+- **Accent**: **Lima `#C8F23C`** (tone 90 of its own palette), adopted on 2026-11-02 for every
+  app, replacing verde azulado `#1F7A8C`. It is kept as chosen, not harmonized. Lime is a
+  **fill or a mark, never text or a thin line on a light surface** (it reaches only 1.3:1 on
+  white): the one primary action of a screen, the current page in the rail, a selected stage,
+  the courier's next stop, the live indicator, and focus on pizarra and in the dark scheme.
+  Text on lime is `on-accent` (tone 10, 13.3:1). On light surfaces, focus outlines and thin
+  accent lines use `accent-strong` (tone 50, 4.5:1 on white, 3.9:1 on paper).
 - Schemes shipped: light, dark, and **high contrast** (M3 contrast level "high"). The
   courier app offers high contrast as a one-tap setting for direct sunlight.
-- Default: light scheme; the dispatch panel and pages follow the device preference.
+- Default: the panel and the public pages follow the device. The panel's top bar has a
+  light/dark switch; the choice is remembered on that computer (`domy-theme` in local
+  storage) until the person switches back. The courier app follows the phone and keeps its
+  high-contrast setting.
 
 ### 3.2 Roles used
 
@@ -85,28 +101,33 @@ Domy's surface roles, taken from the same palettes (tones in light / dark):
 | Role | Tone | Used for |
 | --- | --- | --- |
 | `paper` | neutral 94 / 6 | Page background |
-| `sheet` | neutral 100 / 12 | Content: tables, forms, the ribbon, dialogs, menus |
+| `sheet` | neutral 100 / 12 | Content: lists, forms, dialogs, menus, the side panel |
 | `sheet-alt` | neutral 97 / 15 | Table headers, bins inside a sheet |
-| `rail` | primary 20 / 8 | Navigation rail, sign-in panel, snackbar |
-| `rail-raised` | primary 30 / 20 | Current page in the rail (the seed itself in light) |
-| `on-rail` / `on-rail-variant` | neutral 98 / 92, variant 80 / 75 | Text on the rail |
-| `rail-accent` | accent 80 | Current page's icon |
+| `rail` | pizarra 11 / 11 (high contrast 8) | Pizarra surfaces: navigation rail, sign-in panel, the board's summary and courier list, the courier app's header and navigation bar, snackbars |
+| `rail-raised` | pizarra 20 / 20 | Hover and pressed on pizarra |
+| `rail-line` | pizarra 25 / 25 | Dividers and outlines on pizarra |
+| `on-rail` / `on-rail-variant` | neutral 98 / 92, pizarra 80 / 80 | Text on pizarra |
+| `rail-success`, `rail-warning`, `rail-error`, `rail-info`, `rail-tertiary` | the state's dark-scheme color (tone 80) | State marks and labels on pizarra (about 10:1), where tone-40 roles are unreadable |
+| `accent` / `on-accent` | lime 90 / lime 10 | The one primary action, current page, selected stage, next stop, live indicator; text on lime |
+| `accent-strong` | lime 50 / lime 80 | Focus outline and thin accent lines on light surfaces (dark: on sheets) |
 
 ### 3.3 Custom colors for shipment states
 
-M3 defines only `error`. Domy adds four **custom colors**, each with its four roles (color,
-on-color, container, on-container); the state colors are harmonized with the seed, the
-accent is kept as chosen:
+M3 defines only `error`. Domy adds three state **custom colors**, each with its four roles
+(color, on-color, container, on-container), harmonized with the seed, plus the accent (§3.1,
+§3.2), kept as chosen:
 
 | Custom color | Base | Used for |
 | --- | --- | --- |
-| `accent` | `#1F7A8C` | Focus indicator, "now" on the board (§3.1) |
+| `accent` | `#C8F23C` | Action and focus (§3.1); never a state |
 | `success` | `#2E7D32` | Delivered, synced |
 | `warning` | `#F9A825` | At risk, returned, pending sync, photo skipped, fee to review |
 | `info` | `#1E6FD9` | On the way (in route, picked up), informational notices |
 
 `error` covers late shipments, delivery exceptions, and failed sync; `tertiary` marks
-"Asignado". Color is never the only signal: every state also carries its label.
+"Asignado" and pending handovers. Color is never the only signal: every state also carries
+its label or shape. On pizarra the same states use their `rail-*` roles (§3.2). Delivered is
+always `success`, never lime: lime means "act here", not "done".
 
 Route statuses reuse these roles, so a route reads like its shipments (adopted 2026-10-13):
 "En preparación" `tertiary` (as "Asignado"), "En curso" `info` (as on the way), "Finalizada"
@@ -130,7 +151,7 @@ shadcn/ui components read their own variable names; they are aliases of M3 roles
 | `--destructive` | `error` |
 | `--border` | `outline-variant` |
 | `--input` | `outline` |
-| `--ring` | `accent` |
+| `--ring` | `accent-strong` (on pizarra and in the dark scheme, `accent`) |
 
 The Tailwind utilities `secondary` and `accent` name M3's `secondary` role and Domy's
 `accent` color, not shadcn's tokens of the same name; shadcn's tokens stay internal.
@@ -153,8 +174,12 @@ The Tailwind utilities `secondary` and `accent` name M3's `secondary` role and D
 | Title L / M / S | 20/28 · 17/25 · 15/21 | 600 | 100 % | 0 |
 | Body L / M / S | 16/24 · 15/22 · 13/18 | 400 | 100 % | 0 |
 | Label L / M / S | 15/20 · 13/17 · 12/16 | 550 | 100 % | 0.005 · 0.01 · 0.015 em |
-| `text-lede` | 19/29 | 400 | 100 % | 0 |
+| `text-lede` | 21/30 (18/26 below 840 px) | 400 | 100 % | 0 |
+| `text-figure` (stage counts and other key figures) | 28/32 (24/28 below 840 px) | 650 | 112 % | −0.02 em |
 | `guia` (tracking numbers; combine with any size) | — | 700 | 75 % | 0.03 em |
+
+- Section titles inside a screen ("Por resolver", "Mensajeros", "Envíos") use Title L at
+  106 % width and weight 650, followed by their count in Body M, `on-surface-variant`.
 
 - Courier app minimum body text: **Body L (16 px)**. Money amounts and tracking numbers use
   tabular figures.
@@ -164,11 +189,15 @@ The Tailwind utilities `secondary` and `accent` name M3's `secondary` role and D
 ## 5. Layout and spacing
 
 - 4 dp base grid; spacing utilities use multiples of 4.
-- **Touch targets: minimum 48 × 48 dp** everywhere (M3 and Constitution VII agree); fields
-  and buttons are 48 px high, chips are 32 px with a 48 px target.
-- Dispatch panel: a dark navigation rail (240 px, 72 px collapsed) beside a paper canvas;
-  content is left-aligned in a column of at most 1280 px with 32 px gutters, laid out in
-  sheets.
+- **Targets**: courier app and public pages **48 × 48 px minimum** (Constitution VII);
+  fields and buttons 48 px high, chips 36 px with a 48 px target. Dispatch panel (pointer
+  first): fields and buttons **44 px** high, chips 36 px with a 44 px target, and no
+  interactive element under 24 × 24 px (WCAG 2.2 target size).
+- Dispatch panel: the pizarra navigation rail (240 px, 76 px collapsed) beside a paper
+  canvas; content is centered in a column of at most 1520 px with gutters of 16–32 px (2.4 %
+  of the width), laid out in sheets with 20 px between blocks.
+- Long text (client, recipient, neighborhood, errand) wraps to at most two lines; it is never
+  cut without a way to read it.
 - Courier app: primary actions sit in the bottom third of the screen; destructive actions
   are never adjacent to the primary action.
 - Margins and panes follow M3 canonical layouts: list-detail for the dispatch board,
@@ -178,15 +207,18 @@ The Tailwind utilities `secondary` and `accent` name M3's `secondary` role and D
 
 | Token group | Values (M3) |
 | --- | --- |
-| Shape (corner radius) | Domy scale: extra-small 6 (marks, bars) · small 10 (buttons, fields, chips, menus — M3 Expressive "square" shape) · medium 14 (sheets) · large 20 (dialogs) · extra-large 28 · full (avatars, round icon buttons) |
+| Shape (corner radius) | Domy scale: extra-small 6 (marks, bars) · small 10 (buttons, fields, menus, icon tiles — M3 Expressive "square" shape) · medium 16 (sheets, pizarra panels) · large 20 (the board's summary block, dialogs) · extra-large 28 · full (avatars, chips, round icon buttons) |
 | Elevation (tonal, levels 0–5) | 0 · 1 · 3 · 6 · 8 · 12 dp; expressed through surface-container roles, shadows only where M3 requires them |
 | Easing | standard `cubic-bezier(0.2, 0, 0, 1)` · emphasized decelerate `cubic-bezier(0.05, 0.7, 0.1, 1)` · emphasized accelerate `cubic-bezier(0.3, 0, 0.8, 0.15)` |
 | Duration | short 50–200 ms · medium 250–400 ms · long 450–600 ms |
 | State layer opacity | hover 8 % · focus 10 % · pressed 10 % · dragged 16 % |
 
-All motion respects `prefers-reduced-motion`. The panel has one orchestrated moment: the
-board's windows draw in from their start, once, when a day loads; everything else moves only
-in answer to the person (opening, expanding, confirming).
+All motion respects `prefers-reduced-motion` (it is then removed, not shortened). The panel
+has one orchestrated moment: the board's progress bar draws in from the left, once, when a day
+loads (medium duration, emphasized decelerate). Two ambient signals repeat: the live
+indicator beside "Actualizado hace N s" and the courier's next stop, both a soft lime pulse
+every 2.2 s. Everything else moves only in answer to the person: the side panel slides in
+(280 ms, emphasized decelerate), snackbars rise, arrows nudge on hover.
 
 ## 7. Components
 
@@ -196,11 +228,12 @@ spec.
 
 | M3 component | Implementation | Domy usage |
 | --- | --- | --- |
-| Buttons (filled, tonal, outlined, text) | shadcn `Button` with M3 variants | Filled = the one primary action per screen |
-| Floating action button | Custom, M3 spec | Courier: main route action; dispatcher: new shipment |
-| Navigation bar | Custom, M3 spec | Courier app, 3–4 destinations |
-| Navigation rail / drawer | shadcn `Sidebar` restyled on `rail` | Dispatch panel: product name, destinations in groups, the account and "Cerrar sesión" at the foot; a "Saltar al contenido" link comes first |
-| Top app bar | Custom, M3 spec | Panel: global search (`/` jumps to it) and "Nuevo envío" |
+| Buttons (filled, tonal, outlined, text) | shadcn `Button` with M3 variants | Lime filled (`accent`) = the one primary action per screen; slate filled (`primary`) = a row's or a panel's main action ("Decidir", "Resolver revisión"); outlined = other actions; text = links and "Ver todos" |
+| Floating action button | Custom, M3 spec | Courier: main route action, lime |
+| Navigation bar | Custom, M3 spec, on `rail` | Courier app, 3–4 destinations; the current one with a lime indicator |
+| Navigation rail / drawer | shadcn `Sidebar` restyled on `rail` | Dispatch panel: the wordmark (only the symbol when collapsed), destinations in groups, the current page filled in lime, the account and "Cerrar sesión" at the foot; a "Saltar al contenido" link comes first |
+| Top app bar | Custom, M3 spec | Panel: rail toggle, global search (`/` jumps to it) with its results, "Actualizado hace N s", the theme switch, "Registro masivo" (outlined), and "Nuevo envío" (lime) |
+| Side panel | shadcn `Sheet` (right, 480 px, full width on phones) | A shipment's detail and actions opened from a list without leaving it; focus moves in and returns to the opener; Escape closes |
 | Cards | shadcn `Card` | Stops, shipments, tracking summary |
 | Lists | Custom, M3 spec | Route stops, search results |
 | Chips (filter, assist, input) | shadcn `Toggle`/`Badge` restyled | Board filters, payment mode, delivery window presets |
@@ -213,9 +246,9 @@ spec.
 | Badges | shadcn `Badge` restyled | Pending sync count, at-risk count |
 | Segmented buttons | shadcn `ToggleGroup` restyled | Board views, payment method |
 | Date and time pickers | shadcn `Calendar` + `Popover`, `es` locale | Delivery windows, history filters |
-| Tabs | Buttons with `aria-pressed`, M3 secondary tabs look | Board status filter with each status's count |
+| Tabs | Buttons with `aria-pressed`, M3 secondary tabs look | Status filter of lists (Todos, Por salir, En camino, Entregados, Novedades, Cerrados) with each count |
 | Search | shadcn `Command` | Global search by tracking number, merchant, recipient |
-| Data table | shadcn `Table` on a `sheet`; TanStack Table only once sorting or column controls are needed | Dispatch board, history, master data. M3 has no data table spec; fixed columns that line up across a page's tables, a second line in `body-s` for related facts, wide tables scroll inside their own focusable area |
+| Data list | Grid rows on a `sheet` (each row one button that opens the item); TanStack Table only once sorting or column controls are needed | Dispatch board, history, master data. M3 has no data table spec; fixed columns that line up across a page's lists, a header row on `sheet-alt`, a second line in `body-s` for related facts, a bounded first page with "Ver los N", and cards instead of columns below 820 px |
 | File picker | Native input, visually hidden, opened by an outlined button "Elegir archivo" | Bulk registration |
 
 ### 7.1 Icons
@@ -246,23 +279,56 @@ spec.
   (state mark, badges) beside the title, and the page's actions on the right. The board's
   title is the day itself ("Jueves 1 de octubre", announced as "Tablero de despacho, …") with
   the day stepper beside it.
-- **Day sentence** (dispatch board): the day in one `text-lede` paragraph — shipments,
-  deliveries, pending from earlier days, late and at risk (late in `error`), and the cash still
-  to collect; numbers are strong so the eye can scan them.
-- **Day ribbon** (dispatch board): the delivery windows from 8 a. m. to 8 p. m. on one sheet,
-  one bar per shipment in as few lanes as possible, the elapsed part of the day shaded, and an
-  `accent` line at "now"; earlier days' shipments and those without a window sit in bins at
-  either side. Bars take the state's tone (late or exception, at risk, on the way, to go,
-  delivered). It is a picture of the list below: assistive technology gets its summary and
-  the list, pointing at a bar marks its row, and clicking it scrolls there.
+- **Day summary** (dispatch board): one pizarra block (radius large) that opens the board.
+  Top left: the title (the day, Display S), the day stepper and date field, and the **day
+  sentence** in `text-lede` `on-rail-variant` — shipments, deliveries, pending from earlier
+  days, late (`rail-error`) and at risk (`rail-warning`), and the cash still to collect —
+  with numbers in `on-rail`, weight 650. Top right: **shortcuts** to the screens that own a
+  job ("N envíos sin asignar → Rutas", "N clientes por notificar → Notificar clientes"), each a
+  row with its icon, count, a hint, and a lime arrow. Bottom: the **stage counts**.
+- **Stage counts**: a progress bar of 8 px segments, one per open stage in its state's
+  `rail-*` tone (Por salir neutral, En camino `rail-info`, Entregados `rail-success`, Novedades
+  `rail-error`), proportional to its count, then one button per stage (Por salir, En camino,
+  Entregados, Novedades, Cerrados) with a colored square, the label, the count in
+  `text-figure`, and a one-line breakdown ("5 registrados · 3 asignados", "43 % de hoy",
+  "1 por decidir"). Pressing a stage filters the list below (`aria-pressed`, filled lime) and
+  scrolls to it; pressing it again clears the filter.
+- **Por resolver** (dispatch board): the things that need a person now, on a sheet beside the
+  courier list, in this order: delivery exceptions to decide, late, pending handovers, at risk,
+  pickup problems; at most five, the rest behind "Ver los N" in the section title. Each row: a
+  tone tile with the icon (`error-container`, `warning-container`, `tertiary-container`), a
+  tag in the state's color ("Novedad por decidir", "Atrasado · 17 min"), what and who in Title
+  S, the detail in Body S, and **one** action ("Decidir" slate filled; "Reasignar",
+  "Confirmar", "Asignar" outlined). A last line, "Además: 1 recaudo diferente, 1 por revisar,
+  1 sin foto…", filters the list by alerts. Empty: "Todo bajo control".
+- **Courier progress** (dispatch board): a pizarra sheet, one row per courier, ordered by
+  need (late, then at risk, then out of sync, routes in preparation last): initials, name
+  (pressing it filters the list by that courier), route, "5 de 7 paradas", the **stop
+  track**, one or two short notes in `rail-*` tones (late, at risk, handover, "Sin
+  sincronizar hace 38 min", "Lista para despachar"), and one button: call, or dispatch (lime)
+  for a route in preparation. Stop track marks, joined by a line that brightens between done
+  stops: pickup done = hollow `rail-success` ring; delivery done = solid `rail-success` dot;
+  exception = `rail-error` square; pending = `rail-line` ring; the next stop pulses in lime. A
+  legend closes the block. "Ver rutas" in the title opens Rutas.
+- **Shipment list** (dispatch board, history): the section title with the count, the filters
+  on the right (an "Con alerta" chip, client and courier selects), status tabs under it, then
+  the data list ordered by need (exceptions, late, at risk, earlier days, other alerts,
+  open, closed), eight rows first and "Ver los N envíos". A row: tracking number (and
+  "Exprés", "31 oct, pendiente" or the kind under it), client, recipient and neighborhood,
+  courier and route, window and its at-risk or late tag, COD, state mark and its first note.
+  Opening a row opens the side panel.
 - **Empty state**: on a sheet, an icon in a `secondary-container` circle, what happened, and
   the next action; never a bare sentence.
 - **Error and not-found screens**: the same pattern, with "Reintentar" or "Ir al tablero";
   a failed page never stays blank.
 - **Global search** (top app bar): outlined search field; Enter opens "Historial" with the
   term; `/` focuses it from anywhere outside a field.
-- **Screens outside the panel** (sign-in, recovery, the courier's waiting page): the product
-  name on `rail` beside a plain form on `paper`; stacked on narrow screens.
+- **Screens outside the panel** (sign-in, recovery, the courier's waiting page): the wordmark
+  on `rail` beside a plain form on `paper`; stacked on narrow screens.
+- **Courier app look**: light surfaces (`paper`, `sheet`) for every screen's content, so it
+  reads in sunlight; pizarra only for the header (the wordmark, the high-contrast and sign-out
+  buttons) and the navigation bar; the main route action is the lime floating action button.
+  The dark scheme follows the phone; high contrast stays one tap away.
 
 ## 9. Content
 
@@ -277,7 +343,9 @@ spec.
 
 - WCAG 2.2 AA (Constitution VII). M3 on-color pairs meet 4.5:1 by construction; custom
   combinations must be checked.
-- Visible focus indicator on every interactive element (M3 focus ring, `primary`).
+- Visible focus indicator on every interactive element: a 3 px outline, 2 px away, in
+  `accent-strong` on light surfaces and in `accent` on pizarra and in the dark scheme.
+- Automated checks run axe in the light and dark schemes, at desktop and phone widths.
 - Every icon-only button has an accessible name in Spanish.
 - High contrast scheme available on the courier app (§3.1).
 
@@ -286,11 +354,11 @@ spec.
 | Item | Decision |
 | --- | --- |
 | Product name | Domy (company: Cohex, shown as operator and support contact) |
-| Seed color | Pizarra `#34495E` (§3.1); accent verde azulado `#1F7A8C` |
+| Seed color | Pizarra `#34495E` (§3.1); accent lima `#C8F23C` (since 2026-11-02; before, verde azulado `#1F7A8C`) |
 | Logo direction | **"Route d"**: a geometric lowercase "d" drawn as a route that starts at one point (pickup) and closes at another (delivery). No sector clichés (scooter, box, map pin, speed arrows). |
 | Wordmark | Lowercase "domy" drawn, not typeset: the symbol is its d, and "omy" continues at the same stroke weight, with the same round ends, and in one color, ending in a solid point on the tail of the y. It takes the current text color (`text-on-rail` on the rail, `text-primary` on light surfaces). The collapsed rail shows only the symbol. The UI itself is set in Archivo (§4). |
 | App icon | White symbol on the seed color |
-| Status | Direction approved 2026-09-30; symbol artwork chosen by the owner 2026-11-02 (option A). wordmark chosen by the owner 2026-11-02 (option 1, one color from the d to the y). `pnpm icons` draws every asset from it |
+| Status | Direction approved 2026-09-30; symbol artwork chosen by the owner 2026-11-02 (option A); wordmark chosen by the owner 2026-11-02 (option 1, one color from the d to the y). `pnpm icons` draws every asset from it |
 
 Required brand assets:
 
