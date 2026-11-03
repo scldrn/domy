@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Wordmark } from "@/components/logo";
 
 type PublicLayoutProps = {
   children: ReactNode;
@@ -12,7 +13,7 @@ export function PublicLayout({ children, companyName = "Cohex", supportPhone }: 
     <div className="flex min-h-dvh w-full flex-col bg-paper text-on-surface">
       <header className="border-b border-outline-variant bg-surface-container">
         <div className="mx-auto flex min-h-16 w-full max-w-xl items-center px-4">
-          <span className="text-headline-s font-semibold text-primary">Domy</span>
+          <Wordmark className="h-10 w-fit text-primary" />
         </div>
       </header>
       <main className="mx-auto w-full max-w-xl min-w-0 grow px-4 py-8">{children}</main>

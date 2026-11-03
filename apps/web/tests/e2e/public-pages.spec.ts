@@ -98,6 +98,7 @@ test("every brand asset is served and the link preview shows only the product (F
     ...manifest.icons.map((icon) => icon.src),
     "/icons/favicon.svg",
     "/icons/logo.svg",
+    "/icons/wordmark.svg",
     "/icons/apple-touch-icon.png",
     "/icons/link-preview.png",
   ]) {

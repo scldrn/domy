@@ -54,11 +54,12 @@ pnpm --filter @domy/web exec playwright test tests/e2e/register-shipment.spec.ts
 
 pnpm db:generate  # SQL migration from apps/server/src/db/schema/ (drizzle-kit)
 pnpm tokens       # regenerates apps/web/src/styles/tokens.css from the seed colors
-pnpm icons        # regenerates the installable app's icons in apps/web/public/icons/
+pnpm icons        # regenerates the brand assets: apps/web/public/icons/ and src/assets/brand/
 ```
 
 Generated, never edited by hand: `apps/web/src/route-tree.gen.ts` (TanStack Router plugin,
-on `vite dev` and `vite build`), `apps/web/src/styles/tokens.css` (`pnpm tokens`), and
+on `vite dev` and `vite build`), `apps/web/src/styles/tokens.css` (`pnpm tokens`),
+`apps/web/public/icons/` and `apps/web/src/assets/brand/` (`pnpm icons`), and
 `apps/server/src/db/migrations/` (`pnpm db:generate`). Prettier skips Markdown, `docs/`,
 `.specify/`, `.claude/`, and those generated files, but only when it runs from the repository
 root, where `.prettierignore` lives: `prettier --write src` from `apps/server` rewrites the

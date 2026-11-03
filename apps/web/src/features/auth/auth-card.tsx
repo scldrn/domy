@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Wordmark } from "@/components/logo";
 
 /**
  * The screens outside the panel (sign-in, recovery, the courier's waiting page): the product
@@ -16,12 +17,10 @@ export function AuthCard({
   return (
     <div className="grid min-h-dvh bg-paper lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       <header className="flex flex-col justify-between gap-6 bg-rail px-6 py-6 text-on-rail lg:px-12 lg:py-12">
-        <p className="flex flex-col gap-1">
-          <span className="text-[2.25rem] leading-none font-bold tracking-[-0.02em] [font-stretch:125%] lg:text-[3.5rem]">
-            domy
-          </span>
-          <span className="text-body-m text-on-rail-variant">de Cohex</span>
-        </p>
+        <div className="flex flex-col">
+          <Wordmark className="h-16 w-fit lg:h-28" />
+          <p className="-mt-3 text-body-m text-on-rail-variant lg:-mt-5.5">de Cohex</p>
+        </div>
         <p className="hidden max-w-[28ch] text-lede text-on-rail-variant lg:block">
           Despacho y seguimiento de los envíos de Cohex en Medellín y el Valle de Aburrá.
         </p>

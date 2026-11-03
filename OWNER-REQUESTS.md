@@ -212,6 +212,7 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-11-02 | ¿Cómo se dibuja la palabra «domy» junto al logo? | «Opción 1»: toda la palabra con el trazo de la «d», de la «d» a la «y», en un solo color. Reemplaza el nombre como texto en la interfaz y en la vista previa |
 | 2026-11-02 | ¿Qué logo «route d» se usa? (pregunta 8) | «Elijo el logo A», la curva cerrada. Íconos, favicon y vista previa generados con `pnpm icons`; el nombre en la interfaz sigue como texto |
 | 2026-11-02 | ¿Qué hacemos con los avisos de una fecha futura? (pregunta 10) | «Usa tus recomendaciones»: se limitan a hoy o antes (004/T037) |
 | 2026-11-02 | ¿Qué tarifa tienen Caldas y Girardota? (pregunta 4) | «Usa tus recomendaciones»: siguen con tarifa manual y motivo, marcadas «Tarifa por revisar», hasta que el cliente las dé |
