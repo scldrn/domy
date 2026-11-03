@@ -1,6 +1,8 @@
 import {
   bogotaToday,
+  formatCop,
   formatTrackingNumber,
+  paymentModeLabels,
   packageSizeLabels,
   packageSizes,
   serviceLevelLabels,
@@ -8,7 +10,6 @@ import {
   shipmentCreateInput,
   shipmentUpdateInput,
   shipmentKindLabels,
-  shipmentKinds,
   codAmountError,
   reason,
   windowFromPreset,
@@ -16,8 +17,18 @@ import {
   type Shipment,
 } from "@domy/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState, type ComponentProps } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import ErrorIcon from "@material-symbols/svg-400/rounded/error.svg?react";
+import LockIcon from "@material-symbols/svg-400/rounded/lock.svg?react";
+import WarningIcon from "@material-symbols/svg-400/rounded/warning.svg?react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import { Controller, FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -32,20 +43,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from "@/components/ui/field";
+import { Icon } from "@/components/icon";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Field, FieldError, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { OptionSelect } from "@/components/option-select";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api-client";
 import { now } from "@/lib/clock";
+import { formatDate, formatWindow } from "@/lib/format";
 import {
   createShipment,
   findDuplicates,
@@ -56,6 +62,9 @@ import {
 } from "./api";
 import { DeliveryWindowField } from "./delivery-window-field";
 import { FeeField } from "./fee-field";
+import { ChangedFields, ChangedMark } from "./changed-mark";
+import { KindPicker } from "./kind-picker";
+import { collectsOf, ShipmentSummary, type FormChange } from "./shipment-summary";
 import {
   emptyShipmentForm,
   formFieldOf,
@@ -671,6 +680,37 @@ function ShipmentFormBody({
     return form.handleSubmit((formValues) => save(formValues, confirmed))();
   };
 
+  const today = bogotaToday(now());
+  const changes = shipment
+    ? shipmentChanges(fromShipment(shipment), values, {
+        carriers: carriers.data ?? [],
+        points:
+          queryClient.getQueryData<{ id: string; label: string }[]>([
+            "pickup-points",
+            values.merchant?.id,
+          ]) ?? [],
+      })
+    : [];
+  const changedFields = new Set(changes.map((change) => change.field));
+  const fieldErrorCount = Object.keys(formState.errors).filter((key) => key !== "root").length;
+  const submit = (className: string) => (
+    <Button
+      type="submit"
+      variant="accent"
+      size="lg"
+      className={className}
+      disabled={formState.isSubmitting || pending !== null || draft.writeFailed}
+    >
+      {shipment
+        ? formState.isSubmitting
+          ? "Guardando…"
+          : "Guardar cambios"
+        : formState.isSubmitting
+          ? "Registrando…"
+          : "Registrar envío"}
+    </Button>
+  );
+
   return (
     <FormProvider {...form}>
       {pending && pendingRequiresReview ? (
@@ -765,254 +805,278 @@ function ShipmentFormBody({
           void attempt(false);
         }}
         noValidate
-        className="grid max-w-5xl items-start gap-4 lg:grid-cols-2"
+        className="flex flex-wrap items-start gap-5"
       >
-        <fieldset disabled={pending !== null} className="contents">
-          <FieldSet className="rounded-md border border-outline-variant bg-sheet p-6 [&>legend]:float-left [&>legend]:mb-4 [&>legend]:w-full [&>legend]:text-title-m [&>legend+*]:clear-both lg:col-span-2">
-            <FieldLegend>Tipo de envío</FieldLegend>
-            {shipment ? (
-              <p className="text-body-l text-on-surface">{shipmentKindLabels[shipment.kind]}</p>
-            ) : (
-              <Controller
-                control={control}
-                name="kind"
-                render={({ field }) => (
-                  <SegmentedControl
-                    label="Tipo de envío"
-                    value={field.value}
-                    onChange={field.onChange}
-                    options={shipmentKinds.map((value) => ({
-                      value,
-                      label: shipmentKindLabels[value],
-                    }))}
-                  />
-                )}
-              />
-            )}
-          </FieldSet>
-
-          <FieldSet className="rounded-md border border-outline-variant bg-sheet p-6 [&>legend]:float-left [&>legend]:mb-4 [&>legend]:w-full [&>legend]:text-title-m [&>legend+*]:clear-both">
-            <FieldLegend>Cliente y recogida</FieldLegend>
-            <FieldGroup>
-              {shipment ? (
-                <Field>
-                  <FieldLabel>Cliente</FieldLabel>
-                  <p className="text-body-l text-on-surface">{shipment.merchant.name}</p>
-                </Field>
-              ) : (
-                <MerchantCombobox autoFocus />
-              )}
-              <PickupPointSelect freezeDefault={pending !== null} />
-            </FieldGroup>
-          </FieldSet>
-
-          <FieldSet className="rounded-md border border-outline-variant bg-sheet p-6 [&>legend]:float-left [&>legend]:mb-4 [&>legend]:w-full [&>legend]:text-title-m [&>legend+*]:clear-both">
-            <FieldLegend>{values.kind === "errand" ? "Diligencia" : "Destino"}</FieldLegend>
-            <FieldGroup>
-              {(values.kind === "delivery" || values.kind === "reverse_pickup") && (
-                <>
-                  <RecipientAutocomplete />
-                  <TextField name="recipientName" label="Nombre del destinatario" />
-                  <TextField
-                    name="recipientPhone"
-                    label="Teléfono"
-                    inputMode="tel"
-                    autoComplete="off"
-                  />
-                  <TextField
-                    name="recipientAddress"
-                    label={
-                      values.kind === "reverse_pickup"
-                        ? "Dirección donde se recoge"
-                        : "Dirección de entrega"
-                    }
-                  />
-                  <NeighborhoodCombobox name="recipientNeighborhood" label="Barrio" />
-                </>
-              )}
-              {values.kind === "carrier_handoff" && (
-                <>
-                  <NeighborhoodCombobox
-                    name="handoffPlace"
-                    label="Punto de entrega a transportadora"
-                    handoffOnly
-                  />
+        <ChangedFields.Provider value={changedFields}>
+          <fieldset disabled={pending !== null} className="contents">
+            <div className="flex min-w-0 flex-[999_1_35rem] flex-col gap-4">
+              <Section number={1} title="Tipo de envío">
+                {shipment ? (
+                  <Locked>{shipmentKindLabels[shipment.kind]}</Locked>
+                ) : (
                   <Controller
                     control={control}
-                    name="carrierId"
-                    render={({ field, fieldState }) => (
-                      <Field data-invalid={fieldState.invalid}>
-                        <OptionSelect
-                          label="Transportadora"
+                    name="kind"
+                    render={({ field }) => (
+                      <KindPicker value={field.value} onChange={field.onChange} />
+                    )}
+                  />
+                )}
+              </Section>
+
+              <Section number={2} title="Cliente y recogida">
+                <div className="grid items-start gap-x-4 gap-y-3.5 sm:grid-cols-2">
+                  {shipment ? (
+                    <Field>
+                      <FieldLabel>Cliente</FieldLabel>
+                      <Locked>{shipment.merchant.name}</Locked>
+                    </Field>
+                  ) : (
+                    <MerchantCombobox autoFocus />
+                  )}
+                  <PickupPointSelect freezeDefault={pending !== null} />
+                </div>
+              </Section>
+
+              <Section number={3} title={values.kind === "errand" ? "Diligencia" : "Destino"}>
+                <div className="grid items-start gap-x-4 gap-y-3.5 sm:grid-cols-2">
+                  {(values.kind === "delivery" || values.kind === "reverse_pickup") && (
+                    <>
+                      <div className="empty:hidden sm:col-span-2">
+                        <RecipientAutocomplete />
+                      </div>
+                      <TextField name="recipientName" label="Nombre del destinatario" />
+                      <TextField
+                        name="recipientPhone"
+                        label="Teléfono"
+                        inputMode="tel"
+                        autoComplete="off"
+                      />
+                      <TextField
+                        name="recipientAddress"
+                        label={
+                          values.kind === "reverse_pickup"
+                            ? "Dirección donde se recoge"
+                            : "Dirección de entrega"
+                        }
+                      />
+                      <NeighborhoodCombobox name="recipientNeighborhood" label="Barrio" />
+                    </>
+                  )}
+                  {values.kind === "carrier_handoff" && (
+                    <>
+                      <div className="sm:col-span-2">
+                        <NeighborhoodCombobox
+                          name="handoffPlace"
+                          label="Punto de entrega a transportadora"
+                          handoffOnly
+                        />
+                      </div>
+                      <Controller
+                        control={control}
+                        name="carrierId"
+                        render={({ field, fieldState }) => (
+                          <Field data-invalid={fieldState.invalid}>
+                            <OptionSelect
+                              label="Transportadora"
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={(carriers.data ?? []).map((carrier) => ({
+                                value: carrier.id,
+                                label: carrier.name,
+                              }))}
+                              placeholder="Elige la transportadora"
+                              invalid={fieldState.invalid}
+                            />
+                            <FieldError errors={[fieldState.error]} />
+                          </Field>
+                        )}
+                      />
+                      <TextField name="destinationTown" label="Municipio de destino" />
+                      <TextField name="recipientName" label="Destinatario (opcional)" />
+                      <TextField
+                        name="recipientPhone"
+                        label="Teléfono (opcional)"
+                        inputMode="tel"
+                      />
+                    </>
+                  )}
+                  {values.kind === "errand" && (
+                    <Field
+                      data-invalid={Boolean(formState.errors.errandDescription)}
+                      className="sm:col-span-2"
+                    >
+                      <FieldLabel htmlFor="errandDescription">
+                        Descripción de la diligencia
+                        <ChangedMark name="errandDescription" />
+                      </FieldLabel>
+                      <Textarea id="errandDescription" {...register("errandDescription")} />
+                      <FieldError errors={[formState.errors.errandDescription]} />
+                    </Field>
+                  )}
+                </div>
+              </Section>
+
+              <Section number={4} title="Pago y tarifa">
+                <div className="grid items-start gap-x-4 gap-y-3.5 sm:grid-cols-2">
+                  <PaymentModeFields />
+                  <Controller
+                    control={control}
+                    name="serviceLevel"
+                    render={({ field }) => (
+                      <Field>
+                        <FieldLabel>Nivel de servicio</FieldLabel>
+                        <SegmentedControl
+                          label="Nivel de servicio"
                           value={field.value}
                           onChange={field.onChange}
-                          options={(carriers.data ?? []).map((carrier) => ({
-                            value: carrier.id,
-                            label: carrier.name,
+                          options={serviceLevels.map((value) => ({
+                            value,
+                            label: serviceLevelLabels[value],
                           }))}
-                          placeholder="Elige la transportadora"
-                          invalid={fieldState.invalid}
                         />
-                        <FieldError errors={[fieldState.error]} />
                       </Field>
                     )}
                   />
-                  <TextField name="destinationTown" label="Municipio de destino" />
-                  <TextField name="recipientName" label="Destinatario (opcional)" />
-                  <TextField name="recipientPhone" label="Teléfono (opcional)" inputMode="tel" />
-                </>
-              )}
-              {values.kind === "errand" && (
-                <Field data-invalid={Boolean(formState.errors.errandDescription)}>
-                  <FieldLabel htmlFor="errandDescription">Descripción de la diligencia</FieldLabel>
-                  <Textarea id="errandDescription" {...register("errandDescription")} />
-                  <FieldError errors={[formState.errors.errandDescription]} />
-                </Field>
-              )}
-            </FieldGroup>
-          </FieldSet>
-
-          <FieldSet className="rounded-md border border-outline-variant bg-sheet p-6 [&>legend]:float-left [&>legend]:mb-4 [&>legend]:w-full [&>legend]:text-title-m [&>legend+*]:clear-both">
-            <FieldLegend>Pago y tarifa</FieldLegend>
-            <FieldGroup>
-              <PaymentModeFields />
-              <Controller
-                control={control}
-                name="serviceLevel"
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel>Nivel de servicio</FieldLabel>
-                    <SegmentedControl
-                      label="Nivel de servicio"
-                      value={field.value}
-                      onChange={field.onChange}
-                      options={serviceLevels.map((value) => ({
-                        value,
-                        label: serviceLevelLabels[value],
-                      }))}
+                  <div className="border-t border-outline-variant pt-3.5 sm:col-span-2">
+                    <FeeField
+                      calculatedFee={calculatedFee}
+                      needsManualFee={needsManualFee}
+                      quoting={quote.isFetching}
                     />
+                  </div>
+                </div>
+              </Section>
+
+              <Section number={5} title="Detalles">
+                <div className="grid items-start gap-x-4 gap-y-3.5 sm:grid-cols-3">
+                  <Field data-invalid={Boolean(formState.errors.serviceDate)}>
+                    <FieldLabel htmlFor="serviceDate">
+                      Fecha del servicio
+                      <ChangedMark name="serviceDate" />
+                    </FieldLabel>
+                    <Input id="serviceDate" type="date" {...register("serviceDate")} />
+                    <FieldError errors={[formState.errors.serviceDate]} />
                   </Field>
-                )}
-              />
-              <FeeField
-                calculatedFee={calculatedFee}
-                needsManualFee={needsManualFee}
-                quoting={quote.isFetching}
-              />
-            </FieldGroup>
-          </FieldSet>
+                  <div className="sm:col-span-2">
+                    <DeliveryWindowField />
+                  </div>
+                  <Controller
+                    control={control}
+                    name="packageSize"
+                    render={({ field }) => (
+                      <Field>
+                        <OptionSelect
+                          label="Tamaño"
+                          value={field.value}
+                          onChange={field.onChange}
+                          options={packageSizes.map((value) => ({
+                            value,
+                            label: packageSizeLabels[value],
+                          }))}
+                          placeholder="Sin tamaño"
+                        />
+                      </Field>
+                    )}
+                  />
+                  <TextField name="packageCount" label="Unidades" type="number" min={1} />
+                  <TextField name="merchantReference" label="Referencia del cliente" />
+                  <Field className="sm:col-span-3">
+                    <FieldLabel htmlFor="instructions">
+                      Indicaciones
+                      <ChangedMark name="instructions" />
+                    </FieldLabel>
+                    <Textarea id="instructions" {...register("instructions")} />
+                  </Field>
+                </div>
+              </Section>
+            </div>
 
-          <FieldSet className="rounded-md border border-outline-variant bg-sheet p-6 [&>legend]:float-left [&>legend]:mb-4 [&>legend]:w-full [&>legend]:text-title-m [&>legend+*]:clear-both">
-            <FieldLegend>Detalles</FieldLegend>
-            <FieldGroup>
-              <Field data-invalid={Boolean(formState.errors.serviceDate)}>
-                <FieldLabel htmlFor="serviceDate">Fecha del servicio</FieldLabel>
-                <Input id="serviceDate" type="date" {...register("serviceDate")} />
-                <FieldError errors={[formState.errors.serviceDate]} />
-              </Field>
-              <DeliveryWindowField />
-              <div className="grid grid-cols-2 gap-3">
-                <Controller
-                  control={control}
-                  name="packageSize"
-                  render={({ field }) => (
-                    <Field>
-                      <OptionSelect
-                        label="Tamaño"
-                        value={field.value}
-                        onChange={field.onChange}
-                        options={packageSizes.map((value) => ({
-                          value,
-                          label: packageSizeLabels[value],
-                        }))}
-                        placeholder="Sin tamaño"
-                      />
-                    </Field>
-                  )}
-                />
-                <TextField name="packageCount" label="Unidades" type="number" min={1} />
-              </div>
-              <TextField name="merchantReference" label="Referencia del cliente" />
-              <Field>
-                <FieldLabel htmlFor="instructions">Indicaciones</FieldLabel>
-                <Textarea id="instructions" {...register("instructions")} />
-              </Field>
-            </FieldGroup>
-          </FieldSet>
-
-          <div className="flex flex-col gap-3 lg:col-span-2">
-            {(duplicates.data?.length ?? 0) > 0 && (
-              <p
-                role="status"
-                className="rounded-sm bg-warning-container p-3 text-body-m text-on-warning-container"
-              >
-                Posible duplicado: ya hay un envío de este cliente para ese día con{" "}
-                {reference ? "la misma referencia" : "el mismo teléfono"} (
-                {duplicates.data?.map(formatTrackingNumber).join(", ")}).
-              </p>
-            )}
-            {warnings.sunday && (
-              <p
-                role="status"
-                className="rounded-sm bg-warning-container p-3 text-body-m text-on-warning-container"
-              >
-                La fecha del servicio es un domingo.
-              </p>
-            )}
-            {warnings.past && (
-              <p
-                role="status"
-                className="rounded-sm bg-warning-container p-3 text-body-m text-on-warning-container"
-              >
-                La franja de entrega ya pasó.
-              </p>
-            )}
-            {!pending && formState.errors.root && <FieldError errors={[formState.errors.root]} />}
-            {draft.writeFailed && !reviewedPendingRelease && (
-              <div role="alert" className="space-y-2 text-body-m text-error">
-                <p>
-                  Tus datos siguen en pantalla. Reintenta el guardado antes de enviar; si el
-                  almacenamiento sigue fallando, no enviaremos la solicitud.
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    if (
-                      draft.save(
-                        shipmentDraftValues(
-                          values,
-                          pending,
-                          false,
-                          draft.initialValues.baseVersion,
-                        ),
+            <aside
+              aria-label={shipment ? "Cambios del envío" : "Resumen del envío"}
+              className="sticky top-4 flex max-w-95 min-w-0 flex-[1_1_18.75rem] flex-col gap-3 max-[820px]:static max-[820px]:max-w-none max-[820px]:basis-full"
+            >
+              <ShipmentSummary
+                values={values}
+                window={window}
+                today={today}
+                carrier={
+                  carriers.data?.find((carrier) => carrier.id === values.carrierId)?.name ?? null
+                }
+                {...(shipment && { changes })}
+              />
+              {(duplicates.data?.length ?? 0) > 0 && (
+                <Notice>
+                  Posible duplicado: ya hay un envío de este cliente para ese día con{" "}
+                  {reference ? "la misma referencia" : "el mismo teléfono"} (
+                  {duplicates.data?.map(formatTrackingNumber).join(", ")}).
+                </Notice>
+              )}
+              {warnings.sunday && <Notice>La fecha del servicio es un domingo.</Notice>}
+              {warnings.past && <Notice>La franja de entrega ya pasó.</Notice>}
+              {!pending && formState.errors.root && <FieldError errors={[formState.errors.root]} />}
+              {draft.writeFailed && !reviewedPendingRelease && (
+                <div role="alert" className="space-y-2 text-body-m text-error">
+                  <p>
+                    Tus datos siguen en pantalla. Reintenta el guardado antes de enviar; si el
+                    almacenamiento sigue fallando, no enviaremos la solicitud.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (
+                        draft.save(
+                          shipmentDraftValues(
+                            values,
+                            pending,
+                            false,
+                            draft.initialValues.baseVersion,
+                          ),
+                        )
                       )
-                    )
-                      clearErrors("root");
-                  }}
-                >
-                  Reintentar guardado
-                </Button>
+                        clearErrors("root");
+                    }}
+                  >
+                    Reintentar guardado
+                  </Button>
+                </div>
+              )}
+              <div className="flex flex-col gap-2 max-[820px]:hidden">
+                {fieldErrorCount > 0 && (
+                  <FieldCountError count={fieldErrorCount} editing={Boolean(shipment)} />
+                )}
+                {submit("w-full")}
+                {shipment && (
+                  <Link
+                    to="/envios/$trackingNumber"
+                    params={{ trackingNumber: shipment.trackingNumber }}
+                    className={buttonVariants({ variant: "ghost" })}
+                  >
+                    Cancelar
+                  </Link>
+                )}
+                <p className="text-center text-body-s text-on-surface-variant">
+                  El borrador se guarda en este equipo mientras escribes.
+                </p>
               </div>
-            )}
-          </div>
-        </fieldset>
+            </aside>
+          </fieldset>
+        </ChangedFields.Provider>
 
-        <div className="sticky bottom-0 z-10 -mx-1 flex bg-paper/95 px-1 py-4 backdrop-blur lg:col-span-2">
-          <Button
-            type="submit"
-            size="lg"
-            className="self-start"
-            disabled={formState.isSubmitting || pending !== null || draft.writeFailed}
-          >
-            {shipment
-              ? formState.isSubmitting
-                ? "Guardando…"
-                : "Guardar cambios"
-              : formState.isSubmitting
-                ? "Registrando…"
-                : "Registrar envío"}
-          </Button>
+        <div className="sticky bottom-0 z-10 -mx-4 hidden w-[calc(100%+2rem)] flex-col gap-2 border-t border-outline-variant bg-sheet px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-10px_24px_-18px] shadow-scrim/45 max-[820px]:flex">
+          {fieldErrorCount > 0 && (
+            <FieldCountError count={fieldErrorCount} editing={Boolean(shipment)} />
+          )}
+          <div className="flex items-center gap-3">
+            <span className="min-w-0">
+              <span className="block text-body-s text-on-surface-variant">El mensajero cobra</span>
+              <strong className="block font-bold tabular-nums">
+                {formatCop(collectsOf(values))}
+              </strong>
+            </span>
+            {submit("flex-1")}
+          </div>
         </div>
       </form>
 
@@ -1041,6 +1105,151 @@ function ShipmentFormBody({
   );
 }
 
+/** A numbered section of the form (approved "Nuevo envío" proposal). */
+function Section({
+  number,
+  title,
+  children,
+}: {
+  number: number;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <FieldSet className="min-w-0 gap-0 rounded-lg border border-outline-variant bg-sheet px-5 pt-4 pb-5 max-[820px]:px-4 [&>legend]:float-left [&>legend]:mb-3.5 [&>legend]:w-full [&>legend+*]:clear-both">
+      <FieldLegend className="text-title-l text-on-surface">
+        <span
+          aria-hidden="true"
+          className="mr-2.5 inline-grid size-6 place-items-center rounded-[7px] bg-surface-container-high align-[2px] text-label-m font-bold text-on-surface"
+        >
+          {number}
+        </span>
+        {title}
+      </FieldLegend>
+      {children}
+    </FieldSet>
+  );
+}
+
+/** What a registered shipment keeps: its kind and its client. */
+function Locked({ children }: { children: ReactNode }) {
+  return (
+    <p className="flex min-h-12 items-center gap-2 text-body-l font-semibold text-on-surface">
+      <Icon symbol={LockIcon} size={20} className="text-on-surface-variant" />
+      {children}
+      <span className="sr-only"> (no cambia después de registrar)</span>
+    </p>
+  );
+}
+
+function Notice({ children }: { children: ReactNode }) {
+  return (
+    <p
+      role="status"
+      className="flex gap-2.5 rounded-md bg-warning-container p-3 text-body-m text-on-warning-container"
+    >
+      <Icon symbol={WarningIcon} size={20} />
+      <span>{children}</span>
+    </p>
+  );
+}
+
+/** "Revisa los 3 campos marcados antes de registrar." next to the button. */
+function FieldCountError({ count, editing }: { count: number; editing: boolean }) {
+  return (
+    <p role="alert" className="flex items-start gap-1.5 text-label-m text-error">
+      <Icon symbol={ErrorIcon} size={20} />
+      Revisa {count === 1 ? "el campo marcado" : `los ${String(count)} campos marcados`} antes de{" "}
+      {editing ? "guardar" : "registrar"}.
+    </p>
+  );
+}
+
+const changeLabels: [keyof ShipmentFormValues, string][] = [
+  ["pickupPointId", "Punto de recogida"],
+  ["pickupAddress", "Dirección de recogida"],
+  ["pickupNeighborhood", "Barrio de recogida"],
+  ["recipientName", "Destinatario"],
+  ["recipientPhone", "Teléfono"],
+  ["recipientAddress", "Dirección"],
+  ["recipientNeighborhood", "Barrio"],
+  ["handoffPlace", "Punto de entrega a transportadora"],
+  ["carrierId", "Transportadora"],
+  ["destinationTown", "Municipio de destino"],
+  ["errandDescription", "Descripción de la diligencia"],
+  ["paymentMode", "Modalidad de pago"],
+  ["codAmount", "Valor a recaudar"],
+  ["serviceLevel", "Nivel de servicio"],
+  ["fee", "Tarifa"],
+  ["feeOverrideReason", "Motivo de la tarifa"],
+  ["serviceDate", "Fecha del servicio"],
+  ["window", "Franja de entrega"],
+  ["packageSize", "Tamaño"],
+  ["packageCount", "Unidades"],
+  ["merchantReference", "Referencia del cliente"],
+  ["instructions", "Indicaciones"],
+];
+
+/**
+ * What the dispatcher changed against the registered shipment, field by field, as the summary
+ * lists it ("antes → ahora"); the same fields carry "Cambiado" in the form. Nothing here
+ * decides what is saved: the form sends its values as before.
+ */
+function shipmentChanges(
+  before: ShipmentFormValues,
+  after: ShipmentFormValues,
+  names: { carriers: { id: string; name: string }[]; points: { id: string; label: string }[] },
+): (FormChange & { field: string })[] {
+  const windowText = (values: ShipmentFormValues) => {
+    try {
+      const preset = windowPresetOf(values);
+      const window = preset ? windowFromPreset(values.serviceDate, preset) : null;
+      return (
+        formatWindow(
+          window?.windowStart?.toISOString() ?? null,
+          window?.windowEnd?.toISOString() ?? null,
+        ) ?? "Sin franja"
+      );
+    } catch {
+      return "Franja incompleta";
+    }
+  };
+  const show = (key: keyof ShipmentFormValues, values: ShipmentFormValues): string => {
+    const value = values[key];
+    switch (key) {
+      case "pickupPointId":
+        return values.pickupPointId === null
+          ? "Otra dirección"
+          : (names.points.find((point) => point.id === values.pickupPointId)?.label ??
+              "Punto de recogida");
+      case "pickupNeighborhood":
+      case "recipientNeighborhood":
+      case "handoffPlace":
+        return values[key]?.name ?? "—";
+      case "carrierId":
+        return names.carriers.find((carrier) => carrier.id === values.carrierId)?.name ?? "—";
+      case "paymentMode":
+        return paymentModeLabels[values.paymentMode];
+      case "serviceLevel":
+        return serviceLevelLabels[values.serviceLevel];
+      case "codAmount":
+      case "fee":
+        return formatCop(values[key] ?? 0);
+      case "serviceDate":
+        return values.serviceDate ? formatDate(values.serviceDate) : "—";
+      case "window":
+        return windowText(values);
+      case "packageSize":
+        return values.packageSize ? packageSizeLabels[values.packageSize] : "Sin tamaño";
+      default:
+        return typeof value === "string" && value.trim() ? value : "—";
+    }
+  };
+  return changeLabels
+    .filter(([key]) => show(key, before) !== show(key, after))
+    .map(([key, label]) => ({ field: key, label, from: show(key, before), to: show(key, after) }));
+}
+
 type TextFieldName =
   | "recipientName"
   | "recipientPhone"
@@ -1058,7 +1267,10 @@ function TextField({
   const error = formState.errors[name];
   return (
     <Field data-invalid={Boolean(error)}>
-      <FieldLabel htmlFor={name}>{label}</FieldLabel>
+      <FieldLabel htmlFor={name}>
+        {label}
+        <ChangedMark name={name} />
+      </FieldLabel>
       <Input id={name} aria-invalid={Boolean(error)} {...props} {...register(name)} />
       <FieldError errors={[error]} />
     </Field>

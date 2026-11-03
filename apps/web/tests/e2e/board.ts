@@ -24,3 +24,15 @@ export async function showEveryShipment(page: Page) {
   const more = page.getByRole("button", { name: /^Ver los \d+ envíos$/ });
   if ((await more.count()) > 0) await more.click();
 }
+
+/**
+ * "Por resolver" lists five items first (feature 006, FR-018); a spec looking for one opens
+ * the rest, since every spec shares the day and its exceptions.
+ */
+export async function showEveryAttention(page: Page) {
+  const section = page.getByRole("region", { name: /^Por resolver/ });
+  await expect(section).toBeVisible();
+  const more = section.getByRole("button", { name: /^Ver los \d+$/ });
+  if ((await more.count()) > 0) await more.click();
+  return section;
+}

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCop } from "@/lib/format";
+import { ChangedMark } from "./changed-mark";
 import type { ShipmentFormValues } from "./form-values";
 
 /**
@@ -36,7 +37,10 @@ export function FeeField({
         name="fee"
         render={({ field, fieldState }) => (
           <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor="fee">Tarifa</FieldLabel>
+            <FieldLabel htmlFor="fee">
+              Tarifa
+              <ChangedMark name="fee" />
+            </FieldLabel>
             {manual ? (
               <MoneyInput
                 id="fee"

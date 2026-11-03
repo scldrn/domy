@@ -4,9 +4,10 @@ import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { cn } from "@/lib/cn";
 
 /**
- * M3 segmented button for one choice among a few (kind, payment mode, service level): 40 px
- * high with a 48 px touch target and a check on the selected segment. On phones the segments
- * become a two-column grid; up to tablet width they share the row and their labels wrap.
+ * M3 segmented button for one choice among a few (payment mode, service level): segments on a
+ * `sheet-alt` track, the selected one filled in `on-surface` with a check (feature 006,
+ * approved "Nuevo envío" proposal). 40 px high with a 48 px touch target; the segments wrap
+ * when the row is narrow.
  */
 export function SegmentedControl<T extends string>({
   value,
@@ -29,13 +30,16 @@ export function SegmentedControl<T extends string>({
         const next = values.find((item) => item !== value) as T | undefined;
         if (next) onChange(next);
       }}
-      className={cn("grid w-full grid-cols-2 gap-1 sm:flex sm:gap-0 md:w-fit", className)}
+      className={cn(
+        "flex w-full flex-wrap gap-1 rounded-md border border-outline-variant bg-sheet-alt p-1",
+        className,
+      )}
     >
       {options.map((option) => (
         <Toggle
           key={option.value}
           value={option.value}
-          className="state-layer flex min-h-10 min-w-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-sm border border-outline px-3 py-1.5 text-center text-label-l text-on-surface outline-none before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] focus-visible:z-10 data-pressed:bg-secondary-container data-pressed:text-on-secondary-container sm:-ml-px sm:rounded-none sm:first:ml-0 sm:first:rounded-l-sm sm:last:rounded-r-sm md:flex-none md:px-4 md:whitespace-nowrap"
+          className="relative flex min-h-10 flex-[1_1_auto] cursor-pointer items-center justify-center gap-2 rounded-sm px-3.5 py-1.5 text-center text-label-l whitespace-nowrap text-on-surface-variant outline-none before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] hover:bg-surface-container-high hover:text-on-surface focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-strong data-pressed:bg-on-surface data-pressed:text-surface"
         >
           <CheckIcon className="hidden size-[1.125rem] shrink-0 in-data-pressed:block" />
           {option.label}
