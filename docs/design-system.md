@@ -288,15 +288,16 @@ spec.
 | Product name | Domy (company: Cohex, shown as operator and support contact) |
 | Seed color | Pizarra `#34495E` (§3.1); accent verde azulado `#1F7A8C` |
 | Logo direction | **"Route d"**: a geometric lowercase "d" drawn as a route that starts at one point (pickup) and closes at another (delivery). No sector clichés (scooter, box, map pin, speed arrows). |
-| Wordmark | Lowercase "domy" in an open-license geometric sans (Manrope or Plus Jakarta Sans), customized. Until the artwork exists, the interface shows the name as text in Archivo at 125 % width; the UI itself is set in Archivo (§4). |
+| Wordmark | Lowercase "domy" drawn, not typeset: the symbol is its d, and "omy" continues at the same stroke weight, with the same round ends, and in one color, ending in a solid point on the tail of the y. It takes the current text color (`text-on-rail` on the rail, `text-primary` on light surfaces). The collapsed rail shows only the symbol. The UI itself is set in Archivo (§4). |
 | App icon | White symbol on the seed color |
-| Status | Direction approved 2026-09-30; symbol artwork chosen by the owner 2026-11-02 (option A). `pnpm icons` draws every asset from it. The customized wordmark is pending; the interface keeps the text wordmark |
+| Status | Direction approved 2026-09-30; symbol artwork chosen by the owner 2026-11-02 (option A). wordmark chosen by the owner 2026-11-02 (option 1, one color from the d to the y). `pnpm icons` draws every asset from it |
 
 Required brand assets:
 
 | Asset | Size | Use |
 | --- | --- | --- |
 | Master logo | SVG | Source for every other asset |
+| Wordmark | SVG, `apps/web/src/assets/brand/` in the current text color, `public/icons/wordmark.svg` in the seed color | The interface's headers and the link preview |
 | Favicon | SVG | Browser tab |
 | App icons | PNG 192 and 512, purpose `any` | PWA install |
 | Maskable icon | PNG 512, symbol inside the central 409 px circle, separate file | Android adaptive shapes |

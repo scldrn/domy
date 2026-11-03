@@ -19,6 +19,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Icon, type Symbol } from "@/components/icon";
+import { Wordmark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { sessionQuery, signOut } from "@/features/auth/session";
 import {
@@ -244,9 +245,7 @@ function CourierLayout() {
       </a>
       <header className="sticky top-0 z-20 border-b border-outline-variant bg-surface-container">
         <div className="mx-auto flex h-16 w-full max-w-xl items-center gap-1 pr-2 pl-4">
-          <span className="mr-auto text-[1.5rem] leading-none font-bold tracking-[-0.02em] text-primary [font-stretch:125%]">
-            domy
-          </span>
+          <Wordmark className="mr-auto h-10 w-fit text-primary" />
           <Button
             variant="ghost"
             size="icon"

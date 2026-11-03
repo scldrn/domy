@@ -43,6 +43,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { Icon, type Symbol } from "@/components/icon";
+import { LogoSymbol, Wordmark } from "@/components/logo";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -254,15 +255,11 @@ function PanelLayout() {
           <Link
             to="/"
             aria-label="Domy, ir al tablero"
-            className="flex w-fit flex-col gap-1 rounded-sm text-on-rail"
+            className="flex w-fit flex-col rounded-sm text-on-rail"
           >
-            <span className="text-[1.75rem] leading-none font-bold tracking-[-0.02em] [font-stretch:125%] group-data-[collapsible=icon]:hidden">
-              domy
-            </span>
-            <span className="hidden text-[1.75rem] leading-none font-bold [font-stretch:125%] group-data-[collapsible=icon]:block">
-              d
-            </span>
-            <span className="text-body-s text-on-rail-variant group-data-[collapsible=icon]:hidden">
+            <Wordmark className="h-12.5 w-fit group-data-[collapsible=icon]:hidden" />
+            <LogoSymbol className="hidden h-9 w-fit group-data-[collapsible=icon]:block" />
+            <span className="-mt-2.5 text-body-s text-on-rail-variant group-data-[collapsible=icon]:hidden">
               de Cohex
             </span>
           </Link>
