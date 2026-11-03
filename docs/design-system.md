@@ -290,7 +290,7 @@ spec.
 | Logo direction | **"Route d"**: a geometric lowercase "d" drawn as a route that starts at one point (pickup) and closes at another (delivery). No sector clichés (scooter, box, map pin, speed arrows). |
 | Wordmark | Lowercase "domy" in an open-license geometric sans (Manrope or Plus Jakarta Sans), customized. Until the artwork exists, the interface shows the name as text in Archivo at 125 % width; the UI itself is set in Archivo (§4). |
 | App icon | White symbol on the seed color |
-| Status | Direction approved 2026-09-30; artwork pending |
+| Status | Direction approved 2026-09-30; symbol artwork chosen by the owner 2026-11-02 (option A). `pnpm icons` draws every asset from it. The customized wordmark is pending; the interface keeps the text wordmark |
 
 Required brand assets:
 

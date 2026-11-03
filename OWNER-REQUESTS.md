@@ -208,15 +208,11 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
     las fotos. `scripts/backup.sh` y `scripts/restore.sh` existen y están probados, pero no se
     programan solos. Detalle en `docs/verificacion-despliegue.md`.
 
-## Decisiones visuales (son tuyas)
-
-8. **El logo definitivo**: la dirección «route d» está aprobada (design-system.md §11), pero
-   falta el arte. Mientras tanto, los íconos de la app son el texto provisional «domy».
-
 ## Resueltas
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-11-02 | ¿Qué logo «route d» se usa? (pregunta 8) | «Elijo el logo A», la curva cerrada. Íconos, favicon y vista previa generados con `pnpm icons`; el nombre en la interfaz sigue como texto |
 | 2026-11-02 | ¿Qué hacemos con los avisos de una fecha futura? (pregunta 10) | «Usa tus recomendaciones»: se limitan a hoy o antes (004/T037) |
 | 2026-11-02 | ¿Qué tarifa tienen Caldas y Girardota? (pregunta 4) | «Usa tus recomendaciones»: siguen con tarifa manual y motivo, marcadas «Tarifa por revisar», hasta que el cliente las dé |
 | 2026-11-02 | ¿Aceptar el riesgo de `glob` y `minimatch`, avisos moderados que solo trae un plugin de Sentry que el servidor no carga? | «Sí, lo acepto». Revisar cuando Sentry publique una versión sin ellos |
