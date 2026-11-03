@@ -13,6 +13,7 @@ export * from "./shipment-flags.ts";
 export * from "./schemas/board.ts";
 export * from "./dispatch-board.ts";
 export * from "./attention.ts";
+export * from "./board-stages.ts";
 export * from "./route-stop-marks.ts";
 export * from "./bulk-rows.ts";
 export * from "./schemas/bulk.ts";

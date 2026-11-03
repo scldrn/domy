@@ -95,4 +95,14 @@ describe("daySentence", () => {
     });
     expect(segments).toContainEqual({ text: "2 están atrasados", strong: true, tone: "error" });
   });
+
+  it("marks the at-risk count in its own tone (feature 006, design-system.md §8)", () => {
+    const segments = daySentence({
+      isToday: true,
+      shipments: [shipment("picked_up", { windowEnd: "2026-10-01T16:00:00Z" })],
+      pending: [],
+      now,
+    });
+    expect(segments).toContainEqual({ text: "1", strong: true, tone: "warning" });
+  });
 });

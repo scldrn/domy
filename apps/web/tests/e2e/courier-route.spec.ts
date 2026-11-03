@@ -1,6 +1,7 @@
 import { formatTrackingNumber, type RouteDetail, type Shipment } from "@domy/domain";
 import type { Page } from "@playwright/test";
 import { register } from "./api";
+import { showEveryShipment } from "./board";
 import { expect, test } from "./fixtures";
 
 /**
@@ -172,6 +173,7 @@ test("carries out a route from the phone (scenarios 2–7)", async ({
 
   // The dispatch board sees each record once, with its flags (FR-033).
   await office.goto("/");
+  await showEveryShipment(office);
   const row = (shipment: Shipment) => office.getByRole("row").filter({ hasText: guide(shipment) });
   await expect(row(short)).toContainText("Entregado");
   await expect(row(short)).toContainText("Sin foto");

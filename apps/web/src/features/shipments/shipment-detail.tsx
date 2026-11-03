@@ -144,12 +144,25 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-/** A shipment with every recorded value and its history (FR-016). */
-export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
+/**
+ * A shipment with every recorded value and its history (FR-016). As a `panel` it fills the
+ * board's side panel (feature 006, FR-019): the panel's header carries the tracking number
+ * and state, so only the marks, the actions, and one column of sections remain;
+ * `initialAction` opens the reassign dialog straight away ("Reasignar" in "Por resolver").
+ */
+export function ShipmentDetail({
+  shipment,
+  variant = "page",
+  initialAction,
+}: {
+  shipment: ShipmentDetailData;
+  variant?: "page" | "panel";
+  initialAction?: "reassign";
+}) {
   const { user } = panelRoute.useRouteContext();
   const queryClient = useQueryClient();
   const historyId = useId();
-  const [reassigning, setReassigning] = useState(false);
+  const [reassigning, setReassigning] = useState(initialAction === "reassign");
   async function copyTrackingLink() {
     try {
       const origin = publicOriginSchema.parse(import.meta.env.PUBLIC_BASE_URL);
@@ -168,6 +181,7 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["shipment", shipment.trackingNumber] });
     await queryClient.invalidateQueries({ queryKey: ["routes-board"] });
+    await queryClient.invalidateQueries({ queryKey: ["board"] });
   };
   // A shipment on a route can move to another one (feature 002, FR-014): a planned one with its
   // stops, or a picked-up one through a handover (DESIGN-1). Unlike the server, the detail does
@@ -178,61 +192,75 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
   const recipientPlace = shipment.recipientNeighborhood
     ? `${shipment.recipientNeighborhood.name}, ${shipment.recipientNeighborhood.municipality}`
     : null;
-  return (
-    <div className="flex max-w-5xl flex-col gap-6">
-      <PageHeader
-        title={<span className="guia">{formatTrackingNumber(shipment.trackingNumber)}</span>}
-        description={`${shipment.merchant.name} · ${formatDate(shipment.serviceDate)}`}
-        actions={
-          <>
-            {(user.role === "owner" || user.role === "dispatcher") && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  void copyTrackingLink();
-                }}
-              >
-                Copiar enlace de seguimiento
-              </Button>
-            )}
-            <ExceptionActions shipment={shipment} />
-            <ClearReviewDialog shipment={shipment} />
-            <RecordOnBehalfDialog shipment={shipment} />
-            {shipment.feeNeedsReview && user.role === "owner" && (
-              <ConfirmFeeDialog shipment={shipment} />
-            )}
-            {movable && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setReassigning(true);
-                }}
-              >
-                Reasignar
-              </Button>
-            )}
-            {canVoid(shipment.status) && <VoidDialog shipment={shipment} />}
-            {isEditable(shipment.status) && (
-              <Link
-                to="/envios/$trackingNumber/editar"
-                params={{ trackingNumber: shipment.trackingNumber }}
-                className={buttonVariants()}
-              >
-                Editar
-              </Link>
-            )}
-          </>
-        }
-      >
-        <ShipmentStatusMark status={shipment.status} />
+  const actions = (
+    <>
+      {(user.role === "owner" || user.role === "dispatcher") && (
+        <Button
+          variant="outline"
+          onClick={() => {
+            void copyTrackingLink();
+          }}
+        >
+          Copiar enlace de seguimiento
+        </Button>
+      )}
+      <ExceptionActions shipment={shipment} />
+      <ClearReviewDialog shipment={shipment} />
+      <RecordOnBehalfDialog shipment={shipment} />
+      {shipment.feeNeedsReview && user.role === "owner" && <ConfirmFeeDialog shipment={shipment} />}
+      {movable && (
+        <Button
+          variant="outline"
+          onClick={() => {
+            setReassigning(true);
+          }}
+        >
+          Reasignar
+        </Button>
+      )}
+      {canVoid(shipment.status) && <VoidDialog shipment={shipment} />}
+      {isEditable(shipment.status) && (
+        <Link
+          to="/envios/$trackingNumber/editar"
+          params={{ trackingNumber: shipment.trackingNumber }}
+          className={buttonVariants()}
+        >
+          Editar
+        </Link>
+      )}
+    </>
+  );
+  const badges =
+    (shipment.returnDecided && shipment.status === "exception") ||
+    shipment.heldAtOffice ||
+    shipment.feeNeedsReview ? (
+      <>
         {shipment.returnDecided && shipment.status === "exception" && (
           <Badge variant="warning">Devolución en curso</Badge>
         )}
         {shipment.heldAtOffice && <Badge variant="outline">En oficina</Badge>}
         {shipment.feeNeedsReview && <Badge variant="warning">Tarifa por revisar</Badge>}
-      </PageHeader>
+      </>
+    ) : null;
+  return (
+    <div className="flex max-w-5xl flex-col gap-6">
+      {variant === "page" ? (
+        <PageHeader
+          title={<span className="guia">{formatTrackingNumber(shipment.trackingNumber)}</span>}
+          description={`${shipment.merchant.name} · ${formatDate(shipment.serviceDate)}`}
+          actions={actions}
+        >
+          <ShipmentStatusMark status={shipment.status} />
+          {badges}
+        </PageHeader>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {badges && <div className="flex flex-wrap items-center gap-2">{badges}</div>}
+          <div className="flex flex-wrap items-center gap-2">{actions}</div>
+        </div>
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={variant === "page" ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}>
         <Section title="Cliente y recogida">
           <Row label="Cliente">{shipment.merchant.name}</Row>
           <Row label="Tipo">{shipmentKindLabels[shipment.kind]}</Row>
@@ -369,6 +397,16 @@ export function ShipmentDetail({ shipment }: { shipment: ShipmentDetailData }) {
           ))}
         </ol>
       </section>
+
+      {variant === "panel" && (
+        <Link
+          to="/envios/$trackingNumber"
+          params={{ trackingNumber: shipment.trackingNumber }}
+          className="w-fit rounded-xs text-label-l text-on-surface underline decoration-outline-variant underline-offset-4 hover:decoration-current"
+        >
+          Abrir la página del envío
+        </Link>
+      )}
 
       {reassigning && shipment.route && (
         <ReassignShipmentDialog

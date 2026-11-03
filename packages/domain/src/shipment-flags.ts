@@ -31,7 +31,8 @@ export const shipmentFlagLabels: Record<ShipmentFlagKind, string> = {
   late: "Atrasado",
 };
 
-function duration(minutes: number): string {
+/** "17 min", "1 h 5 min", "2 días": how long a flag or a wait has lasted. */
+export function formatDuration(minutes: number): string {
   if (minutes > dayMinutes) {
     const days = Math.floor(minutes / dayMinutes);
     return days === 1 ? "1 día" : `${String(days)} días`;
@@ -42,7 +43,7 @@ function duration(minutes: number): string {
 }
 
 export function flagLabel(flag: ShipmentFlag): string {
-  const time = duration(flag.minutes);
+  const time = formatDuration(flag.minutes);
   return `${shipmentFlagLabels[flag.kind]} · ${flag.kind === "at_risk" ? `quedan ${time}` : time}`;
 }
 

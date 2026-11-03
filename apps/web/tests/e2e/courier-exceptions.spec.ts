@@ -1,6 +1,7 @@
 import { formatTrackingNumber, type Shipment, type ShipmentDetail } from "@domy/domain";
 import type { Page } from "@playwright/test";
 import { register } from "./api";
+import { boardRow, showEveryShipment } from "./board";
 import { dispatch, ownSession, workerControls, openStop, deliver } from "./courier";
 import { accessibilityViolations, expect, test } from "./fixtures";
 
@@ -11,13 +12,6 @@ const card = (page: Page, shipment: Shipment) =>
     .filter({
       has: page.getByText(formatTrackingNumber(shipment.trackingNumber), { exact: true }),
     });
-const boardRow = (page: Page, shipment: Shipment) =>
-  page.getByRole("row").filter({
-    has: page.getByRole("link", {
-      name: formatTrackingNumber(shipment.trackingNumber),
-      exact: true,
-    }),
-  });
 
 /** Check the center and edges, not just a visible bounding box (T101). */
 function targetIsUncovered(element: Element): boolean {
@@ -227,6 +221,7 @@ test("reports and replaces a pickup problem, clears it upon pickup and reviews a
   await expect(card(page, problem)).toContainText("Problema de recogida: El pedido no está listo");
   await expectSynchronized(page);
   await office.goto("/");
+  await showEveryShipment(office);
   await expect(boardRow(office, problem)).toContainText("Problema de recogida");
   await reportProblem(page, problem, "El cliente está cerrando");
   await expect(card(page, problem)).toContainText("El cliente está cerrando");
@@ -235,6 +230,7 @@ test("reports and replaces a pickup problem, clears it upon pickup and reviews a
   await expect(card(page, problem)).not.toContainText("Problema de recogida");
   await expectSynchronized(page);
   await office.reload();
+  await showEveryShipment(office);
   await expect(boardRow(office, problem)).not.toContainText("Problema de recogida");
   await card(page, failed).getByRole("button", { name: "Confirmar recogida" }).click();
   await expectSynchronized(page);
@@ -273,10 +269,11 @@ test("reports and replaces a pickup problem, clears it upon pickup and reviews a
   await expect(sheet).not.toBeVisible();
   await expectSynchronized(page);
   await office.reload();
-  const section = office.getByRole("region", { name: /Novedades por decidir/ });
+  await showEveryShipment(office);
+  const section = office.getByRole("region", { name: /^Por resolver/ });
   await expect(
-    section.getByRole("link", { name: formatTrackingNumber(failed.trackingNumber), exact: true }),
-  ).toBeVisible();
+    section.getByRole("listitem").filter({ hasText: formatTrackingNumber(failed.trackingNumber) }),
+  ).toContainText("Novedad por decidir");
   await expect(boardRow(office, failed)).toHaveCount(1);
   await expect(boardRow(office, failed)).toContainText("Novedad");
   await office.goto(`/envios/${failed.trackingNumber}`);
@@ -308,6 +305,7 @@ test("keeps a reported errand pending and clears its problem after completion", 
   await reportProblem(page, errand, "La oficina está cerrada");
   await expect(card(page, errand)).toContainText("Problema de recogida: La oficina está cerrada");
   await office.goto("/");
+  await showEveryShipment(office);
   await expect(boardRow(office, errand)).toContainText("Problema de recogida");
   await page.getByRole("button", { name: "Completar diligencia" }).click();
   const sheet = page.getByRole("dialog");
@@ -317,6 +315,7 @@ test("keeps a reported errand pending and clears its problem after completion", 
   await expect(sheet).not.toBeVisible();
   await expectSynchronized(page);
   await office.reload();
+  await showEveryShipment(office);
   await expect(boardRow(office, errand)).toContainText("Entregado");
   await expect(boardRow(office, errand)).not.toContainText("Problema de recogida");
 });
@@ -394,11 +393,13 @@ test("reopens offline with pickups, delivery and exception, then synchronizes on
     expect.objectContaining({ cashAmount: 85_000 }),
   ]);
   await office.goto("/");
+  await showEveryShipment(office);
   await expect(
     office
-      .getByRole("region", { name: /Novedades por decidir/ })
-      .getByRole("link", { name: formatTrackingNumber(failed.trackingNumber), exact: true }),
-  ).toBeVisible();
+      .getByRole("region", { name: /^Por resolver/ })
+      .getByRole("listitem")
+      .filter({ hasText: formatTrackingNumber(failed.trackingNumber) }),
+  ).toContainText("Novedad por decidir");
   await expect(boardRow(office, delivered)).toContainText("Entregado");
   await office.goto(`/envios/${failed.trackingNumber}`);
   await expect(office.getByRole("img", { name: "Foto de la novedad" })).toBeVisible();
