@@ -154,6 +154,24 @@ async function copyMessage(page: Page, card: ReturnType<typeof merchantCard>): P
   return page.evaluate(() => navigator.clipboard.readText());
 }
 
+test("keeps the date on today or earlier (FR-015, US2 scenario 8)", async ({
+  dispatcherPage: page,
+}) => {
+  await page.setViewportSize(viewport);
+  const date = page.getByLabel("Fecha de los envíos");
+
+  // The end-to-end clock is fixed on 2026-10-01 (global-setup).
+  await page.goto("/notificar?date=2026-10-05");
+  await expect(date).toHaveValue("2026-10-01");
+  await expect(date).toHaveAttribute("max", "2026-10-01");
+
+  await date.fill("2026-10-02");
+  await expect(date).toHaveValue("2026-10-01");
+  await date.fill("2026-09-30");
+  await expect(date).toHaveValue("2026-09-30");
+  await expect(page).toHaveURL(/date=2026-09-30/u);
+});
+
 test("opens WhatsApp in one tap, marks included shipments, and copies new-only or all-date messages", async ({
   dispatcherPage: page,
 }) => {

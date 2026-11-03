@@ -167,3 +167,12 @@ describe("notification boundary schemas", () => {
     ).toContain("No repitas el mismo envío.");
   });
 });
+
+describe("isFutureServiceDate (FR-015)", () => {
+  it("allows today and earlier days and refuses later ones", () => {
+    expect(domain.isFutureServiceDate("2026-10-01", "2026-10-01")).toBe(false);
+    expect(domain.isFutureServiceDate("2026-09-30", "2026-10-01")).toBe(false);
+    expect(domain.isFutureServiceDate("2026-10-02", "2026-10-01")).toBe(true);
+    expect(domain.isFutureServiceDate("2027-01-01", "2026-12-31")).toBe(true);
+  });
+});

@@ -5,7 +5,7 @@ import { accessibilityViolations, expect, test } from "./fixtures";
 import { webPort } from "./ports";
 
 const serviceDate = "2026-10-01";
-const emptyNotificationDate = "2099-01-01";
+const emptyNotificationDate = "2026-08-15";
 const viewportHeight = 800;
 const publicOrigin = `http://127.0.0.1:${String(webPort)}`;
 const supportPhone = "3015550123";

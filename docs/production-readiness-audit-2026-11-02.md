@@ -61,6 +61,9 @@ The owner approved correcting every blocker on 2026-11-02.
 | A-6 | PR #44 |
 | C003-5 | 003/T138. Conforms to FR-023; no code change |
 
+Owner decisions of 2026-11-02: notices limited to today or earlier (004/T037); Caldas and Girardota
+stay on the manual fee. Still open with the owner: confirming Amy Tecnology's rates and the final logo.
+
 Final-candidate rehearsal: arm64 image, fresh stack and browser journey, including offline reopening,
 offline delivery with a photo and one applied delivery after reconnecting.
 
@@ -77,7 +80,7 @@ but they block go-live under the constitution and quote:
   again, and the failed iPhone offline reopening is an open defect until retested on a trusted
   certificate. C003-5 also reopens: the phone deletes personal data after 24 hours only when it
   synchronizes (FR-023).
-- Decisions and data in `OWNER-REQUESTS.md`: rates (3, 4), courier consent (5), bucket (6),
-  dispatcher timings (7), future-dated notices (10), platform and backups (11), logo (8).
+- Decisions and data in `OWNER-REQUESTS.md`: rates (3), courier consent (5), bucket (6),
+  dispatcher timings (7), platform and backups (11), logo (8).
 - The quote promises automatic backups. The scripts exist; nothing schedules them or copies
   photos. There is also no CD workflow.

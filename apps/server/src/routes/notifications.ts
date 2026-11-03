@@ -1,5 +1,6 @@
 import {
   bogotaToday,
+  isFutureServiceDate,
   notificationListQuery,
   notificationListSchema,
   notificationMarkInput,
@@ -28,7 +29,9 @@ export const notificationRoutes = new Hono<AppEnv>()
   .use(requireRole("owner", "dispatcher"))
   .get("/", validate("query", notificationListQuery), async (c) => {
     const { date: requestedDate } = c.req.valid("query");
-    const date = requestedDate ?? bogotaToday(c.get("clock")());
+    const today = bogotaToday(c.get("clock")());
+    const date = requestedDate ?? today;
+    if (isFutureServiceDate(date, today)) throw new AppError("notification_date_in_future");
     const rows = await c
       .get("db")
       .select({

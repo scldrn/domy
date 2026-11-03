@@ -16,6 +16,11 @@ const notificationDate = z
 /** `GET /api/notifications?date=...`; the caller supplies today's Bogotá date when omitted. */
 export const notificationListQuery = z.strictObject({ date: notificationDate.optional() });
 
+/** "Notificar clientes" works with today or earlier: the merchant page has no future day (FR-015). */
+export function isFutureServiceDate(date: string, today: string): boolean {
+  return date > today;
+}
+
 /** The minimum shipment row needed to compose a merchant message (FR-015/FR-016, R8). */
 export const notificationShipmentSchema = z.strictObject({
   id: z.uuid("El identificador del envío no es válido."),
