@@ -1,6 +1,7 @@
 import {
   removeShipmentFromStops,
   routeProgress,
+  routeStopMarks,
   safeIntegerCop,
   shipmentFlag,
   shipmentPlaces,
@@ -485,14 +486,23 @@ export async function loadRouteSummaries(
   if (rows.length === 0) return [];
   const ids = rows.map(({ route }) => route.id);
   const stops = await db
-    .select({ id: routeStops.id, routeId: routeStops.routeId })
+    .select({
+      id: routeStops.id,
+      routeId: routeStops.routeId,
+      position: routeStops.position,
+      kind: routeStops.kind,
+    })
     .from(routeStops)
     .where(inArray(routeStops.routeId, ids));
   const tasks =
     stops.length === 0
       ? []
       : await db
-          .select({ stopId: routeTasks.stopId, status: routeTasks.status })
+          .select({
+            stopId: routeTasks.stopId,
+            status: routeTasks.status,
+            completedAt: routeTasks.completedAt,
+          })
           .from(routeTasks)
           .where(
             inArray(
@@ -520,11 +530,10 @@ export async function loadRouteSummaries(
     .where(isNull(courierNotices.acknowledgedAt))
     .groupBy(courierNotices.courierId);
   return rows.map(({ route, courier, lastSyncedAt }) => {
-    const progress = routeProgress(
-      stops
-        .filter((stop) => stop.routeId === route.id)
-        .map((stop) => ({ tasks: tasks.filter((task) => task.stopId === stop.id) })),
-    );
+    const routeStopsWithTasks = stops
+      .filter((stop) => stop.routeId === route.id)
+      .map((stop) => ({ ...stop, tasks: tasks.filter((task) => task.stopId === stop.id) }));
+    const progress = routeProgress(routeStopsWithTasks);
     const flags = carried
       .filter((shipment) => shipment.routeId === route.id)
       .map((shipment) => shipmentFlag(shipment, now)?.kind);
@@ -540,6 +549,8 @@ export async function loadRouteSummaries(
       atRiskCount: flags.filter((kind) => kind === "at_risk").length,
       lateCount: flags.filter((kind) => kind === "late").length,
       pendingHandovers: waiting.find((row) => row.routeId === route.id)?.count ?? 0,
+      // The board's courier progress (feature 006, FR-018, research R5).
+      stopMarks: routeStopMarks(routeStopsWithTasks),
       courierLastSyncedAt: lastSyncedAt?.toISOString() ?? null,
       unacknowledgedNotices: unseen.find((row) => row.courierId === route.courierId)?.count ?? 0,
     };

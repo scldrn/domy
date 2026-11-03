@@ -39,10 +39,19 @@ export type BoardShipment = {
   courier: { id: string; name: string } | null;
 };
 
-/** A shipment on the board, with the flags of its courier records (feature 003, FR-033). */
+/**
+ * A shipment on the board, with the flags of its courier records (feature 003, FR-033) and
+ * the handover still waiting for the receiving courier, if any (feature 006, FR-018).
+ */
 export type BoardEntry = BoardShipment & {
   recordFlags: RecordFlagKind[];
   returnDecided: boolean;
+  pendingHandover: {
+    id: string;
+    fromCourier: { id: string; name: string };
+    toCourier: { id: string; name: string };
+    requestedAt: string;
+  } | null;
 };
 
 /** The dispatch board of a date (FR-021); `serverTime` corrects the client's clock (R9). */

@@ -6,7 +6,7 @@ Each `RouteSummary` in `routes` and `routesFromPreviousDays` gains:
 
 ```ts
 stopMarks: Array<{
-  kind: "pickup" | "delivery";
+  kind: "pickup" | "delivery" | "errand" | "return"; // the stop's kind (StopKind)
   state: "done" | "exception" | "pending";
 }>;
 ```

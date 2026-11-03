@@ -177,6 +177,12 @@ const routeSummary = z
     pendingHandovers: z.int().min(0),
     courierLastSyncedAt: z.iso.datetime({ offset: true }).nullable(),
     unacknowledgedNotices: z.int().min(0),
+    // The board's courier progress (feature 006, contracts/board-read.md).
+    stopMarks: z.array(
+      z
+        .object({ kind: z.enum(stopKinds), state: z.enum(["done", "exception", "pending"]) })
+        .strict(),
+    ),
   })
   .strict();
 
