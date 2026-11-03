@@ -145,7 +145,9 @@ async function responsiveProblems(page: Page, width: number): Promise<string[]> 
   return problems;
 }
 
-async function tabUntilFocused(page: Page, target: ReturnType<Page["getByRole"]>, limit = 60) {
+// A full keyboard cycle at 320 px includes the panel's row of destinations (feature 006,
+// design-system.md §2), so a search that wraps around the page needs room for it.
+async function tabUntilFocused(page: Page, target: ReturnType<Page["getByRole"]>, limit = 90) {
   for (let step = 0; step < limit; step += 1) {
     if (await target.evaluate((element) => element === document.activeElement)) return;
     await page.keyboard.press("Tab");

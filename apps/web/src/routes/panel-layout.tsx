@@ -44,6 +44,7 @@ import {
 } from "@tanstack/react-router";
 import { Icon, type Symbol } from "@/components/icon";
 import { LogoSymbol, Wordmark } from "@/components/logo";
+import { ThemeSwitch } from "@/components/theme-switch";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -63,6 +64,7 @@ import {
 import { sessionQuery, signOut } from "@/features/auth/session";
 import { useNotificationSync } from "@/features/notifications/use-notification-sync";
 import { cn } from "@/lib/cn";
+import { usePanelTheme } from "@/lib/theme";
 
 type NavigationItem = {
   to:
@@ -218,6 +220,7 @@ function PanelLayout() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const theme = usePanelTheme();
   const notificationSnapshot = useNotificationSync(user.id);
   const notificationIntents = notificationSnapshot.data?.intents ?? [];
   const notificationDates = [...new Set(notificationIntents.map((intent) => intent.serviceDate))];
@@ -334,13 +337,25 @@ function PanelLayout() {
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-20 bg-paper/90 backdrop-blur">
-          <div className="mx-auto flex h-18 w-full max-w-7xl items-center gap-3 px-4 md:px-8">
+          {/* Top app bar (design-system.md §7): search, theme, and the one lime action. */}
+          <div className="mx-auto flex h-18 w-full max-w-380 items-center gap-2 px-4 md:px-8">
             <SidebarTrigger aria-label="Mostrar u ocultar el menú" className="-ml-3" />
             <GlobalSearch />
+            <span className="flex-1" />
+            <ThemeSwitch shown={theme.shown} onToggle={theme.toggle} />
+            {pathname !== "/envios/masivo" && (
+              <Link
+                to="/envios/masivo"
+                className={cn(buttonVariants({ variant: "outline" }), "max-lg:hidden")}
+              >
+                <Icon symbol={PostAddIcon} />
+                Registro masivo
+              </Link>
+            )}
             {pathname !== "/envios/nuevo" && (
               <Link
                 to="/envios/nuevo"
-                className={cn(buttonVariants(), "ml-auto max-sm:size-12 max-sm:px-0")}
+                className={cn(buttonVariants({ variant: "accent" }), "max-sm:size-12 max-sm:px-0")}
               >
                 <Icon symbol={AddIcon} />
                 <span className="hidden sm:inline">Nuevo envío</span>
@@ -348,11 +363,12 @@ function PanelLayout() {
               </Link>
             )}
           </div>
+          <PhoneDestinations role={user.role} pathname={pathname} />
         </header>
         <div
           id="contenido"
           tabIndex={-1}
-          className="mx-auto w-full max-w-7xl px-4 pt-4 pb-16 outline-none md:px-8"
+          className="mx-auto w-full max-w-380 px-4 pt-4 pb-16 outline-none md:px-8"
         >
           {(notificationDates.length > 0 || notificationSnapshot.data?.guidance) && (
             <aside
@@ -394,6 +410,41 @@ function PanelLayout() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+/**
+ * Below 768 px the rail gives way to a row of destinations under the top bar
+ * (design-system.md §2); the menu button still opens the full rail with the account.
+ */
+function PhoneDestinations({ role, pathname }: { role: UserRole; pathname: string }) {
+  return (
+    <nav aria-label="Destinos" className="bg-rail md:hidden">
+      <ul className="flex gap-1 overflow-x-auto px-3 py-2 [scrollbar-width:none]">
+        {navigation
+          .flatMap((group) => group.items)
+          .filter((item) => item.roles.includes(role))
+          .map((item) => {
+            const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+            return (
+              <li key={item.to} className="shrink-0">
+                <Link
+                  to={item.to}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex min-h-12 items-center gap-2 rounded-sm px-3 text-label-l whitespace-nowrap text-on-rail-variant outline-none hover:bg-on-rail/8 hover:text-on-rail focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                    active &&
+                      "bg-accent font-bold text-on-accent hover:bg-accent hover:text-on-accent",
+                  )}
+                >
+                  <Icon symbol={active ? item.activeIcon : item.icon} size={20} />
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+      </ul>
+    </nav>
   );
 }
 
