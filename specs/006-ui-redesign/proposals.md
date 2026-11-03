@@ -1,0 +1,34 @@
+# Screen Proposals
+
+Register of the owner's decisions per screen (FR-003, FR-004; research R4). A screen is built
+only when its row says `approved`.
+
+| Screen | Area | Proposal | Status | Decided |
+| --- | --- | --- | --- | --- |
+| Tablero `/` | Daily operation | [Design artifact v9](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk) | approved | 2026-11-02: version 8 «Tablero equilibrado» after «está muy sobrecargado… busca un equilibrio»; logo option 1 in version 9 |
+| Wordmark | Brand | Option 1 | approved | 2026-11-02: «Opción 1» (merged in #51) |
+| Nuevo envío `/envios/nuevo` | Daily operation | — | pending | — |
+| Registro masivo `/envios/masivo` | Daily operation | — | pending | — |
+| Detalle de envío `/envios/:guía` | Daily operation | — | pending | — |
+| Editar envío `/envios/:guía/editar` | Daily operation | — | pending | — |
+| Rutas `/rutas` | Daily operation | — | pending | — |
+| Detalle de ruta `/rutas/:id` | Daily operation | — | pending | — |
+| Historial `/historial` | Daily operation | — | pending | — |
+| Notificar clientes `/notificar` | Daily operation | — | pending | — |
+| Mi ruta `/mensajero` | Courier app | — | pending | — |
+| Parada `/mensajero/parada/:id` | Courier app | — | pending | — |
+| Mi día `/mensajero/mi-dia` | Courier app | — | pending | — |
+| Pendientes `/mensajero/pendientes` | Courier app | — | pending | — |
+| Seguimiento `/seguimiento/:código` | Public | — | pending | — |
+| Enlace del cliente `/cliente/:código` | Public | — | pending | — |
+| Ingresar, Recuperar, Restablecer | Sign-in | — | pending | — |
+| Clientes and client detail | Master data | — | pending | — |
+| Mensajeros `/mensajeros` | Master data | — | pending | — |
+| Transportadoras `/transportadoras` | Master data | — | pending | — |
+| Barrios `/barrios` | Master data | — | pending | — |
+| Tarifario `/tarifario` | Master data | — | pending | — |
+| Configuración `/configuracion` | Administration | — | pending | — |
+| Usuarios `/usuarios` | Administration | — | pending | — |
+| Auditoría `/auditoria` | Administration | — | pending | — |
+| Mi cuenta `/cuenta` | Administration | — | pending | — |
+| Panel shell (rail, top bar, search, theme) | Panel shell | Part of the board proposal | approved with the board | 2026-11-02 |
