@@ -15,6 +15,7 @@ type BundleChunk = Extract<
 >;
 
 const appModuleId = fileURLToPath(new URL("./src/app.tsx", import.meta.url));
+let publicOrigin = "";
 
 export default defineConfig(({ mode }) => ({
   // One .env at the repository root; only VITE_* variables reach the browser.
@@ -31,13 +32,16 @@ export default defineConfig(({ mode }) => ({
                 "APP_URL",
               ]);
         const configuredOrigin = source["PUBLIC_BASE_URL"] || source["APP_URL"];
-        let publicOrigin: string;
         try {
           publicOrigin = publicOriginSchema.parse(configuredOrigin || "http://localhost:5173");
         } catch {
           throw new Error("PUBLIC_BASE_URL or APP_URL must be a bare HTTP(S) origin");
         }
         return { define: { "import.meta.env.PUBLIC_BASE_URL": JSON.stringify(publicOrigin) } };
+      },
+      // Chat previews need an absolute address for the image (design-system.md §11).
+      transformIndexHtml(html) {
+        return html.replace("__PUBLIC_BASE_URL__", publicOrigin);
       },
     },
     tanstackRouter({
@@ -85,6 +89,12 @@ export default defineConfig(({ mode }) => ({
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
+          },
+          {
+            src: "/icons/icon-monochrome.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "monochrome",
           },
         ],
       },

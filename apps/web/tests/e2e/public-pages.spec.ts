@@ -80,6 +80,32 @@ async function readCourierStorage(page: Page) {
   });
 }
 
+test("every brand asset is served and the link preview shows only the product (FR-012)", async ({
+  browser,
+}) => {
+  const context = await browser.newContext();
+  const html = await (await context.request.get("/")).text();
+  expect(html).toContain('<meta property="og:title" content="Domy" />');
+  const image = /<meta property="og:image" content="(https?:[^"]+)"/u.exec(html)?.[1];
+  expect(image).toMatch(/\/icons\/link-preview\.png$/u);
+  expect(html).not.toContain("__PUBLIC_BASE_URL__");
+
+  const manifest = (await (await context.request.get("/manifest.webmanifest")).json()) as {
+    icons: { src: string; purpose?: string }[];
+  };
+  expect(manifest.icons.map((icon) => icon.purpose)).toContain("monochrome");
+  for (const path of [
+    ...manifest.icons.map((icon) => icon.src),
+    "/icons/favicon.svg",
+    "/icons/logo.svg",
+    "/icons/apple-touch-icon.png",
+    "/icons/link-preview.png",
+  ]) {
+    expect((await context.request.get(path)).status(), path).toBe(200);
+  }
+  await context.close();
+});
+
 test("public pages open anonymously at 320 px with no unset support actions", async ({
   browser,
 }) => {

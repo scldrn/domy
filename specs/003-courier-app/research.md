@@ -30,7 +30,7 @@ npm registry on 2026-09-30 and again on 2026-10-14, after feature 002 shipped (R
   end-to-end tests already use, exactly as the panel draws the wordmark (Archivo bold at
   125 % width), into `apps/web/public/icons/`: 192, 512, maskable 512, Apple touch 180, and
   favicons of 32 and 16 px with only the "d", as the collapsed rail shows it. The logo
-  replaces them by changing that script. A tool that rasterizes an SVG
+  replaced them by changing that script (option A of the "route d", owner decision 2026-11-02). A tool that rasterizes an SVG
   (`@vite-pwa/assets-generator`) was dropped during setup: it cannot draw the wordmark
   without the font. The service worker is built as a classic script (`rollupFormat: "iife"`),
   which every supported phone runs, and serves the app shell for every navigation outside
