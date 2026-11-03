@@ -1,7 +1,7 @@
 import { formatTrackingNumber, type Shipment, type ShipmentDetail } from "@domy/domain";
 import type { Page } from "@playwright/test";
 import { register } from "./api";
-import { boardRow, showEveryShipment } from "./board";
+import { boardRow, showEveryAttention, showEveryShipment } from "./board";
 import { dispatch, ownSession, workerControls, openStop, deliver } from "./courier";
 import { accessibilityViolations, expect, test } from "./fixtures";
 
@@ -270,7 +270,7 @@ test("reports and replaces a pickup problem, clears it upon pickup and reviews a
   await expectSynchronized(page);
   await office.reload();
   await showEveryShipment(office);
-  const section = office.getByRole("region", { name: /^Por resolver/ });
+  const section = await showEveryAttention(office);
   await expect(
     section.getByRole("listitem").filter({ hasText: formatTrackingNumber(failed.trackingNumber) }),
   ).toContainText("Novedad por decidir");
@@ -395,8 +395,7 @@ test("reopens offline with pickups, delivery and exception, then synchronizes on
   await office.goto("/");
   await showEveryShipment(office);
   await expect(
-    office
-      .getByRole("region", { name: /^Por resolver/ })
+    (await showEveryAttention(office))
       .getByRole("listitem")
       .filter({ hasText: formatTrackingNumber(failed.trackingNumber) }),
   ).toContainText("Novedad por decidir");
