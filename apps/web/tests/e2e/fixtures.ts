@@ -12,12 +12,18 @@ export async function accessibilityViolations(
   beforeAnalyze?: () => Promise<void>,
   beforePause?: () => Promise<void>,
 ): Promise<string[]> {
+  // A toast mounts one frame before its entrance transition starts; until Sonner marks it
+  // mounted, no animation is running yet and axe would read it half transparent.
   const settleAnimations = () =>
-    page.waitForFunction(() =>
-      document
-        .getAnimations()
-        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
-        .every((animation) => animation.playState !== "running"),
+    page.waitForFunction(
+      () =>
+        [...document.querySelectorAll("[data-sonner-toast]:not([data-removed=true])")].every(
+          (toast) => toast.getAttribute("data-mounted") === "true",
+        ) &&
+        document
+          .getAnimations()
+          .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+          .every((animation) => animation.playState !== "running"),
     );
   // A closing dialog still has its role until its exit animation ends. Classify the
   // visible screen only afterward, or its background toast would escape stabilization.

@@ -46,13 +46,13 @@ function ContactLinks({ firstName, phone }: { firstName: string; phone: string }
       <div className="flex min-w-0 flex-wrap gap-2">
         <a
           href={`tel:+57${phone}`}
-          className="state-layer inline-flex min-h-12 min-w-12 max-w-full items-center justify-center rounded-sm border border-outline-variant bg-sheet px-4 py-3 text-center text-label-l text-primary whitespace-normal wrap-anywhere outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent focus-visible:outline-solid"
+          className="state-layer inline-flex min-h-12 min-w-12 max-w-full items-center justify-center rounded-sm border border-outline-variant bg-sheet px-4 py-3 text-center text-label-l text-primary whitespace-normal wrap-anywhere outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-strong focus-visible:outline-solid"
         >
           Llamar al mensajero
         </a>
         <a
           href={`https://wa.me/57${phone}`}
-          className="state-layer inline-flex min-h-12 min-w-12 max-w-full items-center justify-center rounded-sm border border-outline-variant bg-sheet px-4 py-3 text-center text-label-l text-primary whitespace-normal wrap-anywhere outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent focus-visible:outline-solid"
+          className="state-layer inline-flex min-h-12 min-w-12 max-w-full items-center justify-center rounded-sm border border-outline-variant bg-sheet px-4 py-3 text-center text-label-l text-primary whitespace-normal wrap-anywhere outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-strong focus-visible:outline-solid"
         >
           WhatsApp del mensajero
         </a>

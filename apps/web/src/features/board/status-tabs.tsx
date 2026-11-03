@@ -2,7 +2,7 @@ import { shipmentStatuses, shipmentStatusLabels, type ShipmentStatus } from "@do
 import { cn } from "@/lib/cn";
 
 const tab =
-  "relative flex h-12 shrink-0 cursor-pointer items-center gap-1.5 px-3 text-label-l whitespace-nowrap text-on-surface-variant outline-none hover:text-on-surface focus-visible:rounded-xs focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent after:absolute after:inset-x-2 after:bottom-0 after:h-[3px] after:rounded-t-full aria-pressed:text-on-surface aria-pressed:after:bg-primary";
+  "relative flex h-12 shrink-0 cursor-pointer items-center gap-1.5 px-3 text-label-l whitespace-nowrap text-on-surface-variant outline-none hover:text-on-surface focus-visible:rounded-xs focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-strong after:absolute after:inset-x-2 after:bottom-0 after:h-[3px] after:rounded-t-full aria-pressed:text-on-surface aria-pressed:after:bg-primary";
 
 /**
  * The count of each status (FR-021) as tabs that filter the board; "Todos" clears the

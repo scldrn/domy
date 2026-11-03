@@ -103,7 +103,7 @@ export function BulkInput({
             htmlFor={fileId}
             className={cn(
               buttonVariants({ variant: "outline" }),
-              "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent",
+              "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-strong",
             )}
           >
             <Icon symbol={UploadIcon} size={20} />

@@ -424,7 +424,7 @@ function GlobalSearch() {
   return (
     <search className="block w-full max-w-xl min-w-0">
       <form
-        className="flex h-12 items-center gap-3 rounded-sm border border-outline bg-sheet px-4 text-on-surface-variant transition-[border-color,box-shadow] hover:border-on-surface focus-within:border-accent focus-within:shadow-[inset_0_0_0_1px_var(--color-accent)]"
+        className="flex h-12 items-center gap-3 rounded-sm border border-outline bg-sheet px-4 text-on-surface-variant transition-[border-color,box-shadow] hover:border-on-surface focus-within:border-accent-strong focus-within:shadow-[inset_0_0_0_1px_var(--color-accent-strong)]"
         onSubmit={(event) => {
           event.preventDefault();
           const q = term.trim();

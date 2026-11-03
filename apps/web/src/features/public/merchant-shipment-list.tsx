@@ -34,7 +34,7 @@ export function MerchantDateSelector({
         onChange={(event) => {
           onChange(event.currentTarget.value || null);
         }}
-        className="min-h-12 w-full min-w-0 rounded-sm border border-outline bg-sheet px-3 text-body-l text-on-surface outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent focus-visible:outline-solid"
+        className="min-h-12 w-full min-w-0 rounded-sm border border-outline bg-sheet px-3 text-body-l text-on-surface outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-strong focus-visible:outline-solid"
       />
     </label>
   );
@@ -150,7 +150,7 @@ export function MerchantShipmentList({
                     onClick={() => {
                       onOpenShipment(shipment.id);
                     }}
-                    className="state-layer flex min-h-12 w-full min-w-0 flex-col items-start gap-2 p-4 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent focus-visible:outline-solid"
+                    className="state-layer flex min-h-12 w-full min-w-0 flex-col items-start gap-2 p-4 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-strong focus-visible:outline-solid"
                   >
                     <span className="flex w-full min-w-0 items-start justify-between gap-3">
                       <span className="guia min-w-0 break-all text-title-m">
@@ -184,7 +184,7 @@ export function MerchantShipmentList({
                   <div className="border-t border-outline-variant px-4">
                     <a
                       href={shipment.trackingLink}
-                      className="inline-flex min-h-12 items-center text-label-l text-primary underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent focus-visible:outline-solid"
+                      className="inline-flex min-h-12 items-center text-label-l text-primary underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-strong focus-visible:outline-solid"
                     >
                       Abrir seguimiento
                     </a>

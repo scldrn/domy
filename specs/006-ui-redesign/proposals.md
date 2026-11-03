@@ -5,7 +5,8 @@ only when its row says `approved`.
 
 | Screen | Area | Proposal | Status | Decided |
 | --- | --- | --- | --- | --- |
-| Tablero `/` | Daily operation | [Design artifact v9](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk) | approved | 2026-11-02: version 8 «Tablero equilibrado» after «está muy sobrecargado… busca un equilibrio»; logo option 1 in version 9 |
+| Design system revision (`docs/design-system.md`) | Foundation | [Reference v1](https://claude.ai/artifact/GXnWCeFb4yWXqnzajGjJFW) | approved | 2026-11-02: «Apruebo en verde» (delivered in green, not lime) |
+| Tablero `/` | Daily operation | [Design artifact v11](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk) | approved | 2026-11-02: version 8 «Tablero equilibrado» after «está muy sobrecargado… busca un equilibrio»; logo option 1 in version 9; version 11 applies the approved design system (delivered in green) |
 | Wordmark | Brand | Option 1 | approved | 2026-11-02: «Opción 1» (merged in #51) |
 | Nuevo envío `/envios/nuevo` | Daily operation | — | pending | — |
 | Registro masivo `/envios/masivo` | Daily operation | — | pending | — |

@@ -30,7 +30,7 @@ function Toaster(props: ToasterProps) {
       toastOptions={{
         classNames: {
           toast: "text-body-m min-h-12",
-          actionButton: "text-label-l !text-rail-accent !bg-transparent",
+          actionButton: "text-label-l !text-accent !bg-transparent",
         },
       }}
       {...props}
