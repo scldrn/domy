@@ -1,8 +1,9 @@
 import { formatTrackingNumber } from "@domy/domain";
 import { register } from "./api";
+import { boardRow, showEveryShipment } from "./board";
 import { expect, test } from "./fixtures";
 
-/** How the panel feels to use: keyboard, the board's day, its ribbon, and motion (design-system.md §8). */
+/** How the panel feels to use: keyboard, the board's day, its stages, and motion (design-system.md §8). */
 
 test("the keyboard reaches the content first and the search with '/'", async ({
   dispatcherPage: page,
@@ -52,36 +53,38 @@ test("the board names its day and steps between days", async ({ dispatcherPage: 
   await expect(heading).toHaveText(/Miércoles 30 de septiembre/);
 });
 
-test("pointing at a window on the ribbon marks its row, and clicking takes you there", async ({
+test("a stage on the day summary filters the list and takes you there", async ({
   dispatcherPage: page,
 }) => {
   const shipment = await register(page, { window: { preset: "morning" } });
   await page.goto("/");
-  const ribbon = page.getByRole("region", { name: "Franjas de entrega" });
-  const bar = ribbon.getByText(formatTrackingNumber(shipment.trackingNumber), { exact: true });
-  const row = page.locator(`#envio-${shipment.trackingNumber}`);
+  const stages = page.getByRole("group", { name: "Filtrar los envíos por etapa" });
+  const open = stages.getByRole("button", { name: /^Por salir/ });
 
-  await bar.hover();
-  await expect(row).toHaveAttribute("data-pointed", "true");
-  await page.mouse.move(0, 0);
-  await expect(row).not.toHaveAttribute("data-pointed");
-
-  await bar.click();
+  await open.click();
+  await expect(open).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#envios")).toBeInViewport();
+  await showEveryShipment(page);
   await expect(
-    row.getByRole("link", { name: formatTrackingNumber(shipment.trackingNumber) }),
-  ).toBeFocused();
-  await expect(row).toBeInViewport();
+    boardRow(page, shipment).getByRole("button", {
+      name: formatTrackingNumber(shipment.trackingNumber),
+    }),
+  ).toBeVisible();
+
+  await open.click();
+  await expect(open).toHaveAttribute("aria-pressed", "false");
+  await expect(page).not.toHaveURL(/stage=/);
 });
 
-test("the ribbon does not animate for people who ask for less motion", async ({
+test("the stage bar does not animate for people who ask for less motion", async ({
   dispatcherPage: page,
 }) => {
   await register(page, { window: { preset: "afternoon" } });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  const ribbon = page.getByRole("region", { name: "Franjas de entrega" });
-  const duration = await ribbon
-    .locator("[aria-hidden=true] button")
+  const duration = await page
+    .getByRole("region", { name: /Tablero de despacho/ })
+    .locator("[aria-hidden=true] > span")
     .first()
     .evaluate((element) => Number.parseFloat(getComputedStyle(element).animationDuration));
   expect(duration).toBeLessThan(0.001);

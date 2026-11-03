@@ -1,7 +1,7 @@
 import { addCop, formatCop, isFinal, shipmentFlag, type BoardShipment } from "@domy/domain";
 
 /** A piece of the board's opening sentence; strong pieces carry the numbers. */
-export type Segment = { text: string; strong?: boolean; tone?: "error" };
+export type Segment = { text: string; strong?: boolean; tone?: "error" | "warning" };
 
 const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 
@@ -39,7 +39,7 @@ export function daySentence({
     .reduce((sum, shipment) => addCop(sum, shipment.codAmount), 0);
 
   const segments: Segment[] = [];
-  const say = (text: string, strong = false, tone?: "error") => {
+  const say = (text: string, strong = false, tone?: Segment["tone"]) => {
     segments.push({ text, ...(strong && { strong }), ...(tone && { tone }) });
   };
 
@@ -74,7 +74,7 @@ export function daySentence({
     }
     if (atRisk > 0) {
       if (late === 0) say(" ");
-      say(String(atRisk), true);
+      say(String(atRisk), true, "warning");
       say(` ${plural(atRisk, "está", "están")} en riesgo de llegar tarde.`);
     }
   }

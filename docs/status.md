@@ -1,7 +1,7 @@
 # Project status
 
 Where Domy stands and what comes next, so any session can resume without the conversation
-that produced it. Updated 2026-11-02 (America/Bogota); update it whenever a slice is merged or the next step
+that produced it. Updated 2026-11-03 (America/Bogota); update it whenever a slice is merged or the next step
 changes.
 
 **Latest audit: [production-readiness audit of 2026-11-02](production-readiness-audit-2026-11-02.md).
@@ -21,8 +21,11 @@ a short-lived branch, so the specification and implementation of every feature l
 | 002 Routes and dispatch | 2 integral catalog tasks verified locally, including aggregate overflow and traceability; retain historical feature receipts |
 | 003 Courier app | T093/T087 physical acceptance, now including offline, and dependent T088 closure remain open |
 | 004 Tracking page and merchant link | T034 physical acceptance and dependent T035 closure remain open |
+| 006 UI redesign | Design system, tokens, shell and theme on `main` (#53, #54); board data (#55) and the new board with its side panel (slice `006-us1-board-screen`). Open: the top bar's search results and last-update status (T019), state marks restyle (T018), setup guards T002–T004, baselines T001 |
 
 ## Next step
+
+Feature 006: after the board, propose «Nuevo envío» and «Editar envío» to the owner (T034), one screen at a time ([proposals.md](../specs/006-ui-redesign/proposals.md)).
 
 
 ### Release-change review completed locally — 2026-10-23

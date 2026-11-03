@@ -237,6 +237,15 @@
   letter-spacing: 0.015em;
 }
 /* The opening sentence of a page: larger than body, never bold. */
+/* Counts on the board (design-system.md §8, "Stage counts"). */
+@utility text-figure {
+  font-size: 1.75rem;
+  line-height: 2rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  font-stretch: 112%;
+}
+
 @utility text-lede {
   font-size: 1.1875rem;
   line-height: 1.55;
@@ -302,6 +311,29 @@
     transform: scaleX(0);
     opacity: 0;
   }
+}
+
+/* The stage bar draws in once (design-system.md §6, §8). */
+@keyframes stage-draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* The next stop of a courier on the street (design-system.md §8, "Courier progress"). */
+@keyframes next-stop {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-sys-color-accent) 60%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+
+/* Focus on pizarra is lime; on light surfaces it stays accent-strong (design-system.md §10). */
+.on-rail :focus-visible {
+  outline-color: var(--md-sys-color-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {
