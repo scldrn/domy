@@ -104,8 +104,8 @@ and passes axe in both themes.
 
 - [X] T034 [US2] Propose "Nuevo envío" and "Editar envío" beside the board and record the decision (FR-003)
 - [X] T035 [US2] Implement the approved form in `apps/web/src/routes/shipment-new.tsx`, `apps/web/src/routes/shipment-edit.tsx`, and `apps/web/src/features/shipments/*` fields; keep keyboard order and field errors (US2 scenario 1); `register-shipment.spec.ts`, `edit-void-shipment.spec.ts`, and the form-draft specs green
-- [ ] T036 [US2] Propose "Registro masivo" and record the decision
-- [ ] T037 [US2] Implement it in `apps/web/src/routes/shipment-bulk.tsx` and `apps/web/src/features/bulk/`; `bulk-registration.spec.ts` green
+- [X] T036 [US2] Propose "Registro masivo" and record the decision
+- [X] T037 [US2] Implement it in `apps/web/src/routes/shipment-bulk.tsx` and `apps/web/src/features/bulk/`; `bulk-registration.spec.ts` green
 - [ ] T038 [US2] Propose "Detalle de envío" and record the decision
 - [ ] T039 [US2] Implement it in `apps/web/src/routes/shipment-detail.tsx` and its sections, sharing the board's `SidePanel` content where the proposal shows the same sections
 - [ ] T040 [US2] Propose "Rutas" and "Detalle de ruta" and record the decision

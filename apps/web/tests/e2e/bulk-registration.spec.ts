@@ -48,7 +48,7 @@ test("registers a pasted list, with fixes in the preview (scenario 10)", async (
 
   await page.goto("/envios/masivo");
   await chooseMerchant(page, "Amy Tecnology");
-  await page.getByLabel("Filas").fill(text);
+  await page.getByLabel("Filas", { exact: true }).fill(text);
   await page.getByRole("button", { name: "Revisar lista" }).click();
 
   await expect(page.getByText("17 listas · 1 por confirmar · 2 con errores")).toBeVisible();
@@ -60,9 +60,9 @@ test("registers a pasted list, with fixes in the preview (scenario 10)", async (
   await expect(page.getByText("18 envíos creados")).toBeVisible();
 
   // The two rows with errors stay for correction.
-  await expect(page.getByLabel("Filas")).toHaveValue(/M\d+-C[\s\S]*M\d+-D/);
+  await expect(page.getByLabel("Filas", { exact: true })).toHaveValue(/M\d+-C[\s\S]*M\d+-D/);
   await page
-    .getByLabel("Filas")
+    .getByLabel("Filas", { exact: true })
     .fill(
       [
         delivery(`M${run}-C`, { Teléfono: "3005550101" }),
@@ -90,7 +90,7 @@ test("registers an uploaded spreadsheet", async ({ dispatcherPage: page }) => {
 test("explains a list with unknown columns", async ({ dispatcherPage: page }) => {
   await page.goto("/envios/masivo");
   await chooseMerchant(page, "Amy Tecnology");
-  await page.getByLabel("Filas").fill("Tipo\tCliente\nEntrega\tAmy");
+  await page.getByLabel("Filas", { exact: true }).fill("Tipo\tCliente\nEntrega\tAmy");
   await page.getByRole("button", { name: "Revisar lista" }).click();
   await expect(page.getByText(/La columna «Cliente» no es de la plantilla/)).toBeVisible();
 });

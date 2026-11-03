@@ -43,9 +43,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { FormSection } from "@/components/form-section";
 import { Icon } from "@/components/icon";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Field, FieldError, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { OptionSelect } from "@/components/option-select";
 import { Textarea } from "@/components/ui/textarea";
@@ -810,7 +811,7 @@ function ShipmentFormBody({
         <ChangedFields.Provider value={changedFields}>
           <fieldset disabled={pending !== null} className="contents">
             <div className="flex min-w-0 flex-[999_1_35rem] flex-col gap-4">
-              <Section number={1} title="Tipo de envío">
+              <FormSection number={1} title="Tipo de envío">
                 {shipment ? (
                   <Locked>{shipmentKindLabels[shipment.kind]}</Locked>
                 ) : (
@@ -822,10 +823,10 @@ function ShipmentFormBody({
                     )}
                   />
                 )}
-              </Section>
+              </FormSection>
 
-              <Section number={2} title="Cliente y recogida">
-                <div className="grid items-start gap-x-4 gap-y-3.5 sm:grid-cols-2">
+              <FormSection number={2} title="Cliente y recogida">
+                <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-x-4 gap-y-3.5 sm:grid-cols-2">
                   {shipment ? (
                     <Field>
                       <FieldLabel>Cliente</FieldLabel>
@@ -836,10 +837,10 @@ function ShipmentFormBody({
                   )}
                   <PickupPointSelect freezeDefault={pending !== null} />
                 </div>
-              </Section>
+              </FormSection>
 
-              <Section number={3} title={values.kind === "errand" ? "Diligencia" : "Destino"}>
-                <div className="grid items-start gap-x-4 gap-y-3.5 sm:grid-cols-2">
+              <FormSection number={3} title={values.kind === "errand" ? "Diligencia" : "Destino"}>
+                <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-x-4 gap-y-3.5 sm:grid-cols-2">
                   {(values.kind === "delivery" || values.kind === "reverse_pickup") && (
                     <>
                       <div className="empty:hidden sm:col-span-2">
@@ -915,10 +916,10 @@ function ShipmentFormBody({
                     </Field>
                   )}
                 </div>
-              </Section>
+              </FormSection>
 
-              <Section number={4} title="Pago y tarifa">
-                <div className="grid items-start gap-x-4 gap-y-3.5 sm:grid-cols-2">
+              <FormSection number={4} title="Pago y tarifa">
+                <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-x-4 gap-y-3.5 sm:grid-cols-2">
                   <PaymentModeFields />
                   <Controller
                     control={control}
@@ -946,10 +947,10 @@ function ShipmentFormBody({
                     />
                   </div>
                 </div>
-              </Section>
+              </FormSection>
 
-              <Section number={5} title="Detalles">
-                <div className="grid items-start gap-x-4 gap-y-3.5 sm:grid-cols-3">
+              <FormSection number={5} title="Detalles">
+                <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-x-4 gap-y-3.5 sm:grid-cols-3">
                   <Field data-invalid={Boolean(formState.errors.serviceDate)}>
                     <FieldLabel htmlFor="serviceDate">
                       Fecha del servicio
@@ -989,7 +990,7 @@ function ShipmentFormBody({
                     <Textarea id="instructions" {...register("instructions")} />
                   </Field>
                 </div>
-              </Section>
+              </FormSection>
             </div>
 
             <aside
@@ -1102,32 +1103,6 @@ function ShipmentFormBody({
         </AlertDialogContent>
       </AlertDialog>
     </FormProvider>
-  );
-}
-
-/** A numbered section of the form (approved "Nuevo envío" proposal). */
-function Section({
-  number,
-  title,
-  children,
-}: {
-  number: number;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <FieldSet className="min-w-0 gap-0 rounded-lg border border-outline-variant bg-sheet px-5 pt-4 pb-5 max-[820px]:px-4 [&>legend]:float-left [&>legend]:mb-3.5 [&>legend]:w-full [&>legend+*]:clear-both">
-      <FieldLegend className="text-title-l text-on-surface">
-        <span
-          aria-hidden="true"
-          className="mr-2.5 inline-grid size-6 place-items-center rounded-[7px] bg-surface-container-high align-[2px] text-label-m font-bold text-on-surface"
-        >
-          {number}
-        </span>
-        {title}
-      </FieldLegend>
-      {children}
-    </FieldSet>
   );
 }
 

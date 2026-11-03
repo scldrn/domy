@@ -21,11 +21,11 @@ a short-lived branch, so the specification and implementation of every feature l
 | 002 Routes and dispatch | 2 integral catalog tasks verified locally, including aggregate overflow and traceability; retain historical feature receipts |
 | 003 Courier app | T093/T087 physical acceptance, now including offline, and dependent T088 closure remain open |
 | 004 Tracking page and merchant link | T034 physical acceptance and dependent T035 closure remain open |
-| 006 UI redesign | Design system, tokens, shell and theme on `main` (#53, #54); board data (#55), the new board with its side panel (#56), and the shipment form (slice `006-us2-shipment-form`). Open: the top bar's search results and last-update status (T019), state marks restyle (T018), setup guards T002–T004, baselines T001 |
+| 006 UI redesign | Design system, tokens, shell and theme on `main` (#53, #54); board data (#55), the new board with its side panel (#56), the shipment form (#57), and bulk registration (slice `006-us2-bulk-registration`). Open: the top bar's search results and last-update status (T019), state marks restyle (T018), setup guards T002–T004, baselines T001 |
 
 ## Next step
 
-Feature 006: «Nuevo envío» and «Editar envío» are approved and built (T034–T035, slice `006-us2-shipment-form`); next, propose «Registro masivo» (T036), one screen at a time ([proposals.md](../specs/006-ui-redesign/proposals.md)).
+Feature 006: «Nuevo envío», «Editar envío» (#57) and «Registro masivo» (T036–T037, slice `006-us2-bulk-registration`) are approved and built; next, propose «Detalle de envío» (T038), one screen at a time ([proposals.md](../specs/006-ui-redesign/proposals.md)).
 
 
 ### Release-change review completed locally — 2026-10-23
