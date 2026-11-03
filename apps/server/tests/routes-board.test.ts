@@ -103,6 +103,11 @@ describe("GET /api/routes/board (FR-018)", () => {
         pendingHandovers: 0,
         courierLastSyncedAt: null,
         unacknowledgedNotices: 1,
+        stopMarks: [
+          { kind: "pickup", state: "pending" },
+          { kind: "delivery", state: "pending" },
+          { kind: "delivery", state: "pending" },
+        ],
       },
       {
         id: second.id,
@@ -118,6 +123,10 @@ describe("GET /api/routes/board (FR-018)", () => {
         pendingHandovers: 0,
         courierLastSyncedAt: null,
         unacknowledgedNotices: 1,
+        stopMarks: [
+          { kind: "pickup", state: "pending" },
+          { kind: "delivery", state: "pending" },
+        ],
       },
     ]);
   });
@@ -212,6 +221,42 @@ describe("GET /api/routes/board (FR-018)", () => {
     expect((await detail(from.id)).status).toBe("finished");
   });
 
+  it("draws each route's stops as the board's courier progress (feature 006, FR-018)", async () => {
+    const courier = await createCourier(database.db);
+    const a = await register();
+    const b = await register();
+    const c = await register();
+    await dispatched([a.id, b.id, c.id], courier);
+    await pickUp(database.db, a.id, new Date("2026-10-01T15:05:00Z"));
+    await pickUp(database.db, b.id, new Date("2026-10-01T15:06:00Z"));
+    await pickUp(database.db, c.id, new Date("2026-10-01T15:07:00Z"));
+    await finishTask(database.db, c.id, "delivered", new Date("2026-10-01T15:30:00Z"));
+    await finishTask(database.db, a.id, "exception", new Date("2026-10-01T15:20:00Z"));
+
+    const [summary] = (await board()).routes;
+    expect(summary?.stopMarks).toEqual([
+      { kind: "pickup", state: "done" },
+      { kind: "delivery", state: "exception" },
+      { kind: "delivery", state: "done" },
+      { kind: "delivery", state: "pending" },
+    ]);
+    expect(summary?.stopMarks.filter((mark) => mark.state !== "pending")).toHaveLength(
+      summary?.completedStops ?? -1,
+    );
+  });
+
+  it("draws every stop of a route in preparation as pending (feature 006, FR-018)", async () => {
+    const courier = await createCourier(database.db);
+    const shipment = await register();
+    await createRoute(t, cookie, { shipmentIds: [shipment.id], courierId: courier });
+    const [summary] = (await board()).routes;
+    expect(summary).toMatchObject({ status: "draft", totalStops: 2 });
+    expect(summary?.stopMarks).toEqual([
+      { kind: "pickup", state: "pending" },
+      { kind: "delivery", state: "pending" },
+    ]);
+  });
+
   it("lists routes still in progress from earlier dates on today's board only (scenario 6)", async () => {
     const courier = await createCourier(database.db);
     t.setNow("2026-09-30T15:00:00Z");
@@ -264,5 +309,43 @@ describe("GET /api/shipments/board with routes (FR-018; feature 001, FR-021 and 
 
     const filtered = await shipmentBoard(`?courierId=${ana}`);
     expect(filtered.shipments.map((item) => item.id)).toEqual([first.id]);
+  });
+
+  it("shows a shipment's pending handover until it is resolved (feature 006, FR-018)", async () => {
+    const ana = await createCourier(database.db, "Ana Ruiz");
+    const beto = await createCourier(database.db, "Beto Mesa");
+    const moved = await register();
+    const other = await register();
+    const from = await dispatched([moved.id], ana);
+    const to = await dispatched([other.id], beto);
+    await pickUp(database.db, moved.id);
+    const [handover] = await database.db
+      .insert(handovers)
+      .values({
+        shipmentId: moved.id,
+        fromCourierId: ana,
+        toCourierId: beto,
+        fromRouteId: from.id,
+        toRouteId: to.id,
+        reason: "Le queda de camino",
+        requestedBy: dispatcherId,
+        requestedAt: new Date("2026-10-01T15:00:00Z"),
+      })
+      .returning({ id: handovers.id });
+
+    const result = await shipmentBoard();
+    expect(find(result, moved)?.pendingHandover).toEqual({
+      id: handover?.id,
+      fromCourier: { id: ana, name: "Ana Ruiz" },
+      toCourier: { id: beto, name: "Beto Mesa" },
+      requestedAt: "2026-10-01T15:00:00.000Z",
+    });
+    expect(find(result, other)?.pendingHandover).toBeNull();
+
+    await database.db
+      .update(handovers)
+      .set({ status: "cancelled" })
+      .where(eq(handovers.id, handover?.id ?? ""));
+    expect(find(await shipmentBoard(), moved)?.pendingHandover).toBeNull();
   });
 });

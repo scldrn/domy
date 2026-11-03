@@ -75,15 +75,15 @@ and passes axe in both themes.
 
 ### Tests for User Story 1
 
-- [ ] T021 [P] [US1] Write failing tests for `routeStopMarks` in `packages/domain/src/route-stop-marks.test.ts`: "Length equals `totalStops`; `done` + `exception` marks equal `completedStops`", completed by completion time then pending in route order, draft routes all `pending`, returned counts as `done`
-- [ ] T022 [P] [US1] Write failing tests for `buildAttention` in `packages/domain/src/attention.test.ts`: order `exception_to_decide`, `late`, `pending_handover`, `at_risk`, `pickup_problem`, ties by window end; `fee_to_review` only for the owner; minor counts for `collection_differs`, `needs_review`, `no_photo`, `fee_to_review`; late and at-risk reuse the existing delivery-window rule
-- [ ] T023 [P] [US1] Write failing server tests: `/api/routes/board` returns `stopMarks` per route in `apps/server/tests/routes-board.test.ts`; `/api/shipments/board` returns `pendingHandover` (`null` unless a handover is `pending`) in `apps/server/tests/board.test.ts`
+- [X] T021 [P] [US1] Write failing tests for `routeStopMarks` in `packages/domain/src/route-stop-marks.test.ts`: "Length equals `totalStops`; `done` + `exception` marks equal `completedStops`", completed by completion time then pending in route order, draft routes all `pending`, returned counts as `done`
+- [X] T022 [P] [US1] Write failing tests for `buildAttention` in `packages/domain/src/attention.test.ts`: order `exception_to_decide`, `late`, `pending_handover`, `at_risk`, `pickup_problem`, ties by window end; `fee_to_review` only for the owner; minor counts for `collection_differs`, `needs_review`, `no_photo`, `fee_to_review`; late and at-risk reuse the existing delivery-window rule
+- [X] T023 [P] [US1] Write failing server tests: `/api/routes/board` returns `stopMarks` per route in `apps/server/tests/routes-board.test.ts`; `/api/shipments/board` returns `pendingHandover` (`null` unless a handover is `pending`) in `apps/server/tests/board.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T024 [US1] Implement `packages/domain/src/route-stop-marks.ts`, export it from `packages/domain/src/index.ts`, add `stopMarks` to `RouteSummary` in `packages/domain/src/schemas/routes.ts` (T021 green)
-- [ ] T025 [US1] Implement `packages/domain/src/attention.ts`, export it, add `pendingHandover` to `BoardEntry` in `packages/domain/src/schemas/board.ts` (T022 green)
-- [ ] T026 [US1] Fill `stopMarks` in `loadRouteSummaries` in `apps/server/src/routes/routes.ts` and `pendingHandover` in the board query of `apps/server/src/routes/shipments.ts` (T023 green)
+- [X] T024 [US1] Implement `packages/domain/src/route-stop-marks.ts`, export it from `packages/domain/src/index.ts`, add `stopMarks` to `RouteSummary` in `packages/domain/src/schemas/routes.ts` (T021 green)
+- [X] T025 [US1] Implement `packages/domain/src/attention.ts`, export it, add `pendingHandover` to `BoardEntry` in `packages/domain/src/schemas/board.ts` (T022 green)
+- [X] T026 [US1] Fill `stopMarks` in `loadRouteSummaries` in `apps/server/src/routes/routes.ts` and `pendingHandover` in the board query of `apps/server/src/routes/shipments.ts` (T023 green)
 - [ ] T027 [P] [US1] Build `StageCounts` in `apps/web/src/components/stage-counts.tsx` (progress bar, stage buttons with `aria-pressed`, filter and scroll to the list)
 - [ ] T028 [P] [US1] Build `AttentionList` in `apps/web/src/features/board/attention-list.tsx` (five rows, one action each, "Ver todos", "Además" line that filters the list)
 - [ ] T029 [P] [US1] Build the courier progress list in `apps/web/src/features/board/courier-progress.tsx` (stop track from `stopMarks`, next stop, one note, call, dispatch for routes in preparation, legend)

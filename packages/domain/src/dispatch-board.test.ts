@@ -23,6 +23,7 @@ const entry = (overrides: Partial<BoardEntry> = {}): BoardEntry => ({
   courier: { id: "courier-one", name: "Ana Ruiz" },
   recordFlags: [],
   returnDecided: false,
+  pendingHandover: null,
   ...overrides,
 });
 

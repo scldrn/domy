@@ -112,6 +112,8 @@ const recipientNeighborhoods = alias(neighborhoods, "recipient_neighborhoods");
 const recipientMunicipalities = alias(municipalities, "recipient_municipalities");
 const routeCouriers = alias(couriers, "route_couriers");
 const custodyCouriers = alias(couriers, "custody_couriers");
+const handoverSenders = alias(couriers, "handover_senders");
+const handoverReceivers = alias(couriers, "handover_receivers");
 
 /** A left-joined record, or null when the join found nothing. */
 function present<T extends Record<string, unknown>>(
@@ -703,19 +705,39 @@ export const shipmentRoutes = new Hono<AppEnv>()
     // The flags of the courier's records (feature 003, FR-033).
     const db = c.get("db");
     const ids = all.map((shipment) => shipment.id);
-    const [flags, decisions] = await Promise.all([
+    const [flags, decisions, waiting] = await Promise.all([
       loadRecordFlags(db, ids, now),
       db
         .select({ id: shipments.id, returnDecided: shipments.returnDecided })
         .from(shipments)
         .where(inArray(shipments.id, ids)),
+      // The handover each shipment still waits on, for "Por resolver" (feature 006, FR-018).
+      db
+        .select({
+          id: handovers.id,
+          shipmentId: handovers.shipmentId,
+          fromCourier: { id: handoverSenders.id, name: handoverSenders.name },
+          toCourier: { id: handoverReceivers.id, name: handoverReceivers.name },
+          requestedAt: handovers.requestedAt,
+        })
+        .from(handovers)
+        .innerJoin(handoverSenders, eq(handoverSenders.id, handovers.fromCourierId))
+        .innerJoin(handoverReceivers, eq(handoverReceivers.id, handovers.toCourierId))
+        .where(and(eq(handovers.status, "pending"), inArray(handovers.shipmentId, ids))),
     ]);
     const returned = new Map(decisions.map((shipment) => [shipment.id, shipment.returnDecided]));
-    const entries = all.map((shipment) => ({
-      ...shipment,
-      recordFlags: flags.get(shipment.id) ?? [],
-      returnDecided: returned.get(shipment.id) ?? false,
-    }));
+    const pending = new Map(waiting.map(({ shipmentId, ...handover }) => [shipmentId, handover]));
+    const entries = all.map((shipment) => {
+      const handover = pending.get(shipment.id);
+      return {
+        ...shipment,
+        recordFlags: flags.get(shipment.id) ?? [],
+        returnDecided: returned.get(shipment.id) ?? false,
+        pendingHandover: handover
+          ? { ...handover, requestedAt: handover.requestedAt.toISOString() }
+          : null,
+      };
+    });
     return c.json({
       date,
       serverTime: now.toISOString(),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { StopMark } from "../route-stop-marks.ts";
 import type { HandoverStatus, RouteStatus, StopKind, TaskStatus } from "../routes.ts";
 import type { ShipmentStatus } from "../shipment-lifecycle.ts";
 import type { ShipmentSummary } from "./search.ts";
@@ -203,6 +204,8 @@ export type RouteSummary = {
   atRiskCount: number;
   lateCount: number;
   pendingHandovers: number;
+  /** Its stops as the board's courier progress draws them (feature 006, FR-018). */
+  stopMarks: StopMark[];
 };
 
 export type RoutesBoard = {

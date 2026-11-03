@@ -51,7 +51,7 @@ Added to each route in `GET /api/routes/board` ([contracts/board-read.md](contra
 | Field | Type | Rule |
 | --- | --- | --- |
 | `stopMarks` | array | The route's stops: pickups and deliveries |
-| `stopMarks[].kind` | `pickup` \| `delivery` | From the stop's task |
+| `stopMarks[].kind` | `StopKind`: `pickup`, `delivery`, `errand`, `return` | The stop's kind |
 | `stopMarks[].state` | `done` \| `exception` \| `pending` | `done` when picked up or delivered (returned counts as done); `exception` for an open delivery exception; otherwise `pending` |
 
 Order: completed marks by completion time, then pending marks in route order. Derived by
