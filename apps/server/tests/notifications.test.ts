@@ -180,6 +180,29 @@ async function expectListedShipments(
 }
 
 describe("notifications integration (004/T018, FR-015–FR-018, R15)", () => {
+  it("refuses a future service date with an actionable Spanish message (FR-015)", async () => {
+    t.setNow("2026-10-01T15:00:00.000Z");
+    const future = await t.request("/api/notifications?date=2026-10-02", {
+      cookie: owner.cookie,
+    });
+    expect(future.status).toBe(422);
+    expect(objectBody.parse(await future.json())).toEqual({
+      error: {
+        code: "notification_date_in_future",
+        message: "Elige hoy o una fecha anterior.",
+      },
+    });
+
+    // Bogotá's day decides: at 23:30 on October 1 local time it is already October 2 in UTC.
+    t.setNow("2026-10-02T04:30:00.000Z");
+    const beforeMidnight = await t.request("/api/notifications?date=2026-10-02", {
+      cookie: owner.cookie,
+    });
+    expect(beforeMidnight.status).toBe(422);
+    const today = await t.request("/api/notifications?date=2026-10-01", { cookie: owner.cookie });
+    expect(today.status).toBe(200);
+  });
+
   it("preserves existing shipment detail and export permissions", async () => {
     const shipment = await register();
     const [
@@ -290,6 +313,8 @@ describe("notifications integration (004/T018, FR-015–FR-018, R15)", () => {
     const defaultDateBody = objectBody.parse(await defaultDateResponse.json());
     expect(defaultDateBody["merchants"]).toEqual(body["merchants"]);
 
+    // October 2 is listable once it is that day in Bogotá (FR-015).
+    t.setNow("2026-10-02T15:00:00.000Z");
     const nextDayResponse = await t.request("/api/notifications?date=2026-10-02", {
       cookie: dispatcher.cookie,
     });

@@ -21,6 +21,7 @@ const errorCatalog = {
   ],
   invalid_request: [400, "Revisa los datos marcados."],
   date_out_of_range: [422, "Elige una fecha dentro de los últimos 30 días."],
+  notification_date_in_future: [422, "Elige hoy o una fecha anterior."],
   unauthenticated: [401, "Tu sesión terminó. Ingresa de nuevo."],
   forbidden: [403, "No tienes permiso para esta acción."],
   not_found: [404, "No encontramos lo que buscas."],

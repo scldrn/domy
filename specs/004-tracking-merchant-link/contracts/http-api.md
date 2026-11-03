@@ -21,7 +21,7 @@ no es válido".
 
 | Method and path | Request → Response |
 | --- | --- |
-| `GET /api/notifications?date=YYYY-MM-DD` | → `{ merchants: { merchantId, name, whatsappPhone, linkCode, isActive, shipments: { id, trackingNumber, trackingCode, recipientName, neighborhood, status, notifiedAt }[] }[] }` (FR-015) |
+| `GET /api/notifications?date=YYYY-MM-DD` | → `{ merchants: { merchantId, name, whatsappPhone, linkCode, isActive, shipments: { id, trackingNumber, trackingCode, recipientName, neighborhood, status, notifiedAt }[] }[] }`; a date after today in Bogotá → `422 notification_date_in_future` (FR-015) |
 | `POST /api/notifications` | `{ actionId, shipmentIds }` → `204`; nonempty distinct IDs, atomic actor/operation/sorted-ID-set-bound receipt, same replay has no effect, conflicting replay returns `409`; marks them notified; voided shipments are never listed (FR-016, FR-017) |
 | `POST /api/merchants/:id/replace-link` | `{ actionId }` → `Merchant` with the new `linkCode`; audited (FR-021) |
 

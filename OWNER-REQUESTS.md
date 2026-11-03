@@ -189,8 +189,6 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 3. **Tarifas de Amy Tecnology**: hoy son inferidas del libro de envíos. ¿Las confirma el
    cliente?
-4. **Tarifas de Caldas y Girardota**: no hay tarifa confirmada; sus envíos piden tarifa manual
-   («Sin tarifa»).
 5. **Autorización de los mensajeros** para mostrar su primer nombre y teléfono en la página de
    rastreo (Ley 1581 de 2012). Hace falta para la 004.
 6. **Bucket de DigitalOcean Spaces a nombre del cliente** para las fotos, con regla de
@@ -204,11 +202,6 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
     **Actualización 2026-11-02:** existe la rama local `005-merchant-portal`, sin ningún commit
     propio y con `specs/005-merchant-portal/` vacía. El portal del cliente con inicio de sesión
     (I-08) está fuera de la Fase 1. ¿Es trabajo para después de la salida o entra en esta entrega?
-10. **Avisos con fecha futura** (2026-10-24, F004-3): hoy se puede preparar el aviso de un
-    día futuro, pero el enlace del comercio solo muestra hasta hoy, así que con más de 20
-    envíos el comercio no ve los enlaces hasta ese día. ¿Limitamos la fecha del aviso a hoy o
-    antes, dejamos que el enlace del comercio muestre días futuros, o el mensaje lista
-    siempre los enlaces cuando la fecha es futura?
 11. **Plataforma y respaldos** (2026-10-24): elegir proveedor y arquitectura (la imagen se
     probó en arm64), dominio y certificado, y para los respaldos el horario, cuántos guardar,
     dónde se copian fuera del servidor, quién recibe la alerta si fallan y cómo se respaldan
@@ -224,6 +217,8 @@ esta validación ni amplían la prueba móvil anterior de US1–US3.
 
 | Fecha | Pregunta | Respuesta |
 | --- | --- | --- |
+| 2026-11-02 | ¿Qué hacemos con los avisos de una fecha futura? (pregunta 10) | «Usa tus recomendaciones»: se limitan a hoy o antes (004/T037) |
+| 2026-11-02 | ¿Qué tarifa tienen Caldas y Girardota? (pregunta 4) | «Usa tus recomendaciones»: siguen con tarifa manual y motivo, marcadas «Tarifa por revisar», hasta que el cliente las dé |
 | 2026-11-02 | ¿Aceptar el riesgo de `glob` y `minimatch`, avisos moderados que solo trae un plugin de Sentry que el servidor no carga? | «Sí, lo acepto». Revisar cuando Sentry publique una versión sin ellos |
 | 2026-11-02 | ¿Corregir los bloqueos de la auditoría en ramas cortas, con PR y fusión con CI verde? | «Sí, corrige todo». PR #44, #45, #46 y la de documentos |
 | 2026-11-02 | ¿Dónde se conserva el modo sin conexión? | «Descarta el modo sin conexion para la app web si para la movil»; aclarado como «App del mensajero sí», instalada o en el navegador del teléfono. El panel sigue solo en línea. Vuelve a exigir la prueba física sin señal |

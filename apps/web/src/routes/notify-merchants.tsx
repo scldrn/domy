@@ -1,5 +1,6 @@
 import {
   bogotaToday,
+  isFutureServiceDate,
   composeMerchantMessage,
   eligibleNotificationShipments,
   notificationListQuery,
@@ -42,7 +43,9 @@ function NotifyMerchants() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
-  const date = search.date ?? bogotaToday(now());
+  const today = bogotaToday(now());
+  // FR-015: a link with a future date opens today, the latest day there is to notify.
+  const date = search.date && !isFutureServiceDate(search.date, today) ? search.date : today;
   const notifications = useQuery(notificationListQueryOptions(user.id, date));
   const intentOptions = notificationIntentsQueryOptions(user.id);
   const intentSnapshot = useQuery(intentOptions);
@@ -287,6 +290,7 @@ function NotifyMerchants() {
       return;
     }
     if (!notificationListQuery.safeParse({ date: nextDate }).success) return;
+    if (isFutureServiceDate(nextDate, today)) return;
     void navigate({ search: { date: nextDate }, replace: true });
   };
 
@@ -303,6 +307,7 @@ function NotifyMerchants() {
           id="notification-service-date"
           type="date"
           value={date}
+          max={today}
           onChange={(event) => {
             changeDate(event.currentTarget.value);
           }}

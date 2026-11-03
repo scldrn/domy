@@ -24,6 +24,10 @@ in Spanish between quotes.
 - Q: On its private link, must the merchant see each shipment's fee and the day's totals? → A: Yes: the fee of each shipment ("por confirmar" while under review) and the day's totals of fees, COD amounts to collect, and amounts collected by payment method; no balance or netting (FR-019).
 - Q: Can the recipient do anything from the tracking page, such as announce an absence or leave instructions? → A: No. The page is read-only; for any request the recipient uses the WhatsApp button to the support contact or, while the shipment is on its way, to the courier (FR-024).
 
+### Session 2026-11-02
+
+- Q: Can a merchant message be prepared for a future service date? → A: No. "Notificar clientes" works with today or an earlier date, because the merchant page never shows a future day and the message's private link would show nothing (owner decision, finding F004-3). A shipment scheduled ahead is notified on its service date (FR-015).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Follow a shipment (Priority: P1)
@@ -102,6 +106,8 @@ pending.
    the number of shipments and gives the merchant's private link instead of listing each.
 7. **Given** any shipment's detail, **When** the dispatcher taps "Copiar enlace de
    seguimiento", **Then** the link is copied.
+8. **Given** "Notificar clientes", **When** the dispatcher tries to choose tomorrow, **Then**
+   the date stays on today, and a link with a future date opens today's list.
 
 ---
 
@@ -245,9 +251,10 @@ and lets the merchant see yesterday.
 
 **WhatsApp message**
 
-- **FR-015**: The owner and the dispatcher MUST be able to see, for a service date, every
-  merchant with shipments, with the number of shipments and how many have not been included
-  in a message ("Notificar clientes").
+- **FR-015**: The owner and the dispatcher MUST be able to see, for a service date of today or
+  earlier, every merchant with shipments, with the number of shipments and how many have not
+  been included in a message ("Notificar clientes"). A future date MUST NOT be selectable, and
+  the system refuses it.
 - **FR-016**: For a merchant, the system MUST compose a message in Spanish with a greeting,
   one entry per shipment of the date not yet notified and not voided (recipient's name, neighborhood, tracking number,
   tracking link), and the merchant's private link. With more than 20 shipments, the message

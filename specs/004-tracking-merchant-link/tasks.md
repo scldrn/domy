@@ -235,3 +235,7 @@ feature by feature (decision #35 in the business master).
 ## Release change review — 2026-10-23
 
 - [X] T036 Review shared bounded request limiting and IPv6 prefix keys without evicting live public buckets. Preserve public privacy, status and rate-limit contracts; full local gates required. See ../../docs/release-change-review-results.md.
+
+## Production-readiness audit — 2026-11-02
+
+- [X] T037 Limit "Notificar clientes" to today or earlier (FR-015, US2 scenario 8, finding F004-3). `isFutureServiceDate` in `packages/domain`, used by both sides; `GET /api/notifications` refuses a future date with `notification_date_in_future`; the date field has that maximum and a future date in the URL opens today. Marking a shipment stays unchanged, so a delayed acknowledgment still records (FR-017). Tests: domain `notifications.test.ts`, server `notifications.test.ts`, e2e `notify-merchants.spec.ts`.
