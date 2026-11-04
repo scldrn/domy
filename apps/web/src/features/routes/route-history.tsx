@@ -76,53 +76,25 @@ export function RouteHistory({ events }: { events: RouteEvent[] }) {
 }
 
 /**
- * Who held a package and from when (SC-005): its pickup, each confirmed handover, and its
- * delivery, from the custody changes in the shipment's history.
+ * Who has the package after an event (SC-005): its pickup, each confirmed handover, and its
+ * delivery, read from the custody change; null when the event did not change custody.
  */
-export function CustodyHistory({ events }: { events: ShipmentEvent[] }) {
-  const headingId = useId();
-  const records = events.flatMap((event) => {
-    const change = event.changes?.["custodyCourierId"];
-    return change && change[0] !== change[1] ? [{ event, from: change[0], to: change[1] }] : [];
-  });
-  if (records.length === 0) return null;
-  const text = ({ event, from, to }: (typeof records)[number]) => {
-    if (event.type === "record_reverted" && typeof to === "string")
-      return `Se restablece la custodia de ${to} por reversión`;
-    // US4 FR-041: a change to office custody is not a delivery.
-    if (event.type === "office_received") return "La recibe la oficina";
-    if (typeof to === "string" && event.changes?.["heldAtOffice"]?.[0] === true)
-      return `La recoge ${to} en la oficina`;
-    if (typeof to === "string") {
-      return event.type === "handover_confirmed"
-        ? `Lo recibe ${to} de ${String(from)}`
-        : `Lo recoge ${to}`;
-    }
-    return event.toStatus === "returned"
-      ? `Lo devuelve ${String(from)}`
-      : `Lo entrega ${String(from)}`;
-  };
-  return (
-    <section aria-labelledby={headingId}>
-      <h2 id={headingId} className="mb-2 text-title-m text-on-surface">
-        Custodia del paquete
-      </h2>
-      <ol className="ml-2 flex flex-col border-l-2 border-outline-variant">
-        {records.map((record) => (
-          <li
-            key={record.event.id}
-            className="relative pb-5 pl-6 before:absolute before:top-1.5 before:-left-[7px] before:size-3 before:rounded-full before:bg-primary before:ring-4 before:ring-surface last:pb-0"
-          >
-            <p className="flex flex-wrap items-center gap-x-2 text-body-l text-on-surface">
-              {text(record)}
-              {record.event.onBehalf && <OnBehalfMark />}
-            </p>
-            <p className="text-body-m text-on-surface-variant">
-              {formatDateTime(record.event.occurredAt)} · Registró {record.event.actor.name}
-            </p>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
+export function custodyChange(event: ShipmentEvent): string | null {
+  const change = event.changes?.["custodyCourierId"];
+  if (!change || change[0] === change[1]) return null;
+  const [from, to] = change;
+  if (event.type === "record_reverted" && typeof to === "string")
+    return `Se restablece la custodia de ${to} por reversión`;
+  // US4 FR-041: a change to office custody is not a delivery.
+  if (event.type === "office_received") return "La recibe la oficina";
+  if (typeof to === "string" && event.changes?.["heldAtOffice"]?.[0] === true)
+    return `La recoge ${to} en la oficina`;
+  if (typeof to === "string") {
+    return event.type === "handover_confirmed"
+      ? `Lo recibe ${to} de ${String(from)}`
+      : `Lo recoge ${to}`;
+  }
+  return event.toStatus === "returned"
+    ? `Lo devuelve ${String(from)}`
+    : `Lo entrega ${String(from)}`;
 }

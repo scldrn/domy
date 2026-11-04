@@ -19,7 +19,7 @@ async function enter(page: Page, kind: string, values: Record<string, string> = 
 }
 async function revertLatest(page: Page) {
   const records = page.getByRole("region", { name: "Registros del mensajero" });
-  await records.getByRole("button", { name: "Revertir registro", exact: true }).last().click();
+  await records.getByRole("button", { name: "Revertir registro", exact: true }).first().click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Motivo", { exact: true }).fill("Se registró por equivocación");
   await dialog.getByRole("button", { name: "Confirmar reversión", exact: true }).click();
@@ -61,7 +61,7 @@ test("records, corrects and reverts a delivery on behalf, preserving the history
   ).toBeVisible();
   await expect(await revertLatest(office)).not.toBeVisible();
   await expect(records.getByRole("term").filter({ hasText: /^Revertido$/ })).toBeVisible();
-  await expect(office.getByRole("region", { name: "Custodia del paquete" })).toContainText(
+  await expect(office.getByRole("region", { name: "Historial", exact: true })).toContainText(
     "por reversión",
   );
   const detail = (await (

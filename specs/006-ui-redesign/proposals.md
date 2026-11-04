@@ -10,7 +10,7 @@ only when its row says `approved`.
 | Wordmark | Brand | Option 1 | approved | 2026-11-02: «Opción 1» (merged in #51) |
 | Nuevo envío `/envios/nuevo` | Daily operation | [Design artifact v13](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the board | approved | 2026-11-03: «Apruebo», including «El mensajero cobra», the top bar's «Nuevo envío» marked as the current page, and the summary aside |
 | Registro masivo `/envios/masivo` | Daily operation | [Design artifact v15](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the board and the shipment form | approved | 2026-11-03: «Apruebo», including the tabs by row state and the lot totals of the ready rows |
-| Detalle de envío `/envios/:guía` | Daily operation | — | pending | — |
+| Detalle de envío `/envios/:guía` | Daily operation | [Design artifact v17](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the board, the shipment form, and bulk registration | approved | 2026-11-03: «Apruebo», shown in four moments (exception, on route, delivered, assigned), including one «Historial» for custody and changes, «Recorrido» with times, and «Registrar por mensajero» hidden while no courier can be recorded for |
 | Editar envío `/envios/:guía/editar` | Daily operation | [Design artifact v13](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the board | approved | 2026-11-03: «Apruebo», including the «Cambiado» marks and the list of changes |
 | Rutas `/rutas` | Daily operation | — | pending | — |
 | Detalle de ruta `/rutas/:id` | Daily operation | — | pending | — |

@@ -52,7 +52,8 @@ export function VoidDialog({ shipment }: { shipment: Shipment }) {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <Button
-        variant="outline"
+        variant="ghost"
+        className="text-error hover:bg-error-container"
         onClick={() => {
           setActionId(crypto.randomUUID());
           setReason("");

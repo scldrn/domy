@@ -73,7 +73,7 @@ test("reassigns a shipment on the way to another courier's route, only with a re
   await expect(routeHistory).toContainText(`Reasignación · ${guide(moved)}`);
   await expect(routeHistory).toContainText(`Ana ${run} → Beto ${run}`);
   await page.goto(`/envios/${moved.trackingNumber}`);
-  const history = page.getByRole("region", { name: "Historial de cambios" });
+  const history = page.getByRole("region", { name: "Historial", exact: true });
   await expect(history).toContainText("Reasignado");
   await expect(history).toContainText(`Mensajero: Ana ${run} → Beto ${run}`);
   await expect(history).toContainText("La moto de Ana se varó");
