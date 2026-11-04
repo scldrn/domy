@@ -35,7 +35,7 @@ import { now } from "@/lib/clock";
 import { cn } from "@/lib/cn";
 import { formatCop, formatDate, formatDateTime, formatLongDate, formatWindow } from "@/lib/format";
 import { ClearReviewDialog } from "./clear-review-dialog";
-import { DetailCard } from "./detail-card";
+import { DetailCard } from "@/components/detail-card";
 import { ConfirmFeeDialog } from "./confirm-fee-dialog";
 import { ExceptionActions } from "./exception-decision-dialog";
 import { RecordOnBehalfDialog } from "./record-on-behalf-dialog";

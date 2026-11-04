@@ -12,7 +12,7 @@ import { OnBehalfMark } from "@/components/on-behalf-mark";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/format";
 import { RecordActions } from "./correct-record-dialog";
-import { DetailCard } from "./detail-card";
+import { DetailCard } from "@/components/detail-card";
 
 /** A record received more than a minute after it happened shows both times (FR-039). */
 const lateMs = 60_000;

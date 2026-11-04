@@ -327,7 +327,7 @@ test("reschedules into office custody and completes an office pickup and return 
   await reportException(phone, "Calle 34 # 40-04");
   await decide(office, shipment, "Nuevo intento", "2026-10-02");
   await office.goto("/rutas?date=2026-10-02");
-  const heldRow = office.getByRole("row").filter({
+  const heldRow = office.getByRole("listitem").filter({
     has: office.getByRole("link", {
       name: formatTrackingNumber(shipment.trackingNumber),
       exact: true,
@@ -351,7 +351,7 @@ test("reschedules into office custody and completes an office pickup and return 
   );
   await office.goto("/rutas?date=2026-10-02");
   await expect(
-    office.getByRole("row").filter({
+    office.getByRole("listitem").filter({
       has: office.getByRole("link", {
         name: formatTrackingNumber(shipment.trackingNumber),
         exact: true,

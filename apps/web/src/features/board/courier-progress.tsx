@@ -1,9 +1,9 @@
-import { formatDuration, type RouteSummary, type StopMark } from "@domy/domain";
+import { formatDuration, type RouteSummary } from "@domy/domain";
 import ArrowIcon from "@material-symbols/svg-400/rounded/arrow_forward.svg?react";
 import CallIcon from "@material-symbols/svg-400/rounded/call.svg?react";
 import { Link } from "@tanstack/react-router";
-import { Fragment } from "react";
 import { Icon } from "@/components/icon";
+import { markClass, StopTrack } from "@/components/stop-track";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 
@@ -21,26 +21,6 @@ function initials(name: string): string {
     .slice(0, 2)
     .map((word) => word.charAt(0).toUpperCase())
     .join("");
-}
-
-/**
- * The stop track's marks (design-system.md §8): pickup done is a hollow green ring, any other
- * stop done a solid green dot, an exception a red square, pending a ring; the next stop of a
- * route on the street pulses in lime.
- */
-function markClass(mark: StopMark, next: boolean): string {
-  if (mark.state === "exception") return "rounded-[3px] bg-rail-error";
-  if (mark.state === "done")
-    return mark.kind === "pickup"
-      ? "rounded-full border-[3px] border-rail-success bg-rail"
-      : "rounded-full bg-rail-success";
-  return cn(
-    "rounded-full border-2 bg-rail",
-    mark.kind === "pickup" && "border-[3px]",
-    next
-      ? "border-accent motion-safe:animate-[next-stop_2.2s_ease-out_infinite]"
-      : "border-on-rail-variant/60",
-  );
 }
 
 function sinceMinutes(instant: string | null, now: Date): number | null {
@@ -165,10 +145,6 @@ export function CourierProgress({
             if (!courier) return null;
             const marks = route.stopMarks;
             const done = marks.filter((mark) => mark.state !== "pending").length;
-            const nextIndex =
-              route.status === "in_progress"
-                ? marks.findIndex((mark) => mark.state === "pending")
-                : -1;
             const phone = phones.get(courier.id);
             const notes = notesOf(route, now);
             return (
@@ -205,29 +181,12 @@ export function CourierProgress({
                       {done} de {marks.length} paradas
                     </span>
                   </div>
-                  <div
-                    role="img"
-                    aria-label={`${String(done)} de ${String(marks.length)} paradas completadas`}
-                    className="my-1.5 flex min-h-3.5 items-center"
-                  >
-                    {marks.map((mark, index) => (
-                      <Fragment key={index}>
-                        <span
-                          className={cn("size-3 shrink-0", markClass(mark, index === nextIndex))}
-                        />
-                        {index < marks.length - 1 && (
-                          <span
-                            className={cn(
-                              "h-0.5 min-w-1 flex-[1_1_6px]",
-                              mark.state !== "pending" && marks[index + 1]?.state !== "pending"
-                                ? "bg-rail-success/50"
-                                : "bg-rail-line",
-                            )}
-                          />
-                        )}
-                      </Fragment>
-                    ))}
-                  </div>
+                  <StopTrack
+                    marks={marks}
+                    next={route.status === "in_progress"}
+                    surface="rail"
+                    className="my-1.5"
+                  />
                   <p className="flex flex-wrap gap-x-3 text-body-s">
                     {notes.map((note) => (
                       <span key={note.text} className={note.tone}>
@@ -275,10 +234,10 @@ export function CourierProgress({
         className="flex flex-wrap gap-x-4 gap-y-1 border-t border-rail-line pt-2.5 pb-1 text-body-s text-on-rail-variant"
       >
         {[
-          ["Recogida", markClass({ kind: "pickup", state: "done" }, false)],
-          ["Entrega", markClass({ kind: "delivery", state: "done" }, false)],
-          ["Novedad", markClass({ kind: "delivery", state: "exception" }, false)],
-          ["Pendiente", markClass({ kind: "delivery", state: "pending" }, false)],
+          ["Recogida", markClass({ kind: "pickup", state: "done" }, false, "rail")],
+          ["Entrega", markClass({ kind: "delivery", state: "done" }, false, "rail")],
+          ["Novedad", markClass({ kind: "delivery", state: "exception" }, false, "rail")],
+          ["Pendiente", markClass({ kind: "delivery", state: "pending" }, false, "rail")],
           ["Próxima", "rounded-full border-2 border-accent bg-rail"],
         ].map(([label, mark]) => (
           <span key={label} className="inline-flex items-center gap-1.5">

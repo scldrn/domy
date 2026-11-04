@@ -102,7 +102,7 @@ test("reassigns a whole route to a courier without a route in progress (scenario
   await dialog.getByRole("button", { name: "Reasignar ruta" }).click();
   await expect(dialog).toBeHidden();
 
-  await expect(page.getByText(`Jueves 1 de octubre · ${dario}`)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Mensajero", exact: true })).toContainText(dario);
   const history = page.getByRole("region", { name: "Historial de la ruta" });
   await expect(history).toContainText(`Carla ${run} → ${dario}`);
   await expect(history).toContainText("Carla terminó su turno");

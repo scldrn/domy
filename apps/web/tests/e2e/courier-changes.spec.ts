@@ -131,7 +131,7 @@ test("shows route changes until understood, preserves offline acknowledgment and
     })
     .toMatchObject({ unacknowledgedNotices: 0, courierLastSyncedAt: expect.any(String) });
   await office.goto("/rutas");
-  await expect(office.getByText(/Última sincronización/).first()).toBeVisible();
+  await expect(office.getByText(/Sincronizó hace/).first()).toBeVisible();
 });
 
 /** Quickstart 15: two independent phones, receiver confirmation persisted offline first. */
