@@ -108,8 +108,8 @@ and passes axe in both themes.
 - [X] T037 [US2] Implement it in `apps/web/src/routes/shipment-bulk.tsx` and `apps/web/src/features/bulk/`; `bulk-registration.spec.ts` green
 - [X] T038 [US2] Propose "Detalle de envío" and record the decision
 - [X] T039 [US2] Implement it in `apps/web/src/routes/shipment-detail.tsx` and its sections, sharing the board's `SidePanel` content where the proposal shows the same sections
-- [ ] T040 [US2] Propose "Rutas" and "Detalle de ruta" and record the decision
-- [ ] T041 [US2] Implement them in `apps/web/src/routes/routes-board.tsx`, `apps/web/src/routes/route-detail.tsx`, and `apps/web/src/features/routes/*`; route-build, adjust, cancel, reassign, concurrent-edit, and routes-board specs green (US2 scenario 2)
+- [X] T040 [US2] Propose "Rutas" and "Detalle de ruta" and record the decision
+- [X] T041 [US2] Implement them in `apps/web/src/routes/routes-board.tsx`, `apps/web/src/routes/route-detail.tsx`, and `apps/web/src/features/routes/*`; route-build, adjust, cancel, reassign, concurrent-edit, and routes-board specs green (US2 scenario 2)
 - [ ] T042 [US2] Propose "Historial" and record the decision
 - [ ] T043 [US2] Implement it in `apps/web/src/routes/history.tsx` and `apps/web/src/features/history/`; `history-search.spec.ts` green
 - [ ] T044 [US2] Propose "Notificar clientes" and record the decision

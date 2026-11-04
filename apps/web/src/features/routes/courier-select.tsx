@@ -16,6 +16,7 @@ export function CourierSelect({
   disabled,
   id = "route-courier",
   label = "Mensajero",
+  hideLabel = false,
   invalid,
 }: {
   value: { id: string; name: string } | null;
@@ -23,6 +24,8 @@ export function CourierSelect({
   disabled?: boolean;
   id?: string;
   label?: string;
+  /** The label stays for screen readers only, under a heading that already says it. */
+  hideLabel?: boolean;
   invalid?: boolean;
 }) {
   const couriers = useQuery({ queryKey: ["couriers", "active"], queryFn: listActiveCouriers });
@@ -53,7 +56,9 @@ export function CourierSelect({
   const current = couriers.data?.find((courier) => courier.id === value?.id) ?? null;
   return (
     <Field data-invalid={invalid}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id} className={hideLabel ? "sr-only" : undefined}>
+        {label}
+      </FieldLabel>
       {disabled ? (
         <p className="text-body-l text-on-surface">{value?.name ?? "Sin mensajero"}</p>
       ) : couriers.isPending ? (

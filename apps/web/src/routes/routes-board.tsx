@@ -19,17 +19,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/empty-state";
-import { PageHeader } from "@/components/page-header";
+import { DayStepper } from "@/components/day-stepper";
+import { SummarySentence } from "@/components/summary-sentence";
 import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createRoute, getRoutesBoard, listUnassigned } from "@/features/routes/api";
+import { routesDaySentence } from "@/features/routes/route-sentences";
 import { RouteSummaryCard } from "@/features/routes/route-summary-card";
 import { UnassignedList } from "@/features/routes/unassigned-list";
 import { ApiError } from "@/lib/api-client";
 import { now } from "@/lib/clock";
-import { formatDate, formatLongDate } from "@/lib/format";
+import { formatCop, formatDate, formatLongDate } from "@/lib/format";
 
 export const Route = createFileRoute("/_panel/rutas")({
   validateSearch: z.object({ date: z.iso.date().optional() }),
@@ -42,11 +42,13 @@ function RoutesSection({
   title,
   hint,
   routes,
+  now,
   empty,
 }: {
   title: string;
   hint?: string;
   routes: RouteSummary[];
+  now: Date;
   empty?: ReactNode;
 }) {
   const headingId = useId();
@@ -62,10 +64,13 @@ function RoutesSection({
       {routes.length === 0 ? (
         empty
       ) : (
-        <ul aria-labelledby={headingId} className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+        <ul
+          aria-labelledby={headingId}
+          className="grid grid-cols-[repeat(auto-fill,minmax(17.5rem,1fr))] gap-3.5"
+        >
           {routes.map((route) => (
             <li key={route.id}>
-              <RouteSummaryCard route={route} />
+              <RouteSummaryCard route={route} now={now} />
             </li>
           ))}
         </ul>
@@ -74,7 +79,11 @@ function RoutesSection({
   );
 }
 
-/** The routes of a date and the shipments still without a route (feature 002). */
+/**
+ * The routes of a date and the shipments still without a route (feature 002), as the owner
+ * approved «Rutas» (feature 006): a sentence of the day, the route cards, and «Sin asignar»
+ * beside «Nueva ruta», which on a phone stays at the bottom while the list scrolls.
+ */
 function RoutesBoardPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
@@ -117,8 +126,9 @@ function RoutesBoardPage() {
       });
       setPicked([]);
       setDraftId(crypto.randomUUID());
-      await queryClient.invalidateQueries({ queryKey: ["unassigned"] });
-      await queryClient.invalidateQueries({ queryKey: ["routes-board"] });
+      // The new route opens at once; the lists reload behind it.
+      void queryClient.invalidateQueries({ queryKey: ["unassigned"] });
+      void queryClient.invalidateQueries({ queryKey: ["routes-board"] });
       await navigate({ to: "/rutas/$routeId", params: { routeId: route.id } });
     } catch (error) {
       // The selection stays, so the dispatcher can adjust it and try again (FR-021).
@@ -131,32 +141,46 @@ function RoutesBoardPage() {
   }
 
   const count = selected.length;
+  const chosen = (unassigned.data ?? []).filter((shipment) => selected.includes(shipment.id));
+  const pickups = new Set(
+    chosen.map(
+      (shipment) =>
+        `${shipment.merchant.id}|${shipment.pickupAddress}|${shipment.pickupNeighborhood.id}`,
+    ),
+  ).size;
+  const toCollect = chosen.reduce((sum, shipment) => sum + shipment.codAmount, 0);
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Rutas"
-        description={formatLongDate(date, today)}
-        actions={
-          <Field className="w-44">
-            <FieldLabel htmlFor="routes-date">Fecha</FieldLabel>
-            <Input
-              id="routes-date"
-              type="date"
-              min={today}
-              value={date}
-              onChange={(event) => {
-                if (event.target.value) {
-                  void navigate({
-                    to: "/rutas",
-                    search: { date: event.target.value },
-                    replace: true,
-                  });
-                }
-              }}
+      <header className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
+        <div className="flex min-w-0 flex-[1_1_26rem] flex-col gap-1.5">
+          <h1 className="text-headline-l text-on-surface">Rutas</h1>
+          {board.data && (
+            <SummarySentence
+              parts={routesDaySentence({
+                date,
+                today,
+                routes: board.data.routes,
+                unassigned: unassigned.data,
+                now: now(),
+              })}
             />
-          </Field>
-        }
-      />
+          )}
+        </div>
+        <DayStepper
+          date={date}
+          today={today}
+          min={today}
+          surface="sheet"
+          label="Fecha de las rutas"
+          onChange={(next) => {
+            void navigate({
+              to: "/rutas",
+              search: next === today ? {} : { date: next },
+              replace: true,
+            });
+          }}
+        />
+      </header>
 
       {board.isPending ? (
         <div className="grid gap-3 md:grid-cols-2" aria-label="Cargando las rutas">
@@ -175,6 +199,7 @@ function RoutesBoardPage() {
           <RoutesSection
             title="Rutas del día"
             routes={board.data.routes}
+            now={now()}
             empty={
               <EmptyState
                 icon={RouteIcon}
@@ -188,15 +213,19 @@ function RoutesBoardPage() {
               title="Rutas de días anteriores"
               hint="Siguen en curso hasta que se resuelvan todos sus envíos."
               routes={board.data.routesFromPreviousDays}
+              now={now()}
             />
           )}
         </>
       )}
 
-      {/* Route building in the supporting pane layout (design-system.md §5); when the panes
-          stack, the new route stays in view at the bottom. */}
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <section aria-labelledby="unassigned-title" className="flex min-w-0 flex-col gap-4">
+      {/* Route building beside the list (design-system.md §5); on a phone «Nueva ruta» stays
+          at the bottom of the screen while the list scrolls. */}
+      <div className="flex flex-wrap items-start gap-5 max-[820px]:flex-col max-[820px]:items-stretch">
+        <section
+          aria-labelledby="unassigned-title"
+          className="flex min-w-0 flex-[999_1_36rem] flex-col gap-3 rounded-lg border border-outline-variant bg-sheet px-5 py-4.5 max-[820px]:px-4"
+        >
           <div>
             <h2
               id="unassigned-title"
@@ -210,7 +239,8 @@ function RoutesBoardPage() {
               )}
             </h2>
             <p className="text-body-m text-on-surface-variant">
-              Envíos registrados hasta el {formatDate(date)} que no están en ninguna ruta.
+              Registrados hasta el {formatDate(date)} y en ninguna ruta, agrupados por dónde se
+              recogen.
             </p>
           </div>
           {unassigned.isPending ? (
@@ -245,16 +275,26 @@ function RoutesBoardPage() {
 
         <section
           aria-labelledby="new-route-title"
-          className="sticky bottom-4 z-10 flex flex-col gap-4 rounded-md border border-outline-variant bg-sheet p-6 shadow-md xl:top-6 xl:bottom-auto xl:shadow-none"
+          className="sticky top-4 z-10 flex max-w-95 min-w-0 flex-[1_1_18.75rem] flex-col gap-3 rounded-lg border border-outline-variant bg-sheet px-5 py-4 max-[820px]:top-auto max-[820px]:bottom-0 max-[820px]:-mx-4 max-[820px]:max-w-none max-[820px]:gap-2 max-[820px]:rounded-b-none max-[820px]:px-4 max-[820px]:pb-[calc(0.75rem+env(safe-area-inset-bottom))] max-[820px]:shadow-[0_-10px_24px_-18px] max-[820px]:shadow-scrim/45"
         >
-          <h2 id="new-route-title" className="text-title-l text-on-surface">
+          <h2 id="new-route-title" className="text-title-l text-on-surface max-[820px]:sr-only">
             Nueva ruta
           </h2>
-          <p className="text-body-l text-on-surface-variant" aria-live="polite">
+          <p className="text-body-m text-on-surface-variant" aria-live="polite">
             {count === 0
-              ? "Elige en la lista los envíos de la ruta."
-              : `${count === 1 ? "1 envío elegido" : `${String(count)} envíos elegidos`} para el ${formatDate(date)}.`}
+              ? "Elige en «Sin asignar» los envíos de la ruta."
+              : `${count === 1 ? "1 envío elegido" : `${String(count)} envíos elegidos`} para el ${formatLongDate(date, today).toLowerCase()}.`}
           </p>
+          <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 border-t border-outline-variant pt-3 text-body-m max-[820px]:hidden">
+            <dt className="text-on-surface-variant">Envíos</dt>
+            <dd className="text-right font-semibold tabular-nums">{count}</dd>
+            <dt className="text-on-surface-variant">Recogidas</dt>
+            <dd className="text-right font-semibold tabular-nums">{pickups}</dd>
+            <dt className="text-body-l font-bold text-on-surface">Por recaudar</dt>
+            <dd className="text-right text-body-l font-bold tabular-nums">
+              {formatCop(toCollect)}
+            </dd>
+          </dl>
           {problem && (
             <p
               role="alert"
@@ -264,6 +304,7 @@ function RoutesBoardPage() {
             </p>
           )}
           <Button
+            variant="accent"
             className="w-full"
             disabled={busy || count === 0}
             onClick={() => {
@@ -277,6 +318,10 @@ function RoutesBoardPage() {
                 ? "Crear ruta con 1 envío"
                 : `Crear ruta con ${String(count)} envíos`}
           </Button>
+          <p className="text-center text-body-s text-on-surface-variant max-[820px]:hidden">
+            El mensajero y el orden se eligen en la ruta. Con más de {largeRouteThreshold} envíos te
+            pediremos confirmarla.
+          </p>
         </section>
       </div>
 

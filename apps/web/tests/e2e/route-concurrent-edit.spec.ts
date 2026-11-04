@@ -46,7 +46,7 @@ test("refuses the second of two changes to the same route and shows the latest v
   await expect(second.getByRole("alert")).toHaveText(
     "Esta ruta cambió; revisa la versión más reciente.",
   );
-  await expect(second.getByText(`Jueves 1 de octubre · ${courier}`)).toBeVisible();
+  await expect(second.getByRole("combobox", { name: "Mensajero" })).toHaveValue(courier);
   await expect(second.getByText("En preparación", { exact: true })).toBeVisible();
 
   // With the latest version on screen, the same action goes through.

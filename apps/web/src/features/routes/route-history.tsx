@@ -5,8 +5,9 @@ import {
   type ShipmentEvent,
 } from "@domy/domain";
 import { Link } from "@tanstack/react-router";
-import { useId } from "react";
+import { DetailCard } from "@/components/detail-card";
 import { OnBehalfMark } from "@/components/on-behalf-mark";
+import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/format";
 
 const eventLabels: Record<RouteEventType, string> = {
@@ -26,21 +27,24 @@ const eventLabels: Record<RouteEventType, string> = {
   record_reverted: "Registro revertido",
 };
 
-/** Every action on the route, with author, time, couriers, and reason (FR-019, FR-022). */
+/**
+ * Every action on the route, with author, time, couriers, and reason (FR-019, FR-022), newest
+ * first, as the shipment's «Historial» shows them (approved «Detalle de ruta», feature 006).
+ */
 export function RouteHistory({ events }: { events: RouteEvent[] }) {
-  const headingId = useId();
   return (
-    <section aria-labelledby={headingId}>
-      <h2 id={headingId} className="mb-2 text-title-m text-on-surface">
-        Historial de la ruta
-      </h2>
-      <ol className="ml-2 flex flex-col border-l-2 border-outline-variant">
-        {events.map((event) => (
+    <DetailCard title="Historial de la ruta">
+      <ol className="flex flex-col">
+        {events.toReversed().map((event) => (
           <li
             key={event.id}
-            className="relative pb-5 pl-6 before:absolute before:top-1.5 before:-left-[7px] before:size-3 before:rounded-full before:bg-primary before:ring-4 before:ring-surface last:pb-0"
+            className={cn(
+              "relative pb-3.5 pl-6 text-body-m before:absolute before:top-1.25 before:left-1 before:size-2.5 before:rounded-full before:content-['']",
+              "after:absolute after:top-4.25 after:-bottom-px after:left-[8.5px] after:w-px after:bg-outline-variant after:content-[''] last:pb-0 last:after:hidden",
+              tone(event.type),
+            )}
           >
-            <p className="flex flex-wrap items-center gap-x-2 text-body-l text-on-surface">
+            <p className="flex flex-wrap items-center gap-x-2 font-semibold text-on-surface">
               <span>
                 {eventLabels[event.type]}
                 {event.shipment && (
@@ -58,21 +62,29 @@ export function RouteHistory({ events }: { events: RouteEvent[] }) {
               </span>
               {event.onBehalf && <OnBehalfMark />}
             </p>
-            <p className="text-body-m text-on-surface-variant">
+            <p className="text-on-surface-variant">
               {event.actor.name} · {formatDateTime(event.occurredAt)}
             </p>
             {(event.fromCourier ?? event.toCourier) && (
-              <p className="text-body-m text-on-surface">
+              <p className="text-on-surface">
                 {event.fromCourier ? `${event.fromCourier.name} → ` : ""}
                 {event.toCourier?.name ?? "Sin mensajero"}
               </p>
             )}
-            {event.reason && <p className="text-body-m text-on-surface">{event.reason}</p>}
+            {event.reason && <p className="text-on-surface">{event.reason}</p>}
           </li>
         ))}
       </ol>
-    </section>
+    </DetailCard>
   );
+}
+
+/** The dot of an event: handovers in the custody color, a finished route in green. */
+function tone(type: RouteEventType): string {
+  if (type.startsWith("handover_") || type === "reassigned") return "before:bg-info";
+  if (type === "finished") return "before:bg-success";
+  if (type === "cancelled") return "before:rounded-[3px] before:bg-error";
+  return "before:bg-on-surface-variant";
 }
 
 /**

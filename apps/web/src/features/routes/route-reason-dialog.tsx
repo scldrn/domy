@@ -75,7 +75,8 @@ function RouteReasonDialog({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <Button
-        variant="outline"
+        variant="ghost"
+        className={destructive ? "text-error hover:bg-error-container" : undefined}
         disabled={disabled}
         onClick={() => {
           setActionId(crypto.randomUUID());

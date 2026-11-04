@@ -45,7 +45,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AttentionList, type AttentionIntent } from "@/features/board/attention-list";
 import { CourierProgress } from "@/features/board/courier-progress";
 import { daySentence } from "@/features/board/day-sentence";
-import { DayStepper } from "@/features/board/day-stepper";
+import { DayStepper } from "@/components/day-stepper";
 import { ShipmentPanel, type OpenShipment } from "@/features/board/shipment-panel";
 import { listCouriers } from "@/features/master-data/api";
 import { notificationListQueryOptions } from "@/features/notifications/api";

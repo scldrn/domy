@@ -75,6 +75,8 @@ test("derives the COD amount from the payment mode (scenario 3)", async ({
   dispatcherPage: page,
 }) => {
   await fillDelivery(page, "Bullish Hype", "Laureles");
+  // The fee arrives from the rate card; without it the form reports the fee first.
+  await expect(payment(page).getByText("$ 13.000")).toBeVisible();
   await page.getByRole("button", { name: "Registrar envío" }).click();
   await expect(
     page.getByText("En contraentrega el valor a recaudar debe ser mayor que cero."),

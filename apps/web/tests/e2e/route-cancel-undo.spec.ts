@@ -114,7 +114,7 @@ test("undoes the dispatch of a route with nothing picked up (scenario 15)", asyn
 
   // In preparation again, with the same courier, its shipment "Asignado", ready to dispatch.
   await expect(page.getByText("En preparación", { exact: true })).toBeVisible();
-  await expect(page.getByText(`Jueves 1 de octubre · Gloria ${run}`)).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Mensajero" })).toHaveValue(`Gloria ${run}`);
   await expect(stopList(page).getByText("Asignado", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Despachar" })).toBeVisible();
   const history = page.getByRole("region", { name: "Historial de la ruta" });

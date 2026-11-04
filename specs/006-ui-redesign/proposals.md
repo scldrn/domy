@@ -12,8 +12,8 @@ only when its row says `approved`.
 | Registro masivo `/envios/masivo` | Daily operation | [Design artifact v15](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the board and the shipment form | approved | 2026-11-03: «Apruebo», including the tabs by row state and the lot totals of the ready rows |
 | Detalle de envío `/envios/:guía` | Daily operation | [Design artifact v17](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the board, the shipment form, and bulk registration | approved | 2026-11-03: «Apruebo», shown in four moments (exception, on route, delivered, assigned), including one «Historial» for custody and changes, «Recorrido» with times, and «Registrar por mensajero» hidden while no courier can be recorded for |
 | Editar envío `/envios/:guía/editar` | Daily operation | [Design artifact v13](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the board | approved | 2026-11-03: «Apruebo», including the «Cambiado» marks and the list of changes |
-| Rutas `/rutas` | Daily operation | — | pending | — |
-| Detalle de ruta `/rutas/:id` | Daily operation | — | pending | — |
+| Rutas `/rutas` | Daily operation | [Design artifact v19](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the shipment detail | approved | 2026-11-04: «Apruebo», route cards with the board's stop track, «Sin asignar» grouped by pickup with check rows, and «Nueva ruta» as a sticky aside (a bottom bar on phones); light and phone width |
+| Detalle de ruta `/rutas/:id` | Daily operation | [Design artifact v19](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside «Rutas» | approved | 2026-11-04: «Apruebo», shown in three moments (in preparation, in progress, finished), including «Despachar» in slate and «Mensajero» and «Avance» replacing «Resumen» |
 | Historial `/historial` | Daily operation | — | pending | — |
 | Notificar clientes `/notificar` | Daily operation | — | pending | — |
 | Mi ruta `/mensajero` | Courier app | — | pending | — |
