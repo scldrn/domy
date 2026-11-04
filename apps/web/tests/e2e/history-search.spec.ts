@@ -34,7 +34,9 @@ test("finds shipments by recipient phone, newest first, and exports them (scenar
 
   // Opening a result shows its detail and history.
   await rows.first().getByRole("link").click();
-  await expect(page.getByRole("region", { name: "Historial de cambios" })).toContainText("Creado");
+  await expect(page.getByRole("region", { name: "Historial", exact: true })).toContainText(
+    "Creado",
+  );
 });
 
 test("shows export only to the owner and filters fees to review", async ({

@@ -346,7 +346,7 @@ test("reschedules into office custody and completes an office pickup and return 
     .getByRole("button", { name: "Confirmar recepción" })
     .click();
   await expect(office.getByText("En oficina", { exact: true })).toBeVisible();
-  await expect(office.getByRole("region", { name: "Custodia del paquete" })).toContainText(
+  await expect(office.getByRole("region", { name: "Historial", exact: true })).toContainText(
     "La recibe la oficina",
   );
   await office.goto("/rutas?date=2026-10-02");
@@ -435,7 +435,7 @@ test("reschedules into office custody and completes an office pickup and return 
   expect(recorded.records.filter((record) => record.kind === "return")).toHaveLength(1);
   expect(recorded.records.filter((record) => record.kind === "pickup")).toHaveLength(2);
   await office.reload();
-  await expect(office.getByRole("region", { name: "Custodia del paquete" })).toContainText(
+  await expect(office.getByRole("region", { name: "Historial", exact: true })).toContainText(
     "en la oficina",
   );
 });

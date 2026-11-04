@@ -22,7 +22,7 @@ test("edits the COD amount and voids another shipment, both in the history (scen
   await expect(changes).toContainText("$ 90.000");
   await page.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(page).toHaveURL(new RegExp(`/envios/${edited.trackingNumber}$`));
-  const history = page.getByRole("region", { name: "Historial de cambios" });
+  const history = page.getByRole("region", { name: "Historial", exact: true });
   await expect(history).toContainText("Editado");
   await expect(history).toContainText("Valor a recaudar: $ 85.000 → $ 90.000");
   await expect(history).toContainText("John Coordinador");
@@ -95,7 +95,7 @@ test("lets the owner confirm a fee marked for review (FR-035)", async ({
   await dialog.getByLabel("Tarifa").fill("30.000");
   await dialog.getByRole("button", { name: "Guardar tarifa" }).click();
   await expect(ownerPage.getByText("Tarifa por revisar", { exact: true })).toHaveCount(0);
-  const history = ownerPage.getByRole("region", { name: "Historial de cambios" });
+  const history = ownerPage.getByRole("region", { name: "Historial", exact: true });
   await expect(history).toContainText("Tarifa confirmada");
   await expect(history).toContainText("Tarifa: $ 35.000 → $ 30.000");
 });

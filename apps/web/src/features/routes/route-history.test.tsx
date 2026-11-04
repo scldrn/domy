@@ -8,7 +8,7 @@ import {
 import type { ReactNode } from "react";
 import { renderToStaticMarkup as renderBare } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CustodyHistory, RouteHistory } from "./route-history";
+import { custodyChange, RouteHistory } from "./route-history";
 
 const john = { id: "u1", name: "John Coordinador" };
 const ana = { id: "c1", name: "Ana Ruiz" };
@@ -126,92 +126,80 @@ describe("RouteHistory (FR-019, FR-022)", () => {
   });
 });
 
-describe("CustodyHistory (SC-005)", () => {
-  it("labels restored responsibility without claiming another pickup and omits unchanged legacy pairs (T124)", () => {
-    const read = text(
-      renderToStaticMarkup(
-        <CustodyHistory
-          events={[
-            shipmentEvent({
-              type: "record_reverted",
-              changes: { custodyCourierId: [null, "Ana Ruiz"] },
-            }),
-            shipmentEvent({
-              type: "record_reverted",
-              changes: { custodyCourierId: ["Ana Ruiz", "Ana Ruiz"] },
-            }),
-            shipmentEvent({ type: "record_reverted", changes: { custodyCourierId: [null, null] } }),
-          ]}
-        />,
+describe("custodyChange (SC-005)", () => {
+  it("labels restored responsibility without claiming another pickup and skips unchanged legacy pairs (T124)", () => {
+    expect(
+      custodyChange(
+        shipmentEvent({
+          type: "record_reverted",
+          changes: { custodyCourierId: [null, "Ana Ruiz"] },
+        }),
       ),
-    );
-    expect(read).toContain("Se restablece la custodia de Ana Ruiz por reversión");
-    expect(read).not.toContain("Lo recoge");
-    expect(read).not.toContain("Lo entrega");
-    expect(read.match(/Registró John/g)).toHaveLength(1);
-  });
-  it("distinguishes office receipt and pickup from delivery and ordinary pickup (US4 T058)", () => {
-    const html = renderToStaticMarkup(
-      <CustodyHistory
-        events={[
-          shipmentEvent({
-            type: "office_received",
-            changes: { custodyCourierId: ["Ana Ruiz", null], heldAtOffice: [false, true] },
-          }),
-          shipmentEvent({
-            toStatus: "picked_up",
-            changes: { custodyCourierId: [null, "Beto Gómez"], heldAtOffice: [true, false] },
-          }),
-        ]}
-      />,
-    );
-    expect(text(html)).toContain("La recibe la oficina");
-    expect(text(html)).toContain("La recoge Beto Gómez en la oficina");
-    expect(text(html)).not.toContain("Lo entrega Ana Ruiz");
-  });
-  it("tells who held the package, from pickup to delivery, and who recorded it", () => {
-    const html = renderToStaticMarkup(
-      <CustodyHistory
-        events={[
-          shipmentEvent({ toStatus: "registered" }),
-          shipmentEvent({
-            toStatus: "picked_up",
-            changes: { custodyCourierId: [null, "Ana Ruiz"] },
-          }),
-          shipmentEvent({
-            type: "handover_confirmed",
-            changes: { custodyCourierId: ["Ana Ruiz", "Beto Gómez"] },
-            onBehalf: true,
-          }),
-          shipmentEvent({
-            toStatus: "delivered",
-            changes: { custodyCourierId: ["Beto Gómez", null] },
-          }),
-        ]}
-      />,
-    );
-    const read = text(html);
-    expect(read).toContain("Lo recoge Ana Ruiz");
-    expect(read).toContain("Lo recibe Beto Gómez de Ana Ruiz");
-    expect(read).toContain("Lo entrega Beto Gómez");
-    expect(read.match(/Registrado por despacho/g)).toHaveLength(1);
+    ).toBe("Se restablece la custodia de Ana Ruiz por reversión");
+    expect(
+      custodyChange(
+        shipmentEvent({
+          type: "record_reverted",
+          changes: { custodyCourierId: ["Ana Ruiz", "Ana Ruiz"] },
+        }),
+      ),
+    ).toBeNull();
+    expect(
+      custodyChange(
+        shipmentEvent({ type: "record_reverted", changes: { custodyCourierId: [null, null] } }),
+      ),
+    ).toBeNull();
   });
 
-  it("shows nothing while no courier has had the package", () => {
-    expect(renderToStaticMarkup(<CustodyHistory events={[shipmentEvent({})]} />)).toBe("");
+  it("distinguishes office receipt and pickup from delivery and ordinary pickup (US4 T058)", () => {
+    expect(
+      custodyChange(
+        shipmentEvent({
+          type: "office_received",
+          changes: { custodyCourierId: ["Ana Ruiz", null], heldAtOffice: [false, true] },
+        }),
+      ),
+    ).toBe("La recibe la oficina");
+    expect(
+      custodyChange(
+        shipmentEvent({
+          toStatus: "picked_up",
+          changes: { custodyCourierId: [null, "Beto Gómez"], heldAtOffice: [true, false] },
+        }),
+      ),
+    ).toBe("La recoge Beto Gómez en la oficina");
+  });
+
+  it("tells who held the package, from pickup to delivery", () => {
+    expect(custodyChange(shipmentEvent({ toStatus: "registered" }))).toBeNull();
+    expect(
+      custodyChange(
+        shipmentEvent({ toStatus: "picked_up", changes: { custodyCourierId: [null, "Ana Ruiz"] } }),
+      ),
+    ).toBe("Lo recoge Ana Ruiz");
+    expect(
+      custodyChange(
+        shipmentEvent({
+          type: "handover_confirmed",
+          changes: { custodyCourierId: ["Ana Ruiz", "Beto Gómez"] },
+        }),
+      ),
+    ).toBe("Lo recibe Beto Gómez de Ana Ruiz");
+    expect(
+      custodyChange(
+        shipmentEvent({
+          toStatus: "delivered",
+          changes: { custodyCourierId: ["Beto Gómez", null] },
+        }),
+      ),
+    ).toBe("Lo entrega Beto Gómez");
   });
 
   it("tells a return apart from a delivery", () => {
-    const html = renderToStaticMarkup(
-      <CustodyHistory
-        events={[
-          shipmentEvent({
-            toStatus: "returned",
-            changes: { custodyCourierId: ["Ana Ruiz", null] },
-          }),
-        ]}
-      />,
-    );
-    expect(text(html)).toContain("Lo devuelve Ana Ruiz");
+    expect(
+      custodyChange(
+        shipmentEvent({ toStatus: "returned", changes: { custodyCourierId: ["Ana Ruiz", null] } }),
+      ),
+    ).toBe("Lo devuelve Ana Ruiz");
   });
 });

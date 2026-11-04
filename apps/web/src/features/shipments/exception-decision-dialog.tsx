@@ -36,7 +36,14 @@ import { formatDate } from "@/lib/format";
 import { decideException, receiveAtOffice } from "./api";
 
 /** US4 T058, FR-029/FR-041: panel actions use the same declared eligibility as the API. */
-export function ExceptionActions({ shipment }: { shipment: ShipmentDetail }) {
+export function ExceptionActions({
+  shipment,
+  primary = false,
+}: {
+  shipment: ShipmentDetail;
+  /** The decision is the detail's main action (approved "Detalle de envío", feature 006). */
+  primary?: boolean;
+}) {
   const queryClient = useQueryClient();
   const [action, setAction] = useState<"decision" | "receipt" | null>(null);
   const refresh = async () => {
@@ -58,7 +65,7 @@ export function ExceptionActions({ shipment }: { shipment: ShipmentDetail }) {
     <>
       {shipment.status === "exception" && (
         <Button
-          variant="outline"
+          variant={primary ? "default" : "outline"}
           onClick={() => {
             setAction("decision");
           }}

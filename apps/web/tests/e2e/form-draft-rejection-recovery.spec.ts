@@ -539,7 +539,7 @@ test("reviews a definitively rejected bulk row before replacing its batch and ro
   await page
     .getByRole("option", { name: `${pickupLabel} · ${recipientAddress}`, exact: true })
     .click();
-  await page.getByLabel("Filas").fill(rawRows);
+  await page.getByLabel("Filas", { exact: true }).fill(rawRows);
   await page.getByRole("button", { name: "Revisar lista" }).click();
   await expect(page.getByText("1 lista · 0 por confirmar · 0 con errores")).toBeVisible();
 
@@ -613,7 +613,7 @@ test("reviews a definitively rejected bulk row before replacing its batch and ro
 
   await historyAcknowledgement.check();
   await prepareNewIntent.click();
-  await expect(page.getByLabel("Filas")).toHaveValue(rawRows);
+  await expect(page.getByLabel("Filas", { exact: true })).toHaveValue(rawRows);
   await expect(page.getByRole("button", { name: "Revisar lista" })).toBeEnabled();
   const preparedRaw = await storedText(page, bulkDraftKey);
   const preparedDraft = bulkDraftEnvelopeSchema.safeParse(parseJson(preparedRaw));

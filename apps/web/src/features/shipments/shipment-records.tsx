@@ -7,11 +7,12 @@ import {
   type CourierRecord,
   type ShipmentDetail,
 } from "@domy/domain";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { OnBehalfMark } from "@/components/on-behalf-mark";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/format";
 import { RecordActions } from "./correct-record-dialog";
+import { DetailCard } from "./detail-card";
 
 /** A record received more than a minute after it happened shows both times (FR-039). */
 const lateMs = 60_000;
@@ -19,7 +20,7 @@ const lateMs = 60_000;
 /**
  * The courier's records of a shipment (feature 003, FR-036, FR-039): proof of delivery with
  * its photos, the collection by payment method, disbursements, exceptions, and the records
- * that could not be applied.
+ * that could not be applied, as cards of the approved "Detalle de envío" (feature 006).
  */
 export function ShipmentRecords({
   records,
@@ -30,46 +31,43 @@ export function ShipmentRecords({
   attempts?: CourierRecord[];
   shipment?: ShipmentDetail;
 }) {
-  const headingId = useId();
-  const attemptsId = useId();
-  if (records.length === 0) return null;
   return (
     <>
       {attempts.length > 0 && (
-        <section aria-labelledby={attemptsId}>
-          <h2 id={attemptsId} className="mb-2 text-title-m text-on-surface">
-            Intentos de entrega
-          </h2>
-          <ol className="flex flex-col gap-2">
+        <DetailCard title="Intentos de entrega">
+          <ol className="flex flex-col gap-2 text-body-m">
             {attempts.map((attempt, index) => (
-              <li
-                key={attempt.id}
-                className="rounded-sm border border-outline-variant bg-sheet p-4 text-body-l text-on-surface"
-              >
-                Intento {index + 1}:{" "}
-                {attempt.kind === "delivery"
-                  ? "Entregado"
-                  : attempt.exceptionReason
-                    ? exceptionReasonLabels[attempt.exceptionReason]
-                    : "Novedad"}
-                <span className="block text-body-m text-on-surface-variant">
+              <li key={attempt.id} className="text-on-surface">
+                <span className="font-semibold">
+                  Intento {index + 1}:{" "}
+                  {attempt.kind === "delivery"
+                    ? "Entregado"
+                    : attempt.exceptionReason
+                      ? exceptionReasonLabels[attempt.exceptionReason]
+                      : "Novedad"}
+                </span>
+                <span className="block text-on-surface-variant">
                   {attempt.courier.name} · {formatDateTime(attempt.occurredAt)}
                 </span>
               </li>
             ))}
           </ol>
-        </section>
+        </DetailCard>
       )}
-      <section aria-labelledby={headingId}>
-        <h2 id={headingId} className="mb-2 text-title-m text-on-surface">
-          Registros del mensajero
-        </h2>
-        <ol className="flex flex-col gap-3">
-          {records.map((record) => (
-            <RecordItem key={record.id} record={record} shipment={shipment} />
-          ))}
-        </ol>
-      </section>
+      <DetailCard title="Registros del mensajero" count={records.length}>
+        {records.length === 0 ? (
+          <p className="text-body-m text-on-surface-variant">
+            Todavía no hay registros del mensajero. Aparecen aquí cuando recoge, entrega o reporta
+            una novedad.
+          </p>
+        ) : (
+          <ol className="flex flex-col">
+            {records.toReversed().map((record) => (
+              <RecordItem key={record.id} record={record} shipment={shipment} />
+            ))}
+          </ol>
+        )}
+      </DetailCard>
     </>
   );
 }
@@ -89,20 +87,21 @@ function RecordItem({
   const collected = amounts.filter(([, amount]) => amount > 0);
   const late = Date.parse(record.recordedAt) - Date.parse(record.occurredAt) > lateMs;
   return (
-    <li className="flex flex-col gap-2 rounded-md border border-outline-variant bg-sheet p-4">
-      {shipment && <RecordActions shipment={shipment} record={record} />}
-      <p className="flex flex-wrap items-center gap-2 text-title-m text-on-surface">
-        {courierRecordKindLabels[record.kind]}
-        {record.outcome === "not_applied" && <Badge variant="warning">No aplicado</Badge>}
-        {record.reverted && <Badge variant="outline">Revertido</Badge>}
-        {record.onBehalf && <OnBehalfMark />}
-      </p>
-      <p className="text-body-m text-on-surface-variant">
-        {record.courier.name} · {formatDateTime(record.occurredAt)}
-        {late && ` · recibido ${formatDateTime(record.recordedAt)}`}
-        {record.onBehalf && ` · registró ${record.author.name}`}
-      </p>
-      <dl className="flex flex-col gap-1 text-body-l text-on-surface">
+    <li className="flex flex-col gap-2.5 border-t border-outline-variant py-3.5 first:border-t-0 first:pt-0 last:pb-0">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <p className="flex flex-wrap items-center gap-2 text-title-m text-on-surface">
+          {courierRecordKindLabels[record.kind]}
+          {record.outcome === "not_applied" && <Badge variant="warning">No aplicado</Badge>}
+          {record.reverted && <Badge variant="outline">Revertido</Badge>}
+          {record.onBehalf && <OnBehalfMark />}
+        </p>
+        <p className="text-body-m text-on-surface-variant">
+          {record.courier.name} · {formatDateTime(record.occurredAt)}
+          {late && ` · recibido ${formatDateTime(record.recordedAt)}`}
+          {record.onBehalf && ` · registró ${record.author.name}`}
+        </p>
+      </div>
+      <dl className="grid grid-cols-[7rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-body-m text-on-surface">
         {record.receivedByName && <Line label="Recibió">{record.receivedByName}</Line>}
         {record.exceptionReason && (
           <Line label="Motivo">{exceptionReasonLabels[record.exceptionReason]}</Line>
@@ -150,15 +149,16 @@ function RecordItem({
           ))}
         </ul>
       )}
+      {shipment && <RecordActions shipment={shipment} record={record} />}
     </li>
   );
 }
 
 function Line({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[10rem_1fr] gap-4">
-      <dt className="text-body-m text-on-surface-variant">{label}</dt>
-      <dd>{children}</dd>
+    <div className="contents">
+      <dt className="text-on-surface-variant">{label}</dt>
+      <dd className="font-medium break-words">{children}</dd>
     </div>
   );
 }
@@ -167,7 +167,7 @@ function Line({ label, children }: { label: string; children: React.ReactNode })
 function Photo({ id, label, uploaded }: { id: string; label: string; uploaded: boolean }) {
   const [gone, setGone] = useState(false);
   const placeholder = (text: string) => (
-    <figure className="flex size-32 flex-col items-center justify-center gap-1 rounded-sm border border-dashed border-outline p-2 text-center">
+    <figure className="flex h-24 w-33 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-outline bg-sheet-alt p-2 text-center">
       <figcaption className="text-body-s text-on-surface-variant">
         {label}
         <br />
@@ -184,7 +184,7 @@ function Photo({ id, label, uploaded }: { id: string; label: string; uploaded: b
           src={`/api/photos/${id}`}
           alt={label}
           loading="lazy"
-          className="size-32 rounded-sm border border-outline-variant object-cover"
+          className="h-24 w-33 rounded-md border border-outline-variant object-cover"
           onError={() => {
             setGone(true);
           }}

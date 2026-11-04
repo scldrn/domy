@@ -149,6 +149,10 @@ export function recordValuesFor(
   );
 }
 
+/**
+ * "Registrar por mensajero" (feature 002, FR-025), shown only while a courier can be recorded
+ * for (approved "Detalle de envío", feature 006).
+ */
 export function RecordOnBehalfDialog({ shipment }: { shipment: ShipmentDetail }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -161,15 +165,16 @@ export function RecordOnBehalfDialog({ shipment }: { shipment: ShipmentDetail })
   });
   return (
     <>
-      <Button
-        variant="outline"
-        disabled={!courierId}
-        onClick={() => {
-          setOpen(true);
-        }}
-      >
-        Registrar por mensajero
-      </Button>
+      {courierId && (
+        <Button
+          variant="outline"
+          onClick={() => {
+            setOpen(true);
+          }}
+        >
+          Registrar por mensajero
+        </Button>
+      )}
       {open && (
         <EntryForm
           shipment={shipment}

@@ -249,7 +249,7 @@ test("keeps valid legacy bulk rows behind informed recovery", async ({ dispatche
   await page.getByLabel("Ya descargué la copia y revisé el historial de envíos.").check();
   await page.getByRole("button", { name: "Preparar un intento nuevo" }).click();
 
-  await expect(page.getByLabel("Filas")).toHaveValue(raw);
+  await expect(page.getByLabel("Filas", { exact: true })).toHaveValue(raw);
   const savedRaw = await page.evaluate((storageKey) => sessionStorage.getItem(storageKey), key);
   const saved: unknown = JSON.parse(savedRaw ?? "null");
   const modern = z
@@ -388,7 +388,7 @@ test("retries the exact bulk payload after its committed response is lost", asyn
 
   await page.goto("/envios/masivo");
   await chooseMerchant(page, "Amy Tecnology");
-  await page.getByLabel("Filas").fill(raw);
+  await page.getByLabel("Filas", { exact: true }).fill(raw);
   await page.getByRole("button", { name: "Revisar lista" }).click();
   await expect(page.getByText("1 lista · 0 por confirmar · 0 con errores")).toBeVisible();
   await page.getByRole("button", { name: "Crear 1 envío" }).click();
@@ -486,7 +486,7 @@ test("restores only unconfirmed bulk rows after an uncertain partial confirmatio
 
   await page.goto("/envios/masivo");
   await chooseMerchant(page, "Amy Tecnology");
-  await page.getByLabel("Filas").fill([createdRow, remainingRow].join("\n"));
+  await page.getByLabel("Filas", { exact: true }).fill([createdRow, remainingRow].join("\n"));
   await page.getByRole("button", { name: "Revisar lista" }).click();
   await expect(page.getByText("1 lista · 0 por confirmar · 1 con errores")).toBeVisible();
   await page.getByRole("button", { name: "Crear 1 envío" }).click();
@@ -496,7 +496,7 @@ test("restores only unconfirmed bulk rows after an uncertain partial confirmatio
   await expect(page.getByRole("button", { name: "Reintentar creación pendiente" })).toBeVisible();
   await page.getByRole("button", { name: "Reintentar creación pendiente" }).click();
 
-  await expect(page.getByLabel("Filas")).toHaveValue(remainingRow);
+  await expect(page.getByLabel("Filas", { exact: true })).toHaveValue(remainingRow);
   await expect(page.getByText("0 listas · 0 por confirmar · 1 con errores")).toBeVisible();
   const first = bulkConfirmInput.safeParse(requests[0]);
   const second = bulkConfirmInput.safeParse(requests[1]);

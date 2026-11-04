@@ -14,6 +14,7 @@ const badgeVariants = cva(
         success: "bg-success-container text-on-success-container",
         warning: "bg-warning-container text-on-warning-container",
         info: "bg-info-container text-on-info-container",
+        tertiary: "bg-tertiary-container text-on-tertiary-container",
         destructive: "bg-error-container text-on-error-container",
         outline: "border border-outline-variant text-on-surface-variant",
         count: "h-4 min-w-4 rounded-full bg-error px-1 text-label-s text-on-error",

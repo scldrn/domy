@@ -60,7 +60,8 @@ test("registers a delivery on merchant account at the standard fee (scenario 1)"
     .click();
   await expect(payment(page).getByText("$ 13.000")).toBeVisible();
   await registerAndOpen(page);
-  await expect(page.getByText("Registrado", { exact: true })).toBeVisible();
+  // The state mark and the first step of «Recorrido».
+  await expect(page.getByText("Registrado", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Creado", { exact: true })).toBeVisible();
   await expect(page.getByText("$ 13.000")).toBeVisible();
 });
@@ -124,7 +125,7 @@ test("adds the express surcharge and prices a carrier handoff by its place (scen
   await chooseSelect(page, "Transportadora", "Coonorte");
   await page.getByLabel("Municipio de destino").fill("Santa Rosa de Osos");
   await registerAndOpen(page);
-  await expect(page.getByText("Coonorte")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Destino" }).getByText("Coonorte")).toBeVisible();
 });
 
 test("keeps the values after a failed save and registers once on retry (FR-038)", async ({
