@@ -343,22 +343,24 @@ function PanelLayout() {
             <GlobalSearch />
             <span className="flex-1" />
             <ThemeSwitch shown={theme.shown} onToggle={theme.toggle} />
-            {pathname !== "/envios/masivo" && (
-              <Link
-                to="/envios/masivo"
-                className={cn(buttonVariants({ variant: "outline" }), "max-lg:hidden")}
-              >
-                <Icon symbol={PostAddIcon} />
-                Registro masivo
-              </Link>
-            )}
+            <Link
+              to="/envios/masivo"
+              aria-current={pathname === "/envios/masivo" ? "page" : undefined}
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "max-lg:hidden aria-[current=page]:border-on-surface aria-[current=page]:font-bold",
+              )}
+            >
+              <Icon symbol={PostAddIcon} />
+              Registro masivo
+            </Link>
             {/* On its own page it is the current page, not a second lime action (approved "Nuevo envío"). */}
             <Link
               to="/envios/nuevo"
               aria-current={pathname === "/envios/nuevo" ? "page" : undefined}
               className={cn(
                 buttonVariants({ variant: pathname === "/envios/nuevo" ? "outline" : "accent" }),
-                "max-sm:size-12 max-sm:px-0",
+                "max-sm:size-12 max-sm:px-0 aria-[current=page]:border-on-surface aria-[current=page]:font-bold",
               )}
             >
               <Icon symbol={AddIcon} />

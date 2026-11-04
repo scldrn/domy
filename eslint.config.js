@@ -12,6 +12,8 @@ export default tseslint.config(
       "apps/web/src/route-tree.gen.ts",
       "apps/server/src/db/migrations/",
       "apps/server/demo/",
+      // Worktrees of other Claude Code sessions, whole copies of the repository.
+      ".claude/",
     ],
   },
   js.configs.recommended,

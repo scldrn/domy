@@ -1,5 +1,7 @@
 import {
   bulkConfirmInput,
+  formatCop,
+  resolveCodAmount,
   readBulkTable,
   shipmentCreateInput,
   type BulkConfirmation,
@@ -10,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { FormSection, SectionNumber } from "@/components/form-section";
 import { PageHeader } from "@/components/page-header";
 import { OptionSelect } from "@/components/option-select";
 import { SearchCombobox } from "@/components/search-combobox";
@@ -64,6 +67,34 @@ const plural = (count: number, one: string, many: string) =>
   `${String(count)} ${count === 1 ? one : many}`;
 
 /** Registration of up to 200 shipments of one merchant at once (User Story 4). */
+/** One state's count in the lot, with the same mark as its rows. */
+function LotCount({
+  state,
+  label,
+  count,
+}: {
+  state: "ready" | "needs_confirmation" | "invalid";
+  label: string;
+  count: number;
+}) {
+  const mark = {
+    ready: "text-success before:bg-success",
+    needs_confirmation:
+      "text-warning before:bg-transparent before:ring-2 before:ring-warning before:ring-inset",
+    invalid: "text-error before:rounded-[3px] before:bg-error",
+  }[state];
+  return (
+    <li className="flex items-center justify-between gap-3">
+      <span
+        className={`inline-flex items-center gap-2 text-label-l before:size-2.5 before:shrink-0 before:rounded-full before:content-[''] ${mark}`}
+      >
+        {label}
+      </span>
+      <strong className="tabular-nums">{count}</strong>
+    </li>
+  );
+}
+
 function ShipmentBulkPage() {
   const draft = useFormDraft<BulkDraft>("bulk", emptyBulkDraft, bulkDraftSchema);
   if (draft.status !== "ready") return <FormDraftRecovery draft={draft} />;
@@ -184,6 +215,52 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
   );
   const creatable = states?.flatMap((state, index) => (state === "ready" ? [index] : [])) ?? [];
   const count = (state: string) => states?.filter((value) => value === state).length ?? 0;
+
+  const pickupPointShown = pickupPointId ?? points.data?.find((point) => point.isDefault)?.id;
+  const pickupName = points.data?.find((point) => point.id === pickupPointShown)?.label;
+  // What the ready rows add up to (approved "Registro masivo"): fees, and what couriers collect.
+  const lot = creatable.reduce(
+    (sum, index) => {
+      const input = preview?.rows[index]?.input;
+      if (!input) return sum;
+      return {
+        fees: sum.fees + input.fee,
+        collected:
+          sum.collected + resolveCodAmount(input.paymentMode, input.fee, input.codAmount ?? 0),
+      };
+    },
+    { fees: 0, collected: 0 },
+  );
+  const invalidCount = count("invalid");
+  const actionHint = !preview
+    ? "Revisar no crea nada: muestra cada fila con su tarifa y lo que falta."
+    : invalidCount > 0
+      ? `${invalidCount === 1 ? "La fila" : `Las ${String(invalidCount)} filas`} con errores se ${invalidCount === 1 ? "queda" : "quedan"} en el cuadro para corregirlas.`
+      : "El lote se guarda en este equipo mientras trabajas.";
+  const action = (className: string) =>
+    preview ? (
+      <Button
+        variant="accent"
+        size="lg"
+        className={className}
+        disabled={busy || creatable.length === 0 || draft.writeFailed}
+        onClick={() => void create()}
+      >
+        {creatable.length === 0
+          ? "Ninguna fila lista"
+          : `Crear ${plural(creatable.length, "envío", "envíos")}`}
+      </Button>
+    ) : (
+      <Button
+        variant="accent"
+        size="lg"
+        className={className}
+        disabled={busy}
+        onClick={() => void review(text)}
+      >
+        Revisar lista
+      </Button>
+    );
 
   async function confirmPending(payload: BulkPending) {
     const snapshot = {
@@ -351,8 +428,18 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Registro masivo" />
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title="Registro masivo"
+        sentence={
+          <p className="max-w-[72ch] text-pretty">
+            Pega las filas de la hoja de cálculo o sube el archivo de la plantilla. Revisas la
+            lista, confirmas lo dudoso y creas{" "}
+            <strong className="font-semibold text-on-surface">las filas listas</strong>; las que
+            tienen errores se quedan en el cuadro para corregirlas.
+          </p>
+        }
+      />
       {pending && pendingRequiresReview ? (
         reviewedPendingRelease ? (
           <section
@@ -388,93 +475,164 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
           </Button>
         </section>
       ) : (
-        <>
-          <div className="grid max-w-5xl gap-4 lg:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="bulk-merchant">Cliente</FieldLabel>
-              <SearchCombobox<MerchantOption>
-                id="bulk-merchant"
-                label="Cliente"
-                queryKey={["merchants"]}
-                search={searchMerchants}
-                value={merchant}
-                onChange={(next) => {
-                  setMerchant(next);
-                  setPickupPointId(null);
+        <div className="flex flex-wrap items-start gap-5">
+          <div className="flex min-w-0 flex-[999_1_35rem] flex-col gap-4">
+            <FormSection number={1} title="Cliente y recogida">
+              <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-x-4 gap-y-3.5 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="bulk-merchant">Cliente</FieldLabel>
+                  <SearchCombobox<MerchantOption>
+                    id="bulk-merchant"
+                    label="Cliente"
+                    queryKey={["merchants"]}
+                    search={searchMerchants}
+                    value={merchant}
+                    onChange={(next) => {
+                      setMerchant(next);
+                      setPickupPointId(null);
+                      setPreview(null);
+                    }}
+                    itemKey={(option) => option.id}
+                    itemLabel={(option) => option.name}
+                    placeholder="Nombre o alias del cliente"
+                    emptyText="No hay clientes con ese nombre"
+                    autoFocus
+                  />
+                </Field>
+                <Field>
+                  <OptionSelect
+                    label="Punto de recogida"
+                    value={
+                      pickupPointId ?? points.data?.find((point) => point.isDefault)?.id ?? null
+                    }
+                    onChange={(value) => {
+                      setPickupPointId(value);
+                      setPreview(null);
+                    }}
+                    options={(points.data ?? []).map((point) => ({
+                      value: point.id,
+                      label: `${point.label} · ${point.address}`,
+                    }))}
+                    placeholder="Primero elige el cliente"
+                    disabled={!merchant}
+                  />
+                  <p className="text-body-s text-on-surface-variant">
+                    Todas las filas salen de este punto.
+                  </p>
+                </Field>
+              </div>
+            </FormSection>
+
+            <FormSection number={2} title="Lista">
+              <BulkInput
+                text={text}
+                onTextChange={(next) => {
+                  setText(next);
                   setPreview(null);
                 }}
-                itemKey={(option) => option.id}
-                itemLabel={(option) => option.name}
-                placeholder="Nombre o alias del cliente"
-                emptyText="No hay clientes con ese nombre"
-                autoFocus
-              />
-            </Field>
-            <Field>
-              <OptionSelect
-                label="Punto de recogida"
-                value={pickupPointId ?? points.data?.find((point) => point.isDefault)?.id ?? null}
-                onChange={(value) => {
-                  setPickupPointId(value);
-                  setPreview(null);
+                onFileRead={(rows) => {
+                  setText(rowsToText(rows));
+                  void review(rows);
                 }}
-                options={(points.data ?? []).map((point) => ({
-                  value: point.id,
-                  label: `${point.label} · ${point.address}`,
-                }))}
-                placeholder="Primero elige el cliente"
-                disabled={!merchant}
+                onFileError={setError}
               />
-            </Field>
-          </div>
+              {preview && (
+                <div className="mt-3.5 flex justify-end">
+                  <Button variant="outline" disabled={busy} onClick={() => void review(text)}>
+                    Revisar de nuevo
+                  </Button>
+                </div>
+              )}
+            </FormSection>
 
-          <div className="max-w-5xl">
-            <BulkInput
-              text={text}
-              onTextChange={(next) => {
-                setText(next);
-                setPreview(null);
-              }}
-              onFileRead={(rows) => {
-                setText(rowsToText(rows));
-                void review(rows);
-              }}
-              onFileError={setError}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4">
-            <Button variant="outline" disabled={busy} onClick={() => void review(text)}>
-              Revisar lista
-            </Button>
             {preview && (
-              <>
-                <p className="text-body-l text-on-surface" role="status">
+              <section
+                aria-labelledby="revision"
+                className="rounded-lg border border-outline-variant bg-sheet px-5 pt-4 pb-1 max-[820px]:px-4"
+              >
+                <h2 id="revision" className="text-title-l text-on-surface">
+                  <SectionNumber number={3} />
+                  Revisión
+                </h2>
+                <p className="mt-0.5 mb-2 text-body-m text-on-surface-variant" role="status">
                   {plural(count("ready"), "lista", "listas")} · {count("needs_confirmation")} por
                   confirmar · {count("invalid")} con errores
                 </p>
-                <Button
-                  disabled={busy || creatable.length === 0 || draft.writeFailed}
-                  onClick={() => void create()}
-                >
-                  Crear {plural(creatable.length, "envío", "envíos")}
-                </Button>
-              </>
+                <BulkPreviewTable
+                  rows={preview.rows}
+                  accepted={preview.accepted}
+                  onAccept={accept}
+                  onChooseNeighborhood={(row, place) => {
+                    const places = new Map(preview.places);
+                    places.set(row, place.id);
+                    void review(preview.cells, places);
+                  }}
+                />
+              </section>
             )}
           </div>
-          {preview && (
-            <BulkPreviewTable
-              rows={preview.rows}
-              accepted={preview.accepted}
-              onAccept={accept}
-              onChooseNeighborhood={(row, place) => {
-                const places = new Map(preview.places);
-                places.set(row, place.id);
-                void review(preview.cells, places);
-              }}
-            />
-          )}
-        </>
+
+          <aside
+            aria-label="Lote"
+            className="sticky top-4 flex max-w-95 min-w-0 flex-[1_1_20rem] flex-col gap-3 max-[820px]:static max-[820px]:max-w-none max-[820px]:basis-full"
+          >
+            <section
+              aria-labelledby="lote"
+              className="rounded-lg border border-outline-variant bg-sheet px-5 py-4"
+            >
+              <h2 id="lote" className="text-title-l text-on-surface">
+                Lote
+              </h2>
+              <dl className="mt-3 grid grid-cols-[6rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-body-m">
+                <dt className="text-on-surface-variant">Cliente</dt>
+                <dd className="font-medium break-words">{merchant?.name ?? "Sin elegir"}</dd>
+                <dt className="text-on-surface-variant">Recoge en</dt>
+                <dd className="font-medium break-words">{pickupName ?? "Sin elegir"}</dd>
+                <dt className="text-on-surface-variant">Filas</dt>
+                <dd className="font-medium">
+                  {preview ? plural(preview.rows.length, "fila", "filas") : "Sin revisar todavía"}
+                </dd>
+              </dl>
+              {preview && (
+                <>
+                  <ul className="mt-3 flex flex-col gap-1.5 text-body-m">
+                    <LotCount state="ready" label="Listas" count={count("ready")} />
+                    <LotCount
+                      state="needs_confirmation"
+                      label="Por confirmar"
+                      count={count("needs_confirmation")}
+                    />
+                    <LotCount state="invalid" label="Con errores" count={count("invalid")} />
+                  </ul>
+                  <dl className="mt-3.5 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 border-t border-outline-variant pt-3.5 text-body-m">
+                    <dt className="text-on-surface-variant">Tarifas de las listas</dt>
+                    <dd className="text-right font-semibold tabular-nums">{formatCop(lot.fees)}</dd>
+                    <dt className="text-body-l font-bold">A recaudar</dt>
+                    <dd className="text-right text-body-l font-bold tabular-nums">
+                      {formatCop(lot.collected)}
+                    </dd>
+                  </dl>
+                </>
+              )}
+            </section>
+            <div className="flex flex-col gap-2 max-[820px]:hidden">
+              {action("w-full")}
+              <p className="text-center text-body-s text-on-surface-variant">{actionHint}</p>
+            </div>
+          </aside>
+
+          <div className="sticky bottom-0 z-10 -mx-4 hidden w-[calc(100%+2rem)] items-center gap-3 border-t border-outline-variant bg-sheet px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] max-[820px]:flex">
+            <span className="min-w-0">
+              <span className="block text-body-s text-on-surface-variant">
+                {preview ? "Listas para crear" : "Sin revisar"}
+              </span>
+              <strong className="block font-bold tabular-nums">
+                {preview ? plural(count("ready"), "fila", "filas") : "Revisa la lista"}
+              </strong>
+            </span>
+            {action("flex-1")}
+          </div>
+        </div>
       )}
       {draft.writeFailed && !(pendingRequiresReview && reviewedPendingRelease) && (
         <div role="alert" className="max-w-5xl space-y-2 text-body-m text-error">
