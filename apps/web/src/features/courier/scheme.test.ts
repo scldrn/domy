@@ -36,8 +36,9 @@ describe("courier scheme", () => {
     }).not.toThrow();
   });
 
-  it("names the scheme of the generated tokens", () => {
+  it("names the scheme of the generated tokens, and follows the phone without high contrast", () => {
     expect(courierScheme(true)).toBe("high-contrast");
-    expect(courierScheme(false)).toBe("light");
+    // No scheme: the tokens follow the phone's light or dark preference (feature 006, FR-015a).
+    expect(courierScheme(false)).toBeUndefined();
   });
 });

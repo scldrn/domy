@@ -190,7 +190,9 @@ test("decides another attempt and a return, preserving attempts and never collec
       .getByRole("link")
       .filter({ hasText: "Calle 31 # 40-01" });
     await expect(cachedVisit).toHaveCount(1);
-    await expect(cachedVisit).toContainText("Completada");
+    // A finished visit with a novedad reads «Novedad» since the approved app del mensajero
+    // (feature 006); it is still not pending.
+    await expect(cachedVisit).toContainText("Novedad");
     await expect(pendingDelivery(phone, "Calle 31 # 40-01")).toHaveCount(0);
   } finally {
     refresh.resolve(undefined);

@@ -1,4 +1,6 @@
+import CloudOffIcon from "@material-symbols/svg-400/rounded/cloud_off.svg?react";
 import ContrastIcon from "@material-symbols/svg-400/rounded/contrast.svg?react";
+import SyncIcon from "@material-symbols/svg-400/rounded/sync.svg?react";
 import LogoutIcon from "@material-symbols/svg-400/rounded/logout.svg?react";
 import RouteFillIcon from "@material-symbols/svg-400/rounded/route-fill.svg?react";
 import RouteIcon from "@material-symbols/svg-400/rounded/route.svg?react";
@@ -59,6 +61,10 @@ const destinations: Destination[] = [
   },
   { to: "/mensajero/mi-dia", label: "Mi día", icon: TodayIcon, activeIcon: TodayFillIcon },
 ];
+
+/** Icon buttons on the pizarra header: light icons, a quiet hover, lime focus (feature 006). */
+const railButton =
+  "text-on-rail hover:bg-on-rail/10 hover:text-on-rail focus-visible:outline-accent";
 
 /** The courier app (feature 003): for couriers only; the office has the panel (FR-002). */
 export const Route = createFileRoute("/_courier")({
@@ -175,10 +181,13 @@ function CourierLayout() {
     if (user) void storage?.persist?.().catch(() => undefined);
   }, [user]);
 
-  // Light unless the courier chose high contrast; the panel follows the device again after.
+  // The phone's light or dark unless the courier chose high contrast (feature 006, FR-015a);
+  // the panel follows its own choice again after.
   useEffect(() => {
     const root = document.documentElement;
-    root.dataset["scheme"] = courierScheme(highContrast);
+    const scheme = courierScheme(highContrast);
+    if (scheme) root.dataset["scheme"] = scheme;
+    else delete root.dataset["scheme"];
     return () => {
       delete root.dataset["scheme"];
     };
@@ -236,22 +245,27 @@ function CourierLayout() {
   }, [status.syncing, status.offline, status.refusal, totalPending, user]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface">
+    <div className="flex min-h-dvh flex-col bg-paper">
       <a
         href="#contenido"
         className="sr-only z-50 rounded-sm bg-sheet px-4 py-3 text-label-l text-on-surface shadow-lg focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
       >
         Saltar al contenido
       </a>
-      <header className="sticky top-0 z-20 border-b border-outline-variant bg-surface-container">
+      {/* Pizarra only in the header and the navigation bar (feature 006, FR-015a). The header
+          scrolls away with the page, so it never covers part of a control; the bar stays. */}
+      <header className="bg-rail text-on-rail">
         <div className="mx-auto flex h-16 w-full max-w-xl items-center gap-1 pr-2 pl-4">
-          <Wordmark className="mr-auto h-10 w-fit text-primary" />
+          <Wordmark className="mr-auto h-9 w-fit text-accent" />
           <Button
             variant="ghost"
             size="icon"
             aria-label="Alto contraste"
             aria-pressed={highContrast}
-            className={cn(highContrast && "bg-secondary-container text-on-secondary-container")}
+            className={cn(
+              railButton,
+              highContrast && "bg-accent text-on-accent hover:bg-accent hover:text-on-accent",
+            )}
             onClick={() => {
               setHighContrast((on) => {
                 saveHighContrast(!on);
@@ -265,6 +279,7 @@ function CourierLayout() {
             variant="ghost"
             size="icon"
             aria-label="Cerrar sesión"
+            className={railButton}
             disabled={signingOut || !user}
             onClick={() => void onSignOut()}
           >
@@ -272,16 +287,27 @@ function CourierLayout() {
           </Button>
         </div>
       </header>
+      {/* The sync strip reads calmly on pizarra under the header and scrolls away, so it never
+          covers the screen's controls (approved app del mensajero, US3 scenario 2). */}
       {(status.offline || status.syncing || totalPending > 0) && (
-        <div
-          role="status"
-          className="border-b border-outline-variant bg-warning-container px-4 py-3 text-body-l text-on-warning-container"
-        >
-          <div className="mx-auto max-w-xl">
-            {status.offline ? "Sin conexión — " : status.syncing ? "Sincronizando — " : ""}
-            {pendingLabel(status.pending.length)}
-            {status.pendingPhotos > 0 &&
-              ` · ${String(status.pendingPhotos)} ${status.pendingPhotos === 1 ? "foto pendiente" : "fotos pendientes"}`}
+        <div role="status" className="bg-rail-raised text-body-m text-on-rail">
+          <div className="mx-auto flex max-w-xl items-start gap-2.5 px-4 py-2.5">
+            <Icon
+              symbol={status.offline ? CloudOffIcon : SyncIcon}
+              size={20}
+              className="mt-0.5 text-rail-warning"
+            />
+            <span>
+              {status.offline ? "Sin conexión — " : status.syncing ? "Sincronizando — " : ""}
+              {pendingLabel(status.pending.length)}
+              {status.pendingPhotos > 0 &&
+                ` · ${String(status.pendingPhotos)} ${status.pendingPhotos === 1 ? "foto pendiente" : "fotos pendientes"}`}
+              {status.offline && (
+                <span className="text-on-rail-variant">
+                  . Se envían solos cuando vuelva la señal.
+                </span>
+              )}
+            </span>
           </div>
         </div>
       )}
@@ -289,7 +315,7 @@ function CourierLayout() {
       <main
         id="contenido"
         tabIndex={-1}
-        className="mx-auto w-full max-w-xl flex-1 px-4 pt-4 pb-48 outline-none"
+        className="mx-auto w-full max-w-xl flex-1 px-4 pt-4 pb-64 outline-none"
       >
         <div className="mb-4 flex flex-col gap-3">
           {status.sessionStatus === "withdrawn" ? (
@@ -373,7 +399,7 @@ function CourierLayout() {
       </main>
       <nav
         aria-label="Navegación principal"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-outline-variant bg-surface-container pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-rail-line bg-rail pb-[env(safe-area-inset-bottom)]"
       >
         <ul className="mx-auto grid h-20 max-w-xl grid-cols-3">
           {destinations.map((destination) => {
@@ -386,12 +412,12 @@ function CourierLayout() {
                 <Link
                   to={destination.to}
                   aria-current={active ? "page" : undefined}
-                  className="flex flex-1 flex-col items-center justify-center gap-1 rounded-sm text-label-m text-on-surface-variant aria-[current=page]:text-on-surface"
+                  className="flex flex-1 flex-col items-center justify-center gap-1 rounded-sm text-label-m text-on-rail-variant outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent aria-[current=page]:text-on-rail"
                 >
                   <span
                     className={cn(
                       "state-layer flex h-8 w-16 items-center justify-center rounded-full",
-                      active && "bg-secondary-container text-on-secondary-container",
+                      active && "bg-accent text-on-accent",
                     )}
                   >
                     <Icon symbol={active ? destination.activeIcon : destination.icon} />
@@ -399,7 +425,7 @@ function CourierLayout() {
                   {destination.label}
                   {destination.to === "/mensajero/pendientes" && totalPending > 0 && (
                     <span
-                      className="mt-0.5 rounded-full bg-warning-container px-2 text-label-m tabular-nums text-on-warning-container"
+                      className="mt-0.5 rounded-full bg-rail-warning px-2 text-label-m text-rail tabular-nums"
                       aria-label={`${String(status.pending.length)} acciones y ${String(status.pendingPhotos)} fotos pendientes`}
                     >
                       {status.pending.length}

@@ -1,5 +1,5 @@
 /**
- * The courier app's color scheme (design-system.md §3.1): light by default, and high contrast
+ * The courier app's color scheme (design-system.md §3.1): the phone's light or dark, and high contrast
  * for direct sunlight as a one-tap setting kept on the phone. A blocked storage means light.
  */
 
@@ -23,7 +23,11 @@ export function saveHighContrast(on: boolean, storage: PreferenceStorage = local
   }
 }
 
-/** The `data-scheme` of the generated tokens (`styles/tokens.css`). */
-export function courierScheme(highContrast: boolean): "high-contrast" | "light" {
-  return highContrast ? "high-contrast" : "light";
+/**
+ * The `data-scheme` of the generated tokens (`styles/tokens.css`): high contrast when chosen;
+ * otherwise none, so the app follows the phone's light or dark preference (feature 006,
+ * FR-015a).
+ */
+export function courierScheme(highContrast: boolean): "high-contrast" | undefined {
+  return highContrast ? "high-contrast" : undefined;
 }
