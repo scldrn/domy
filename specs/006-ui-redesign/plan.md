@@ -96,7 +96,8 @@ scripts/generate-design-tokens.ts      # Lime accent, pizarra and on-pizarra sta
 packages/domain/src/
 ├── attention.ts                       # "Por resolver" items and their order (R6)
 ├── route-stop-marks.ts                # Ordered marks of a route's stops (R5)
-└── schemas/routes.ts                  # RouteSummary.stopMarks (additive)
+├── schemas/routes.ts                  # RouteSummary.stopMarks (additive)
+└── schemas/search.ts                  # ShipmentSearchResult.counts (additive, «Historial»)
 apps/server/src/
 ├── routes/routes.ts                   # /routes/board fills stopMarks
 ├── routes/shipments.ts                # /shipments/board fills pendingHandover

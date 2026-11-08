@@ -811,6 +811,18 @@ export const shipmentRoutes = new Hono<AppEnv>()
     const { cursor, ...query } = c.req.valid("query");
     const db = c.get("db");
     const after = cursor ? decodeCursor(cursor) : null;
+    // The whole search's counts open «Historial»'s sentence; later pages skip them
+    // (feature 006, contracts/history-read.md).
+    const counts = after
+      ? null
+      : await db
+          .select({
+            total: sql<number>`count(*)::int`,
+            feeReview: sql<number>`(count(*) filter (where ${shipments.feeNeedsReview}))::int`,
+          })
+          .from(shipments)
+          .where(searchConditions(db, query))
+          .then(([row]) => row ?? { total: 0, feeReview: 0 });
     const items = await findSummaries(
       db,
       and(
@@ -834,6 +846,7 @@ export const shipmentRoutes = new Hono<AppEnv>()
         items.length > pageSize && last
           ? Buffer.from(JSON.stringify([last.registeredAt, last.id])).toString("base64url")
           : null,
+      counts,
     } satisfies ShipmentSearchResult);
   })
   // Export of the same search with Spanish headers (FR-025); owner only.

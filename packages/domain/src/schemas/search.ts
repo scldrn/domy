@@ -32,4 +32,14 @@ export type ShipmentSummary = BoardShipment & {
   registeredAt: string;
 };
 
-export type ShipmentSearchResult = { items: ShipmentSummary[]; nextCursor: string | null };
+/**
+ * How many shipments the whole search finds, and how many of them have their fee to review;
+ * on the first page only, `null` on the next ones (feature 006, approved «Historial»).
+ */
+export type ShipmentSearchCounts = { total: number; feeReview: number };
+
+export type ShipmentSearchResult = {
+  items: ShipmentSummary[];
+  nextCursor: string | null;
+  counts: ShipmentSearchCounts | null;
+};

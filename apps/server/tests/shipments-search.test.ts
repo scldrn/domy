@@ -164,6 +164,20 @@ describe("GET /api/shipments/search", () => {
     expect(all.size).toBe(55);
   });
 
+  it("counts the whole search on its first page only (feature 006, approved «Historial»)", async () => {
+    for (let i = 0; i < 51; i++) await register();
+    await register({
+      recipientNeighborhoodId: catalog.place.girardota,
+      fee: 35000,
+      feeOverrideReason: "Tarifa de Girardota sin definir",
+    });
+    const first = await search();
+    expect(first.counts).toEqual({ total: 52, feeReview: 1 });
+    expect((await search({ cursor: first.nextCursor ?? "" })).counts).toBeNull();
+    expect((await search({ feeReview: "true" })).counts).toEqual({ total: 1, feeReview: 1 });
+    expect((await search({ q: "no existe" })).counts).toEqual({ total: 0, feeReview: 0 });
+  });
+
   it("is only for the owner and dispatchers", async () => {
     const courier = await t.signIn("courier");
     const response = await t.request("/api/shipments/search", { cookie: courier.cookie });
