@@ -1,16 +1,8 @@
 import { userRole } from "@domy/domain";
 import { queryOptions, type QueryFunctionContext } from "@tanstack/react-query";
 import { z } from "zod";
-import {
-  courierDatabase,
-  pauseCourierSynchronization,
-  resetCourierState,
-  resumeCourierSynchronization,
-} from "@/features/courier/courier-store";
-import { claimCourierDb, clearCourierDb, courierMeta, CourierDataError } from "@/lib/offline/db";
 import { ApiError, apiErrorBody } from "@/lib/api-client";
 import { syncClock } from "@/lib/clock";
-import { removePush } from "@/lib/offline/push";
 
 const sessionUser = z.object({ id: z.uuid(), name: z.string(), email: z.email(), role: userRole });
 export type SessionUser = z.output<typeof sessionUser>;
@@ -23,6 +15,21 @@ const networkError = new ApiError(0, {
   code: "network_error",
   message: "No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.",
 });
+
+/**
+ * The phone's offline store, loaded when a session needs it rather than with the app: the
+ * routes' guards use `sessionQuery`, so a static import would put the courier's store, IndexedDB
+ * and records on every page, the public tracking page included (constitution: status within 3 s
+ * on a weak mobile connection). A chunk that cannot load is a connection problem.
+ */
+function courierStorage() {
+  return Promise.all([import("@/features/courier/courier-store"), import("@/lib/offline/db")]).then(
+    ([store, db]) => ({ ...store, ...db }),
+    () => {
+      throw networkError;
+    },
+  );
+}
 
 async function authRequest(
   path: string,
@@ -81,6 +88,7 @@ async function getSession({ signal }: QueryFunctionContext): Promise<SessionUser
       });
     const { user, session } = parsed.data;
     if (user.role === "courier" && session) {
+      const { courierDatabase, courierMeta } = await courierStorage();
       const db = await courierDatabase();
       const tx = db.transaction("meta", "readwrite");
       const value = await tx.store.get("current");
@@ -113,6 +121,15 @@ export const sessionQuery = queryOptions({
 
 /** Signs in with email and password; errors carry Spanish messages. */
 export async function signIn(email: string, password: string): Promise<void> {
+  const {
+    courierDatabase,
+    claimCourierDb,
+    clearCourierDb,
+    CourierDataError,
+    pauseCourierSynchronization,
+    resetCourierState,
+    resumeCourierSynchronization,
+  } = await courierStorage();
   await pauseCourierSynchronization();
   try {
     const response = await authRequest("sign-in/email", { email, password });
@@ -163,6 +180,13 @@ export async function signIn(email: string, password: string): Promise<void> {
 }
 
 export async function signOut(): Promise<void> {
+  const {
+    courierDatabase,
+    clearCourierDb,
+    pauseCourierSynchronization,
+    resetCourierState,
+    resumeCourierSynchronization,
+  } = await courierStorage();
   await pauseCourierSynchronization();
   try {
     const db = await courierDatabase();
@@ -172,7 +196,9 @@ export async function signOut(): Promise<void> {
         message:
           "Tienes registros o fotos pendientes por sincronizar. Espera a que lleguen antes de cerrar sesión.",
       });
-    await removePush().catch(() => undefined);
+    await import("@/lib/offline/push")
+      .then(({ removePush }) => removePush())
+      .catch(() => undefined);
     const response = await authRequest("sign-out", {});
     if (!response.ok)
       throw new ApiError(response.status, {

@@ -23,10 +23,10 @@ import { toast } from "sonner";
 import { Icon, type Symbol } from "@/components/icon";
 import { Wordmark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
 import { sessionQuery, signOut } from "@/features/auth/session";
 import {
   courierDatabase,
-  resetCourierState,
   synchronizeNow,
   useCourierState,
   useSynchronization,
@@ -37,8 +37,6 @@ import { courierScheme, readHighContrast, saveHighContrast } from "@/features/co
 import { cn } from "@/lib/cn";
 import { now } from "@/lib/clock";
 import { ApiError } from "@/lib/api-client";
-import { claimCourierDb, readCourierMeta } from "@/lib/offline/db";
-import { refuseCourierSession } from "@/lib/offline/sync";
 import { enablePush, loadPushKey } from "@/lib/offline/push";
 import { courierMeta } from "@/lib/offline/db";
 
@@ -66,14 +64,24 @@ const destinations: Destination[] = [
 const railButton =
   "text-on-rail hover:bg-on-rail/10 hover:text-on-rail focus-visible:outline-accent";
 
+/** In the courier app, snackbars sit above the navigation bar (M3; design-system.md §7). */
+const aboveNavigationBar = { bottom: "6.5rem" };
+
 /** The courier app (feature 003): for couriers only; the office has the panel (FR-002). */
 export const Route = createFileRoute("/_courier")({
   beforeLoad: async ({ context, location }) => {
-    const db = await courierDatabase();
-    const meta = await readCourierMeta(db);
+    // Loaded here, not imported: this guard stays in the route tree every page loads, the public
+    // ones included (constitution: tracking within 3 s). `main.tsx` starts the download early.
+    const [store, offline, sync] = await Promise.all([
+      import("@/features/courier/courier-store"),
+      import("@/lib/offline/db"),
+      import("@/lib/offline/sync"),
+    ]);
+    const db = await store.courierDatabase();
+    const meta = await offline.readCourierMeta(db);
     const localUser = meta ? { id: meta.userId, role: "courier" as const } : null;
     if (!navigator.onLine) {
-      if (!localUser) resetCourierState();
+      if (!localUser) store.resetCourierState();
       return { user: localUser };
     }
     let user;
@@ -81,7 +89,7 @@ export const Route = createFileRoute("/_courier")({
       user = await context.queryClient.query({ ...sessionQuery, retry: false });
     } catch (error) {
       if (error instanceof ApiError && error.status === 403 && localUser) {
-        await refuseCourierSession(db, {
+        await sync.refuseCourierSession(db, {
           userId: localUser.id,
           now: () => new Date(),
           serverTime: now().toISOString(),
@@ -94,12 +102,12 @@ export const Route = createFileRoute("/_courier")({
         (error.status !== 0 && error.code !== "session_unavailable")
       )
         throw error;
-      if (!localUser) resetCourierState();
+      if (!localUser) store.resetCourierState();
       return { user: localUser };
     }
     if (!user) {
       if (!localUser) throw redirect({ to: "/ingresar", search: { redirect: location.href } });
-      await refuseCourierSession(db, {
+      await sync.refuseCourierSession(db, {
         userId: localUser.id,
         now: () => new Date(),
         serverTime: now().toISOString(),
@@ -107,8 +115,8 @@ export const Route = createFileRoute("/_courier")({
       return { user: localUser };
     }
     if (user.role !== "courier") throw redirect({ to: "/" });
-    await claimCourierDb(db, user.id);
-    if (meta?.userId !== user.id) resetCourierState();
+    await offline.claimCourierDb(db, user.id);
+    if (meta?.userId !== user.id) store.resetCourierState();
     return { user };
   },
   component: CourierLayout,
@@ -245,200 +253,208 @@ function CourierLayout() {
   }, [status.syncing, status.offline, status.refusal, totalPending, user]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-paper">
-      <a
-        href="#contenido"
-        className="sr-only z-50 rounded-sm bg-sheet px-4 py-3 text-label-l text-on-surface shadow-lg focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
-      >
-        Saltar al contenido
-      </a>
-      {/* Pizarra only in the header and the navigation bar (feature 006, FR-015a). The header
+    <>
+      <div className="flex min-h-dvh flex-col bg-paper">
+        <a
+          href="#contenido"
+          className="sr-only z-50 rounded-sm bg-sheet px-4 py-3 text-label-l text-on-surface shadow-lg focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        >
+          Saltar al contenido
+        </a>
+        {/* Pizarra only in the header and the navigation bar (feature 006, FR-015a). The header
           scrolls away with the page, so it never covers part of a control; the bar stays. */}
-      <header className="bg-rail text-on-rail">
-        <div className="mx-auto flex h-16 w-full max-w-xl items-center gap-1 pr-2 pl-4">
-          <Wordmark className="mr-auto h-9 w-fit text-accent" />
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Alto contraste"
-            aria-pressed={highContrast}
-            className={cn(
-              railButton,
-              highContrast && "bg-accent text-on-accent hover:bg-accent hover:text-on-accent",
-            )}
-            onClick={() => {
-              setHighContrast((on) => {
-                saveHighContrast(!on);
-                return !on;
-              });
-            }}
-          >
-            <Icon symbol={ContrastIcon} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Cerrar sesión"
-            className={railButton}
-            disabled={signingOut || !user}
-            onClick={() => void onSignOut()}
-          >
-            <Icon symbol={LogoutIcon} />
-          </Button>
-        </div>
-      </header>
-      {/* The sync strip reads calmly on pizarra under the header and scrolls away, so it never
-          covers the screen's controls (approved app del mensajero, US3 scenario 2). */}
-      {(status.offline || status.syncing || totalPending > 0) && (
-        <div role="status" className="bg-rail-raised text-body-m text-on-rail">
-          <div className="mx-auto flex max-w-xl items-start gap-2.5 px-4 py-2.5">
-            <Icon
-              symbol={status.offline ? CloudOffIcon : SyncIcon}
-              size={20}
-              className="mt-0.5 text-rail-warning"
-            />
-            <span>
-              {status.offline ? "Sin conexión — " : status.syncing ? "Sincronizando — " : ""}
-              {pendingLabel(status.pending.length)}
-              {status.pendingPhotos > 0 &&
-                ` · ${String(status.pendingPhotos)} ${status.pendingPhotos === 1 ? "foto pendiente" : "fotos pendientes"}`}
-              {status.offline && (
-                <span className="text-on-rail-variant">
-                  . Se envían solos cuando vuelva la señal.
-                </span>
+        <header className="bg-rail text-on-rail">
+          <div className="mx-auto flex h-16 w-full max-w-xl items-center gap-1 pr-2 pl-4">
+            <Wordmark className="mr-auto h-9 w-fit text-accent" />
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Alto contraste"
+              aria-pressed={highContrast}
+              className={cn(
+                railButton,
+                highContrast && "bg-accent text-on-accent hover:bg-accent hover:text-on-accent",
               )}
-            </span>
+              onClick={() => {
+                setHighContrast((on) => {
+                  saveHighContrast(!on);
+                  return !on;
+                });
+              }}
+            >
+              <Icon symbol={ContrastIcon} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Cerrar sesión"
+              className={railButton}
+              disabled={signingOut || !user}
+              onClick={() => void onSignOut()}
+            >
+              <Icon symbol={LogoutIcon} />
+            </Button>
           </div>
-        </div>
-      )}
-      {/* Keep actions scrollable above the fixed navigation and sync snackbars (FR-038). */}
-      <main
-        id="contenido"
-        tabIndex={-1}
-        className="mx-auto w-full max-w-xl flex-1 px-4 pt-4 pb-64 outline-none"
-      >
-        <div className="mb-4 flex flex-col gap-3">
-          {status.sessionStatus === "withdrawn" ? (
-            <p
-              role="alert"
-              className="rounded-sm bg-error-container p-3 text-body-l text-on-error-container"
-            >
-              Tu acceso fue retirado. Tus registros pendientes siguen guardados; comunícate con el
-              coordinador.
-            </p>
-          ) : warning === "expired" || status.sessionStatus === "expired" ? (
-            <div
-              role="alert"
-              className="rounded-sm bg-warning-container p-3 text-body-l text-on-warning-container"
-            >
-              <p>
-                Tu sesión venció. Puedes seguir trabajando; tus registros quedan guardados hasta que
-                ingreses de nuevo.
-              </p>
-              <Link
-                to="/ingresar"
-                className="mt-2 inline-flex min-h-12 items-center font-medium underline underline-offset-4"
-              >
-                Ingresar de nuevo
-              </Link>
-            </div>
-          ) : warning === "soon" ? (
-            <p
-              role="status"
-              className="rounded-sm bg-warning-container p-3 text-body-l text-on-warning-container"
-            >
-              Tu sesión vence en 2 días o menos. Sincroniza tus pendientes e ingresa de nuevo antes
-              de salir a una ruta.
-            </p>
-          ) : null}
-          {oldPending && (
-            <p
-              role="alert"
-              className="rounded-sm bg-warning-container p-3 text-body-l text-on-warning-container"
-            >
-              Hay registros pendientes desde hace más de 2 horas. Busca señal para enviarlos; si no
-              llegan, comunícate con el coordinador.
-            </p>
-          )}
-          {/* One actionable refusal across courier screens, including withdrawn access (T099). */}
-          {status.refusal && status.sessionStatus !== "expired" && (
-            <div
-              role="alert"
-              className="rounded-sm bg-error-container p-3 text-body-l text-on-error-container"
-            >
-              <p>{status.refusal}</p>
-              {user && (
-                <Button
-                  variant="ghost"
-                  className="mt-2 text-on-error-container"
-                  disabled={status.syncing}
-                  onClick={() => void synchronizeNow(user.id)}
-                >
-                  Reintentar sincronización
-                </Button>
-              )}
-            </div>
-          )}
-          <InstallHint />
-        </div>
-        {pushKey &&
-          !pushAsked &&
-          !status.meta?.notificationPrompted &&
-          typeof Notification !== "undefined" &&
-          Notification.permission === "default" && (
-            <aside className="flex flex-col gap-2 rounded-md bg-secondary-container p-4 text-on-secondary-container">
-              <p className="text-body-l">
-                Recibe avisos cuando el coordinador cambie tu ruta, incluso con la app cerrada.
-              </p>
-              <Button variant="outline" className="self-start" onClick={askPush}>
-                Activar notificaciones
-              </Button>
-            </aside>
-          )}
-        <Outlet />
-      </main>
-      <nav
-        aria-label="Navegación principal"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-rail-line bg-rail pb-[env(safe-area-inset-bottom)]"
-      >
-        <ul className="mx-auto grid h-20 max-w-xl grid-cols-3">
-          {destinations.map((destination) => {
-            const active =
-              destination.to === "/mensajero"
-                ? pathname === "/mensajero" || pathname.startsWith("/mensajero/parada")
-                : pathname.startsWith(destination.to);
-            return (
-              <li key={destination.to} className="flex">
-                <Link
-                  to={destination.to}
-                  aria-current={active ? "page" : undefined}
-                  className="flex flex-1 flex-col items-center justify-center gap-1 rounded-sm text-label-m text-on-rail-variant outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent aria-[current=page]:text-on-rail"
-                >
-                  <span
-                    className={cn(
-                      "state-layer flex h-8 w-16 items-center justify-center rounded-full",
-                      active && "bg-accent text-on-accent",
-                    )}
-                  >
-                    <Icon symbol={active ? destination.activeIcon : destination.icon} />
+        </header>
+        {/* The sync strip reads calmly on pizarra under the header and scrolls away, so it never
+          covers the screen's controls (approved app del mensajero, US3 scenario 2). */}
+        {(status.offline || status.syncing || totalPending > 0) && (
+          <div role="status" className="bg-rail-raised text-body-m text-on-rail">
+            <div className="mx-auto flex max-w-xl items-start gap-2.5 px-4 py-2.5">
+              <Icon
+                symbol={status.offline ? CloudOffIcon : SyncIcon}
+                size={20}
+                className="mt-0.5 text-rail-warning"
+              />
+              <span>
+                {status.offline ? "Sin conexión — " : status.syncing ? "Sincronizando — " : ""}
+                {pendingLabel(status.pending.length)}
+                {status.pendingPhotos > 0 &&
+                  ` · ${String(status.pendingPhotos)} ${status.pendingPhotos === 1 ? "foto pendiente" : "fotos pendientes"}`}
+                {status.offline && (
+                  <span className="text-on-rail-variant">
+                    . Se envían solos cuando vuelva la señal.
                   </span>
-                  {destination.label}
-                  {destination.to === "/mensajero/pendientes" && totalPending > 0 && (
-                    <span
-                      className="mt-0.5 rounded-full bg-rail-warning px-2 text-label-m text-rail tabular-nums"
-                      aria-label={`${String(status.pending.length)} acciones y ${String(status.pendingPhotos)} fotos pendientes`}
-                    >
-                      {status.pending.length}
-                      {status.pendingPhotos > 0 &&
-                        ` · ${String(status.pendingPhotos)} ${status.pendingPhotos === 1 ? "foto" : "fotos"}`}
-                    </span>
-                  )}
+                )}
+              </span>
+            </div>
+          </div>
+        )}
+        {/* Keep actions scrollable above the fixed navigation and sync snackbars (FR-038). */}
+        <main
+          id="contenido"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-xl flex-1 px-4 pt-4 pb-64 outline-none"
+        >
+          <div className="mb-4 flex flex-col gap-3">
+            {status.sessionStatus === "withdrawn" ? (
+              <p
+                role="alert"
+                className="rounded-sm bg-error-container p-3 text-body-l text-on-error-container"
+              >
+                Tu acceso fue retirado. Tus registros pendientes siguen guardados; comunícate con el
+                coordinador.
+              </p>
+            ) : warning === "expired" || status.sessionStatus === "expired" ? (
+              <div
+                role="alert"
+                className="rounded-sm bg-warning-container p-3 text-body-l text-on-warning-container"
+              >
+                <p>
+                  Tu sesión venció. Puedes seguir trabajando; tus registros quedan guardados hasta
+                  que ingreses de nuevo.
+                </p>
+                <Link
+                  to="/ingresar"
+                  className="mt-2 inline-flex min-h-12 items-center font-medium underline underline-offset-4"
+                >
+                  Ingresar de nuevo
                 </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-    </div>
+              </div>
+            ) : warning === "soon" ? (
+              <p
+                role="status"
+                className="rounded-sm bg-warning-container p-3 text-body-l text-on-warning-container"
+              >
+                Tu sesión vence en 2 días o menos. Sincroniza tus pendientes e ingresa de nuevo
+                antes de salir a una ruta.
+              </p>
+            ) : null}
+            {oldPending && (
+              <p
+                role="alert"
+                className="rounded-sm bg-warning-container p-3 text-body-l text-on-warning-container"
+              >
+                Hay registros pendientes desde hace más de 2 horas. Busca señal para enviarlos; si
+                no llegan, comunícate con el coordinador.
+              </p>
+            )}
+            {/* One actionable refusal across courier screens, including withdrawn access (T099). */}
+            {status.refusal && status.sessionStatus !== "expired" && (
+              <div
+                role="alert"
+                className="rounded-sm bg-error-container p-3 text-body-l text-on-error-container"
+              >
+                <p>{status.refusal}</p>
+                {user && (
+                  <Button
+                    variant="ghost"
+                    className="mt-2 text-on-error-container"
+                    disabled={status.syncing}
+                    onClick={() => void synchronizeNow(user.id)}
+                  >
+                    Reintentar sincronización
+                  </Button>
+                )}
+              </div>
+            )}
+            <InstallHint />
+          </div>
+          {pushKey &&
+            !pushAsked &&
+            !status.meta?.notificationPrompted &&
+            typeof Notification !== "undefined" &&
+            Notification.permission === "default" && (
+              <aside className="flex flex-col gap-2 rounded-md bg-secondary-container p-4 text-on-secondary-container">
+                <p className="text-body-l">
+                  Recibe avisos cuando el coordinador cambie tu ruta, incluso con la app cerrada.
+                </p>
+                <Button variant="outline" className="self-start" onClick={askPush}>
+                  Activar notificaciones
+                </Button>
+              </aside>
+            )}
+          <Outlet />
+        </main>
+        <nav
+          aria-label="Navegación principal"
+          className="fixed inset-x-0 bottom-0 z-20 border-t border-rail-line bg-rail pb-[env(safe-area-inset-bottom)]"
+        >
+          <ul className="mx-auto grid h-20 max-w-xl grid-cols-3">
+            {destinations.map((destination) => {
+              const active =
+                destination.to === "/mensajero"
+                  ? pathname === "/mensajero" || pathname.startsWith("/mensajero/parada")
+                  : pathname.startsWith(destination.to);
+              return (
+                <li key={destination.to} className="flex">
+                  <Link
+                    to={destination.to}
+                    aria-current={active ? "page" : undefined}
+                    className="flex flex-1 flex-col items-center justify-center gap-1 rounded-sm text-label-m text-on-rail-variant outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent aria-[current=page]:text-on-rail"
+                  >
+                    <span
+                      className={cn(
+                        "state-layer flex h-8 w-16 items-center justify-center rounded-full",
+                        active && "bg-accent text-on-accent",
+                      )}
+                    >
+                      <Icon symbol={active ? destination.activeIcon : destination.icon} />
+                    </span>
+                    {destination.label}
+                    {destination.to === "/mensajero/pendientes" && totalPending > 0 && (
+                      <span
+                        className="mt-0.5 rounded-full bg-rail-warning px-2 text-label-m text-rail tabular-nums"
+                        aria-label={`${String(status.pending.length)} acciones y ${String(status.pendingPhotos)} fotos pendientes`}
+                      >
+                        {status.pending.length}
+                        {status.pendingPhotos > 0 &&
+                          ` · ${String(status.pendingPhotos)} ${status.pendingPhotos === 1 ? "foto" : "fotos"}`}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </div>
+      <Toaster
+        // T101 / FR-038: courier notices sit above navigation (z-20), below sheets (z-50).
+        offset={aboveNavigationBar}
+        mobileOffset={aboveNavigationBar}
+        className="toaster group !z-40"
+      />
+    </>
   );
 }

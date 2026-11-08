@@ -1,7 +1,7 @@
 import { courierSnapshot, courierTask, type CourierSnapshot, type CourierTask } from "@domy/domain";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { TaskCard } from "./courier-stop";
+import { TaskCard } from "./task-card";
 
 const userId = "00000000-0000-4000-8000-000000000001";
 const merchantId = "00000000-0000-4000-8000-000000000002";

@@ -46,7 +46,8 @@ import { Icon, type Symbol } from "@/components/icon";
 import { LogoSymbol, Wordmark } from "@/components/logo";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Sidebar,
   SidebarContent,
@@ -246,175 +247,178 @@ function PanelLayout() {
   };
 
   return (
-    <SidebarProvider>
-      <a
-        href="#contenido"
-        className="sr-only z-50 rounded-sm bg-sheet px-4 py-3 text-label-l text-on-surface shadow-lg focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:min-h-12 focus:min-w-12 focus:inline-flex focus:items-center"
-      >
-        Saltar al contenido
-      </a>
-      <Sidebar collapsible="icon">
-        <SidebarHeader className="px-5 pt-6 pb-5 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0">
-          <Link
-            to="/"
-            aria-label="Domy, ir al tablero"
-            className="flex w-fit flex-col rounded-sm text-on-rail"
-          >
-            <Wordmark className="h-12.5 w-fit group-data-[collapsible=icon]:hidden" />
-            <LogoSymbol className="hidden h-9 w-fit group-data-[collapsible=icon]:block" />
-            <span className="-mt-2.5 text-body-s text-on-rail-variant group-data-[collapsible=icon]:hidden">
-              de Cohex
-            </span>
-          </Link>
-        </SidebarHeader>
-        <SidebarContent>
-          {navigation
-            .filter((group) => group.items.some((item) => item.roles.includes(user.role)))
-            .map((group) => (
-              <SidebarGroup key={group.label ?? "main"}>
-                {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
-                <SidebarMenu>
-                  {group.items
-                    .filter((item) => item.roles.includes(user.role))
-                    .map((item) => {
-                      const active =
-                        item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
-                      return (
-                        <SidebarMenuItem key={item.to}>
-                          <SidebarMenuButton
-                            isActive={active}
-                            tooltip={item.label}
-                            render={<Link to={item.to} />}
-                          >
-                            <Icon symbol={active ? item.activeIcon : item.icon} />
-                            <span>{item.label}</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                </SidebarMenu>
-              </SidebarGroup>
-            ))}
-        </SidebarContent>
-        <SidebarFooter className="border-t border-rail-raised px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0">
-          <div className="flex items-center gap-1">
-            <Link
-              to="/cuenta"
-              aria-label={`Mi cuenta: ${user.name}`}
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-sm px-2 py-2 text-on-rail hover:bg-on-rail/8"
-            >
-              <span
-                aria-hidden="true"
-                className="flex size-9 shrink-0 items-center justify-center rounded-full bg-rail-raised text-label-l text-on-rail"
-              >
-                {initials(user.name)}
-              </span>
-              <span className="flex min-w-0 flex-col leading-tight group-data-[collapsible=icon]:hidden">
-                <span className="truncate text-label-l">{user.name}</span>
-                <span className="text-body-s text-on-rail-variant">
-                  {userRoleLabels[user.role]}
-                </span>
-              </span>
-            </Link>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Cerrar sesión"
-                    className="text-on-rail-variant hover:text-on-rail group-data-[collapsible=icon]:hidden"
-                    onClick={() => void onSignOut()}
-                  />
-                }
-              >
-                <Icon symbol={LogoutIcon} />
-              </TooltipTrigger>
-              <TooltipContent>Cerrar sesión</TooltipContent>
-            </Tooltip>
-          </div>
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <header className="sticky top-0 z-20 bg-paper/90 backdrop-blur">
-          {/* Top app bar (design-system.md §7): search, theme, and the one lime action. */}
-          <div className="mx-auto flex h-18 w-full max-w-380 items-center gap-2 px-4 md:px-8">
-            <SidebarTrigger aria-label="Mostrar u ocultar el menú" className="-ml-3" />
-            <GlobalSearch />
-            <span className="flex-1" />
-            <ThemeSwitch shown={theme.shown} onToggle={theme.toggle} />
-            <Link
-              to="/envios/masivo"
-              aria-current={pathname === "/envios/masivo" ? "page" : undefined}
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "max-lg:hidden aria-[current=page]:border-on-surface aria-[current=page]:font-bold",
-              )}
-            >
-              <Icon symbol={PostAddIcon} />
-              Registro masivo
-            </Link>
-            {/* On its own page it is the current page, not a second lime action (approved "Nuevo envío"). */}
-            <Link
-              to="/envios/nuevo"
-              aria-current={pathname === "/envios/nuevo" ? "page" : undefined}
-              className={cn(
-                buttonVariants({ variant: pathname === "/envios/nuevo" ? "outline" : "accent" }),
-                "max-sm:size-12 max-sm:px-0 aria-[current=page]:border-on-surface aria-[current=page]:font-bold",
-              )}
-            >
-              <Icon symbol={AddIcon} />
-              <span className="hidden sm:inline">Nuevo envío</span>
-              <span className="sr-only sm:hidden">Nuevo envío</span>
-            </Link>
-          </div>
-          <PhoneDestinations role={user.role} pathname={pathname} />
-        </header>
-        <div
-          id="contenido"
-          tabIndex={-1}
-          className="mx-auto w-full max-w-380 px-4 pt-4 pb-16 outline-none md:px-8"
+    <TooltipProvider>
+      <SidebarProvider>
+        <a
+          href="#contenido"
+          className="sr-only z-50 rounded-sm bg-sheet px-4 py-3 text-label-l text-on-surface shadow-lg focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:min-h-12 focus:min-w-12 focus:inline-flex focus:items-center"
         >
-          {(notificationDates.length > 0 || notificationSnapshot.data?.guidance) && (
-            <aside
-              role={notificationSnapshot.data?.guidance ? "alert" : "status"}
-              aria-live="polite"
-              className="mb-5 flex flex-col gap-3 rounded-sm border border-outline-variant bg-secondary-container p-4 text-on-secondary-container"
+          Saltar al contenido
+        </a>
+        <Sidebar collapsible="icon">
+          <SidebarHeader className="px-5 pt-6 pb-5 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0">
+            <Link
+              to="/"
+              aria-label="Domy, ir al tablero"
+              className="flex w-fit flex-col rounded-sm text-on-rail"
             >
-              <p className="text-body-m">
-                {notificationSnapshot.data?.guidance ??
-                  [
-                    readyNotificationCount > 0
-                      ? `${String(readyNotificationCount)} notificaciones esperan su registro.`
-                      : null,
-                    preparedNotificationCount > 0
-                      ? `${String(preparedNotificationCount)} acciones necesitan que vuelvas a compartir el mensaje.`
-                      : null,
-                  ]
-                    .filter((message) => message !== null)
-                    .join(" ")}
-              </p>
-              {notificationDates.length > 0 && (
-                <ul className="flex flex-wrap gap-2">
-                  {notificationDates.map((date) => (
-                    <li key={date}>
-                      <Link
-                        to="/notificar"
-                        search={{ date }}
-                        className="inline-flex min-h-12 items-center rounded-sm px-3 text-label-l text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                      >
-                        Revisar {date}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </aside>
-          )}
-          <Outlet />
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+              <Wordmark className="h-12.5 w-fit group-data-[collapsible=icon]:hidden" />
+              <LogoSymbol className="hidden h-9 w-fit group-data-[collapsible=icon]:block" />
+              <span className="-mt-2.5 text-body-s text-on-rail-variant group-data-[collapsible=icon]:hidden">
+                de Cohex
+              </span>
+            </Link>
+          </SidebarHeader>
+          <SidebarContent>
+            {navigation
+              .filter((group) => group.items.some((item) => item.roles.includes(user.role)))
+              .map((group) => (
+                <SidebarGroup key={group.label ?? "main"}>
+                  {group.label && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+                  <SidebarMenu>
+                    {group.items
+                      .filter((item) => item.roles.includes(user.role))
+                      .map((item) => {
+                        const active =
+                          item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+                        return (
+                          <SidebarMenuItem key={item.to}>
+                            <SidebarMenuButton
+                              isActive={active}
+                              tooltip={item.label}
+                              render={<Link to={item.to} />}
+                            >
+                              <Icon symbol={active ? item.activeIcon : item.icon} />
+                              <span>{item.label}</span>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                  </SidebarMenu>
+                </SidebarGroup>
+              ))}
+          </SidebarContent>
+          <SidebarFooter className="border-t border-rail-raised px-3 py-3 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0">
+            <div className="flex items-center gap-1">
+              <Link
+                to="/cuenta"
+                aria-label={`Mi cuenta: ${user.name}`}
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-sm px-2 py-2 text-on-rail hover:bg-on-rail/8"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-rail-raised text-label-l text-on-rail"
+                >
+                  {initials(user.name)}
+                </span>
+                <span className="flex min-w-0 flex-col leading-tight group-data-[collapsible=icon]:hidden">
+                  <span className="truncate text-label-l">{user.name}</span>
+                  <span className="text-body-s text-on-rail-variant">
+                    {userRoleLabels[user.role]}
+                  </span>
+                </span>
+              </Link>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Cerrar sesión"
+                      className="text-on-rail-variant hover:text-on-rail group-data-[collapsible=icon]:hidden"
+                      onClick={() => void onSignOut()}
+                    />
+                  }
+                >
+                  <Icon symbol={LogoutIcon} />
+                </TooltipTrigger>
+                <TooltipContent>Cerrar sesión</TooltipContent>
+              </Tooltip>
+            </div>
+          </SidebarFooter>
+        </Sidebar>
+        <SidebarInset>
+          <header className="sticky top-0 z-20 bg-paper/90 backdrop-blur">
+            {/* Top app bar (design-system.md §7): search, theme, and the one lime action. */}
+            <div className="mx-auto flex h-18 w-full max-w-380 items-center gap-2 px-4 md:px-8">
+              <SidebarTrigger aria-label="Mostrar u ocultar el menú" className="-ml-3" />
+              <GlobalSearch />
+              <span className="flex-1" />
+              <ThemeSwitch shown={theme.shown} onToggle={theme.toggle} />
+              <Link
+                to="/envios/masivo"
+                aria-current={pathname === "/envios/masivo" ? "page" : undefined}
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "max-lg:hidden aria-[current=page]:border-on-surface aria-[current=page]:font-bold",
+                )}
+              >
+                <Icon symbol={PostAddIcon} />
+                Registro masivo
+              </Link>
+              {/* On its own page it is the current page, not a second lime action (approved "Nuevo envío"). */}
+              <Link
+                to="/envios/nuevo"
+                aria-current={pathname === "/envios/nuevo" ? "page" : undefined}
+                className={cn(
+                  buttonVariants({ variant: pathname === "/envios/nuevo" ? "outline" : "accent" }),
+                  "max-sm:size-12 max-sm:px-0 aria-[current=page]:border-on-surface aria-[current=page]:font-bold",
+                )}
+              >
+                <Icon symbol={AddIcon} />
+                <span className="hidden sm:inline">Nuevo envío</span>
+                <span className="sr-only sm:hidden">Nuevo envío</span>
+              </Link>
+            </div>
+            <PhoneDestinations role={user.role} pathname={pathname} />
+          </header>
+          <div
+            id="contenido"
+            tabIndex={-1}
+            className="mx-auto w-full max-w-380 px-4 pt-4 pb-16 outline-none md:px-8"
+          >
+            {(notificationDates.length > 0 || notificationSnapshot.data?.guidance) && (
+              <aside
+                role={notificationSnapshot.data?.guidance ? "alert" : "status"}
+                aria-live="polite"
+                className="mb-5 flex flex-col gap-3 rounded-sm border border-outline-variant bg-secondary-container p-4 text-on-secondary-container"
+              >
+                <p className="text-body-m">
+                  {notificationSnapshot.data?.guidance ??
+                    [
+                      readyNotificationCount > 0
+                        ? `${String(readyNotificationCount)} notificaciones esperan su registro.`
+                        : null,
+                      preparedNotificationCount > 0
+                        ? `${String(preparedNotificationCount)} acciones necesitan que vuelvas a compartir el mensaje.`
+                        : null,
+                    ]
+                      .filter((message) => message !== null)
+                      .join(" ")}
+                </p>
+                {notificationDates.length > 0 && (
+                  <ul className="flex flex-wrap gap-2">
+                    {notificationDates.map((date) => (
+                      <li key={date}>
+                        <Link
+                          to="/notificar"
+                          search={{ date }}
+                          className="inline-flex min-h-12 items-center rounded-sm px-3 text-label-l text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        >
+                          Revisar {date}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </aside>
+            )}
+            <Outlet />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+      <Toaster />
+    </TooltipProvider>
   );
 }
 

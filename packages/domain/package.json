@@ -5,6 +5,10 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "sideEffects": [
+    "./src/index.ts",
+    "./src/schemas/locale.ts"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
