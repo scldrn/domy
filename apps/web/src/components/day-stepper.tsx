@@ -25,7 +25,8 @@ const surfaces = {
 
 /**
  * Moves a screen one day back or forward, or to any date, and back to today; the board on
- * pizarra, «Rutas» on a sheet (feature 006). Nothing earlier than `min` can be chosen.
+ * pizarra, «Rutas» and «Notificar clientes» on a sheet (feature 006). Nothing earlier than
+ * `min` or later than `max` can be chosen. Its targets are 48 px (Constitution VII).
  */
 export function DayStepper({
   date,
@@ -34,6 +35,7 @@ export function DayStepper({
   label = "Fecha del tablero",
   surface = "rail",
   min,
+  max,
 }: {
   date: string;
   today: string;
@@ -41,6 +43,8 @@ export function DayStepper({
   label?: string;
   surface?: keyof typeof surfaces;
   min?: string;
+  /** Nothing later can be chosen («Notificar clientes»: today, FR-015 of feature 004). */
+  max?: string;
 }) {
   const look = surfaces[surface];
   return (
@@ -48,7 +52,7 @@ export function DayStepper({
       <Button
         variant="outline"
         size="icon"
-        className={cn("size-11", look.control)}
+        className={cn("size-12", look.control)}
         aria-label="Día anterior"
         disabled={min !== undefined && date <= min}
         onClick={() => {
@@ -60,9 +64,10 @@ export function DayStepper({
       <Input
         type="date"
         aria-label={label}
-        className={cn("h-11 w-44", look.input, look.control)}
+        className={cn("h-12 w-44", look.input, look.control)}
         value={date}
         {...(min !== undefined && { min })}
+        {...(max !== undefined && { max })}
         onChange={(event) => {
           if (event.target.value) onChange(event.target.value);
         }}
@@ -70,8 +75,9 @@ export function DayStepper({
       <Button
         variant="outline"
         size="icon"
-        className={cn("size-11", look.control)}
+        className={cn("size-12", look.control)}
         aria-label="Día siguiente"
+        disabled={max !== undefined && date >= max}
         onClick={() => {
           onChange(shiftDay(date, 1));
         }}
@@ -81,7 +87,7 @@ export function DayStepper({
       {date !== today && (
         <Button
           variant="ghost"
-          className={cn("h-11 px-3", look.today)}
+          className={cn("h-12 px-3", look.today)}
           onClick={() => {
             onChange(today);
           }}
