@@ -229,8 +229,9 @@ log after those changes.
 **Behavior preserved**
 
 - **FR-015**: The redesign MUST NOT change business rules, permissions, what each role can do
-  or see, or what each action records; only what the board proposal needs to show may add
-  read-only information.
+  or see, or what each action records; only what an approved proposal needs to show may add
+  read-only information (the board's stop marks and pending handovers, «Historial»'s search
+  counts; contracts/).
 - **FR-015a**: The courier app MUST use light surfaces by default, with pizarra only in its
   header and navigation bar; it MUST follow the phone's dark preference and keep its
   high-contrast mode.

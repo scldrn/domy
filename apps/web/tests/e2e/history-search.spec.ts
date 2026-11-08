@@ -21,9 +21,13 @@ test("finds shipments by recipient phone, newest first, and exports them (scenar
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText(formatTrackingNumber(newer.trackingNumber));
   await expect(rows.last()).toContainText(formatTrackingNumber(older.trackingNumber));
+  // The approved sentence counts the whole search (feature 006).
+  await expect(page.getByText("2 envíos coinciden con la búsqueda.")).toBeVisible();
+  await expect(page.getByText("Mostrando 2 de 2 envíos")).toBeVisible();
 
   const download = page.waitForEvent("download");
-  await page.getByRole("link", { name: "Exportar Excel" }).click();
+  await page.getByRole("button", { name: "Exportar", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Envíos en Excel" }).click();
   const file = await (await download).path();
   const sheet = await readSheet(await readFile(file));
   expect(sheet[0]?.slice(0, 3)).toEqual(["Guía", "Fecha", "Estado"]);
@@ -48,7 +52,8 @@ test("shows export only to the owner and filters fees to review", async ({
     "Girardota",
   );
   await page.goto("/historial");
-  await expect(page.getByRole("link", { name: "Exportar Excel" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: "Historial" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Exportar", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Tarifa por revisar" }).click();
   await expect(page).toHaveURL(/feeReview=true/);
   await expect(

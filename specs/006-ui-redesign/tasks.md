@@ -111,7 +111,7 @@ and passes axe in both themes.
 - [X] T040 [US2] Propose "Rutas" and "Detalle de ruta" and record the decision
 - [X] T041 [US2] Implement them in `apps/web/src/routes/routes-board.tsx`, `apps/web/src/routes/route-detail.tsx`, and `apps/web/src/features/routes/*`; route-build, adjust, cancel, reassign, concurrent-edit, and routes-board specs green (US2 scenario 2)
 - [X] T042 [US2] Propose "Historial" and record the decision
-- [ ] T043 [US2] Implement it in `apps/web/src/routes/history.tsx` and `apps/web/src/features/history/`; `history-search.spec.ts` green
+- [X] T043 [US2] Implement it in `apps/web/src/routes/history.tsx` and `apps/web/src/features/history/`; `history-search.spec.ts` green
 - [X] T044 [US2] Propose "Notificar clientes" and record the decision
 - [ ] T045 [US2] Implement it in `apps/web/src/routes/notify-merchants.tsx` and `apps/web/src/features/notifications/`; notify specs green
 - [ ] T046 [US2] Remove the daily-operation screens from T002's offender set; run every gate; compare sizes
