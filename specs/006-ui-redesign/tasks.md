@@ -34,7 +34,7 @@ every implementation keeps `access.spec.ts` green.
 **Purpose**: baselines and guards before anything changes
 
 - [ ] T001 Record in `specs/006-ui-redesign/baselines.md` the step count of each daily flow today (register, bulk register, edit, create and dispatch a route, find a past shipment, notify; SC-006), the baseline sizes of `apps/web/dist` JavaScript and CSS after `pnpm build`, and the courier route screen's time to first content on a real low-end Android phone (Android 10+, Chrome, installed app, mid-signal 4G, median of 5 cold opens; research R12, SC-008); the phone measurement joins the pending physical tests
-- [ ] T002 [P] Write a failing-then-passing Vitest guard that fails on color literals (`#hex`, `rgb(`, `hsl(`, `oklch(`) in `apps/web/src/**` outside `styles/tokens.css`, in `apps/web/src/styles/color-literals.test.ts`; list today's offenders as the slice-by-slice cleanup set (research R8, SC-005)
+- [X] T002 [P] Write a failing-then-passing Vitest guard that fails on color literals (`#hex`, `rgb(`, `hsl(`, `oklch(`) in `apps/web/src/**` outside `styles/tokens.css`, in `apps/web/src/styles/color-literals.test.ts`; list today's offenders as the slice-by-slice cleanup set (research R8, SC-005) — Written on 2026-11-08 with the daily-operation slices merged: no file outside `tokens.css` held a literal, so the cleanup set starts and stays empty
 - [ ] T003 [P] Add an e2e helper that fails when a screen's visible text contains a UUID-shaped string, in `apps/web/tests/e2e/fixtures.ts`, run after each passing test like axe (research R8, SC-005)
 - [ ] T004 [P] Extend the axe fixture in `apps/web/tests/e2e/fixtures.ts` to also run with `data-scheme="dark"` on panel and public pages, at 390 px for courier and public pages, and at 1024 px and 360 px for panel pages, failing on horizontal page scroll at those widths (research R9, SC-004, FR-012)
 
@@ -60,7 +60,7 @@ components. Every screen sits in the new shell when this phase merges.
 - [X] T017 [P] Build `SidePanel` on shadcn `Sheet` in `apps/web/src/components/side-panel.tsx` (focus in on open, back to opener on close, Escape, sticky header)
 - [ ] T018 [P] Restyle `StateMark` (`apps/web/src/components/shipment-status-mark.tsx`, `apps/web/src/components/route-status-mark.tsx`), `EmptyState`, and `QueryState` to the updated design system, keeping their props — The board added `text-figure`, the stage and next-stop motion, and lime focus on pizarra (`on-rail`); the marks and states themselves are still to restyle
 - [ ] T019 Rebuild the panel shell in `apps/web/src/routes/panel-layout.tsx`: pizarra rail with the wordmark, grouped navigation, lime current page, collapsible to the symbol; top bar with global search, last-update status, `ThemeSwitch`, "Registro masivo", and the one lime "Nuevo envío" (approved with the board); below 768 px a row of destinations under the top bar. Done in slice `006-us1-shell` except the search's results list and the last-update status, which need the board's data and come with T030; 44 px panel controls come with the shared components (T013–T018)
-- [ ] T020 Remove the color literals the shell and shared components still carry, so T002 shrinks to the screens not yet redesigned; run every gate and compare sizes with `baselines.md`
+- [X] T020 Remove the color literals the shell and shared components still carry, so T002 shrinks to the screens not yet redesigned; run every gate and compare sizes with `baselines.md` — 2026-11-08: none were left when T002 was written; gates run and sizes compared in `baselines.md`
 
 **Checkpoint**: tokens, theme, shell, and components merged; every screen is in the new shell
 and passes axe in both themes.
@@ -113,8 +113,8 @@ and passes axe in both themes.
 - [X] T042 [US2] Propose "Historial" and record the decision
 - [X] T043 [US2] Implement it in `apps/web/src/routes/history.tsx` and `apps/web/src/features/history/`; `history-search.spec.ts` green
 - [X] T044 [US2] Propose "Notificar clientes" and record the decision
-- [ ] T045 [US2] Implement it in `apps/web/src/routes/notify-merchants.tsx` and `apps/web/src/features/notifications/`; notify specs green
-- [ ] T046 [US2] Remove the daily-operation screens from T002's offender set; run every gate; compare sizes
+- [X] T045 [US2] Implement it in `apps/web/src/routes/notify-merchants.tsx` and `apps/web/src/features/notifications/`; notify specs green
+- [X] T046 [US2] Remove the daily-operation screens from T002's offender set; run every gate; compare sizes — 2026-11-08: the set is empty; every gate passed locally (CI saved for the end at the owner's request); JS + CSS +7.4 % (`baselines.md`)
 
 **Checkpoint**: daily operation complete in the new language.
 
