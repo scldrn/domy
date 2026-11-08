@@ -538,10 +538,13 @@ export async function courierTargetViolations(page: Page): Promise<string[]> {
 /** Axe, responsive width, scheme, size and real hit testing for one courier screen (T083, FR-038). */
 export async function assertCourierScreen(
   page: Page,
-  scheme: "light" | "high-contrast",
+  scheme: "light" | "dark" | "high-contrast",
 ): Promise<void> {
   expect(await page.evaluate(() => window.innerWidth), "courier viewport width").toBe(360);
-  await expect(page.locator("html")).toHaveAttribute("data-scheme", scheme);
+  // Light and dark follow the phone, so only high contrast names a scheme (feature 006).
+  if (scheme === "high-contrast")
+    await expect(page.locator("html")).toHaveAttribute("data-scheme", scheme);
+  else await expect(page.locator("html")).not.toHaveAttribute("data-scheme");
   expect(await accessibilityViolations(page), `WCAG 2.2 AA in ${scheme}`).toEqual([]);
   expect(await courierTargetViolations(page), `48 px visible targets in ${scheme}`).toEqual([]);
 }

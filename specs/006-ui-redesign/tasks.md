@@ -127,9 +127,9 @@ primary action, high contrast kept (clarification Q2).
 
 **Independent Test**: [spec.md](spec.md) US3; [quickstart.md](quickstart.md) "Courier slice".
 
-- [ ] T047 [US3] Propose the courier shell, "Mi ruta", and "Parada" at 360 px in light, dark, and high contrast, and record the decision
-- [ ] T048 [US3] Implement the shell in `apps/web/src/routes/courier-layout.tsx` and `apps/web/src/features/courier/scheme.ts` (pizarra header and navigation bar, 48 px targets, high contrast kept)
-- [ ] T049 [US3] Implement "Mi ruta" and "Parada" in `apps/web/src/routes/courier-route.tsx`, `apps/web/src/routes/courier-stop.tsx`, and the forms in `apps/web/src/features/courier/`; primary actions within 3 taps (FR-016); `courier-route`, `courier-action-taps`, `courier-exceptions`, `courier-offline`, `records-on-behalf` specs and `courier-stop.test.tsx` green
+- [X] T047 [US3] Propose the courier shell, "Mi ruta", and "Parada" at 360 px in light, dark, and high contrast, and record the decision
+- [X] T048 [US3] Implement the shell in `apps/web/src/routes/courier-layout.tsx` and `apps/web/src/features/courier/scheme.ts` (pizarra header and navigation bar, 48 px targets, high contrast kept)
+- [X] T049 [US3] Implement "Mi ruta" and "Parada" in `apps/web/src/routes/courier-route.tsx`, `apps/web/src/routes/courier-stop.tsx`, and the forms in `apps/web/src/features/courier/`; primary actions within 3 taps (FR-016); `courier-route`, `courier-action-taps`, `courier-exceptions`, `courier-offline`, `records-on-behalf` specs and `courier-stop.test.tsx` green
 - [ ] T050 [US3] Propose "Mi día" and "Pendientes" and record the decision
 - [ ] T051 [US3] Implement them in `apps/web/src/routes/courier-day.tsx` and `apps/web/src/routes/courier-pending.tsx` with the sync states of `apps/web/src/features/courier/sync-status.ts`; `courier-day.spec.ts` green
 - [ ] T052 [US3] Measure the route screen against `baselines.md` (SC-008); remove the courier screens from T002's offender set; run every gate

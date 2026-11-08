@@ -39,8 +39,10 @@ async function openStop(page: Page, address: string) {
 }
 
 for (const scheme of [
-  { label: "standard", value: "light" as const, highContrast: false },
-  { label: "high contrast", value: "high-contrast" as const, highContrast: true },
+  { label: "standard", value: "light" as const, highContrast: false, dark: false },
+  // The app follows the phone's dark preference (feature 006, FR-015a).
+  { label: "dark", value: "dark" as const, highContrast: false, dark: true },
+  { label: "high contrast", value: "high-contrast" as const, highContrast: true, dark: false },
 ]) {
   test(`checks 360 px courier action paths, targets, and axe in ${scheme.label}`, async ({
     courierPage: phone,
@@ -74,6 +76,7 @@ for (const scheme of [
     await seedPickup(office, packageForException);
 
     await phone.setViewportSize(viewport);
+    await phone.emulateMedia({ colorScheme: scheme.dark ? "dark" : "light" });
     await phone.goto("/mensajero");
     await expect(
       phone.getByRole("heading", { name: `Ruta ${String(route.number)}` }),

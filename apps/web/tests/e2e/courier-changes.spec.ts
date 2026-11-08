@@ -7,7 +7,14 @@ import {
 import { chromium, type Page } from "@playwright/test";
 import { z } from "zod";
 import { register } from "./api";
-import { deliver, dispatch, openStop, ownSession, workerControls } from "./courier";
+import {
+  deliver,
+  dispatch,
+  openStop,
+  ownSession,
+  signInWaitingForLimit,
+  workerControls,
+} from "./courier";
 import { accessibilityViolations, expect, test } from "./fixtures";
 
 const card = (page: Page, shipment: Shipment) =>
@@ -331,13 +338,7 @@ test("ignores the same courier's second phone delivery without raising review (q
   const context = await browser.newContext();
   const second = await context.newPage();
   try {
-    expect(
-      (
-        await second.request.post("/api/auth/sign-in/email", {
-          data: { email: account.email, password: account.password },
-        })
-      ).ok(),
-    ).toBe(true);
+    expect((await signInWaitingForLimit(second, account.email, account.password)).ok()).toBe(true);
     await second.setViewportSize({ width: 390, height: 844 });
     const shipment = await register(office, { recipientAddress: "Calle 57 # 40-08" });
     await dispatch(office, [shipment, await register(office)], account.courierId);

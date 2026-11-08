@@ -45,9 +45,7 @@ export async function ownSession(page: Page, owner: Page) {
       })
     ).ok(),
   ).toBe(true);
-  const response = await page.request.post("/api/auth/sign-in/email", {
-    data: { email, password },
-  });
+  const response = await signInWaitingForLimit(page, email, password);
   expect(response.ok()).toBe(true);
   await page.setViewportSize(phone);
   return { courierId: id, email, password };
@@ -115,4 +113,18 @@ export async function deliver(page: Page, photo: boolean) {
   }
   await sheet.getByRole("button", { name: "Guardar entrega" }).click();
   await expect(sheet).not.toBeVisible();
+}
+
+/**
+ * Password sign-in that waits out the server's limit of 20 requests a minute per address
+ * (routes/auth.ts): a long run of courier scenarios can reach it, so the test waits for the
+ * window instead of failing.
+ */
+export async function signInWaitingForLimit(page: Page, email: string, password: string) {
+  let response = await page.request.post("/api/auth/sign-in/email", { data: { email, password } });
+  for (let attempt = 0; response.status() === 429 && attempt < 14; attempt++) {
+    await page.waitForTimeout(5_000);
+    response = await page.request.post("/api/auth/sign-in/email", { data: { email, password } });
+  }
+  return response;
 }

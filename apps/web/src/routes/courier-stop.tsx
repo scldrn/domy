@@ -36,7 +36,11 @@ import { formatWindow } from "@/lib/format";
 import { currentLocation, watchLocation } from "@/lib/offline/location";
 import { shipmentOnRoute } from "@/lib/offline/outbox";
 
-/** A stop of the courier's route and its tasks (feature 003, US1, FR-005–FR-016). */
+/**
+ * A stop of the courier's route and its tasks (feature 003, US1, FR-005–FR-016), as approved in
+ * feature 006: the stop's place, three large shortcuts, and each task with its main action in
+ * lime and the exception reasons one tap away (FR-016: within 3 taps of «Mi ruta»).
+ */
 export const Route = createFileRoute("/_courier/mensajero/parada/$stopId")({
   head: () => ({ meta: [{ title: "Parada · Domy" }] }),
   component: CourierStopPage,
@@ -71,22 +75,32 @@ function CourierStopPage() {
     );
   }
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <BackLink />
-      <header className="flex flex-col gap-1">
-        <p className="text-label-l text-on-surface-variant">Parada {index + 1}</p>
-        <h1 className="text-headline-s text-on-surface">{stopKindLabels[stop.kind]}</h1>
-        <p className="text-body-l text-on-surface">{stop.address}</p>
+      <header className="-mt-2 flex flex-col gap-1">
+        <p className="text-label-l tracking-wide text-on-surface-variant uppercase">
+          Parada {index + 1} de {stops.length}
+        </p>
+        <h1 className="text-headline-m text-on-surface">{stopKindLabels[stop.kind]}</h1>
+        <p className="text-title-l text-on-surface">{stop.address}</p>
         {stop.neighborhood && (
-          <p className="text-body-m text-on-surface-variant">{stop.neighborhood.name}</p>
+          <p className="text-body-l text-on-surface-variant">{stop.neighborhood.name}</p>
         )}
       </header>
       <Shortcuts stop={stop} />
-      <ul className="flex flex-col gap-3" aria-label="Envíos de la parada">
-        {stop.tasks.map((task) => (
-          <TaskCard key={task.id} task={task} userId={user?.id ?? null} view={view} />
-        ))}
-      </ul>
+      <section aria-labelledby="envios-parada" className="flex flex-col gap-2.5">
+        <h2 id="envios-parada" className="flex items-baseline gap-2 text-title-l text-on-surface">
+          Envíos{" "}
+          <span className="text-body-l text-on-surface-variant tabular-nums">
+            {stop.tasks.length}
+          </span>
+        </h2>
+        <ul className="flex flex-col gap-3" aria-label="Envíos de la parada">
+          {stop.tasks.map((task) => (
+            <TaskCard key={task.id} task={task} userId={user?.id ?? null} view={view} />
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }
@@ -136,7 +150,10 @@ function Shortcuts({ stop }: { stop: CourierStop }) {
           key={link.label}
           href={link.href}
           {...(link.external && { target: "_blank", rel: "noreferrer" })}
-          className={cn(buttonVariants({ variant: "outline" }), "px-2 has-[svg]:pl-2")}
+          className={cn(
+            buttonVariants({ variant: "outline" }),
+            "h-auto min-h-16 flex-col gap-1 px-2 has-[svg]:pl-2",
+          )}
         >
           <Icon symbol={link.icon} />
           {link.label}
@@ -225,8 +242,8 @@ export function TaskCard({
   return (
     <li
       className={cn(
-        "flex flex-col gap-3 rounded-md border border-outline-variant p-4",
-        pending ? "bg-sheet" : "bg-surface-container-low",
+        "flex flex-col gap-3 rounded-lg border border-outline-variant p-4",
+        pending ? "bg-sheet" : "bg-sheet-alt",
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -241,9 +258,9 @@ export function TaskCard({
           <dd>{task.merchant.name}</dd>
         </div>
         {task.recipientName && (
-          <div>
+          <div className="-order-1">
             <dt className="sr-only">Destinatario</dt>
-            <dd>{task.recipientName}</dd>
+            <dd className="text-title-m">{task.recipientName}</dd>
           </div>
         )}
         {task.carrier && (
@@ -289,9 +306,11 @@ export function TaskCard({
           </div>
         )}
         {task.codAmount > 0 && finishing && (
-          <div>
+          <div className="my-1 rounded-md bg-sheet-alt px-3.5 py-3">
             <dt className="sr-only">Valor a recaudar</dt>
-            <dd className="text-title-m tabular-nums">Cobrar {formatCop(task.codAmount)}</dd>
+            <dd className="flex items-baseline justify-between gap-3 text-title-m tabular-nums">
+              Cobrar <span className="text-headline-s">{formatCop(task.codAmount)}</span>
+            </dd>
           </div>
         )}
         {task.instructions && (
@@ -311,7 +330,7 @@ export function TaskCard({
       </dl>
 
       {pending && task.kind === "pickup" && (
-        <Button variant="secondary" disabled={saving} onClick={() => void pickUp()}>
+        <Button variant="accent" size="lg" disabled={saving} onClick={() => void pickUp()}>
           Confirmar recogida
         </Button>
       )}
@@ -321,7 +340,7 @@ export function TaskCard({
             Traspaso pendiente · Espera a que {task.blockedByHandover.fromCourier.name} te entregue
             el paquete.
           </p>
-          <Button disabled={saving} onClick={() => void receive()}>
+          <Button variant="accent" size="lg" disabled={saving} onClick={() => void receive()}>
             Recibí el paquete
           </Button>
         </div>
@@ -333,7 +352,8 @@ export function TaskCard({
       )}
       {pending && returning && canReturn && (
         <Button
-          variant="secondary"
+          variant="accent"
+          size="lg"
           onClick={() => {
             setForm("delivery");
           }}
@@ -346,14 +366,15 @@ export function TaskCard({
           <p className="text-body-l text-on-surface-variant">
             Primero confirma la recogida de este envío.
           </p>
-          <Button variant="secondary" disabled={saving} onClick={() => void pickUp()}>
+          <Button variant="accent" size="lg" disabled={saving} onClick={() => void pickUp()}>
             Confirmar recogida
           </Button>
         </div>
       )}
       {pending && finishing && !task.blockedByHandover && pickedUp && (
         <Button
-          variant="secondary"
+          variant="accent"
+          size="lg"
           onClick={() => {
             setForm("delivery");
           }}
@@ -374,22 +395,24 @@ export function TaskCard({
       )}
 
       {pending && task.kind === "delivery" && !task.blockedByHandover && pickedUp && (
-        <fieldset className="flex flex-col gap-2">
-          <legend className="text-body-l font-medium text-on-surface">Reportar novedad</legend>
-          {exceptionReasons.map((reason) => (
-            <Button
-              key={reason}
-              type="button"
-              variant="outline"
-              className="w-full whitespace-normal text-left"
-              onClick={() => {
-                setExceptionReason(reason);
-                setForm("exception");
-              }}
-            >
-              {exceptionReasonLabels[reason]}
-            </Button>
-          ))}
+        <fieldset className="flex flex-col">
+          <legend className="mb-2 text-label-l text-on-surface-variant">Reportar novedad</legend>
+          <div className="grid grid-cols-3 gap-2">
+            {exceptionReasons.map((reason) => (
+              <Button
+                key={reason}
+                type="button"
+                variant="outline"
+                className="h-auto min-h-14 w-full px-2 py-1.5 text-center leading-tight whitespace-normal"
+                onClick={() => {
+                  setExceptionReason(reason);
+                  setForm("exception");
+                }}
+              >
+                {exceptionReasonLabels[reason]}
+              </Button>
+            ))}
+          </div>
         </fieldset>
       )}
       {pending && (task.kind === "pickup" || task.kind === "errand" || returning) && (
