@@ -14,7 +14,7 @@ only when its row says `approved`.
 | Editar envío `/envios/:guía/editar` | Daily operation | [Design artifact v13](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the board | approved | 2026-11-03: «Apruebo», including the «Cambiado» marks and the list of changes |
 | Rutas `/rutas` | Daily operation | [Design artifact v19](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the shipment detail | approved | 2026-11-04: «Apruebo», route cards with the board's stop track, «Sin asignar» grouped by pickup with check rows, and «Nueva ruta» as a sticky aside (a bottom bar on phones); light and phone width |
 | Detalle de ruta `/rutas/:id` | Daily operation | [Design artifact v19](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside «Rutas» | approved | 2026-11-04: «Apruebo», shown in three moments (in preparation, in progress, finished), including «Despachar» in slate and «Mensajero» and «Avance» replacing «Resumen» |
-| Historial `/historial` | Daily operation | — | pending | — |
+| Historial `/historial` | Daily operation | [Design artifact v22](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside «Rutas» and the shipment detail | proposed | — |
 | Notificar clientes `/notificar` | Daily operation | — | pending | — |
 | Mi ruta `/mensajero` | Courier app | — | pending | — |
 | Parada `/mensajero/parada/:id` | Courier app | — | pending | — |
