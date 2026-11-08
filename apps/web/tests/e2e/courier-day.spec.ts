@@ -168,7 +168,7 @@ test("shows a dated zero estimate without a route, in standard and high contrast
   await phone.goto("/mensajero/mi-dia");
   await expect(metric(phone, "Efectivo por entregar")).toHaveText("$ 0");
   await expect(metric(phone, "Entregas")).toHaveText("0");
-  await expect(phone.getByText("1 oct 2026", { exact: true })).toBeVisible();
+  await expect(phone.getByText("Jueves 1 de octubre", { exact: true })).toBeVisible();
   expect(await accessibilityViolations(phone)).toEqual([]);
   await phone.getByRole("button", { name: /contraste/i }).click();
   expect(await accessibilityViolations(phone)).toEqual([]);

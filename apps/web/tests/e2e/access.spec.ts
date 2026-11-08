@@ -138,7 +138,7 @@ test("presents an unlinked account's refusal once during and after synchronizati
   await expect(page.getByText("Tu cuenta no está vinculada a un mensajero.")).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-max-refusals", "1");
   await page.getByRole("link", { name: "Pendientes", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Pendientes por sincronizar" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pendientes", exact: true })).toBeVisible();
   await expect(page.getByText("Tu cuenta no está vinculada a un mensajero.")).toBeVisible();
   // T102: the pending page has its own retry; exercise the refusal's unique action.
   const refusal = page
