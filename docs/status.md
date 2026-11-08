@@ -1,7 +1,7 @@
 # Project status
 
 Where Domy stands and what comes next, so any session can resume without the conversation
-that produced it. Updated 2026-11-03 (America/Bogota); update it whenever a slice is merged or the next step
+that produced it. Updated 2026-11-08 (America/Bogota); update it whenever a slice is merged or the next step
 changes.
 
 **Latest audit: [production-readiness audit of 2026-11-02](production-readiness-audit-2026-11-02.md).
@@ -21,12 +21,17 @@ a short-lived branch, so the specification and implementation of every feature l
 | 002 Routes and dispatch | 2 integral catalog tasks verified locally, including aggregate overflow and traceability; retain historical feature receipts |
 | 003 Courier app | T093/T087 physical acceptance, now including offline, and dependent T088 closure remain open |
 | 004 Tracking page and merchant link | T034 physical acceptance and dependent T035 closure remain open |
-| 006 UI redesign | Design system, tokens, shell and theme on `main` (#53, #54); board data (#55), the new board with its side panel (#56), the shipment form (#57), bulk registration (#58), the shipment detail (#59), and «Rutas» with «Detalle de ruta» (slice `006-us2-routes`). Open: the top bar's search results and last-update status (T019), state marks restyle (T018), setup guards T002–T004, baselines T001 |
+| 006 UI redesign | US1 (board, #53–#56) and US2 (shipment form #57, bulk #58, detail #59, «Rutas» #60, «Historial» #62, «Notificar clientes» #63) on `main`; US3 courier shell, «Mi ruta», «Parada» (#64), «Mi día» and «Pendientes» (#65) on `main`. The public cold start has ~700 ms of margin under 3 s (#66). Open: US3 T052 (phone measurement), US4 T053–T057, US5, polish, the top bar's search results and last-update status (T019), state marks restyle (T018), setup T001–T004 |
 
 ## Next step
 
-Feature 006: «Nuevo envío», «Editar envío» (#57), «Registro masivo» (#58), «Detalle de envío» (#59), «Rutas» and «Detalle de ruta» (T040–T041, slice `006-us2-routes`) are approved and built; next, propose «Historial» (T042), one screen at a time ([proposals.md](../specs/006-ui-redesign/proposals.md)).
-
+Feature 006, US4: «Seguimiento» and «Enlace del cliente» are approved (2026-11-08, T053) and
+their implementation (T054) is in progress on `006-us4-public-pages`; then «Ingresar»,
+«Recuperar», «Restablecer» and the courier waiting page (T055–T057). US5 started apart: the audit
+log's names come from the server (T058, T060); the screens wait for their proposals (T061–T066). Every public
+change keeps the 3-second cold start of `tracking-page.spec.ts` green (#66 left ~700 ms).
+Route files export only `Route`, and `routes/root.tsx` stays empty of UI: anything else there
+loads with every public page.
 
 ### Release-change review completed locally — 2026-10-23
 

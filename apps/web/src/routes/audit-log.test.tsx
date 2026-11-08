@@ -23,6 +23,8 @@ describe("audit-log page Spanish formatting (Finding IV-25, 001/T140)", () => {
         standardFee: [9500, 11000],
         expressSurcharge: [3000, 4000],
       },
+      entityLabel: "Nuevo Cliente",
+      changeLabels: {},
     };
 
     expect(entityLabels[mockEvent.entityType]).toBe("Cliente");

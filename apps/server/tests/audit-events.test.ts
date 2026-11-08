@@ -1,7 +1,7 @@
 import type { AuditEvent } from "@domy/domain";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { auditEvents } from "../src/db/schema/index.ts";
+import { auditEvents, merchants, pickupPoints, rateCardEntries } from "../src/db/schema/index.ts";
 import { createTestApp } from "./setup/app.ts";
 import { createCatalog, type Catalog } from "./setup/catalog.ts";
 import { startDatabase, type TestDatabase } from "./setup/database.ts";
@@ -187,5 +187,180 @@ describe("GET /api/audit-events (FR-036)", () => {
 
   it("is only for the owner", async () => {
     expect((await call("GET", "/api/audit-events")).status).toBe(403);
+  });
+});
+
+/** Names instead of identifiers (feature 006, FR-020, research R10, contracts/audit-read.md). */
+describe("GET /api/audit-events labels (006 US5)", () => {
+  const events = async () =>
+    (await call("GET", "/api/audit-events", undefined, owner.cookie)).body["items"] as AuditEvent[];
+  const insert = (event: {
+    entityType: string;
+    entityId: string;
+    changes: Record<string, [unknown, unknown]>;
+  }) =>
+    database.db.insert(auditEvents).values({
+      ...event,
+      action: "updated",
+      actorUserId: owner.user.id,
+      occurredAt: t.now(),
+    });
+
+  it("names the record and the references a real change points to, keeping changes as ids", async () => {
+    const result = await call(
+      "PATCH",
+      `/api/neighborhoods/${catalog.place.laureles}`,
+      { actionId: crypto.randomUUID(), rateZoneId: catalog.zone.belloItagui },
+      owner.cookie,
+    );
+    expect(result.status).toBe(200);
+    const [event] = await events();
+    expect(event).toMatchObject({
+      entityType: "neighborhood",
+      entityId: catalog.place.laureles,
+      entityLabel: "Laureles",
+      changes: { rateZoneId: [catalog.zone.medellin, catalog.zone.belloItagui] },
+      changeLabels: { rateZoneId: ["Medellín", "Bello–Itagüí"] },
+    });
+  });
+
+  it("resolves merchant, courier, carrier, neighborhood, user, and rate zone references", async () => {
+    const courierId = crypto.randomUUID();
+    await call(
+      "POST",
+      "/api/couriers",
+      { id: courierId, name: "Carlos Pérez", phone: "3004445566", aliases: [] },
+      owner.cookie,
+    );
+    const [pickup] = await database.db
+      .select({ id: pickupPoints.id, label: pickupPoints.label })
+      .from(pickupPoints)
+      .where(eq(pickupPoints.merchantId, catalog.merchant.bullish))
+      .limit(1);
+    if (!pickup) throw new Error("The catalog has no pickup point");
+    await database.db.delete(auditEvents);
+    await insert({
+      entityType: "pickup_point",
+      entityId: pickup.id,
+      changes: {
+        neighborhoodId: [catalog.place.laureles, catalog.place.estadio],
+        merchantId: [null, catalog.merchant.bullish],
+        label: ["Bodega", "Bodega norte"],
+      },
+    });
+    await insert({
+      entityType: "courier",
+      entityId: courierId,
+      changes: { userId: [null, dispatcher.user.id] },
+    });
+    await insert({
+      entityType: "carrier",
+      entityId: catalog.carrier,
+      changes: { name: ["Coonorte", "Coonorte S. A."] },
+    });
+    await insert({
+      entityType: "user",
+      entityId: dispatcher.user.id,
+      changes: { courierId: [courierId, null] },
+    });
+    await insert({
+      entityType: "neighborhood",
+      entityId: catalog.place.itagui,
+      changes: { municipalityId: [catalog.municipality.medellin, catalog.municipality.itagui] },
+    });
+
+    const byType = Object.fromEntries((await events()).map((event) => [event.entityType, event]));
+    expect(byType["pickup_point"]).toMatchObject({
+      entityLabel: pickup.label,
+      changeLabels: {
+        neighborhoodId: ["Laureles", "El Estadio"],
+        merchantId: [null, "Bullish Hype"],
+      },
+    });
+    // Only reference fields get labels; other values are already readable.
+    expect(byType["pickup_point"]?.changeLabels).not.toHaveProperty("label");
+    expect(byType["courier"]).toMatchObject({
+      entityLabel: "Carlos Pérez",
+      changeLabels: { userId: [null, "John Coordinador"] },
+    });
+    expect(byType["carrier"]).toMatchObject({ entityLabel: "Coonorte", changeLabels: {} });
+    expect(byType["user"]).toMatchObject({
+      entityLabel: "John Coordinador",
+      changeLabels: { courierId: ["Carlos Pérez", null] },
+    });
+    expect(byType["neighborhood"]).toMatchObject({
+      entityLabel: "Itagüí",
+      changeLabels: { municipalityId: ["Medellín", "Itagüí"] },
+    });
+  });
+
+  it("names settings and rate card entries, which have no name of their own", async () => {
+    await call(
+      "PATCH",
+      "/api/settings",
+      { actionId: crypto.randomUUID(), companyName: "Cohex Medellín" },
+      owner.cookie,
+    );
+    const [amyRate] = await database.db
+      .select({ id: rateCardEntries.id })
+      .from(rateCardEntries)
+      .where(
+        and(
+          eq(rateCardEntries.merchantId, catalog.merchant.amy),
+          eq(rateCardEntries.rateZoneId, catalog.zone.medellin),
+        ),
+      );
+    const [expressRate] = await database.db
+      .select({ id: rateCardEntries.id })
+      .from(rateCardEntries)
+      .where(
+        and(eq(rateCardEntries.kind, "express_surcharge"), isNull(rateCardEntries.merchantId)),
+      );
+    if (!amyRate || !expressRate) throw new Error("The catalog has no rate card");
+    for (const entityId of [amyRate.id, expressRate.id])
+      await insert({
+        entityType: "rate_card_entry",
+        entityId,
+        changes: { amount: [9000, 9700] },
+      });
+    const items = await events();
+    expect(items.find((event) => event.entityType === "company_settings")).toMatchObject({
+      entityLabel: "Cohex Medellín",
+    });
+    const labelOf = (id: string) => items.find((event) => event.entityId === id)?.entityLabel;
+    // The kind, then the zone and the merchant whose rate it is, when it has them.
+    expect(labelOf(amyRate.id)).toBe("Tarifa de zona · Medellín · Amy Tecnology");
+    expect(labelOf(expressRate.id)).toBe("Recargo exprés");
+  });
+
+  it("keeps a deactivated record's name and never shows an unresolved identifier", async () => {
+    await database.db
+      .update(merchants)
+      .set({ isActive: false })
+      .where(eq(merchants.id, catalog.merchant.amy));
+    const missing = crypto.randomUUID();
+    await insert({
+      entityType: "merchant",
+      entityId: catalog.merchant.amy,
+      changes: { isActive: [true, false] },
+    });
+    await insert({
+      entityType: "pickup_point",
+      entityId: missing,
+      changes: { neighborhoodId: [missing, catalog.place.laureles] },
+    });
+    const items = await events();
+    expect(items.find((event) => event.entityType === "merchant")).toMatchObject({
+      entityLabel: "Amy Tecnology",
+    });
+    const unresolved = items.find((event) => event.entityType === "pickup_point");
+    expect(unresolved).toMatchObject({
+      entityLabel: "Registro eliminado",
+      changes: { neighborhoodId: [missing, catalog.place.laureles] },
+      changeLabels: { neighborhoodId: ["Registro eliminado", "Laureles"] },
+    });
+    expect(JSON.stringify([unresolved?.entityLabel, unresolved?.changeLabels])).not.toContain(
+      missing,
+    );
   });
 });

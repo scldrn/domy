@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { AppEnv } from "../app.ts";
 import { auditEvents, users } from "../db/schema/index.ts";
+import { labelAuditEvents } from "../lib/audit-labels.ts";
 import { requireRole } from "../lib/auth-guard.ts";
 import { validate } from "../lib/validate.ts";
 
@@ -36,7 +37,7 @@ export const auditEventRoutes = new Hono<AppEnv>()
       )
       .orderBy(desc(auditEvents.id))
       .limit(pageSize + 1);
-    const items: AuditEvent[] = rows.slice(0, pageSize).map(({ event, actor }) => ({
+    const page = rows.slice(0, pageSize).map(({ event, actor }) => ({
       id: event.id,
       entityType: event.entityType,
       entityId: event.entityId,
@@ -45,6 +46,8 @@ export const auditEventRoutes = new Hono<AppEnv>()
       occurredAt: event.occurredAt.toISOString(),
       changes: event.changes as AuditEvent["changes"],
     }));
+    // Names, not identifiers, for the owner (feature 006, FR-020, research R10).
+    const items: AuditEvent[] = await labelAuditEvents(c.get("db"), page);
     return c.json({
       items,
       nextCursor: rows.length > pageSize ? (items.at(-1)?.id ?? null) : null,
