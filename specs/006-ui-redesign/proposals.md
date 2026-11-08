@@ -14,8 +14,8 @@ only when its row says `approved`.
 | Editar envío `/envios/:guía/editar` | Daily operation | [Design artifact v13](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the board | approved | 2026-11-03: «Apruebo», including the «Cambiado» marks and the list of changes |
 | Rutas `/rutas` | Daily operation | [Design artifact v19](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside the shipment detail | approved | 2026-11-04: «Apruebo», route cards with the board's stop track, «Sin asignar» grouped by pickup with check rows, and «Nueva ruta» as a sticky aside (a bottom bar on phones); light and phone width |
 | Detalle de ruta `/rutas/:id` | Daily operation | [Design artifact v19](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside «Rutas» | approved | 2026-11-04: «Apruebo», shown in three moments (in preparation, in progress, finished), including «Despachar» in slate and «Mensajero» and «Avance» replacing «Resumen» |
-| Historial `/historial` | Daily operation | — | pending | — |
-| Notificar clientes `/notificar` | Daily operation | — | pending | — |
+| Historial `/historial` | Daily operation | [Design artifact v22](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside «Rutas» and the shipment detail | approved | 2026-11-08: «Apruebo ambas», a sentence lede, one «Exportar» menu, one search sheet whose date, state, and neighborhood filters fold behind «Filtros» on phones, and results as a table (cards on phones) with «Ver más envíos» |
+| Notificar clientes `/notificar` | Daily operation | [Design artifact v23](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), beside «Historial» | approved | 2026-11-08: «Apruebo ambas», a sentence lede with the day stepper, «Por notificar» as cards with «Ver mensaje» (the exact text the merchant gets), «Enviar por WhatsApp» in slate, and «Al día» as a short list |
 | Mi ruta `/mensajero` | Courier app | — | pending | — |
 | Parada `/mensajero/parada/:id` | Courier app | — | pending | — |
 | Mi día `/mensajero/mi-dia` | Courier app | — | pending | — |
