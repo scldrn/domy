@@ -159,7 +159,7 @@ for (const scheme of [
     await assertCourierScreen(phone, scheme.value);
     await phone.screenshot({ path: test.info().outputPath(`courier-${scheme.label}-mi-dia.png`) });
     await phone.getByRole("link", { name: /^Pendientes/ }).click();
-    await expect(phone.getByRole("heading", { name: "Pendientes por sincronizar" })).toBeVisible();
+    await expect(phone.getByRole("heading", { name: "Pendientes", exact: true })).toBeVisible();
     await expect(phone.getByRole("button", { name: "Reintentar sincronización" })).toBeVisible();
     await assertCourierScreen(phone, scheme.value);
     await phone.screenshot({
@@ -214,7 +214,7 @@ for (const scheme of [
     await expect(task).toContainText("Recogido");
 
     await phone.getByRole("link", { name: /^Pendientes/ }).click();
-    await expect(phone.getByRole("heading", { name: "Pendientes por sincronizar" })).toBeVisible();
+    await expect(phone.getByRole("heading", { name: "Pendientes", exact: true })).toBeVisible();
     const pending = phone.getByRole("list", { name: "Registros pendientes" });
     await expect(pending.getByRole("listitem")).toHaveCount(1);
     await expect(pending).toContainText("Recogida");
@@ -228,7 +228,7 @@ for (const scheme of [
 
     await phone.getByRole("link", { name: "Mi día", exact: true }).click();
     await expect(phone.getByRole("heading", { name: "Mi día", exact: true })).toBeVisible();
-    await expect(phone.getByText(/Los totales pueden cambiar al sincronizar/)).toBeVisible();
+    await expect(phone.getByText(/pueden cambiar al sincronizar/)).toBeVisible();
     await expect(
       phone
         .getByRole("term")
