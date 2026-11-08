@@ -253,4 +253,8 @@ export type AuditEvent = {
   actor: Named;
   occurredAt: string;
   changes: Record<string, [unknown, unknown]> | null;
+  /** The record's name, a rate's kind and zone, or «Registro eliminado» (006 FR-020, R10). */
+  entityLabel: string;
+  /** Names for the reference fields of `changes`, which keep their identifiers (R10). */
+  changeLabels: Record<string, [string | null, string | null]>;
 };

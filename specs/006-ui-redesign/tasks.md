@@ -162,12 +162,12 @@ primary action, high contrast kept (clarification Q2).
 
 ### Tests for User Story 5
 
-- [ ] T058 [P] [US5] Write failing server tests for `entityLabel` and `changeLabels` in `apps/server/tests/audit-events.test.ts`: reference fields (merchant, courier, carrier, neighborhood, user, rate zone) resolve to names, deactivated records keep their name, an unresolved reference reads `Registro eliminado`, `changes` keeps its `[from, to]` shape (contracts/audit-read.md)
+- [X] T058 [P] [US5] Write failing server tests for `entityLabel` and `changeLabels` in `apps/server/tests/audit-events.test.ts`: reference fields (merchant, courier, carrier, neighborhood, user, rate zone) resolve to names, deactivated records keep their name, an unresolved reference reads `Registro eliminado`, `changes` keeps its `[from, to]` shape (contracts/audit-read.md)
 - [ ] T059 [P] [US5] Write a failing web test that the audit log renders labels and never an identifier in `apps/web/src/routes/audit-log.test.tsx` and `apps/web/src/features/master-data/audit-formatting.test.ts`
 
 ### Implementation for User Story 5
 
-- [ ] T060 [US5] Add `entityLabel` and `changeLabels` to `AuditEvent` in `packages/domain/src/schemas/master-data.ts` and resolve them in `apps/server/src/routes/audit-events.ts` (T058 green)
+- [X] T060 [US5] Add `entityLabel` and `changeLabels` to `AuditEvent` in `packages/domain/src/schemas/master-data.ts` and resolve them in `apps/server/src/routes/audit-events.ts` (T058 green)
 - [ ] T061 [US5] Propose "Clientes" and the client detail, and record the decision
 - [ ] T062 [US5] Implement them in `apps/web/src/routes/merchants.tsx`, `apps/web/src/routes/merchant-detail.tsx`, and `apps/web/src/features/master-data/merchants/`
 - [ ] T063 [US5] Propose "Mensajeros", "Transportadoras", "Barrios", and "Tarifario" (one proposal each, shown together), and record each decision
