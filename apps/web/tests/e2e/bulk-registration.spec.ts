@@ -75,6 +75,55 @@ test("registers a pasted list, with fixes in the preview (scenario 10)", async (
   await expect(page.getByText("2 envíos creados")).toBeVisible();
 });
 
+test("drops a review that answers after the list changed (scenario 10)", async ({
+  dispatcherPage: page,
+}) => {
+  const run = String(Date.now()).slice(-6);
+  await page.goto("/envios/masivo");
+  await chooseMerchant(page, "Amy Tecnology");
+  await page
+    .getByLabel("Filas", { exact: true })
+    .fill(
+      [
+        bulkColumns.join("\t"),
+        delivery(`S${run}-A`),
+        delivery(`S${run}-B`),
+        delivery(`S${run}-C`, { Teléfono: "300" }),
+      ].join("\n"),
+    );
+  await page.getByRole("button", { name: "Revisar lista" }).click();
+  await expect(page.getByText("2 listas · 0 por confirmar · 1 con errores")).toBeVisible();
+
+  // The automatic review of the row left over answers only after the dispatcher fixed it.
+  let answerStaleReview = () => {};
+  const staleReviewHeld = new Promise<void>((resolve) => {
+    void page.route(
+      "**/api/bulk/preview",
+      async (route) => {
+        const response = await route.fetch();
+        resolve();
+        await new Promise<void>((release) => (answerStaleReview = release));
+        await route.fulfill({ response });
+      },
+      { times: 1 },
+    );
+  });
+  await page.getByRole("button", { name: "Crear 2 envíos" }).click();
+  await expect(page.getByText("2 envíos creados")).toBeVisible();
+  await staleReviewHeld;
+  await page
+    .getByLabel("Filas", { exact: true })
+    .fill(delivery(`S${run}-C`, { Teléfono: "3005550101" }));
+  const staleAnswer = page.waitForResponse("**/api/bulk/preview");
+  answerStaleReview();
+  await staleAnswer;
+
+  await page.getByRole("button", { name: "Revisar lista" }).click();
+  await expect(page.getByText("1 lista · 0 por confirmar · 0 con errores")).toBeVisible();
+  await page.getByRole("button", { name: "Crear 1 envío" }).click();
+  await expect(page.getByText("1 envío creado")).toBeVisible();
+});
+
 test("registers an uploaded spreadsheet", async ({ dispatcherPage: page }) => {
   await page.goto("/envios/masivo");
   await chooseMerchant(page, "Amy Tecnology");
