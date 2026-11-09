@@ -201,6 +201,20 @@ and then needs a migration.
   CSS 4 and shadcn/ui (`base-nova` style on Base UI) in `src/components/ui/`, with Domy's
   shared components in `src/components/`. Colors come only from the generated tokens; icons
   are single Material Symbols Rounded SVGs imported with `?react` and drawn with `Icon`.
+- Every screen follows its approved proposal (feature 006, `specs/006-ui-redesign/proposals.md`)
+  and opens with one sentence of its numbers (`SummarySentence`). Lists are `DataList` (a
+  table that becomes cards under 820 px); states are `ShipmentStatusMark`, `RouteStatusMark`,
+  and `ActiveMark`; empty and failed lists are `EmptyState` and `QueryErrorAlert`. Master data
+  and administration screens share `MasterHeader`, `ListSheet`, and `DetailSheet`
+  (`features/master-data/master-page.tsx`); the screens outside the panel share `AuthCard`.
+  The panel's light or dark theme follows the computer until the person chooses
+  (`lib/theme.ts`, `ThemeSwitch`); the courier app follows the phone, with high contrast one
+  tap away. The top bar's search shows the day's matches as you type
+  (`features/board/global-search.tsx`).
+- Route files export only `Route` and never reference an imported value at module level
+  (helpers, and `typeof` in types, go in `features/`): the router keeps such modules in every
+  page's code, the public pages included. `tracking-page.spec.ts` caps the modules every page
+  preloads and times the public cold start under 3 s.
 
 ### Tests
 
