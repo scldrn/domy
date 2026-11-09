@@ -2,11 +2,15 @@ import { companySettingsInput, type CompanySettings } from "@domy/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useId, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/page-header";
+import CallIcon from "@material-symbols/svg-400/rounded/call.svg?react";
+import ChatIcon from "@material-symbols/svg-400/rounded/chat.svg?react";
+import { Icon } from "@/components/icon";
+import { QueryErrorAlert } from "@/components/query-state";
+import { MasterHeader } from "@/features/master-data/master-page";
 import { SearchCombobox } from "@/components/search-combobox";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,34 +30,41 @@ export const Route = createFileRoute("/_panel/configuracion")({
   component: Settings,
 });
 
+/**
+ * As approved in feature 006 (US5): what recipients see when they ask for help, with its live
+ * preview, beside the office returns go back to.
+ */
 function Settings() {
   const settings = useQuery({ queryKey: ["company-settings"], queryFn: getCompanySettings });
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
-      <PageHeader
+    <div className="flex flex-col gap-6">
+      <MasterHeader
         title="Configuración"
-        description="Administra la oficina y los datos de soporte para tus clientes."
+        sentence={[
+          {
+            text: "Lo que ven los destinatarios cuando piden ayuda, y la oficina a la que vuelven los envíos.",
+          },
+        ]}
       />
       {settings.isPending && <Skeleton className="h-64" />}
       {settings.isError && (
-        <p role="alert" className="text-body-l text-error">
-          No pudimos cargar la configuración.{" "}
-          <Button variant="outline" onClick={() => void settings.refetch()}>
-            Reintentar
-          </Button>
-        </p>
+        <QueryErrorAlert
+          title="No pudimos cargar la configuración"
+          message="Revisa tu conexión e inténtalo de nuevo."
+          onRetry={() => void settings.refetch()}
+        />
       )}
       {settings.data && (
-        <>
-          <OfficeForm
-            key={`${settings.data.officeAddress ?? ""}|${settings.data.officeNeighborhood?.id ?? ""}`}
-            settings={settings.data}
-          />
+        <div className="grid items-start gap-5 lg:grid-cols-2">
           <SupportForm
             key={`${settings.data.supportPhone ?? ""}|${settings.data.companyName}`}
             settings={settings.data}
           />
-        </>
+          <OfficeForm
+            key={`${settings.data.officeAddress ?? ""}|${settings.data.officeNeighborhood?.id ?? ""}`}
+            settings={settings.data}
+          />
+        </div>
       )}
     </div>
   );
@@ -96,9 +107,15 @@ function OfficeForm({ settings }: { settings: CompanySettings }) {
   return (
     <form
       onSubmit={(event) => void submit(event)}
-      className="flex flex-col gap-4 rounded-md border border-outline-variant bg-sheet p-6"
+      className="flex flex-col gap-4 rounded-lg border border-outline-variant bg-sheet px-5.5 py-5"
     >
-      <h2 className="text-title-l text-on-surface">Oficina</h2>
+      <div>
+        <h2 className="text-title-l text-on-surface">Oficina</h2>
+        <p className="mt-1 text-body-m text-on-surface-variant">
+          A esta dirección vuelven los envíos que se reciben en la oficina, y los mensajeros la ven
+          como parada.
+        </p>
+      </div>
       <Field>
         <FieldLabel htmlFor={`${id}-address`}>Dirección de la oficina</FieldLabel>
         <Input
@@ -121,7 +138,7 @@ function OfficeForm({ settings }: { settings: CompanySettings }) {
         />
       </Field>
       <FieldError>{error}</FieldError>
-      <Button type="submit" disabled={form.formState.isSubmitting} className="self-start">
+      <Button type="submit" disabled={form.formState.isSubmitting} className="self-end">
         Guardar configuración
       </Button>
     </form>
@@ -139,6 +156,8 @@ function SupportForm({ settings }: { settings: CompanySettings }) {
       companyName: settings.companyName,
     },
   });
+  const companyName = useWatch({ control: form.control, name: "companyName" });
+  const supportPhone = useWatch({ control: form.control, name: "supportPhone" });
   const submit = form.handleSubmit(async (values) => {
     const parsed = companySettingsInput.safeParse({
       actionId,
@@ -168,12 +187,12 @@ function SupportForm({ settings }: { settings: CompanySettings }) {
   return (
     <form
       onSubmit={(event) => void submit(event)}
-      className="flex flex-col gap-4 rounded-md border border-outline-variant bg-sheet p-6"
+      className="flex flex-col gap-4 rounded-lg border border-outline-variant bg-sheet px-5.5 py-5"
     >
       <div>
         <h2 className="text-title-l text-on-surface">Atención al cliente</h2>
         <p className="mt-1 text-body-m text-on-surface-variant">
-          Estos datos aparecerán en los enlaces de seguimiento.
+          Con estos datos los destinatarios llaman o escriben desde su página de seguimiento.
         </p>
       </div>
       <Field>
@@ -201,8 +220,41 @@ function SupportForm({ settings }: { settings: CompanySettings }) {
           Escribe 10 dígitos, sin indicativo del país.
         </p>
       </Field>
+      <div
+        aria-label="Así lo ve el destinatario"
+        role="group"
+        className="flex flex-col gap-1.5 rounded-md border border-dashed border-outline bg-surface-container-low p-4"
+      >
+        <span className="text-label-s font-bold tracking-wide text-on-surface-variant uppercase">
+          Así lo ve el destinatario
+        </span>
+        <span className="text-title-m text-on-surface">¿Necesitas ayuda?</span>
+        <span className="text-body-m text-on-surface-variant">
+          Contacta a {companyName.trim() || "la empresa"}.
+        </span>
+        {supportPhone.trim() ? (
+          <span aria-hidden="true" className="mt-1 flex flex-wrap gap-2">
+            <span
+              className={buttonVariants({ variant: "outline", className: "pointer-events-none" })}
+            >
+              <Icon symbol={CallIcon} size={20} />
+              Llamar
+            </span>
+            <span
+              className={buttonVariants({ variant: "outline", className: "pointer-events-none" })}
+            >
+              <Icon symbol={ChatIcon} size={20} />
+              WhatsApp
+            </span>
+          </span>
+        ) : (
+          <span className="text-body-m text-on-surface-variant">
+            Sin celular de soporte, la página no ofrece llamar ni escribir.
+          </span>
+        )}
+      </div>
       <FieldError>{error}</FieldError>
-      <Button type="submit" disabled={form.formState.isSubmitting} className="self-start">
+      <Button type="submit" disabled={form.formState.isSubmitting} className="self-end">
         Guardar datos de soporte
       </Button>
     </form>

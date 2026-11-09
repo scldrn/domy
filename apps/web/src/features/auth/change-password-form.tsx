@@ -16,7 +16,6 @@ export function ChangePasswordForm() {
   return (
     <form
       noValidate
-      className="max-w-sm"
       onSubmit={(event) => {
         event.preventDefault();
         const problem = current
@@ -49,10 +48,15 @@ export function ChangePasswordForm() {
           onChange={setCurrent}
           autoComplete="current-password"
         />
-        <PasswordField label="Nueva contraseña" value={password} onChange={setPassword} />
+        <PasswordField
+          label="Nueva contraseña"
+          value={password}
+          onChange={setPassword}
+          hint="Al menos 8 caracteres. Una frase corta es fácil de recordar."
+        />
         <PasswordField label="Repite la contraseña" value={repeated} onChange={setRepeated} />
         {error && <FieldError>{error}</FieldError>}
-        <Button type="submit" className="self-start">
+        <Button type="submit" className="self-end">
           Cambiar contraseña
         </Button>
       </FieldGroup>

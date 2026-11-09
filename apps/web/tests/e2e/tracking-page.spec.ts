@@ -283,6 +283,16 @@ test("an expired delivered link reveals only its expiry and support, then reacti
   }
 });
 
+// A deterministic budget beside the timing below (feature 006, #66): every page preloads the
+// app's bootstrap, and a route file that references an imported value at module level (a
+// helper, or a `typeof` in a type) drags that module and its own imports into it. On
+// 2026-11-09 that cost the cold start 650 ms while it still passed under 3 s; today it is 17.
+test("keeps the modules every page preloads within budget", async ({ page }) => {
+  const html = await (await page.request.get("/")).text();
+  const preloads = html.match(/rel="modulepreload"/g)?.length ?? 0;
+  expect(preloads, "modules every page preloads").toBeLessThanOrEqual(20);
+});
+
 test("shows the registered status within three seconds on a cold weak mobile connection", async ({
   browser,
   dispatcherPage: office,

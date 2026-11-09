@@ -163,7 +163,7 @@ primary action, high contrast kept (clarification Q2).
 ### Tests for User Story 5
 
 - [X] T058 [P] [US5] Write failing server tests for `entityLabel` and `changeLabels` in `apps/server/tests/audit-events.test.ts`: reference fields (merchant, courier, carrier, neighborhood, user, rate zone) resolve to names, deactivated records keep their name, an unresolved reference reads `Registro eliminado`, `changes` keeps its `[from, to]` shape (contracts/audit-read.md)
-- [ ] T059 [P] [US5] Write a failing web test that the audit log renders labels and never an identifier in `apps/web/src/routes/audit-log.test.tsx` and `apps/web/src/features/master-data/audit-formatting.test.ts`
+- [X] T059 [P] [US5] Write a failing web test that the audit log renders labels and never an identifier in `apps/web/src/routes/audit-log.test.tsx` and `apps/web/src/features/master-data/audit-formatting.test.ts` — Done on 2026-11-09: `describeAuditEvent` turns an event into one sentence with the names the server resolved, and shows «Registro eliminado» rather than an identifier it could not name
 
 ### Implementation for User Story 5
 
@@ -172,9 +172,9 @@ primary action, high contrast kept (clarification Q2).
 - [X] T062 [US5] Implement them in `apps/web/src/routes/merchants.tsx`, `apps/web/src/routes/merchant-detail.tsx`, and `apps/web/src/features/master-data/merchants/` — Done on 2026-11-09: the list with each merchant's default pickup point and open shipments (the server adds them to `GET /api/merchants`), the busiest first, and the detail with its data and pickup points beside the link, which can now also be sent by WhatsApp
 - [X] T063 [US5] Propose "Mensajeros", "Transportadoras", "Barrios", and "Tarifario" (one proposal each, shown together), and record each decision — Approved on 2026-11-09 (artifact v28)
 - [X] T064 [US5] Implement them in `apps/web/src/routes/couriers.tsx`, `carriers.tsx`, `neighborhoods.tsx`, `rate-card.tsx`, `apps/web/src/features/master-data/directory-page.tsx`, and their feature folders; `master-data.spec.ts` green — Done on 2026-11-09: one `DirectoryPage` for Mensajeros and Transportadoras (sentence, search, a data list with the state mark and the row's actions; the courier's app account or «Sin cuenta» with a way to «Usuarios»), Barrios with the catalog's counts from `GET /api/neighborhoods/summary` and the rows to review first, and Tarifario with the zones beside a merchant's special rates and the scheduled changes and latest history on the side
-- [ ] T065 [US5] Propose "Configuración", "Usuarios", "Auditoría", and "Mi cuenta", and record each decision
-- [ ] T066 [US5] Implement them in `apps/web/src/routes/settings.tsx`, `users.tsx`, `audit-log.tsx` (using `changeLabels`; T059 green), and `account.tsx`; company-settings and account specs green
-- [ ] T067 [US5] Remove these screens from T002's offender set, which must now be empty; run every gate
+- [X] T065 [US5] Propose "Configuración", "Usuarios", "Auditoría", and "Mi cuenta", and record each decision — Approved on 2026-11-09 (artifact v28)
+- [X] T066 [US5] Implement them in `apps/web/src/routes/settings.tsx`, `users.tsx`, `audit-log.tsx` (using `changeLabels`; T059 green), and `account.tsx`; company-settings and account specs green — Done on 2026-11-09: Configuración with the live preview of what recipients see beside the office, Usuarios with the accounts by role and the couriers still to link first, Auditoría as one sentence per change grouped by day, and Mi cuenta with who the person is beside the password form; an e2e journey checks the audit sentences
+- [X] T067 [US5] Remove these screens from T002's offender set, which must now be empty; run every gate — The offender set was already empty (T002); every gate passes
 
 **Checkpoint**: every screen redesigned.
 

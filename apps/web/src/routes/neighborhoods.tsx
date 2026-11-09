@@ -21,10 +21,13 @@ import {
   AddNeighborhoodDialog,
   EditNeighborhoodDialog,
 } from "@/features/master-data/neighborhoods/neighborhood-dialogs";
+import type { NeighborhoodOption } from "@/features/shipments/api";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { ApiError } from "@/lib/api-client";
 
-type Place = Awaited<ReturnType<typeof listNeighborhoods>>[number];
+// A type from a type import: a module-level `typeof` of an imported function would keep that
+// module in every page's code, outside this route's chunk.
+type Place = NeighborhoodOption & { isActive: boolean };
 
 const panelRoute = getRouteApi("/_panel");
 
