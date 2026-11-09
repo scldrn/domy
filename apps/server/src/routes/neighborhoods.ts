@@ -96,6 +96,25 @@ export const neighborhoodRoutes = new Hono<AppEnv>()
   .get("/", validate("query", searchQuery), async (c) => {
     return c.json({ items: await searchNeighborhoods(c.get("db"), c.req.valid("query"), 20) });
   })
+  // The catalog's counts for the sentence of «Barrios» (feature 006, US5): active places, the
+  // municipalities they cover, and the additions waiting for the owner's review.
+  .get("/summary", async (c) => {
+    const [summary] = await c
+      .get("db")
+      .select({
+        active: sql<number>`count(*) filter (where ${neighborhoods.isActive})`.mapWith(Number),
+        municipalities:
+          sql<number>`count(distinct ${neighborhoods.municipalityId}) filter (where ${neighborhoods.isActive})`.mapWith(
+            Number,
+          ),
+        toReview:
+          sql<number>`count(*) filter (where ${neighborhoods.isActive} and ${neighborhoods.needsReview})`.mapWith(
+            Number,
+          ),
+      })
+      .from(neighborhoods);
+    return c.json(summary ?? { active: 0, municipalities: 0, toReview: 0 });
+  })
   // Dispatchers add neighborhoods with an existing rate zone, for the owner's review (FR-036).
   .post("/", validate("json", createInput), async (c) => {
     const input = c.req.valid("json");

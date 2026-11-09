@@ -103,6 +103,7 @@ export async function listNeighborhoods(query: {
   const { items } = await unwrap(api.api.neighborhoods.$get({ query }));
   return items;
 }
+export const getNeighborhoodSummary = () => unwrap(api.api.neighborhoods.summary.$get());
 export const getNeighborhood = (id: string) =>
   unwrap(api.api.neighborhoods[":id"].$get({ param: { id } }));
 export const updateNeighborhood = (id: string, input: NeighborhoodUpdateInput) =>
