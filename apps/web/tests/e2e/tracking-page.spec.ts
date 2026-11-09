@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import type { Page } from "@playwright/test";
+import { formatTrackingNumber } from "@domy/domain";
 import { z } from "zod";
 import { createDb } from "../../../server/src/db/client.ts";
 import { register } from "./api";
@@ -61,8 +62,12 @@ async function expectNoPrivateDetails(page: Page) {
 }
 
 async function expectNoEarlierGuideNumbers(page: Page, trackingNumbers: string[]) {
-  for (const trackingNumber of trackingNumbers)
+  for (const trackingNumber of trackingNumbers) {
     await expect(page.getByText(trackingNumber, { exact: true })).toHaveCount(0);
+    await expect(page.getByText(formatTrackingNumber(trackingNumber), { exact: true })).toHaveCount(
+      0,
+    );
+  }
 }
 
 async function expectOnlySupportContact(page: Page) {
@@ -100,7 +105,9 @@ test("tracks registration, dispatch, pickup queue and a delivery refreshed withi
     await visitor.goto(path);
     await expect(visitor.getByText("Recibimos tu envío", { exact: true })).toBeVisible();
     await expect(visitor.getByText("Bullish Hype", { exact: true })).toBeVisible();
-    await expect(visitor.getByText(target.trackingNumber, { exact: true })).toBeVisible();
+    await expect(
+      visitor.getByText(formatTrackingNumber(target.trackingNumber), { exact: true }),
+    ).toBeVisible();
     await expect(visitor.getByText(/1 oct 2026/)).toBeVisible();
     await expect(visitor.getByText(/11:00 a\. m\./)).toBeVisible();
     await expectOnlySupportContact(visitor);
@@ -225,6 +232,7 @@ test("an expired delivered link reveals only its expiry and support, then reacti
     for (const value of [
       "Bullish Hype",
       target.trackingNumber,
+      formatTrackingNumber(target.trackingNumber),
       privateName,
       privatePhone,
       privateAddress,
@@ -263,7 +271,9 @@ test("an expired delivered link reveals only its expiry and support, then reacti
     });
     expect(performance.now() - revertedAt).toBeLessThanOrEqual(60_000);
     await expect(visitor.getByText("Este enlace venció", { exact: true })).toHaveCount(0);
-    await expect(visitor.getByText(target.trackingNumber, { exact: true })).toBeVisible();
+    await expect(
+      visitor.getByText(formatTrackingNumber(target.trackingNumber), { exact: true }),
+    ).toBeVisible();
     await expect(visitor.locator(`a[href="tel:+57${supportPhone}"]`)).toBeVisible();
     await expect(visitor.locator('a[href="tel:+573004445566"]')).toHaveCount(0);
     await expectNoPrivateDetails(visitor);
