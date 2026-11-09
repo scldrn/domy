@@ -4,9 +4,19 @@ Preguntas y pendientes para Samuel (propietario de Domy) y, a través de él, pa
 lo mantiene al día: agrega cada pregunta cuando surge y la mueve a «Resueltas» con tu respuesta
 y la fecha. Responde aquí mismo o en la conversación.
 
-Última actualización: 2026-11-02 (America/Bogota).
+Última actualización: 2026-11-09 (America/Bogota).
 
 ## Bloquean algo ahora
+
+**Propuestas de datos maestros y administración — 2026-11-09:** en el
+[lienzo de diseño, versión 28](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), la fila
+«Datos maestros y administración» muestra Clientes y su detalle, Mensajeros, Transportadoras,
+Barrios, Tarifario, Configuración, Usuarios, Auditoría y Mi cuenta. Son las últimas pantallas con
+el estilo anterior. Dime si las apruebas o qué cambias; se implementan solo después.
+
+**Antes de presentar la demo:** corre `apps/server/demo/reset.sh` y luego
+`apps/server/demo/start.sh` en tu checkout principal. Los datos del día se generan hasta el
+momento en que corre `reset.sh`.
 
 **Auditoría de producción — 2026-11-02:** los bloqueos de software están corregidos en `main`, con
 CI en verde. Falta lo que depende de ti: las pruebas físicas y los datos de esta lista. Detalle en
