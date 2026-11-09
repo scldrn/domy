@@ -18,9 +18,6 @@ export const minCop = 0;
  */
 export const maxCop = 2_147_483_647;
 
-/** Alias for maxCop identifying field-level storage bound. */
-export const maxFieldCop = maxCop;
-
 /**
  * Maximum representable safe integer COP amount in JavaScript (Number.MAX_SAFE_INTEGER: 2^53 - 1 = 9,007,199,254,740,991).
  * Used for financial aggregates (routes board, courier day summary, etc.) calculated via PostgreSQL bigint.

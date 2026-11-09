@@ -1,7 +1,7 @@
 {
   "updated": "2026-10-22",
   "timezone": "America/Bogota",
-  "source": "docs/integral-execution-backlog.md",
+  "source": "docs/archive/integral-execution-backlog.md",
   "validation_mode": "local_only",
   "unlock_rule": "Every required node must be verified by the orchestrator; task executor_qa and orchestrator_qa must both reference successful evidence. RED-only tasks use their explicit RED acceptance, not an invented passing implementation. Task markers alone never unlock a node.",
   "nodes": {
@@ -10,14 +10,14 @@
       "requires": [],
       "state": "verified",
       "executor_qa": "specs/001-shipment-registration/rpc-boundaries-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1150 tests/100 E2E/build exit0; source 0c356fec6fd3de1daf6df72b359664eff202ad7d88e752b5905f017046f92a6f"
+      "orchestrator_qa": "docs/archive/local-orchestration.md; N2 check/1150 tests/100 E2E/build exit0; source 0c356fec6fd3de1daf6df72b359664eff202ad7d88e752b5905f017046f92a6f"
     },
     "001/T129": {
       "kind": "task",
       "requires": [],
       "state": "verified",
       "executor_qa": "specs/001-shipment-registration/dependency-audit-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1215 tests/106 first-attempt E2E/build exit0; source 7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d"
+      "orchestrator_qa": "docs/archive/local-orchestration.md; N2 check/1215 tests/106 first-attempt E2E/build exit0; source 7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d"
     },
     "001/T152": {
       "kind": "task",
@@ -26,10 +26,10 @@
       ],
       "state": "verified",
       "executor_qa": "specs/001-shipment-registration/reporting-privacy-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained",
+      "orchestrator_qa": "docs/archive/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained",
       "previous_verification": {
         "executor_qa": "specs/001-shipment-registration/reporting-privacy-results.md",
-        "orchestrator_qa": "docs/local-orchestration.md; N2 check/1150 tests/100 E2E/build exit0; source 0c356fec6fd3de1daf6df72b359664eff202ad7d88e752b5905f017046f92a6f"
+        "orchestrator_qa": "docs/archive/local-orchestration.md; N2 check/1150 tests/100 E2E/build exit0; source 0c356fec6fd3de1daf6df72b359664eff202ad7d88e752b5905f017046f92a6f"
       }
     },
     "verified-privacy-prerequisites": {
@@ -45,7 +45,7 @@
       ],
       "state": "verified",
       "executor_qa": "specs/001-shipment-registration/account-idempotency-results.md; specs/001-shipment-registration/account-client-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1215 tests/106 first-attempt E2E/build exit0; source 7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d"
+      "orchestrator_qa": "docs/archive/local-orchestration.md; N2 check/1215 tests/106 first-attempt E2E/build exit0; source 7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d"
     },
     "003/T135": {
       "kind": "task",
@@ -54,7 +54,7 @@
       ],
       "state": "verified",
       "executor_qa": "specs/003-courier-app/account-link-readiness-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1241 tests/121 first-attempt awake E2E/build exit0; source 1e348e85e314145433fedeb4d027245bcac36c386cd10f67fa80dff273389dbd; original failures retained"
+      "orchestrator_qa": "docs/archive/local-orchestration.md; N2 check/1241 tests/121 first-attempt awake E2E/build exit0; source 1e348e85e314145433fedeb4d027245bcac36c386cd10f67fa80dff273389dbd; original failures retained"
     },
     "001/T137": {
       "kind": "task",
@@ -64,7 +64,7 @@
       ],
       "state": "verified",
       "executor_qa": "specs/001-shipment-registration/form-draft-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1241 tests/121 first-attempt awake E2E/build exit0; source 1e348e85e314145433fedeb4d027245bcac36c386cd10f67fa80dff273389dbd; original failures retained"
+      "orchestrator_qa": "docs/archive/local-orchestration.md; N2 check/1241 tests/121 first-attempt awake E2E/build exit0; source 1e348e85e314145433fedeb4d027245bcac36c386cd10f67fa80dff273389dbd; original failures retained"
     },
     "003/T092": {
       "kind": "task",
@@ -74,7 +74,7 @@
       ],
       "state": "verified",
       "executor_qa": "specs/003-courier-app/courier-logic-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
+      "orchestrator_qa": "docs/archive/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
     },
     "003/T083": {
       "kind": "task",
@@ -95,7 +95,7 @@
       ],
       "state": "verified",
       "executor_qa": "specs/003-courier-app/role-matrix-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
+      "orchestrator_qa": "docs/archive/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
     },
     "003/T082": {
       "kind": "task",
@@ -104,7 +104,7 @@
       ],
       "state": "verified",
       "executor_qa": "specs/003-courier-app/custody-invariants-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; N2 check/1215 tests/106 first-attempt E2E/build exit0; source 7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d"
+      "orchestrator_qa": "docs/archive/local-orchestration.md; N2 check/1215 tests/106 first-attempt E2E/build exit0; source 7d4227587e1661a45cd8c0ea4b14ee0efabd0b0a2cfaecfe359d78b865544d1d"
     },
     "003/T089": {
       "kind": "task",
@@ -116,7 +116,7 @@
       ],
       "state": "verified",
       "executor_qa": "specs/003-courier-app/courier-contract-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
+      "orchestrator_qa": "docs/archive/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
     },
     "003/T090": {
       "kind": "task",
@@ -128,7 +128,7 @@
       ],
       "state": "verified",
       "executor_qa": "specs/003-courier-app/courier-security-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
+      "orchestrator_qa": "docs/archive/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
     },
     "003/T091": {
       "kind": "task",
@@ -140,7 +140,7 @@
       ],
       "state": "verified",
       "executor_qa": "specs/003-courier-app/courier-scale-results.md",
-      "orchestrator_qa": "docs/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
+      "orchestrator_qa": "docs/archive/local-orchestration.md; root N2 check/1281tests/121first-attemptE2E/build PASS; sourcedbb77ffd7d5b368d5a78bfa2e072e85eca3f3fc214e9779f5d454445a63c691e; original failures retained"
     },
     "002/T064": {
       "kind": "task",

@@ -19,7 +19,6 @@ export const accountCreateInput = z.strictObject({
     .max(128, "La contraseña puede tener hasta 128 caracteres."),
   role: userRole.default("courier"),
 });
-export type AccountCreateInput = z.input<typeof accountCreateInput>;
 
 export const accountUpdateInput = z.strictObject({
   actionId: z.uuid("El identificador de la acción no es válido."),
@@ -31,7 +30,6 @@ export const accountUpdateInput = z.strictObject({
       "Indica el nombre o el correo que quieres cambiar.",
     ),
 });
-export type AccountUpdateInput = z.input<typeof accountUpdateInput>;
 
 export const accountRoleInput = z.strictObject({ actionId: z.uuid(), userId, role: userRole });
 export const accountTargetInput = z.strictObject({ actionId: z.uuid(), userId });

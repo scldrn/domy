@@ -1,6 +1,6 @@
 # OP-01 local image upgrade rehearsal
 
-**Executed locally on 2026-10-23.** The [result receipt](../specs/004-tracking-merchant-link/local-image-upgrade-results.md) records the new image, preserved data, session and replay proofs. The original plan below is retained as the reviewed pre-execution contract; its future-tense blockers are historical. Test the
+**Executed locally on 2026-10-23.** The [result receipt](../../specs/004-tracking-merchant-link/local-image-upgrade-results.md) records the new image, preserved data, session and replay proofs. The original plan below is retained as the reviewed pre-execution contract; its future-tense blockers are historical. Test the
 current candidate against schema 0007. Commit `94a7e24` supplies migration SQL only; it is not
 represented as a released app image. This plan authorizes neither production use nor task closure.
 
@@ -91,9 +91,9 @@ Never print URLs, credentials, cookies, tokens, or rows. See the
    owner's generated credential and `auth.api.signInEmail` session in a new mode-`0600` file
    outside the image/build context; never raw-insert auth rows or print secrets. Reuse the
    business shapes in
-   [`migration-toolchain.test.ts`](../apps/server/tests/migration-toolchain.test.ts),
-   [`courier.ts`](../apps/server/tests/setup/courier.ts), and
-   [`custody-invariants.ts`](../apps/server/tests/setup/custody-invariants.ts): merchant/settings,
+   [`migration-toolchain.test.ts`](../../apps/server/tests/migration-toolchain.test.ts),
+   [`courier.ts`](../../apps/server/tests/setup/courier.ts), and
+   [`custody-invariants.ts`](../../apps/server/tests/setup/custody-invariants.ts): merchant/settings,
    municipality/zone/neighborhood, courier, shipment, assigned route/stop/task, and valid
    pickup/delivery custody plus corresponding events. Use synthetic IDs, `.invalid` email,
    fictional contact data, and integer COP fee/COD/cash values. Require nonempty owner account
@@ -119,7 +119,7 @@ Never print URLs, credentials, cookies, tokens, or rows. See the
    `notified_at`, and `notified_by` null; and new codes unique and matching
    `[A-Za-z0-9_-]{22}`. Replay current migrations once; require full 0009 row hashes, schema,
    journal, and sequence unchanged. Retain
-   [`secret-codes.test.ts`](../apps/server/tests/secret-codes.test.ts) assertions. Root compares
+   [`secret-codes.test.ts`](../../apps/server/tests/secret-codes.test.ts) assertions. Root compares
    saved 0007-column hashes before using the saved auth session.
 7. Select the app env for `domy_upgrade`; under the separate grant, replace only the captured
    baseline app with the same image and start the stopped Caddy container. Require the Caddy ID

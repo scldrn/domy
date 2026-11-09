@@ -58,7 +58,7 @@ design, not global implementation conformance; existing defects remain tracked.
 ## Integral remediation execution alignment — 2026-10-18 UTC
 
 The project-wide dependency/closure plan is
-[`docs/integral-remediation-plan.md`](../../docs/integral-remediation-plan.md).
+[`docs/archive/integral-remediation-plan.md`](../../docs/archive/integral-remediation-plan.md).
 Existing task IDs and historical evidence remain authoritative; this adds no product
 scope or permission to publish. Samuel authorized starting the recommended local work.
 Start with the narrow T141 filter to repair the currently red verification boundary,

@@ -153,7 +153,6 @@ export const courierRecordsBatch = z.object({
   deviceNow: instant,
   records: z.array(courierRecordInput).min(1).max(maxRecordsPerRequest),
 });
-export type CourierRecordsBatch = z.input<typeof courierRecordsBatch>;
 
 /**
  * A collected total other than the COD amount needs a note (FR-011); null when the
@@ -288,7 +287,6 @@ export type OfficeReceiptInput = z.input<typeof officeReceiptInput>;
 
 /** `POST /api/shipments/:id/clear-review` (FR-026). */
 export const clearReviewInput = z.object({ actionId, note });
-export type ClearReviewInput = z.input<typeof clearReviewInput>;
 
 /** `PATCH /api/settings` (FR-009, FR-041): independently editable office and support settings. */
 export const companySettingsInput = z
@@ -345,9 +343,7 @@ export const pushSubscriptionInput = z.object({
   }, "La dirección de notificaciones no corresponde a un navegador compatible."),
   keys: z.object({ p256dh: z.string().min(1), auth: z.string().min(1) }),
 });
-export type PushSubscriptionInput = z.input<typeof pushSubscriptionInput>;
 export const pushSubscriptionRemoveInput = z.object({ actionId, endpoint: z.url() });
-export type PushSubscriptionRemoveInput = z.input<typeof pushSubscriptionRemoveInput>;
 
 /** FR-040: runtime public configuration, never private VAPID material. */
 export const courierPushConfig = z.object({ publicKey: z.string().min(1).nullable() });

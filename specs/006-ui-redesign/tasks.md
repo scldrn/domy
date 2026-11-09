@@ -7,7 +7,7 @@ description: "Task list for the coherent redesign of every web interface"
 
 **Input**: Design documents from `specs/006-ui-redesign/`
 **Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md),
-[data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md),
+[data-model.md](data-model.md), [contracts/](contracts), [quickstart.md](quickstart.md),
 [proposals.md](proposals.md)
 
 **Tests**: required where the constitution demands them (VI: business rules, read

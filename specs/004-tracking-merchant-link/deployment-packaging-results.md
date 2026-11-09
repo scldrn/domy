@@ -69,7 +69,7 @@ superseded by this current status; the original failures and partial resources w
   production file does not enable the local CA.
 - `.dockerignore` no longer excludes Dockerfiles and excludes `.git`, env files, dependencies,
   generated outputs, logs, test artifacts, and raw discovery data.
-- [`local-deployment-artifact-plan.md`](../../docs/local-deployment-artifact-plan.md) records
+- [`local-deployment-artifact-plan.md`](../../docs/archive/local-deployment-artifact-plan.md) records
   the local network and validation boundaries.
 
 The pinned base references are Node

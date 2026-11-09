@@ -23,7 +23,6 @@ export type ShipmentSearchQuery = z.infer<typeof shipmentSearchQuery>;
 export const shipmentExportQuery = shipmentSearchQuery
   .omit({ cursor: true })
   .extend({ format: z.enum(["csv", "xlsx"]) });
-export type ShipmentExportQuery = z.infer<typeof shipmentExportQuery>;
 
 export type ShipmentSummary = BoardShipment & {
   recipientPhone: string | null;

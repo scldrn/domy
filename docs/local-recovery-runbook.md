@@ -6,9 +6,9 @@ verification. The historical-image upgrade remains plan-only. This document does
 production deployment or close OP-01, broader OP-02, G1, or physical acceptance.
 
 The governing requirements are [Constitution 2.0.0](../.specify/memory/constitution.md),
-[OP-01](integral-execution-backlog.md#op-01-deployment-upgrade-and-recovery-runbook),
-[OP-02](integral-execution-backlog.md#op-02-backup-and-demonstrated-restore), the
-[local deployment inventory](local-deployment-inventory.md), and the detailed
+[OP-01](archive/integral-execution-backlog.md#op-01-deployment-upgrade-and-recovery-runbook),
+[OP-02](archive/integral-execution-backlog.md#op-02-backup-and-demonstrated-restore), the
+[local deployment inventory](archive/local-deployment-inventory.md), and the detailed
 [restore receipt](../specs/004-tracking-merchant-link/local-database-restore-results.md).
 The receipt holds exact run evidence and first failures; use it instead of copying old
 addresses, process IDs, credentials, or raw state into a new run.

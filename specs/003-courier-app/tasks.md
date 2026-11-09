@@ -7,7 +7,7 @@ description: "Task list for Courier App"
 
 **Input**: Design documents from `/specs/003-courier-app/`
 
-**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
+**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts), [quickstart.md](quickstart.md)
 
 **Depends on**: every task of features [001](../001-shipment-registration/tasks.md) and
 [002](../002-routes-dispatch/tasks.md)
@@ -1242,7 +1242,7 @@ T093/T087/T088 remain unchecked; catalog 43/81 (53%).
 - [X] T136 HIGH Consolidate the approved PR30 literal-loopback correction into the current browser harness. Preserve the failing native DNS-refusal control, coherent origin/cookies/preview/proxy and current public fixtures. Run check, full tests, zero-retry E2E and build locally before publishing the unified candidate; retain all historical failures. This existing task remains outside the 81-entry integral catalog.
 
 T136 revalidation: check, 1,626 tests, 155 zero-retry E2E and build pass on final
-frozen source; [receipt](../../docs/repository-consolidation-results.md). The owner
+frozen source; [receipt](../../docs/archive/repository-consolidation-results.md). The owner
 requires local-only validation, superseding the historical remote-CI prerequisite.
 No physical task is closed by this transport consolidation.
 

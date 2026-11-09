@@ -11,7 +11,7 @@ The candidate image is `sha256:f9c052a29f8bcfea38678e25b4da0fe0cdb351b640f4fe110
 It was built once from source manifest `9604ca9689fc7e354f9f1245a424f72316b4b5ed041635f65c505403dabb32e2`
 after `pnpm check`, `pnpm test` (1610 tests), `pnpm test:e2e --retries=0` (154 passed), and
 `pnpm build` passed. Cold tracking visibility was 2837.3 ms against the 3000 ms limit. See the
-[container rehearsal receipt](../specs/004-tracking-merchant-link/deployment-container-results.md)
+[container rehearsal receipt](../../specs/004-tracking-merchant-link/deployment-container-results.md)
 for image structure and source identity evidence.
 
 The fresh synthetic lab initialized its local S3Proxy bucket, ran all ten current migrations,
@@ -24,7 +24,7 @@ found zero markers while app/Caddy logs retained useful records. The exact revie
 passed; the earlier Base UI dynamic-style failure is resolved in the final local quality gates.
 Observed `Cache-Control` was absent on the home HTML, hashed JavaScript, manifest, and service
 worker; this plan makes no immutable-cache claim. Private N1/N2 evidence is under
-`.git/local-orchestration/op01/lab-20261022/`; see the [packaging receipt](../specs/004-tracking-merchant-link/deployment-packaging-results.md)
+`.git/local-orchestration/op01/lab-20261022/`; see the [packaging receipt](../../specs/004-tracking-merchant-link/deployment-packaging-results.md)
 for the proof filenames and boundaries.
 
 These local results do not exercise a previous-release image upgrade, external provider access,
@@ -32,11 +32,11 @@ photo-object recovery, or production deployment. External infrastructure/provide
 purchase, and deployment are the project owner's responsibility. Production architecture and
 image/platform pins remain unselected.
 
-The governing basis is [Constitution I](../.specify/memory/constitution.md) (one application
+The governing basis is [Constitution I](../../.specify/memory/constitution.md) (one application
 process, PostgreSQL, and object store; Docker Compose/Caddy on one VPS), [001 research
-R16](../specs/001-shipment-registration/research.md#r16-local-development-and-ci) (production
+R16](../../specs/001-shipment-registration/research.md#r16-local-development-and-ci) (production
 packaging is prepared with the first release), and [OP-01](integral-execution-backlog.md#op-01-deployment-upgrade-and-recovery-runbook).
-The [local recovery runbook](local-recovery-runbook.md) records demonstrated synthetic
+The [local recovery runbook](../local-recovery-runbook.md) records demonstrated synthetic
 restore evidence and limits. The [deployment inventory](local-deployment-inventory.md)
 records the current source and artifact gaps.
 
@@ -50,9 +50,9 @@ Prepare three reviewable artifacts after the release candidate and its plan/task
 | `compose.production.yaml` | One app service, PostgreSQL, one explicit migration job, and Caddy. Publish only Caddy's HTTP/HTTPS ports. Keep PostgreSQL, the app listener, Adminer, and object storage unpublished. Use named persistent database/Caddy state, health ordering, pinned images, and explicit restart behavior. The S3-compatible photo service remains an external private provider; do not include development S3Proxy. |
 | `Caddyfile` | Parameterized canonical host, HTTPS termination, and a single reverse-proxy route to the app. The app's backend port is reachable only on its private proxy/app network. Caddy must overwrite a canonical client-address header from its transport peer, not forward a client-supplied value. |
 
-The [tracked development `compose.yaml`](../compose.yaml) is not a production base: it
+The [tracked development `compose.yaml`](../../compose.yaml) is not a production base: it
 publishes PostgreSQL, Adminer, and S3Proxy and has development credentials. The tracked
-[`.dockerignore`](../.dockerignore) now allows the root Dockerfile while excluding `.git`,
+[`.dockerignore`](../../.dockerignore) now allows the root Dockerfile while excluding `.git`,
 `.env*` and env files, `node_modules`, generated target state, logs, test output, and raw
 discovery. The Dockerfile copies only workspace package inputs needed for the build and only
 server/domain sources plus the built web bundle into the runtime stage.
@@ -179,7 +179,7 @@ not reserve resources.
 The lab-only Compose override keeps the app/proxy network internal and uses an ordinary bridge
 for the edge network; the production Compose database network is also internal. This follows
 the local Docker Desktop evidence in the
-[OP-02 receipt](../specs/004-tracking-merchant-link/local-database-restore-results.md#restore-b-attempt):
+[OP-02 receipt](../../specs/004-tracking-merchant-link/local-database-restore-results.md#restore-b-attempt):
 restore-a's internal-only network had a configured loopback port but no active published
 binding, while restore-b's ordinary bridge produced the active binding. The app and migration
 job attach only to internal networks, and PostgreSQL/S3Proxy attach only to the internal
@@ -267,8 +267,8 @@ the synthetic host and scenario described above:
   a new bootstrap feature or include `pnpm db:seed` in the generic Compose release sequence.
 - No previous-release-image upgrade/restart was exercised. This remains plan-only; preserve and
   extend the PostgreSQL-backed prior-schema fixtures in
-  [`migration-toolchain.test.ts`](../apps/server/tests/migration-toolchain.test.ts) (0005)
-  and [`secret-codes.test.ts`](../apps/server/tests/secret-codes.test.ts) (nonempty 0008),
+  [`migration-toolchain.test.ts`](../../apps/server/tests/migration-toolchain.test.ts) (0005)
+  and [`secret-codes.test.ts`](../../apps/server/tests/secret-codes.test.ts) (nonempty 0008),
   then exercise a database with representative synthetic records under an identified prior
   app/schema image and the candidate image. Verify app start, login, reads/writes, history,
   migration replay, restart, and forward-fix/restore on a fresh clone. The existing fixtures
@@ -399,7 +399,7 @@ this synthetic proof.
 No historical-image/schema upgrade was run. A future rehearsal remains plan-only: first identify
 an actual prior release image or define a bounded synthetic historical-schema fixture (the
 repository snapshot at `94a7e24` has migrations 0000–0007), then prepare a fresh isolated database
-and backup using the [OP-02 procedure](local-recovery-runbook.md#op-02-select-dump-restore-and-verify).
+and backup using the [OP-02 procedure](../local-recovery-runbook.md#op-02-select-dump-restore-and-verify).
 If a previous app is used, stop it before candidate migrations and keep it stopped through the
 DDL; start only the candidate after successful migration. Do not leave an old binary serving
 while unreviewed DDL runs without exact-version compatibility evidence. The current lab wrapper

@@ -5,7 +5,7 @@
 container artifacts, build, database, or deployment was changed or exercised.
 
 The OP-01 draft in
-[the local deployment artifact plan](../../docs/local-deployment-artifact-plan.md#network-and-proxy-identity-boundary)
+[the local deployment artifact plan](../../docs/archive/local-deployment-artifact-plan.md#network-and-proxy-identity-boundary)
 selects one opt-in trusted proxy identity for the synthetic local lab. The feature
 artifacts now state the same bounded interface and preserve direct native-peer
 behavior by default:
@@ -39,6 +39,6 @@ planned; no OP-01 code, lab, or physical-phone evidence is claimed.
 - [Research R22](research.md#r22-opt-in-trusted-proxy-identity-for-op-01-2026-10-22)
 - [Plan OP-01 alignment](plan.md#op-01-trusted-proxy-alignment-documentation-only-2026-10-22)
 - [HTTP transport contract](contracts/http-api.md#op-01-public-rate-limit-transport-identity-2026-10-22)
-- [OP-01 artifact plan](../../docs/local-deployment-artifact-plan.md#network-and-proxy-identity-boundary)
+- [OP-01 artifact plan](../../docs/archive/local-deployment-artifact-plan.md#network-and-proxy-identity-boundary)
 
 No feature task ID, reviewer checklist, status ledger, or verified task was changed.

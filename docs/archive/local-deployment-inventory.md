@@ -6,8 +6,8 @@ The inventory below records the original 2026-10-20 inspection. Since then, the
 candidate has passed all four local gates, image build and independent structural
 verification, fresh installation/migrations, actual Caddy HTTPS, proxy isolation,
 CSP/live assets and privacy checks. See the
-[container receipt](../specs/004-tracking-merchant-link/deployment-container-results.md)
-and [engineering handoff](engineering-handoff.md). Earlier isolated LAN, database
+[container receipt](../../specs/004-tracking-merchant-link/deployment-container-results.md)
+and [engineering handoff](../engineering-handoff.md). Earlier isolated LAN, database
 recovery and app-restart receipts retain their own dated scope.
 
 These results supersede the historical absence findings below. Historical-image
@@ -30,13 +30,13 @@ The operational requirements and G0 prerequisites remain in the
 
 | Area | Existing source | Gap or consequence |
 | --- | --- | --- |
-| Runtime | [server entry](../apps/server/src/index.ts), [package scripts](../apps/server/package.json), [constitution](../.specify/memory/constitution.md) | One Node 24 process serves Hono and built web assets. No tracked Dockerfile or production application image recipe was found. |
-| Local services | [compose.yaml](../compose.yaml) | Development PostgreSQL 18, Adminer and filesystem S3Proxy only; no application, Caddy, TLS, healthcheck or production topology. |
-| Build | [root scripts](../package.json), [web configuration](../apps/web/vite.config.ts), [TypeScript settings](../tsconfig.base.json) | Web builds to `apps/web/dist`; server/domain remain TypeScript source. Packaging must retain source, workspace dependencies and Node native type stripping. |
-| Configuration | [.env.example](../.env.example), [environment parser](../apps/server/src/env.ts), [mailer](../apps/server/src/lib/email.ts) | Example values are development placeholders. No target-specific reviewed secret injection, approved HTTPS origin or provider receipt was established by this read. |
-| Database | [migrator](../apps/server/src/db/migrate.ts), [versioned migrations](../apps/server/src/db/migrations), [seed](../apps/server/src/db/seed/index.ts) | No deployment upgrade/restore script or immutable release/schema manifest was found. Migration success does not demonstrate restored application correctness. |
+| Runtime | [server entry](../../apps/server/src/index.ts), [package scripts](../../apps/server/package.json), [constitution](../../.specify/memory/constitution.md) | One Node 24 process serves Hono and built web assets. No tracked Dockerfile or production application image recipe was found. |
+| Local services | [compose.yaml](../../compose.yaml) | Development PostgreSQL 18, Adminer and filesystem S3Proxy only; no application, Caddy, TLS, healthcheck or production topology. |
+| Build | [root scripts](../../package.json), [web configuration](../../apps/web/vite.config.ts), [TypeScript settings](../../tsconfig.base.json) | Web builds to `apps/web/dist`; server/domain remain TypeScript source. Packaging must retain source, workspace dependencies and Node native type stripping. |
+| Configuration | [.env.example](../../.env.example), [environment parser](../../apps/server/src/env.ts), [mailer](../../apps/server/src/lib/email.ts) | Example values are development placeholders. No target-specific reviewed secret injection, approved HTTPS origin or provider receipt was established by this read. |
+| Database | [migrator](../../apps/server/src/db/migrate.ts), [versioned migrations](../../apps/server/src/db/migrations), [seed](../../apps/server/src/db/seed/index.ts) | No deployment upgrade/restore script or immutable release/schema manifest was found. Migration success does not demonstrate restored application correctness. |
 | Recovery | [OP-02 requirements](integral-execution-backlog.md#op-02--backup-and-demonstrated-restore) | No tracked backup scheduler, recovery runbook, retention configuration, measured restore receipt or agreed RPO/RTO was found. |
-| Proxy and health | [application wiring](../apps/server/src/app.ts), [auth configuration](../apps/server/src/auth.ts), [entry point](../apps/server/src/index.ts) | No tracked Caddyfile, explicit trusted-forwarder policy, dedicated health/readiness route, dependency readiness probe or coordinated graceful-shutdown handler was found in these sources. |
+| Proxy and health | [application wiring](../../apps/server/src/app.ts), [auth configuration](../../apps/server/src/auth.ts), [entry point](../../apps/server/src/index.ts) | No tracked Caddyfile, explicit trusted-forwarder policy, dedicated health/readiness route, dependency readiness probe or coordinated graceful-shutdown handler was found in these sources. |
 
 Inventory used repository file listing and targeted source searches; it did not inspect
 external machines, ignored secret files or customer discovery data. An absent tracked
@@ -44,7 +44,7 @@ artifact is not proof that an external operator has never configured that capabi
 
 ## Current commands and working-directory constraints
 
-The [README production sequence](../README.md#production) is:
+The [README production sequence](../../README.md#production) is:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -85,26 +85,26 @@ and candidate are reviewed; no database URL value or credential belongs in the r
   the same-origin Node process; the entry sets a port, not an explicit bind hostname.
   A future isolated topology must restrict internal services and expose only reviewed web
   entry points. Ratified production Caddy/TLS is currently a packaging gap.
-- [Hono middleware](../apps/server/src/app.ts) sets security headers, a 1 MB API body limit,
+- [Hono middleware](../../apps/server/src/app.ts) sets security headers, a 1 MB API body limit,
   `X-Frame-Options: DENY`, referrer policy and a CSP containing `frame-ancestors 'none'`.
   This is not a complete script/connect/worker CSP design. Forwarded host/protocol/address
   handling, spoofed headers, HTTPS cookies, auth redirects and proxy-origin behavior require
   explicit topology review and real response checks; current source alone is not proof.
-- [Photo responses](../apps/server/src/routes/photos.ts) explicitly use private,
+- [Photo responses](../../apps/server/src/routes/photos.ts) explicitly use private,
   no-cache/no-store headers. Application-wide HTML/API cache rules, fingerprinted asset
   policy, worker update headers and future public no-store/noindex behavior were not
   established by an explicit policy in application wiring. Feature 004's public behavior
   must be implemented and verified under its own prerequisites.
-- [Vite PWA](../apps/web/vite.config.ts) builds a classic worker and manifest;
-  [browser startup](../apps/web/src/main.tsx) registers it in production.
-  [The worker](../apps/web/src/sw.ts) precaches the shell, excludes `/api/` navigation,
+- [Vite PWA](../../apps/web/vite.config.ts) builds a classic worker and manifest;
+  [browser startup](../../apps/web/src/main.tsx) registers it in production.
+  [The worker](../../apps/web/src/sw.ts) precaches the shell, excludes `/api/` navigation,
   and does not runtime-cache API responses. Courier data remains in
-  [IndexedDB](../apps/web/src/lib/offline/db.ts). Rehearse update, waiting-worker behavior,
+  [IndexedDB](../../apps/web/src/lib/offline/db.ts). Rehearse update, waiting-worker behavior,
   restart/reconnect and queued work preservation on an existing installed client. A desktop
   localhost test does not establish real Android/iPhone HTTPS installation or push behavior.
 - Production configuration requires private storage and all VAPID values in the parser;
   the mailer additionally rejects a missing recovery API key. Storage provisioning and its
-  12-month lifecycle are external requirements: [the storage client](../apps/server/src/lib/storage.ts)
+  12-month lifecycle are external requirements: [the storage client](../../apps/server/src/lib/storage.ts)
   does not install a provider retention policy. Sentry is optional, and browser configuration
   is build-time. Enable actual reporting only after T152 and relevant privacy gates pass.
   Never copy real secrets into browser `VITE_*` variables.
@@ -117,9 +117,9 @@ and candidate are reviewed; no database URL value or credential belongs in the r
    lockfile, image digest, schema journal and operator. Do not infer a release hash from
    a dirty branch. Do not create manifests before that design/candidate review.
 2. Fresh installation: create a new disposable PostgreSQL 18 and isolated transient S3
-   service; existing [database setup](../apps/server/tests/setup/database.ts),
-   [storage setup](../apps/server/tests/setup/storage.ts) and
-   [browser setup](../apps/web/tests/e2e/global-setup.ts) show proven harness patterns.
+   service; existing [database setup](../../apps/server/tests/setup/database.ts),
+   [storage setup](../../apps/server/tests/setup/storage.ts) and
+   [browser setup](../../apps/web/tests/e2e/global-setup.ts) show proven harness patterns.
    Use explicit environment injection and a controlled synthetic fixture plan. Exercise the
    built same-origin app and worker; test-mode mail outbox is not provider deliverability.
 3. Upgrade: select an identified prior compatible source/schema, create representative safe
@@ -161,7 +161,7 @@ Production hosting, provider accounts, real email deliverability and consent rem
 separate obligations; local-network authorization does not close them.
 
 [OP-01–OP-04](integral-execution-backlog.md#11-operational-work-and-owner-acceptance) and
-[OWNER-REQUESTS.md](../OWNER-REQUESTS.md) retain the decision sources:
+[OWNER-REQUESTS.md](../../OWNER-REQUESTS.md) retain the decision sources:
 
 - Exact environment, public origin, authorized operator, target access and scope; client
   ownership of infrastructure/data/export accounts; actual recurring cost within the
@@ -355,7 +355,7 @@ current IP SAN, and process/resource ownership checks. Every non-dry-run operati
 command revalidates the local Docker endpoint/context before loading state or accessing
 Docker. The launcher has not prepared a target or generated credentials/certificates, and no
 Compose resources, database, build, or listener were created. Root source approval is
-recorded in [the source receipt](../specs/003-courier-app/local-target-source-results.md).
+recorded in [the source receipt](../../specs/003-courier-app/local-target-source-results.md).
 The reviewed-draft/code prerequisites and serialized rehearsal above remain mandatory;
 T084 and OP-test-target must both pass before G0/phone acceptance.
 

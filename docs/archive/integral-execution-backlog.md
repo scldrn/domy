@@ -5,7 +5,7 @@
 rejected photo deletion/live-bucket eviction and reconciled historical documentation.
 Check, 1,686 tests, 155 zero-retry E2E, build, dependency audit and new local Docker
 fresh-runtime checks pass on frozen 550-file source `a2c9c55a`. See the
-[review receipt](release-change-review-results.md) and [current handoff](engineering-handoff.md).
+[review receipt](release-change-review-results.md) and [current handoff](../engineering-handoff.md).
 Additional convergence tasks 001/T156, 002/T065, 003/T137 and 004/T036 are verified;
 they are outside the original 81-entry catalog. Its five original physical/final
 tasks retain their wider scope. No deployment or remote CI was performed.
@@ -37,9 +37,9 @@ its structural inspection and historical-schema upgrade rehearsal: 29 existing
 tables, COP totals, accounts/session preserved; replay and the original fresh DB
 remain unchanged. Root worked alone and performed a separate final inspection,
 as requested; no independent-agent approval is claimed. See
-[regression results](../specs/001-shipment-registration/solo-production-regression-results.md),
-[upgrade results](../specs/004-tracking-merchant-link/local-image-upgrade-results.md)
-and [handoff](engineering-handoff.md).
+[regression results](../../specs/001-shipment-registration/solo-production-regression-results.md),
+[upgrade results](../../specs/004-tracking-merchant-link/local-image-upgrade-results.md)
+and [handoff](../engineering-handoff.md).
 **76/81 closed (94%), five open** for physical acceptance and dependent closures.
 The owner handles infrastructure/public deployment. This is not production
 approval. Earlier checkpoints below retain their own source identities and scope.
@@ -49,94 +49,94 @@ gates on unchanged 537-file source9604ca96: check,1610 tests,154 first-attempt
 browser cases (10.9minutes/retries0/cold2837.3ms),build. First failures remain
 preserved. The local image build and root's independent structural probe pass;
 fresh isolated runtime/upgrade rehearsal follows. **76/81 verified (94%),5 open**;
-physical, provider and final gates remain pending. [Preload results](../specs/004-tracking-merchant-link/deployment-preload-results.md).
+physical, provider and final gates remain pending. [Preload results](../../specs/004-tracking-merchant-link/deployment-preload-results.md).
 
-**Local database recovery double-verified — 2026-10-22:** executor and root independently recover the selected synthetic snapshot:31 exact table hashes,66 FK definitions, sequence and COP totals; migration no-op and restored account access pass; UUID registration replay has one effect. First harness failures retained. **76/81 verified (94%),5 open**. This supplies scoped OP-02 evidence; scheduled backups/object-provider recovery and G1/physical/final gates remain pending. [Restore results](../specs/004-tracking-merchant-link/local-database-restore-results.md).
+**Local database recovery double-verified — 2026-10-22:** executor and root independently recover the selected synthetic snapshot:31 exact table hashes,66 FK definitions, sequence and COP totals; migration no-op and restored account access pass; UUID registration replay has one effect. First harness failures retained. **76/81 verified (94%),5 open**. This supplies scoped OP-02 evidence; scheduled backups/object-provider recovery and G1/physical/final gates remain pending. [Restore results](../../specs/004-tracking-merchant-link/local-database-restore-results.md).
 
-**Current-network candidate verified — 2026-10-22:** phone-20261022-public-b at https://192.168.58.219:8445 passes executor/root native checks and root public probes. Source523files2a885083 remains unchanged. Prior003 and public-a resources are retained; public-a is the separate OP-02 backup source. **76/81 verified (94%),5 open**; G1/OP/physical/final acceptance remain pending. [Current-network results](../specs/004-tracking-merchant-link/local-target-current-network-results.md).
+**Current-network candidate verified — 2026-10-22:** phone-20261022-public-b at https://192.168.58.219:8445 passes executor/root native checks and root public probes. Source523files2a885083 remains unchanged. Prior003 and public-a resources are retained; public-a is the separate OP-02 backup source. **76/81 verified (94%),5 open**; G1/OP/physical/final acceptance remain pending. [Current-network results](../../specs/004-tracking-merchant-link/local-target-current-network-results.md).
 
-**Updated local 004 rehearsal verified — 2026-10-22:** new synthetic candidate phone-20261022-public-a at current LAN IP10.12.117.118:8444 passes executor/root native HTTPS/auth/worker/private-photo checks and root public API probes. Source523files2a885083 unchanged; old003 target retained. **76/81 verified (94%),5 open**. G1/operational and physical/final acceptance remain pending; owner confirms LAN only/no purchased domain. [Rehearsal results](../specs/004-tracking-merchant-link/local-target-preparation-results.md).
+**Updated local 004 rehearsal verified — 2026-10-22:** new synthetic candidate phone-20261022-public-a at current LAN IP10.12.117.118:8444 passes executor/root native HTTPS/auth/worker/private-photo checks and root public API probes. Source523files2a885083 unchanged; old003 target retained. **76/81 verified (94%),5 open**. G1/operational and physical/final acceptance remain pending; owner confirms LAN only/no purchased domain. [Rehearsal results](../../specs/004-tracking-merchant-link/local-target-preparation-results.md).
 
-**Public go-live documentation verified — 2026-10-22:** T033 README origin/support/individual-consent instructions pass executor/root contract review, diff check and32relative links. **76/81 verified (94%),5 open**. Documentation closure does not certify actual courier consent or G1; OP-release-evidence remains pending. [Documentation results](../specs/004-tracking-merchant-link/public-go-live-documentation-results.md).
+**Public go-live documentation verified — 2026-10-22:** T033 README origin/support/individual-consent instructions pass executor/root contract review, diff check and32relative links. **76/81 verified (94%),5 open**. Documentation closure does not certify actual courier consent or G1; OP-release-evidence remains pending. [Documentation results](../../specs/004-tracking-merchant-link/public-go-live-documentation-results.md).
 
-**Public accessibility verified — 2026-10-22:** T032 passes both-level focused checks, executor35 repeated native cases and root final check/1566tests/153E2E9.7min/retries0/build. Frozen523-file source2a885083; cold tracking2847.5ms. Original defects, harness failures and interruption retained. **75/81 verified (93%),6 open**. T033 documentation is eligible. [Accessibility results](../specs/004-tracking-merchant-link/public-accessibility-results.md).
+**Public accessibility verified — 2026-10-22:** T032 passes both-level focused checks, executor35 repeated native cases and root final check/1566tests/153E2E9.7min/retries0/build. Frozen523-file source2a885083; cold tracking2847.5ms. Original defects, harness failures and interruption retained. **75/81 verified (93%),6 open**. T033 documentation is eligible. [Accessibility results](../../specs/004-tracking-merchant-link/public-accessibility-results.md).
 
-**Public permission matrix verified — 2026-10-22:** T030 both-level140native/5files/static/types PASS; four public anonymous reads, mutation refusal with unchanged data/photo, office notification/rotation and role denials verified. **74/81 verified (91%),7 open**. T032 accessibility continues. [Permission results](../specs/004-tracking-merchant-link/public-permissions-results.md).
+**Public permission matrix verified — 2026-10-22:** T030 both-level140native/5files/static/types PASS; four public anonymous reads, mutation refusal with unchanged data/photo, office notification/rotation and role denials verified. **74/81 verified (91%),7 open**. T032 accessibility continues. [Permission results](../../specs/004-tracking-merchant-link/public-permissions-results.md).
 
-**Notification story verified — 2026-10-22:** T022 passes executor/root review and focused8 native cases; root final check/1561tests/150native9.4min/retries0/build PASS on identical522-file source edc9e6f1. Cold tracking2860.6ms. Original selector failures and interruption retained. **73/81 verified (90%),8 open**. T030 permissions and T032 accessibility may start in parallel. [UI results](../specs/004-tracking-merchant-link/notification-ui-results.md).
+**Notification story verified — 2026-10-22:** T022 passes executor/root review and focused8 native cases; root final check/1561tests/150native9.4min/retries0/build PASS on identical522-file source edc9e6f1. Cold tracking2860.6ms. Original selector failures and interruption retained. **73/81 verified (90%),8 open**. T030 permissions and T032 accessibility may start in parallel. [UI results](../../specs/004-tracking-merchant-link/notification-ui-results.md).
 
-**Notification API history fix verified — 2026-10-22:** T021 reclosed after causal RED and both-level65native affected tests/static/server types. Receipt remains intact; detail no longer invents field changes. **72/81 verified (89%),9 open**. T022 resumes; ungenerated concurrent route-type failures remain explicitly pending its integration gates. [API results](../specs/004-tracking-merchant-link/notification-api-results.md).
+**Notification API history fix verified — 2026-10-22:** T021 reclosed after causal RED and both-level65native affected tests/static/server types. Receipt remains intact; detail no longer invents field changes. **72/81 verified (89%),9 open**. T022 resumes; ungenerated concurrent route-type failures remain explicitly pending its integration gates. [API results](../../specs/004-tracking-merchant-link/notification-api-results.md).
 
 **Notification API reopened — 2026-10-22:** root found notification receipt metadata rendered as fabricated detail field changes. T021 reopened; T022 assembly held pending causal regression and N1/N2. **71/81 verified (88%),10 open**. Earlier API/core passes remain historical evidence, not closure of this finding.
 
-**Notification UI checkpoint — 2026-10-22:** T022 remains in progress; presentation/core N1/N2 pass424domain/382web/static/types, including root-discovered partial-batch refresh regression. Page/navigation and8focused browser cases precede full gates. **72/81 verified (89%),9 open**. [UI results](../specs/004-tracking-merchant-link/notification-ui-results.md).
+**Notification UI checkpoint — 2026-10-22:** T022 remains in progress; presentation/core N1/N2 pass424domain/382web/static/types, including root-discovered partial-batch refresh regression. Page/navigation and8focused browser cases precede full gates. **72/81 verified (89%),9 open**. [UI results](../../specs/004-tracking-merchant-link/notification-ui-results.md).
 
-**Notification API checkpoint — 2026-10-22:** T021 both-level43affectedserverPASS/423domain/staticPASS; first full753PASS/2obsolete-contract failures preserved, then strict tests aligned. **72/81 verified (89%),9 open**. [API results](../specs/004-tracking-merchant-link/notification-api-results.md). R21 design gate verified; T022 UI may start. Full story gates remain pending.
+**Notification API checkpoint — 2026-10-22:** T021 both-level43affectedserverPASS/423domain/staticPASS; first full753PASS/2obsolete-contract failures preserved, then strict tests aligned. **72/81 verified (89%),9 open**. [API results](../../specs/004-tracking-merchant-link/notification-api-results.md). R21 design gate verified; T022 UI may start. Full story gates remain pending.
 
-**Notification browser RED checkpoint — 2026-10-22:** T019 both-level3 intended missing-page RED/static PASS, native fixtures and preserved traces. **71/81 verified (88%),10 open**. [Browser RED](../specs/004-tracking-merchant-link/notification-browser-red-results.md). T021 API is the next implementation; T022 waits for its verified completion.
+**Notification browser RED checkpoint — 2026-10-22:** T019 both-level3 intended missing-page RED/static PASS, native fixtures and preserved traces. **71/81 verified (88%),10 open**. [Browser RED](../../specs/004-tracking-merchant-link/notification-browser-red-results.md). T021 API is the next implementation; T022 waits for its verified completion.
 
-**Notification domain checkpoint — 2026-10-22:** T020 both-level422domainPASS/static PASS with preserved UUID/date regressions. **70/81 verified (86%),11 open**. [Domain results](../specs/004-tracking-merchant-link/notification-domain-results.md). T019 browser RED next; T021 eligible after its runtime freeze.
+**Notification domain checkpoint — 2026-10-22:** T020 both-level422domainPASS/static PASS with preserved UUID/date regressions. **70/81 verified (86%),11 open**. [Domain results](../../specs/004-tracking-merchant-link/notification-domain-results.md). T019 browser RED next; T021 eligible after its runtime freeze.
 
-**Notification API RED checkpoint — 2026-10-22:** T018 both-level1baselinePASS/9intendedRED/staticPASS on real PostgreSQL. **69/81 verified (85%),12 open**. [API RED](../specs/004-tracking-merchant-link/notification-api-red-results.md). T020 domain implementation and T019 browser RED continue; T021 waits for T020 verification.
+**Notification API RED checkpoint — 2026-10-22:** T018 both-level1baselinePASS/9intendedRED/staticPASS on real PostgreSQL. **69/81 verified (85%),12 open**. [API RED](../../specs/004-tracking-merchant-link/notification-api-red-results.md). T020 domain implementation and T019 browser RED continue; T021 waits for T020 verification.
 
-**Notification composer RED checkpoint — 2026-10-22:** T017 both-level3 intended missing-export RED/static PASS; contract seam aligned first. **68/81 verified (84%),13 open**. [Composer RED](../specs/004-tracking-merchant-link/notification-composer-red-results.md). T020 eligible; API/browser RED continues.
+**Notification composer RED checkpoint — 2026-10-22:** T017 both-level3 intended missing-export RED/static PASS; contract seam aligned first. **68/81 verified (84%),13 open**. [Composer RED](../../specs/004-tracking-merchant-link/notification-composer-red-results.md). T020 eligible; API/browser RED continues.
 
-**Merchant portal checkpoint — 2026-10-22:** T028/T029 pass both QA levels: check,1511tests,142first-attemptE2E9.3min,build;506-file source55c58134 unchanged. **67/81 verified (83%),14 open**. [Portal results](../specs/004-tracking-merchant-link/merchant-browser-results.md). Next: notifications RED T017–T019 in parallel, with local DB/build/E2E execution serialized.
+**Merchant portal checkpoint — 2026-10-22:** T028/T029 pass both QA levels: check,1511tests,142first-attemptE2E9.3min,build;506-file source55c58134 unchanged. **67/81 verified (83%),14 open**. [Portal results](../../specs/004-tracking-merchant-link/merchant-browser-results.md). Next: notifications RED T017–T019 in parallel, with local DB/build/E2E execution serialized.
 
 
-**Public code scan checkpoint — 2026-10-22:** T031 bothlevels2firstattemptnativePASS/1000codes×2endpoints; rate-limit/real positives retained. **65/81 verified (80%),16 open**. [Scan results](../specs/004-tracking-merchant-link/public-codes-scan-results.md). UI T028/T029 in progress.
+**Public code scan checkpoint — 2026-10-22:** T031 bothlevels2firstattemptnativePASS/1000codes×2endpoints; rate-limit/real positives retained. **65/81 verified (80%),16 open**. [Scan results](../../specs/004-tracking-merchant-link/public-codes-scan-results.md). UI T028/T029 in progress.
 
-**Merchant API checkpoint — 2026-10-22:** T027 root738server/412domain/staticPASS on identical12-file source. **64/81 verified (79%),17 open**. [API results](../specs/004-tracking-merchant-link/merchant-api-results.md). UI T028/T029 and independent T031 now eligible.
+**Merchant API checkpoint — 2026-10-22:** T027 root738server/412domain/staticPASS on identical12-file source. **64/81 verified (79%),17 open**. [API results](../../specs/004-tracking-merchant-link/merchant-api-results.md). UI T028/T029 and independent T031 now eligible.
 
-**Merchant projection checkpoint — 2026-10-22:** T026 bothlevels410domain/staticPASS; root30nativePGPASS, int4regressionfixed/retained. **63/81 verified (78%),18 open**. [Projection results](../specs/004-tracking-merchant-link/merchant-projection-results.md). T027 endpoints eligible.
+**Merchant projection checkpoint — 2026-10-22:** T026 bothlevels410domain/staticPASS; root30nativePGPASS, int4regressionfixed/retained. **63/81 verified (78%),18 open**. [Projection results](../../specs/004-tracking-merchant-link/merchant-projection-results.md). T027 endpoints eligible.
 
-**Merchant browser RED checkpoint — 2026-10-22:** T025 final-source82d7d26c bothlevels3intendedRED plus strictstaticPASS. **62/81 verified (77%),19 open**. [Browser RED](../specs/004-tracking-merchant-link/merchant-browser-red-results.md). Source freeze released; T026 implementation starts.
+**Merchant browser RED checkpoint — 2026-10-22:** T025 final-source82d7d26c bothlevels3intendedRED plus strictstaticPASS. **62/81 verified (77%),19 open**. [Browser RED](../../specs/004-tracking-merchant-link/merchant-browser-red-results.md). Source freeze released; T026 implementation starts.
 
-**Merchant projection RED checkpoint — 2026-10-22:** T023 owner-note decision aligned; independent analysis and both RED runs132total/14intendedfail/118PASS. **61/81 verified (75%),20 open**. [Projection RED](../specs/004-tracking-merchant-link/merchant-projection-red-results.md). T025 final browser audit precedes source-freeze release for T026.
+**Merchant projection RED checkpoint — 2026-10-22:** T023 owner-note decision aligned; independent analysis and both RED runs132total/14intendedfail/118PASS. **61/81 verified (75%),20 open**. [Projection RED](../../specs/004-tracking-merchant-link/merchant-projection-red-results.md). T025 final browser audit precedes source-freeze release for T026.
 
 **Planning revision:** 2026-10-22 (America/Bogota). **Owner:** Samuel Calderón.
 **Local base:** `94a7e2450ec2abae4192f7f864e34c4638f7c963`; active branch `codex/local-readiness-orchestration`.
 **State:** NOT READY FOR RELEASE; 5 canonical tasks remain open, plus operational obligations.
 
-**Merchant API RED checkpoint — 2026-10-22:** T024 independently reproduced9cases/6intended404failures/3baselinepasses; strict static checks PASS. **60/81 verified (74%),21 open**. [Merchant API RED](../specs/004-tracking-merchant-link/merchant-api-red-results.md). T023/T025 authoring corrections continue; implementations remain gated.
+**Merchant API RED checkpoint — 2026-10-22:** T024 independently reproduced9cases/6intended404failures/3baselinepasses; strict static checks PASS. **60/81 verified (74%),21 open**. [Merchant API RED](../../specs/004-tracking-merchant-link/merchant-api-red-results.md). T023/T025 authoring corrections continue; implementations remain gated.
 
-**Tracking story checkpoint — 2026-10-22:** T016 root fullcheck/1472tests/138firstattemptE2E8.9min/build PASS; cold2803.4ms; identical492-file source49e15ee7. **59/81 verified (73%),22 open**. [Tracking results](../specs/004-tracking-merchant-link/tracking-browser-results.md). R19 gate verified; merchant RED T023/T024/T025 authorized in parallel with serialized native execution.
+**Tracking story checkpoint — 2026-10-22:** T016 root fullcheck/1472tests/138firstattemptE2E8.9min/build PASS; cold2803.4ms; identical492-file source49e15ee7. **59/81 verified (73%),22 open**. [Tracking results](../../specs/004-tracking-merchant-link/tracking-browser-results.md). R19 gate verified; merchant RED T023/T024/T025 authorized in parallel with serialized native execution.
 
-**Tracking API checkpoint — 2026-10-22:** T015 passes both-level18 native server/118 domain tests and strict static checks. **58/81 verified (72%),23 open**. [API results](../specs/004-tracking-merchant-link/tracking-api-results.md). T016 UI authorized.
+**Tracking API checkpoint — 2026-10-22:** T015 passes both-level18 native server/118 domain tests and strict static checks. **58/81 verified (72%),23 open**. [API results](../../specs/004-tracking-merchant-link/tracking-api-results.md). T016 UI authorized.
 
-**Projection checkpoint — 2026-10-22:** T013 passes both-level118 tests and strict static checks. **57/81 verified (70%),24 open**. [Projection results](../specs/004-tracking-merchant-link/tracking-projection-results.md). T015 API authorized; T016 remains gated.
+**Projection checkpoint — 2026-10-22:** T013 passes both-level118 tests and strict static checks. **57/81 verified (70%),24 open**. [Projection results](../../specs/004-tracking-merchant-link/tracking-projection-results.md). T015 API authorized; T016 remains gated.
 
-**Browser RED checkpoint — 2026-10-22:** T012 corrected five intended UI failures independently reproduced; scoped static checks pass. **56/81 verified (69%),25 open**. [Browser RED](../specs/004-tracking-merchant-link/tracking-browser-red-results.md). T013 proceeds; T015/T016 remain gated.
+**Browser RED checkpoint — 2026-10-22:** T012 corrected five intended UI failures independently reproduced; scoped static checks pass. **56/81 verified (69%),25 open**. [Browser RED](../../specs/004-tracking-merchant-link/tracking-browser-red-results.md). T013 proceeds; T015/T016 remain gated.
 
-**Tracking RED checkpoint — 2026-10-22:** T009/T011 independently verified intendedRED and scopedstaticchecks; T013 unlocked. **55/81 verified (68%),26 open**. [Tracking RED](../specs/004-tracking-merchant-link/tracking-red-results.md).
+**Tracking RED checkpoint — 2026-10-22:** T009/T011 independently verified intendedRED and scopedstaticchecks; T013 unlocked. **55/81 verified (68%),26 open**. [Tracking RED](../../specs/004-tracking-merchant-link/tracking-red-results.md).
 
-**Queue implementation checkpoint — 2026-10-22:** T014 passes both-level41/41 and scoped static checks. **53/81 verified (65%),28 open**. [Queue helper](../specs/004-tracking-merchant-link/queue-helper-results.md).
+**Queue implementation checkpoint — 2026-10-22:** T014 passes both-level41/41 and scoped static checks. **53/81 verified (65%),28 open**. [Queue helper](../../specs/004-tracking-merchant-link/queue-helper-results.md).
 
-**Queue RED checkpoint — 2026-10-22:** T010 verified by both levels (33 existing pass/8 intended failures), unlocksT014. **52/81 verified (64%),29 open**. [Queue RED](../specs/004-tracking-merchant-link/queue-red-results.md).
+**Queue RED checkpoint — 2026-10-22:** T010 verified by both levels (33 existing pass/8 intended failures), unlocksT014. **52/81 verified (64%),29 open**. [Queue RED](../../specs/004-tracking-merchant-link/queue-red-results.md).
 
-**Foundation checkpoint — 2026-10-22:** T001–T008 verified, including corrected URL aliases. Root full check/1376tests/133 first-attempt E2E7.7min/build PASS on identical481-file sourcec13b486c. **51/81 verified (63%),30 open**. [Foundation results](../specs/004-tracking-merchant-link/foundation-integration-results.md). T009–T012 RED begins in parallel.
+**Foundation checkpoint — 2026-10-22:** T001–T008 verified, including corrected URL aliases. Root full check/1376tests/133 first-attempt E2E7.7min/build PASS on identical481-file sourcec13b486c. **51/81 verified (63%),30 open**. [Foundation results](../../specs/004-tracking-merchant-link/foundation-integration-results.md). T009–T012 RED begins in parallel.
 
 **Historical reopened checkpoint — 2026-10-22:** independent audit found public case/encoded aliases bypass T007 worker guards; T007 reopened for correction and regressions. **49/81 verified (60%),32 open**. Earlier lowercase-path QA remains historical.
 
-**Code checkpoint — 2026-10-22:** T005 verified independently53/53 tests including API creation without SQL code defaults. **50/81 verified (62%),31 open**. [Code results](../specs/004-tracking-merchant-link/secret-code-results.md).
+**Code checkpoint — 2026-10-22:** T005 verified independently53/53 tests including API creation without SQL code defaults. **50/81 verified (62%),31 open**. [Code results](../../specs/004-tracking-merchant-link/secret-code-results.md).
 
-**Layout checkpoint — 2026-10-22:** T007 independently verified3/3 first-attempt built-worker E2E and static checks on unchanged sourcefca79157. **49/81 verified (60%),32 open**. [Layout results](../specs/004-tracking-merchant-link/public-layout-results.md).
+**Layout checkpoint — 2026-10-22:** T007 independently verified3/3 first-attempt built-worker E2E and static checks on unchanged sourcefca79157. **49/81 verified (60%),32 open**. [Layout results](../../specs/004-tracking-merchant-link/public-layout-results.md).
 
-**HTTP checkpoint — 2026-10-22:** T006 verified: independent final42 tests, static checks and privacy/static-fallback review. **48/81 verified (59%),33 open**. See [boundary results](../specs/004-tracking-merchant-link/public-protection-results.md).
+**HTTP checkpoint — 2026-10-22:** T006 verified: independent final42 tests, static checks and privacy/static-fallback review. **48/81 verified (59%),33 open**. See [boundary results](../../specs/004-tracking-merchant-link/public-protection-results.md).
 
-**Schema checkpoint — 2026-10-22:** T004 passed executor and root native migration/code tests (6/6), scoped static checks and generated-DDL review. **47/81 verified (58%), 34 open**. T005/T008 unlocked; T006/T007 continue. See [schema results](../specs/004-tracking-merchant-link/schema-migration-results.md).
+**Schema checkpoint — 2026-10-22:** T004 passed executor and root native migration/code tests (6/6), scoped static checks and generated-DDL review. **47/81 verified (58%), 34 open**. T005/T008 unlocked; T006/T007 continue. See [schema results](../../specs/004-tracking-merchant-link/schema-migration-results.md).
 
 **Historical RED checkpoint — 2026-10-21:** T002/T003 RED-only deliverables passed independent
 N1/N2 verification: four and five intended failures on real PostgreSQL/native HTTP,
 with clean types/lint. **46/81 verified by task deliverable (57%), 35 open**.
 These are failing tests awaiting T004/T005/T006, not implemented protections.
-See [foundational RED results](../specs/004-tracking-merchant-link/foundational-red-results.md).
+See [foundational RED results](../../specs/004-tracking-merchant-link/foundational-red-results.md).
 
 **Previous configuration checkpoint:** 004/T001 passed local N1/N2 on source
 `adb2e974c14025cb3c23a5108ed32f9e51bf1b6beb43def82f5f9f619a313e2d`:
 1,311 tests, check, 2 first-attempt courier E2E, build and private-origin isolation.
 Catalog: **44/81 verified (54%), 37 open**. Next: T002/T003 RED in parallel.
-See [public-origin results](../specs/004-tracking-merchant-link/public-origin-results.md).
+See [public-origin results](../../specs/004-tracking-merchant-link/public-origin-results.md).
 Earlier counts below describe their dated checkpoints.
 
 **Owner sequencing decision — 2026-10-21:** “omite y continuemos” defers physical
@@ -201,7 +201,7 @@ Spec Kit, a declaration that all designs are settled, or permission to deploy pr
 
 Order of authority:
 
-1. [Constitution 2.0.0](../.specify/memory/constitution.md), all nine principles.
+1. [Constitution 2.0.0](../../.specify/memory/constitution.md), all nine principles.
 2. Approved owner decisions, including the explicit CSV/photo replies in the conversation.
 3. Each feature's `spec.md`, clarified decisions, plan, research, data model and contracts.
 4. The canonical task files linked below; task identity is feature-qualified.
@@ -214,10 +214,10 @@ behavior. New product decisions require clarification, not assumptions disguised
 
 | Feature | Canonical task source | Open checkboxes | Checked catalog entries in the working tree | What remains |
 | --- | --- | ---: | ---: | --- |
-| 001 | [Shipment registration tasks](../specs/001-shipment-registration/tasks.md) | 0 | 27 | All cataloged tasks verified locally; human/operational obligations remain |
-| 002 | [Routes tasks](../specs/002-routes-dispatch/tasks.md) | 0 | 2 | Cataloged tasks verified locally; human/operational obligations remain |
-| 003 | [Courier tasks](../specs/003-courier-app/tasks.md) | 3 | 14 | T087-T088/T093 (physical acceptance and final gates); T084 locally verified |
-| 004 | [Tracking/merchant tasks](../specs/004-tracking-merchant-link/tasks.md) | 2 | 33 | T001–T033 verified by deliverable; T034–T035 remain |
+| 001 | [Shipment registration tasks](../../specs/001-shipment-registration/tasks.md) | 0 | 27 | All cataloged tasks verified locally; human/operational obligations remain |
+| 002 | [Routes tasks](../../specs/002-routes-dispatch/tasks.md) | 0 | 2 | Cataloged tasks verified locally; human/operational obligations remain |
+| 003 | [Courier tasks](../../specs/003-courier-app/tasks.md) | 3 | 14 | T087-T088/T093 (physical acceptance and final gates); T084 locally verified |
+| 004 | [Tracking/merchant tasks](../../specs/004-tracking-merchant-link/tasks.md) | 2 | 33 | T001–T033 verified by deliverable; T034–T035 remain |
 | **Total** | Four canonical task files | **5** | **76** | **5 open tasks across features 001, 002, 003, and 004** |
 
 Counts were recomputed from the four working-tree task files after the local double-QA
@@ -573,7 +573,7 @@ still gate final delivery; the earlier wait-for-003 rule is superseded for devel
 
 ## 6. Feature 001: 27 cataloged tasks, 0 open
 
-Canonical source: [001 tasks](../specs/001-shipment-registration/tasks.md). Existing
+Canonical source: [001 tasks](../../specs/001-shipment-registration/tasks.md). Existing
 spec/contract obligations remain authoritative where a description below is abbreviated.
 
 ### 001/T128 — Spreadsheet-safe CSV serialization [COMPLETED]
@@ -684,7 +684,7 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `apps/server/src/routes/shipments.ts`, `apps/server/tests/shipments-search.test.ts`, and existing account boundary tests.
 - **Exit:** Six malformed cursor cases and all four local gates pass on source
   `36ef1cd6`: 1,626 tests, 154 zero-retry E2E, check/build. See
-  [solo regression receipt](../specs/001-shipment-registration/solo-production-regression-results.md).
+  [solo regression receipt](../../specs/001-shipment-registration/solo-production-regression-results.md).
 
 ### 001/T140 — Spanish audit and accessible sidebar text [COMPLETED]
 
@@ -725,7 +725,7 @@ spec/contract obligations remain authoritative where a description below is abbr
 - **Touchpoints:** `apps/server/src/routes/auth.ts`, `apps/server/tests/auth-lockout-recovery.test.ts`.
 - **Exit:** Twelve simultaneous failures yield four 401 and eight 423 responses;
   correct credentials stay locked until expiry, then succeed. All four exact-source
-  local gates pass; [receipt](../specs/001-shipment-registration/solo-production-regression-results.md).
+  local gates pass; [receipt](../../specs/001-shipment-registration/solo-production-regression-results.md).
 
 ### 001/T147 — Preserve historical fee and rate-zone snapshots [COMPLETED]
 
@@ -795,7 +795,7 @@ spec/contract obligations remain authoritative where a description below is abbr
 
 ## 7. Feature 002: 2 cataloged tasks, 0 open
 
-Canonical source: [002 tasks](../specs/002-routes-dispatch/tasks.md).
+Canonical source: [002 tasks](../../specs/002-routes-dispatch/tasks.md).
 
 ### 002/T063 — Exact financial aggregates on every route projection [COMPLETED]
 
@@ -805,7 +805,7 @@ Canonical source: [002 tasks](../specs/002-routes-dispatch/tasks.md).
 
 ### 002/T064 — Unambiguous task references and current documentation [COMPLETED]
 
-- **Local closure (2026-10-21):** documentation-only checks and independent Luna/max review approved preserved historical IDs/results, current record helpers and PR #28 local ancestry. The stale header date was corrected and re-reviewed. See [documentation results](../specs/002-routes-dispatch/documentation-results.md).
+- **Local closure (2026-10-21):** documentation-only checks and independent Luna/max review approved preserved historical IDs/results, current record helpers and PR #28 local ancestry. The stale header date was corrected and re-reviewed. See [documentation results](../../specs/002-routes-dispatch/documentation-results.md).
 
 - **Why/state:** IV-32; MEDIUM. T057/T058 each occur twice historically; current prose also
   contains outdated stand-in-record and PR status descriptions.
@@ -820,7 +820,7 @@ Canonical source: [002 tasks](../specs/002-routes-dispatch/tasks.md).
 
 ## 8. Feature 003: 17 cataloged tasks, 3 open
 
-Canonical source: [003 tasks](../specs/003-courier-app/tasks.md). These are completion and
+Canonical source: [003 tasks](../../specs/003-courier-app/tasks.md). These are completion and
 gap-filling obligations; do not rebuild working US1–US7 or duplicate existing test cases.
 
 ### 003/T081 — Complete endpoint-to-role permission matrix [COMPLETED]
@@ -849,7 +849,7 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 
 ### 003/T083 — Accessible courier controls and ≤3-tap primary actions [COMPLETED]
 
-- **Local closure (2026-10-21):** executor N1 and root N2 approved. Counts are 2/3/3; 360 px standard/high-contrast axe and native 48 px hit tests include offline Pending/My Day and correction controls. Integrated check, 1,281 tests, 129 first-attempt E2E and build passed; [receipt](../specs/003-courier-app/courier-accessibility-results.md). Original criteria below remain historical traceability.
+- **Local closure (2026-10-21):** executor N1 and root N2 approved. Counts are 2/3/3; 360 px standard/high-contrast axe and native 48 px hit tests include offline Pending/My Day and correction controls. Integrated check, 1,281 tests, 129 first-attempt E2E and build passed; [receipt](../../specs/003-courier-app/courier-accessibility-results.md). Original criteria below remain historical traceability.
 
 - **Depends:** interaction design aligned before behavior; coordinate T093, not a second
   inconsistent tap definition. Current route→stop→delivery→review→save exceeds the limit.
@@ -863,7 +863,7 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 
 ### 003/T084 — Complete courier deployment documentation [COMPLETED]
 
-- **Local closure (2026-10-21):** README/quickstart source review and isolated run d rehearsal passed executor N1/root N2; TLS/auth/private storage and graceful restart verified. See [deployment receipt](../specs/003-courier-app/courier-deployment-results.md). Provider/phone evidence remains separate.
+- **Local closure (2026-10-21):** README/quickstart source review and isolated run d rehearsal passed executor N1/root N2; TLS/auth/private storage and graceful restart verified. See [deployment receipt](../../specs/003-courier-app/courier-deployment-results.md). Provider/phone evidence remains separate.
 
 - **Touchpoints:** README deployment section, storage/notification/configuration runbooks;
   actual immutable production build and selected proxy topology.
@@ -997,11 +997,11 @@ gap-filling obligations; do not rebuild working US1–US7 or duplicate existing 
 
 ## 9. Feature 004: 35 cataloged tasks, 2 open
 
-Canonical sources: [tasks](../specs/004-tracking-merchant-link/tasks.md),
-[spec](../specs/004-tracking-merchant-link/spec.md),
-[plan](../specs/004-tracking-merchant-link/plan.md),
-[contract](../specs/004-tracking-merchant-link/contracts/http-api.md) and
-[quickstart](../specs/004-tracking-merchant-link/quickstart.md).
+Canonical sources: [tasks](../../specs/004-tracking-merchant-link/tasks.md),
+[spec](../../specs/004-tracking-merchant-link/spec.md),
+[plan](../../specs/004-tracking-merchant-link/plan.md),
+[contract](../../specs/004-tracking-merchant-link/contracts/http-api.md) and
+[quickstart](../../specs/004-tracking-merchant-link/quickstart.md).
 
 T001–T033 are verified by their deliverables; T034–T035 remain unchecked. The specification is still labelled Draft in its artifact;
 approved inclusion in closure does not replace execution-time clarification/alignment and
@@ -1042,7 +1042,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 
 ### 004/T004 — Additive schema, audit/event additions and safe backfill [COMPLETED]
 
-- **Local closure (2026-10-22):** executor and root focused native tests passed, with generated-DDL review and scoped static checks. See [schema results](../specs/004-tracking-merchant-link/schema-migration-results.md). Full foundation integration gates remain open.
+- **Local closure (2026-10-22):** executor and root focused native tests passed, with generated-DDL review and scoped static checks. See [schema results](../../specs/004-tracking-merchant-link/schema-migration-results.md). Full foundation integration gates remain open.
 
 - **Touchpoints:** shipments tracking/notified columns, merchant link/replacement columns,
   audit action, settings support phone/company name and reviewed generated migration.
@@ -1206,7 +1206,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 
 - **Depends:** T019 RED, T020/T021 and live merchant links(T027–T029).
 - **Touchpoints:** merchant-notify row, `/notificar`, panel navigation, shipment detail.
-- **Local closure:** executor/root native8cases and final check/1561tests/150E2E/build; identical522-file source edc9e6f1. [Results](../specs/004-tracking-merchant-link/notification-ui-results.md). Physical timing/WhatsApp acceptance remains T034.
+- **Local closure:** executor/root native8cases and final check/1561tests/150E2E/build; identical522-file source edc9e6f1. [Results](../../specs/004-tracking-merchant-link/notification-ui-results.md). Physical timing/WhatsApp acceptance remains T034.
 - **Work:** same-tap wa.me open/copy, missing-phone prompt, all-date option, support reminder,
   copy tracking URL, visible notified time and durable uncertain-response action identity.
 - **Exit:** ≤2taps/merchant for the approved flow, proper popup/clipboard failure feedback,
@@ -1280,7 +1280,7 @@ analysis. Reconcile current003 rules, money and task dependency order before cod
 
 ### 004/T030 — Complete public/panel permission and read-only matrix [VERIFIED LOCAL]
 
-- **Local closure:** both-level140native tests, scoped static/recursive types; real anonymous reads and denied mutation effects. [Results](../specs/004-tracking-merchant-link/public-permissions-results.md).
+- **Local closure:** both-level140native tests, scoped static/recursive types; real anonymous reads and denied mutation effects. [Results](../../specs/004-tracking-merchant-link/public-permissions-results.md).
 
 - **Touchpoints:** existing role-permissions tests plus every004 contract endpoint.
 - **Work/test:** anonymous read-only public paths, no mutation method under `/api/public`,

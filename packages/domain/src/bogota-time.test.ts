@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bogotaDayRange, bogotaLocalTimeToInstant, bogotaToday } from "./bogota-time.ts";
+import { bogotaLocalTimeToInstant, bogotaToday } from "./bogota-time.ts";
 
 describe("bogotaToday", () => {
   it("returns the Colombian day at 19:30 in Bogotá (00:30 UTC of the next day)", () => {
@@ -8,14 +8,6 @@ describe("bogotaToday", () => {
 
   it("returns the same day in the morning", () => {
     expect(bogotaToday(new Date("2026-10-01T13:00:00Z"))).toBe("2026-10-01");
-  });
-});
-
-describe("bogotaDayRange", () => {
-  it("returns the start and end of a Colombian day as instants", () => {
-    const { start, end } = bogotaDayRange("2026-10-01");
-    expect(start.toISOString()).toBe("2026-10-01T05:00:00.000Z");
-    expect(end.toISOString()).toBe("2026-10-02T05:00:00.000Z");
   });
 });
 

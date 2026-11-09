@@ -103,9 +103,7 @@ export const merchantShipmentSchema = z.strictObject({
 });
 
 export type MerchantShipmentSummary = z.infer<typeof merchantShipmentSummarySchema>;
-export type MerchantDayTotals = z.infer<typeof merchantDayTotalsSchema>;
 export type MerchantDay = z.infer<typeof merchantDaySchema>;
-export type MerchantAttempt = z.infer<typeof merchantAttempt>;
 export type MerchantShipment = z.infer<typeof merchantShipmentSchema>;
 
 const courier = z.strictObject({

@@ -12,7 +12,7 @@ not claim that a phone target was provisioned, served, or accepted.
   launcher.
 - Source SHA-256: `c10d43b8be3ce8270c0ad1d1a85beaba4520ba5b2cb87b9e6f224d4a374dd347`.
   Server tsconfig SHA-256: `1a88e9d701497e4194c03f1977d83cce4f7b4a4d1aed7dc4c9a956f128382461`.
-- `docs/local-deployment-inventory.md` records source status, certificate identity limits,
+- `docs/archive/local-deployment-inventory.md` records source status, certificate identity limits,
   local push opt-in, and the remaining phone acceptance boundary.
 - The source keeps generated state, credentials, certificates, and web build beneath a
   run-scoped private directory under `.git/local-phone-target/`. Compose uses an exact

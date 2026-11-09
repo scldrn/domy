@@ -4,7 +4,6 @@
  */
 const offset = "-05:00";
 const offsetMs = 5 * 60 * 60 * 1000;
-const dayMs = 24 * 60 * 60 * 1000;
 const merchantServiceDateCount = 30;
 
 /** The Colombian calendar day (YYYY-MM-DD) of an instant. */
@@ -21,12 +20,6 @@ export function merchantServiceDateWindow(now: Date): {
   const firstDay = new Date(`${lastDate}T00:00:00.000Z`);
   firstDay.setUTCDate(firstDay.getUTCDate() - (merchantServiceDateCount - 1));
   return { firstDate: firstDay.toISOString().slice(0, 10), lastDate };
-}
-
-/** First instant of a Colombian day and first instant of the next one. */
-export function bogotaDayRange(date: string): { start: Date; end: Date } {
-  const start = bogotaLocalTimeToInstant(date, "00:00");
-  return { start, end: new Date(start.getTime() + dayMs) };
 }
 
 /** The instant of a local time (HH:MM) on a Colombian day. */
