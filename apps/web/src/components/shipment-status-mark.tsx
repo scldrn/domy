@@ -27,7 +27,7 @@ export function ShipmentStatusMark({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 text-label-l whitespace-nowrap before:size-2.5 before:shrink-0 before:rounded-full before:content-['']",
+        "inline-flex items-center gap-2 text-label-l font-semibold whitespace-nowrap before:size-2.5 before:shrink-0 before:rounded-full before:content-['']",
         appearance[status],
         className,
       )}

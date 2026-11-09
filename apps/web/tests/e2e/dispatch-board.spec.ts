@@ -121,3 +121,35 @@ test("shows the day, the stages, what to resolve, and the couriers without scrol
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
   expect(height).toBeLessThanOrEqual(2 * 900);
 });
+
+// Feature 006, T019 (approved with the board): the top bar finds the day's shipments as you
+// type, from any panel page, and the board says how fresh its data is.
+test("finds the day's shipments from the top bar and opens one", async ({
+  dispatcherPage: page,
+}) => {
+  const name = `Búsqueda ${String(Date.now()).slice(-6)}`;
+  const shipment = await register(page, { recipientName: name });
+  await page.goto("/");
+  await expect(page.getByText(/^Actualizado hace \d+ (s|min)$/)).toBeVisible();
+
+  await page.goto("/rutas");
+  const search = page.getByRole("searchbox", { name: "Buscar envíos" });
+  await search.fill(name.slice(0, 6).toLowerCase().replace("ú", "u"));
+  const results = page.getByRole("list", { name: "Envíos de hoy" });
+  const result = results.getByRole("link").filter({
+    hasText: formatTrackingNumber(shipment.trackingNumber),
+  });
+  await expect(result).toContainText(name);
+  await expect(result).toContainText("Registrado");
+  expect(await accessibilityViolations(page)).toEqual([]);
+
+  await result.click();
+  await expect(page).toHaveURL(new RegExp(`/envios/${shipment.trackingNumber}$`));
+  await expect(search).toHaveValue("");
+  await expect(results).toHaveCount(0);
+
+  await search.fill("zzqq");
+  await expect(page.getByText(/Pulsa Enter para buscarla en «Historial»/)).toBeVisible();
+  await search.press("Escape");
+  await expect(page.getByText(/Pulsa Enter para buscarla en «Historial»/)).toHaveCount(0);
+});

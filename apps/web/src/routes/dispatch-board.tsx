@@ -17,7 +17,6 @@ import {
   stageOf,
   type BoardEntry,
   type BoardStage,
-  type DispatchBoard,
   type RouteSummary,
   type ShipmentStatus,
 } from "@domy/domain";
@@ -43,6 +42,7 @@ import { TrackingNumber } from "@/components/tracking-number";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AttentionList, type AttentionIntent } from "@/features/board/attention-list";
+import { boardQueryOptions } from "@/features/board/board-query";
 import { CourierProgress } from "@/features/board/courier-progress";
 import { daySentence } from "@/features/board/day-sentence";
 import { DayStepper } from "@/components/day-stepper";
@@ -50,8 +50,7 @@ import { ShipmentPanel, type OpenShipment } from "@/features/board/shipment-pane
 import { listCouriers } from "@/features/master-data/api";
 import { notificationListQueryOptions } from "@/features/notifications/api";
 import { confirmHandover, dispatchRoute, getRoute, getRoutesBoard } from "@/features/routes/api";
-import { api, unwrap } from "@/lib/api-client";
-import { now, syncClock } from "@/lib/clock";
+import { now } from "@/lib/clock";
 import { cn } from "@/lib/cn";
 import { formatDate, formatLongDate, formatWindow } from "@/lib/format";
 
@@ -60,12 +59,6 @@ const pollMs = 20_000;
 const flagRefreshMs = 30_000;
 
 const panelRoute = getRouteApi("/_panel");
-
-async function getBoard(date: string | undefined): Promise<DispatchBoard> {
-  const board = await unwrap(api.api.shipments.board.$get({ query: date ? { date } : {} }));
-  syncClock(board.serverTime);
-  return board;
-}
 
 /** Re-renders every `ms` so time-based flags stay current between polls. */
 function useTicker(ms: number) {
@@ -144,11 +137,7 @@ function DispatchBoardPage() {
   const currentTime = now();
   const today = bogotaToday(currentTime);
   const date = search.date ?? today;
-  const board = useQuery({
-    queryKey: ["board", search.date ?? "today"],
-    queryFn: () => getBoard(search.date),
-    refetchInterval: pollMs,
-  });
+  const board = useQuery({ ...boardQueryOptions(search.date), refetchInterval: pollMs });
   const routes = useQuery({
     queryKey: ["routes-board", date],
     queryFn: () => getRoutesBoard(date),
