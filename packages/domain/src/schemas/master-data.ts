@@ -198,6 +198,15 @@ export type PickupPoint = {
   isActive: boolean;
   neighborhood: Named;
 };
+/**
+ * A merchant in the «Clientes» list (feature 006, US5): where it is picked up by default, how
+ * many active pickup points it has, and its open shipments.
+ */
+export type MerchantListItem = Merchant & {
+  openShipments: number;
+  pickupPoints: number;
+  defaultPickupPoint: { label: string; neighborhood: string } | null;
+};
 export type MerchantDetail = Merchant & {
   linkCode: string;
   pickupPoints: PickupPoint[];

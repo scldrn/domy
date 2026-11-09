@@ -12,22 +12,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import ArrowBackIcon from "@material-symbols/svg-400/rounded/arrow_back.svg?react";
+import BlockIcon from "@material-symbols/svg-400/rounded/block.svg?react";
+import HistoryIcon from "@material-symbols/svg-400/rounded/history.svg?react";
+import PinIcon from "@material-symbols/svg-400/rounded/location_on.svg?react";
 import { Icon } from "@/components/icon";
-import { PageHeader } from "@/components/page-header";
+import { ActiveMark } from "@/components/active-mark";
+import { SummarySentence } from "@/components/summary-sentence";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { getMerchant, updateMerchant, updatePickupPoint } from "@/features/master-data/api";
 import { MerchantDialog } from "@/features/master-data/merchants/merchant-dialog";
 import { MerchantLinkControls } from "@/features/master-data/merchants/merchant-link-controls";
 import { PickupPointDialog } from "@/features/master-data/merchants/pickup-point-dialog";
+import { DetailSheet } from "@/features/master-data/master-page";
+import { cn } from "@/lib/cn";
 import { ApiError } from "@/lib/api-client";
 
 export const Route = createFileRoute("/_panel/clientes/$merchantId")({
@@ -37,9 +35,16 @@ export const Route = createFileRoute("/_panel/clientes/$merchantId")({
 
 const plural = (count: number) =>
   count === 1 ? "1 envío abierto" : `${String(count)} envíos abiertos`;
+const points = (count: number) =>
+  count === 1 ? "1 punto de recogida" : `${String(count)} puntos de recogida`;
 const panelRoute = getRouteApi("/_panel");
 
-/** A merchant with its aliases and pickup points (FR-026, FR-029). */
+/**
+ * A merchant with its aliases and pickup points (FR-026, FR-029), as approved in feature 006
+ * (US5): the open shipments and points in one sentence, «Ver sus envíos», its data and pickup
+ * points beside its link. The proposal's list of open shipments is reached through «Ver sus
+ * envíos» instead, which shows them with every filter of «Historial».
+ */
 function MerchantDetailPage() {
   const { merchantId } = Route.useParams();
   const { user } = panelRoute.useRouteContext();
@@ -70,88 +75,116 @@ function MerchantDetailPage() {
     );
 
   return (
-    <div className="flex max-w-5xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <Link
         to="/clientes"
-        className="-mb-3 flex w-fit items-center gap-1 text-label-l text-primary underline-offset-4 hover:underline"
+        className="-mb-3 flex w-fit items-center gap-1 text-label-l font-semibold text-on-surface underline decoration-outline-variant underline-offset-4 hover:decoration-current"
       >
         <Icon symbol={ArrowBackIcon} size={20} />
         Clientes
       </Link>
-      <PageHeader
-        title={data.name}
-        actions={
-          <>
-            <MerchantDialog merchant={data} />
-            {data.isActive ? (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setConfirming(true);
-                }}
-              >
-                Desactivar cliente
-              </Button>
-            ) : (
-              <Button variant="outline" onClick={() => void setActive(true)}>
-                Reactivar cliente
-              </Button>
-            )}
-          </>
-        }
-      >
-        {data.isActive ? (
-          <Badge variant="success">Activo</Badge>
-        ) : (
-          <Badge variant="outline">Inactivo</Badge>
-        )}
-      </PageHeader>
-      <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-3 rounded-md border border-outline-variant bg-sheet p-6 text-body-l">
-        <dt className="text-on-surface-variant">Alias</dt>
-        <dd>{data.aliases.join(", ") || "—"}</dd>
-        <dt className="text-on-surface-variant">WhatsApp</dt>
-        <dd className="tabular-nums">{data.whatsappPhone ?? "—"}</dd>
-        <dt className="text-on-surface-variant">Envíos abiertos</dt>
-        <dd>{data.openShipments}</dd>
-      </dl>
-
-      <MerchantLinkControls
-        actorId={user.id}
-        isActive={data.isActive}
-        linkCode={data.linkCode}
-        merchantId={data.id}
-        merchantName={data.name}
-      />
-
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-title-m text-on-surface">Puntos de recogida</h2>
-          <PickupPointDialog merchantId={data.id} />
+      <header className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
+        <div className="flex min-w-0 flex-[1_1_26rem] flex-col gap-1.5">
+          <div className="flex flex-wrap items-baseline gap-x-3.5 gap-y-1">
+            <h1 className="text-headline-l text-on-surface">{data.name}</h1>
+            <ActiveMark active={data.isActive} />
+          </div>
+          <SummarySentence
+            parts={[
+              { text: plural(data.openShipments), strong: true },
+              {
+                text: ` y ${points(data.pickupPoints.filter((point) => point.isActive).length)}.`,
+              },
+            ]}
+          />
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Punto</TableHead>
-              <TableHead>Dirección</TableHead>
-              <TableHead>Barrio</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.pickupPoints.map((point) => (
-              <TableRow key={point.id}>
-                <TableCell>{point.label}</TableCell>
-                <TableCell>{point.address}</TableCell>
-                <TableCell>{point.neighborhood.name}</TableCell>
-                <TableCell className="flex gap-1">
-                  {point.isDefault && <Badge variant="secondary">Predeterminado</Badge>}
-                  {!point.isActive && <Badge variant="outline">Inactivo</Badge>}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <PickupPointDialog merchantId={data.id} point={point} />
-                    {point.isActive && !point.isDefault && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/historial"
+            search={{ merchantId: data.id }}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <Icon symbol={HistoryIcon} size={20} />
+            Ver sus envíos
+          </Link>
+          <MerchantDialog merchant={data} />
+        </div>
+      </header>
+
+      <div className="grid items-start gap-5 lg:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-5">
+          <DetailSheet id="cliente-datos" title="Datos">
+            <dl className="text-body-l">
+              {[
+                ["WhatsApp", data.whatsappPhone ?? "Sin WhatsApp"],
+                ["Alias para buscarlo", data.aliases.join(" · ") || "Sin alias"],
+              ].map(([label, value], index) => (
+                <div
+                  key={label}
+                  className={cn(
+                    "flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5",
+                    index > 0 && "border-t border-outline-variant",
+                  )}
+                >
+                  <dt className="text-on-surface-variant">{label}</dt>
+                  <dd className="text-right font-semibold wrap-anywhere text-on-surface tabular-nums">
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </DetailSheet>
+          <DetailSheet
+            id="cliente-puntos"
+            title="Puntos de recogida"
+            action={<PickupPointDialog merchantId={data.id} />}
+          >
+            {data.pickupPoints.length === 0 ? (
+              <p className="text-body-m text-on-surface-variant">
+                Agrega el lugar donde se recogen sus paquetes.
+              </p>
+            ) : (
+              <ul aria-label="Puntos de recogida" className="flex flex-col">
+                {data.pickupPoints.map((point, index) => (
+                  <li
+                    key={point.id}
+                    className={cn(
+                      "flex flex-wrap items-center gap-3 py-3",
+                      index > 0 && "border-t border-outline-variant",
+                    )}
+                  >
+                    <span className="grid size-10 shrink-0 place-items-center rounded-sm bg-secondary-container text-on-secondary-container">
+                      <Icon symbol={PinIcon} size={20} />
+                    </span>
+                    <div className="flex min-w-0 flex-[1_1_12rem] flex-col">
+                      <span className="flex flex-wrap items-center gap-2 font-semibold text-on-surface">
+                        {point.label}
+                        {point.isDefault && <Badge variant="secondary">Predeterminado</Badge>}
+                        {!point.isActive && <ActiveMark active={false} />}
+                      </span>
+                      <span className="text-body-m text-on-surface-variant">
+                        {point.address} · {point.neighborhood.name}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      <PickupPointDialog merchantId={data.id} point={point} />
+                      {point.isActive && !point.isDefault && (
+                        <Button
+                          variant="ghost"
+                          onClick={() =>
+                            void change(
+                              () =>
+                                updatePickupPoint(point.id, {
+                                  actionId: crypto.randomUUID(),
+                                  isDefault: true,
+                                }),
+                              "Punto predeterminado actualizado",
+                            )
+                          }
+                        >
+                          Hacer predeterminado
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         onClick={() =>
@@ -159,37 +192,48 @@ function MerchantDetailPage() {
                             () =>
                               updatePickupPoint(point.id, {
                                 actionId: crypto.randomUUID(),
-                                isDefault: true,
+                                isActive: !point.isActive,
                               }),
-                            "Punto predeterminado actualizado",
+                            point.isActive ? "Punto desactivado" : "Punto reactivado",
                           )
                         }
                       >
-                        Hacer predeterminado
+                        {point.isActive ? "Desactivar" : "Reactivar"}
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        void change(
-                          () =>
-                            updatePickupPoint(point.id, {
-                              actionId: crypto.randomUUID(),
-                              isActive: !point.isActive,
-                            }),
-                          point.isActive ? "Punto desactivado" : "Punto reactivado",
-                        )
-                      }
-                    >
-                      {point.isActive ? "Desactivar" : "Reactivar"}
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </section>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </DetailSheet>
+        </div>
+        <div className="flex min-w-0 flex-col gap-5">
+          <MerchantLinkControls
+            actorId={user.id}
+            isActive={data.isActive}
+            linkCode={data.linkCode}
+            merchantId={data.id}
+            merchantName={data.name}
+            whatsappPhone={data.whatsappPhone}
+          />
+          {data.isActive ? (
+            <Button
+              variant="ghost"
+              className="self-start text-error hover:text-error"
+              onClick={() => {
+                setConfirming(true);
+              }}
+            >
+              <Icon symbol={BlockIcon} size={20} />
+              Desactivar cliente
+            </Button>
+          ) : (
+            <Button variant="outline" className="self-start" onClick={() => void setActive(true)}>
+              Reactivar cliente
+            </Button>
+          )}
+        </div>
+      </div>
 
       <AlertDialog open={confirming} onOpenChange={setConfirming}>
         <AlertDialogContent>

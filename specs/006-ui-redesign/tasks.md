@@ -168,8 +168,8 @@ primary action, high contrast kept (clarification Q2).
 ### Implementation for User Story 5
 
 - [X] T060 [US5] Add `entityLabel` and `changeLabels` to `AuditEvent` in `packages/domain/src/schemas/master-data.ts` and resolve them in `apps/server/src/routes/audit-events.ts` (T058 green)
-- [ ] T061 [US5] Propose "Clientes" and the client detail, and record the decision
-- [ ] T062 [US5] Implement them in `apps/web/src/routes/merchants.tsx`, `apps/web/src/routes/merchant-detail.tsx`, and `apps/web/src/features/master-data/merchants/`
+- [X] T061 [US5] Propose "Clientes" and the client detail, and record the decision — Approved on 2026-11-09 with T063 and T065 (artifact v28)
+- [X] T062 [US5] Implement them in `apps/web/src/routes/merchants.tsx`, `apps/web/src/routes/merchant-detail.tsx`, and `apps/web/src/features/master-data/merchants/` — Done on 2026-11-09: the list with each merchant's default pickup point and open shipments (the server adds them to `GET /api/merchants`), the busiest first, and the detail with its data and pickup points beside the link, which can now also be sent by WhatsApp
 - [ ] T063 [US5] Propose "Mensajeros", "Transportadoras", "Barrios", and "Tarifario" (one proposal each, shown together), and record each decision
 - [ ] T064 [US5] Implement them in `apps/web/src/routes/couriers.tsx`, `carriers.tsx`, `neighborhoods.tsx`, `rate-card.tsx`, `apps/web/src/features/master-data/directory-page.tsx`, and their feature folders; `master-data.spec.ts` green
 - [ ] T065 [US5] Propose "Configuración", "Usuarios", "Auditoría", and "Mi cuenta", and record each decision

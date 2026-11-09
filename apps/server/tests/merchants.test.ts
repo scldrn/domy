@@ -158,6 +158,43 @@ describe("merchants", () => {
     const history = (await call("GET", "/api/shipments/search?q=bullish")).body;
     expect(history["items"]).toHaveLength(3);
   });
+
+  it("lists each merchant with its default pickup point and open shipments (006 US5)", async () => {
+    await call("POST", "/api/shipments", {
+      id: crypto.randomUUID(),
+      kind: "delivery",
+      merchantId: catalog.merchant.bullish,
+      pickupPointId: catalog.pickup.bullish,
+      recipientName: "Laura Gómez",
+      recipientPhone: "3001234567",
+      recipientAddress: "Calle 10 # 43-12",
+      recipientNeighborhoodId: catalog.place.laureles,
+      paymentMode: "merchant_account",
+      fee: 13000,
+    });
+    await addPoint(catalog.merchant.bullish, { label: "Local norte" });
+    const fresh = await createMerchant({ name: "Tienda Sol", whatsappPhone: null, aliases: [] });
+
+    const items = (await call("GET", "/api/merchants?q=")).body["items"] as {
+      id: string;
+      openShipments: number;
+      pickupPoints: number;
+      defaultPickupPoint: { label: string; neighborhood: string } | null;
+    }[];
+    const bullish = items.find((item) => item.id === catalog.merchant.bullish);
+    const active = (await detail(catalog.merchant.bullish)).pickupPoints.filter(
+      (point) => point.isActive,
+    );
+    expect(bullish).toMatchObject({ openShipments: 1, pickupPoints: active.length });
+    expect(bullish?.defaultPickupPoint?.label).toBeTruthy();
+    expect(items.find((item) => item.id === fresh.id)).toMatchObject({
+      openShipments: 0,
+      pickupPoints: 0,
+      defaultPickupPoint: null,
+    });
+    // Those with open shipments come first, then by name.
+    expect(items[0]?.id).toBe(catalog.merchant.bullish);
+  });
 });
 
 describe("pickup points (FR-029)", () => {
