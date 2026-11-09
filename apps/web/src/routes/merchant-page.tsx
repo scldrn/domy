@@ -1,20 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { merchantServiceDateWindow } from "@domy/domain";
+import { bogotaToday, merchantServiceDateWindow } from "@domy/domain";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MerchantShipmentDetail } from "@/features/public/merchant-shipment-detail";
 import {
   MerchantDateSelector,
+  MerchantDayHeader,
   MerchantShipmentList,
+  MerchantTotals,
 } from "@/features/public/merchant-shipment-list";
 import { publicMerchantDayQuery } from "@/features/public/api";
-import { PublicLayout } from "@/features/public/public-layout";
+import { PublicLayout, SupportCard } from "@/features/public/public-layout";
 import { ApiError } from "@/lib/api-client";
 import { now } from "@/lib/clock";
+import { cn } from "@/lib/cn";
 
 export const Route = createFileRoute("/cliente/$code")({ component: MerchantPage });
 
+/**
+ * «Enlace del cliente» (feature 002), as approved in feature 006 (US4): the day as a sentence
+ * with its stepper, the states and money, then the shipments; a shipment's detail opens beside
+ * the list on desktop and as its own page on phones.
+ */
 function MerchantPage() {
   const { code } = Route.useParams();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -30,6 +38,10 @@ function MerchantPage() {
     dayQuery.error instanceof ApiError &&
     dayQuery.error.code === "date_out_of_range";
   const dateWindow = day || isDateOutOfRange ? merchantServiceDateWindow(now()) : undefined;
+  const changeDate = (date: string | null) => {
+    setSelectedShipmentId(null);
+    setSelectedDate(date);
+  };
 
   function errorMessage(error: Error): string {
     if (error instanceof ApiError && error.status === 404) return "Este enlace no es válido";
@@ -39,23 +51,22 @@ function MerchantPage() {
     return "No pudimos cargar los envíos del cliente. Intenta de nuevo.";
   }
 
+  const detailOpen = selectedShipmentId !== null;
   return (
-    <PublicLayout
-      {...(day
-        ? {
-            companyName: day.support.companyName,
-            supportPhone: day.support.phone,
-          }
-        : {})}
-    >
-      <section className="flex flex-col gap-2">
-        <h1 className="text-headline-l">Envíos del cliente</h1>
+    <PublicLayout label="Enlace del cliente">
+      <div className="flex min-w-0 flex-col gap-5">
+        <h1 className="text-label-l tracking-wide text-on-surface-variant uppercase">
+          Envíos del cliente
+        </h1>
         {dayQuery.isPending ? (
           <p className="text-body-l text-on-surface-variant" role="status" aria-live="polite">
             Cargando los envíos…
           </p>
         ) : dayQuery.isError ? (
-          <div className="flex flex-col items-start gap-4" role="alert">
+          <div
+            className="flex flex-col items-start gap-4 rounded-lg border border-outline-variant bg-sheet p-5"
+            role="alert"
+          >
             <div className="flex flex-col gap-2">
               <h2 className="text-title-l">{errorMessage(dayQuery.error)}</h2>
               {dayQuery.error instanceof ApiError && dayQuery.error.status === 404 ? (
@@ -74,10 +85,7 @@ function MerchantPage() {
                   value={selectedDate ?? ""}
                   minDate={dateWindow.firstDate}
                   maxDate={dateWindow.lastDate}
-                  onChange={(date) => {
-                    setSelectedShipmentId(null);
-                    setSelectedDate(date);
-                  }}
+                  onChange={changeDate}
                 />
                 <Button
                   variant="outline"
@@ -96,29 +104,50 @@ function MerchantPage() {
             )}
           </div>
         ) : day && dateWindow ? (
-          selectedShipmentId ? (
-            <MerchantShipmentDetail
-              code={code}
-              shipmentId={selectedShipmentId}
-              onBack={() => {
-                setSelectedShipmentId(null);
-              }}
-            />
-          ) : (
-            <MerchantShipmentList
+          <>
+            <MerchantDayHeader
               day={day}
-              selectedDate={selectedDate ?? day.date}
+              today={bogotaToday(now())}
               minDate={dateWindow.firstDate}
               maxDate={dateWindow.lastDate}
-              onDateChange={(date) => {
-                setSelectedShipmentId(null);
-                setSelectedDate(date);
-              }}
-              onOpenShipment={setSelectedShipmentId}
+              onDateChange={changeDate}
             />
-          )
+            <div className={cn(detailOpen && "max-lg:hidden")}>
+              <MerchantTotals day={day} />
+            </div>
+            <div
+              className={cn(
+                "grid min-w-0 items-start gap-5",
+                detailOpen && "lg:grid-cols-[minmax(0,1fr)_26rem]",
+              )}
+            >
+              <div className={cn("min-w-0", detailOpen && "max-lg:hidden")}>
+                <MerchantShipmentList
+                  key={day.date}
+                  day={day}
+                  openShipmentId={selectedShipmentId}
+                  onOpenShipment={setSelectedShipmentId}
+                />
+              </div>
+              {selectedShipmentId && (
+                <MerchantShipmentDetail
+                  code={code}
+                  shipmentId={selectedShipmentId}
+                  className="lg:sticky lg:top-4"
+                  onBack={() => {
+                    setSelectedShipmentId(null);
+                  }}
+                />
+              )}
+            </div>
+            <SupportCard
+              companyName={day.support.companyName}
+              phone={day.support.phone}
+              className="lg:max-w-xl"
+            />
+          </>
         ) : null}
-      </section>
+      </div>
     </PublicLayout>
   );
 }

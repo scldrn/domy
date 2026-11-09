@@ -39,7 +39,7 @@ export function SegmentedControl<T extends string>({
         <Toggle
           key={option.value}
           value={option.value}
-          className="relative flex min-h-10 flex-[1_1_auto] cursor-pointer items-center justify-center gap-2 rounded-sm px-3.5 py-1.5 text-center text-label-l whitespace-nowrap text-on-surface-variant outline-none before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] hover:bg-surface-container-high hover:text-on-surface focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-strong data-pressed:bg-on-surface data-pressed:text-surface"
+          className="relative flex min-h-10 flex-[1_1_auto] cursor-pointer items-center justify-center gap-2 rounded-sm px-3.5 py-1.5 text-center text-label-l whitespace-nowrap text-on-surface-variant outline-none before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] hover:bg-surface-container-high hover:text-on-surface focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-accent-strong data-pressed:bg-on-surface data-pressed:text-surface"
         >
           <CheckIcon className="hidden size-[1.125rem] shrink-0 in-data-pressed:block" />
           {option.label}

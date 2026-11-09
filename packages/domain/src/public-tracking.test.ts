@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import * as domain from "./index.ts";
 import * as publicSchemas from "./schemas/public.ts";
-import { bogotaLocalTime, publicTrackingSchema, shipmentKinds, shipmentStatuses } from "./index.ts";
+import {
+  bogotaLocalTime,
+  publicTrackingSchema,
+  publicTrackingStage,
+  shipmentKinds,
+  shipmentStatuses,
+} from "./index.ts";
 import type { ShipmentKind, ShipmentStatus } from "./index.ts";
 
 const publicTrackingKeys = new Set([
@@ -1571,5 +1577,29 @@ describe("merchantDayView and merchantShipmentView (T023, FR-019–FR-020)", () 
         exception: { ...exception, attempts: [{ ...firstAttempt, courierId: "PRIVATE_ID" }] },
       }),
     ).toThrow();
+  });
+});
+
+describe("publicTrackingStage (feature 006, US4)", () => {
+  it("reads where a tracking view stands from its own fields", () => {
+    expect(publicTrackingStage({ statusText: "En camino" })).toBe("progress");
+    expect(publicTrackingStage({ statusText: "Recibimos tu envío" })).toBe("progress");
+    expect(
+      publicTrackingStage({
+        statusText: "Entregado a María a las 11:00 a. m.",
+        deliveredAt: "2026-10-01T16:00:00.000Z",
+      }),
+    ).toBe("delivered");
+    expect(
+      publicTrackingStage({
+        statusText: "No pudimos entregar tu envío",
+        reasonText: "No encontramos a nadie",
+      }),
+    ).toBe("problem");
+    expect(publicTrackingStage({ statusText: "Tu envío será devuelto al remitente" })).toBe(
+      "problem",
+    );
+    expect(publicTrackingStage({ statusText: "Devuelto al remitente" })).toBe("closed");
+    expect(publicTrackingStage({ statusText: "Este envío fue anulado" })).toBe("closed");
   });
 });

@@ -441,7 +441,7 @@ function PhoneDestinations({ role, pathname }: { role: UserRole; pathname: strin
                   to={item.to}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex min-h-12 items-center gap-2 rounded-sm px-3 text-label-l whitespace-nowrap text-on-rail-variant outline-none hover:bg-on-rail/8 hover:text-on-rail focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                    "flex min-h-12 items-center gap-2 rounded-sm px-3 text-label-l whitespace-nowrap text-on-rail-variant outline-none hover:bg-on-rail/8 hover:text-on-rail focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-accent",
                     active &&
                       "bg-accent font-bold text-on-accent hover:bg-accent hover:text-on-accent",
                   )}

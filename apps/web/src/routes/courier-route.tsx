@@ -140,7 +140,7 @@ function CourierRoute() {
                   to="/mensajero/parada/$stopId"
                   params={{ stopId: stop.id }}
                   aria-current={isNext ? "step" : undefined}
-                  className="state-layer grid min-h-18 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 text-on-surface outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-strong"
+                  className="state-layer grid min-h-18 grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3 text-on-surface outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:-outline-offset-2 focus-visible:outline-accent-strong"
                 >
                   <span
                     aria-hidden="true"
@@ -209,7 +209,7 @@ function NextStopCard({ stop, index }: { stop: CourierStop; index: number }) {
     <Link
       to="/mensajero/parada/$stopId"
       params={{ stopId: stop.id }}
-      className="flex flex-col gap-3 rounded-lg border-2 border-on-surface bg-sheet p-4 text-on-surface outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent-strong"
+      className="flex flex-col gap-3 rounded-lg border-2 border-on-surface bg-sheet p-4 text-on-surface outline-none focus-visible:outline-3 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-accent-strong"
     >
       <span className="flex items-center justify-between gap-2">
         <span className="text-label-l tracking-wide text-on-surface-variant uppercase">

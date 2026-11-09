@@ -21,6 +21,13 @@ const surfaces = {
     today: "text-accent hover:bg-rail-raised",
   },
   sheet: { control: "", input: "", today: "" },
+  /** Public pages: the date field's focus is a 2 px outline like every public control. */
+  public: {
+    control: "",
+    input:
+      "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-accent-strong",
+    today: "",
+  },
 } as const;
 
 /**

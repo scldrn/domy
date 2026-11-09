@@ -245,6 +245,35 @@ function eligibleQueueCount(
   return shipment.status === "picked_up" ? context.deliveriesBefore : undefined;
 }
 
+/** Texts of a shipment that will not reach its recipient (FR-007 of feature 002). */
+const closedTexts = {
+  returned: "Devuelto al remitente",
+  voided: "Este envío fue anulado",
+} as const;
+const problemTexts = {
+  returnDecided: "Tu envío será devuelto al remitente",
+  failed: "No pudimos entregar tu envío",
+} as const;
+
+/**
+ * Where a public tracking view stands, read from its own fields, so the page can color its
+ * status without the shipment state, which the link never exposes (feature 006, US4).
+ */
+export function publicTrackingStage(view: {
+  statusText: string;
+  reasonText?: string | undefined;
+  deliveredAt?: string | undefined;
+}): "progress" | "delivered" | "problem" | "closed" {
+  if (view.deliveredAt !== undefined) return "delivered";
+  if (
+    view.reasonText !== undefined ||
+    Object.values(problemTexts).some((text) => text === view.statusText)
+  )
+    return "problem";
+  if (Object.values(closedTexts).some((text) => text === view.statusText)) return "closed";
+  return "progress";
+}
+
 function statusText(
   shipment: PublicTrackingShipment,
   context: PublicTrackingContext,
@@ -252,12 +281,10 @@ function statusText(
 ): string {
   const { kind, status } = shipment;
   if (status === "exception") {
-    return context.returnDecided
-      ? "Tu envío será devuelto al remitente"
-      : "No pudimos entregar tu envío";
+    return context.returnDecided ? problemTexts.returnDecided : problemTexts.failed;
   }
-  if (status === "returned") return "Devuelto al remitente";
-  if (status === "voided") return "Este envío fue anulado";
+  if (status === "returned") return closedTexts.returned;
+  if (status === "voided") return closedTexts.voided;
   if (
     status === "picked_up" &&
     kind !== "errand" &&

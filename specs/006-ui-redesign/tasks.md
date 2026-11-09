@@ -144,8 +144,8 @@ primary action, high contrast kept (clarification Q2).
 
 **Independent Test**: [spec.md](spec.md) US4.
 
-- [ ] T053 [US4] Propose "Seguimiento" and "Enlace del cliente" at 320 px and desktop in light and dark, and record the decision
-- [ ] T054 [US4] Implement them in `apps/web/src/routes/tracking.tsx`, `apps/web/src/routes/merchant-page.tsx`, and `apps/web/src/features/public/*`, adding no field beyond the constitution's allowance (FR-017); tracking, merchant-page, public-pages, and public-accessibility specs green, including the 3-second cold-start check
+- [X] T053 [US4] Propose "Seguimiento" and "Enlace del cliente" at 320 px and desktop in light and dark, and record the decision
+- [X] T054 [US4] Implement them in `apps/web/src/routes/tracking.tsx`, `apps/web/src/routes/merchant-page.tsx`, and `apps/web/src/features/public/*`, adding no field beyond the constitution's allowance (FR-017); tracking, merchant-page, public-pages, and public-accessibility specs green, including the 3-second cold-start check
 - [ ] T055 [US4] Propose "Ingresar", "Recuperar", "Restablecer" and the courier waiting page, and record the decision
 - [ ] T056 [US4] Implement them in `apps/web/src/routes/sign-in.tsx`, `apps/web/src/routes/recover.tsx`, `apps/web/src/routes/reset-password.tsx`, and `apps/web/src/features/auth/auth-card.tsx`; access and account specs green
 - [ ] T057 [US4] Remove these screens from T002's offender set; run every gate
