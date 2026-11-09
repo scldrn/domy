@@ -21,16 +21,19 @@ a short-lived branch, so the specification and implementation of every feature l
 | 002 Routes and dispatch | 2 integral catalog tasks verified locally, including aggregate overflow and traceability; retain historical feature receipts |
 | 003 Courier app | T093/T087 physical acceptance, now including offline, and dependent T088 closure remain open |
 | 004 Tracking page and merchant link | T034 physical acceptance and dependent T035 closure remain open |
-| 006 UI redesign | US1 (board, #53–#56) and US2 (shipment form #57, bulk #58, detail #59, «Rutas» #60, «Historial» #62, «Notificar clientes» #63) on `main`; US3 courier shell, «Mi ruta», «Parada» (#64), «Mi día» and «Pendientes» (#65) on `main`. The public cold start has ~700 ms of margin under 3 s (#66). Every e2e screen is checked for identifiers, dark, and narrow widths (T003, T004, #69). US4 complete: «Seguimiento» and «Enlace del cliente» (T053, T054), sign-in screens and the courier waiting page (T055–T057). Open: US3 T052 (phone measurement), US5, polish, the top bar's search results and last-update status (T019), state marks restyle (T018), setup T001 |
+| 006 UI redesign | Every user story on `main`: US1 board (#53–#56); US2 daily operation (#57–#63); US3 courier app (#64, #65); US4 public pages, sign-in and the courier waiting page (#70, #71); US5 master data and administration (#75, #76, and this slice). Guards for identifiers, dark and narrow widths (#69), live search and last update (#73), load test (#72). Open: polish T068–T071, T052 and T001 (phone measurement), a full CI run |
 
 ## Next step
 
-Feature 006: US4 is complete (T053–T057); the top bar's search results and «Actualizado hace» (T019) and the restyled marks and states (T018) are on `main`. The US5 proposals (T061, T063, T065) are published for the owner (artifact v28); their screens follow his decision. US5 started apart: the audit
-log's names come from the server (T058, T060); the screens wait for their proposals (T061–T066). Every public
-change keeps the 3-second cold start of `tracking-page.spec.ts` green (#66 left ~700 ms).
-Route files export only `Route`, and `routes/root.tsx` stays empty of UI: anything else there
-loads with every public page. Each passing e2e test checks its last screen in dark and at the
-narrow widths (`checkScreen` in `fixtures.ts`), and test data never embeds a whole UUID.
+Feature 006: every user story is implemented (US1–US5, the last on 2026-11-09). What remains is
+the polish phase (T068 coherence review with the owner, T069 timed walkthrough, T070 docs, T071
+deleting what the redesign left unused and the size comparison), T052 and T001 (the physical
+phone measurement), and one full CI run on `main` to close the feature. Every public change
+keeps the 3-second cold start of `tracking-page.spec.ts` green (~2.3 s now). Route files export
+only `Route`, never reference an imported value at module level (helpers and `typeof` in types
+go in `features/`), and `routes/root.tsx` stays empty of UI: anything else there loads with
+every public page; a test caps the modules every page preloads at 20 (17 today). Each passing e2e test checks its last screen in dark and at the narrow widths
+(`checkScreen` in `fixtures.ts`), and test data never embeds a whole UUID.
 The [load test](load-test.md) of 2026-11-09 holds ten times Cohex's busiest day with no errors;
 rerun it on the production machine before go-live.
 `pnpm audit --prod` reports two moderate advisories in `glob` and `minimatch` under

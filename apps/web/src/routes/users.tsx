@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/page-header";
+import { ActiveMark } from "@/components/active-mark";
+import { ListSheet, MasterHeader } from "@/features/master-data/master-page";
+import { initials, sortAccounts, usersSentence } from "@/features/users/users-summary";
 import { DirectoryEmptyState, QueryErrorAlert, TableSkeleton } from "@/components/query-state";
 import {
   AlertDialog,
@@ -48,7 +50,11 @@ export const Route = createFileRoute("/_panel/usuarios")({
   component: UsersPage,
 });
 
-/** Accounts and roles, managed by the owner (FR-032, FR-033a). */
+/**
+ * Accounts and roles, managed by the owner (FR-032, FR-033a), as approved in feature 006
+ * (US5): a sentence with the accounts by role and the couriers still to link, and the accounts
+ * that need something first.
+ */
 function UsersPage() {
   const queryClient = useQueryClient();
   const { user } = Route.useRouteContext();
@@ -98,13 +104,10 @@ function UsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
+      <MasterHeader
         title="Usuarios"
-        actions={
-          <>
-            <AccountDialog actorId={user.id} />
-          </>
-        }
+        sentence={accounts.data ? usersSentence(accounts.data, couriers.data) : null}
+        actions={<AccountDialog actorId={user.id} />}
       />
       {pendingAccounts.isError && (
         <p role="alert" className="text-body-m text-error">
@@ -126,94 +129,95 @@ function UsersPage() {
           description="Crea la primera cuenta de usuario para comenzar."
         />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Correo</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {accounts.data.map((account) => (
-              <TableRow key={account.id}>
-                <TableCell>{account.name}</TableCell>
-                <TableCell>{account.email}</TableCell>
-                <TableCell>
-                  {userRoleLabels[account.role]}
-                  {account.role === "courier" && (
-                    <span className="block text-body-s text-on-surface-variant">
-                      {linkedCourier(couriers.data, account.id)?.name ?? "Sin vincular"}
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {account.banned ? (
-                    <Badge variant="outline">Inactiva</Badge>
-                  ) : (
-                    <Badge variant="success">Activa</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <AccountDialog account={account} actorId={user.id} />
-                    {(() => {
-                      const pending = pendingAccounts.data?.intents.get(account.id);
-                      if (!pending) return null;
-                      const context = { actorId: user.id, intentId: pending.id };
-                      const retry =
-                        pending.operation === "ban"
-                          ? () => deactivateAccount(account.id, context)
-                          : pending.operation === "unban"
-                            ? () => reactivateAccount(account.id, context)
-                            : pending.operation === "revoke"
-                              ? () => endSessions(account.id, context)
-                              : null;
-                      return retry ? (
-                        <div className="flex flex-col gap-1">
-                          <span className="text-body-s">
-                            Pendiente:{" "}
-                            {pending.operation === "ban"
-                              ? "desactivar cuenta"
-                              : pending.operation === "unban"
-                                ? "reactivar cuenta"
-                                : "cerrar sesiones"}
-                            .
-                          </span>
-                          <Button
-                            variant="outline"
-                            onClick={() => void act(retry, "Cambio pendiente confirmado")}
-                          >
-                            Reintentar cambio pendiente
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-body-s">
-                          {pendingAccounts.data?.creatingUserId === account.id
-                            ? "Hay una creación pendiente. Reabre Nueva cuenta para continuarla."
-                            : "Hay un cambio pendiente. Reabre Editar para continuarlo."}
+        <ListSheet
+          id="usuarios-cuentas"
+          title="Cuentas"
+          count={accounts.data.length}
+          note="Las que necesitan algo, primero"
+        >
+          <Table className="border-0">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Persona</TableHead>
+                <TableHead>Rol</TableHead>
+                <TableHead>Mensajero en la app</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortAccounts(accounts.data, couriers.data).map((account) => (
+                <TableRow key={account.id}>
+                  <TableCell>
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span
+                        aria-hidden="true"
+                        className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary-container text-label-m font-bold text-on-secondary-container"
+                      >
+                        {initials(account.name)}
+                      </span>
+                      <span className="flex min-w-0 flex-col">
+                        <span className="font-semibold text-on-surface">{account.name}</span>
+                        <span className="truncate text-body-m text-on-surface-variant">
+                          {account.email}
                         </span>
-                      );
-                    })()}
-                    <Button
-                      variant="ghost"
-                      disabled={
-                        pendingAccounts.isPending ||
-                        pendingAccounts.isError ||
-                        Boolean(pendingAccounts.data.intents.get(account.id))
-                      }
-                      onClick={() =>
-                        void act(
-                          () => endSessions(account.id, { actorId: user.id }),
-                          "Sesiones cerradas",
-                        )
-                      }
-                    >
-                      Cerrar sesiones
-                    </Button>
-                    {account.banned ? (
+                      </span>
+                    </span>
+                  </TableCell>
+                  <TableCell>{userRoleLabels[account.role]}</TableCell>
+                  <TableCell>
+                    {account.role !== "courier" ? (
+                      <span className="text-on-surface-variant">No aplica</span>
+                    ) : linkedCourier(couriers.data, account.id) === null ? (
+                      <Badge variant="warning">Falta vincular</Badge>
+                    ) : (
+                      linkedCourier(couriers.data, account.id)?.name
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <ActiveMark active={!account.banned} feminine />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <AccountDialog account={account} actorId={user.id} />
+                      {(() => {
+                        const pending = pendingAccounts.data?.intents.get(account.id);
+                        if (!pending) return null;
+                        const context = { actorId: user.id, intentId: pending.id };
+                        const retry =
+                          pending.operation === "ban"
+                            ? () => deactivateAccount(account.id, context)
+                            : pending.operation === "unban"
+                              ? () => reactivateAccount(account.id, context)
+                              : pending.operation === "revoke"
+                                ? () => endSessions(account.id, context)
+                                : null;
+                        return retry ? (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-body-s">
+                              Pendiente:{" "}
+                              {pending.operation === "ban"
+                                ? "desactivar cuenta"
+                                : pending.operation === "unban"
+                                  ? "reactivar cuenta"
+                                  : "cerrar sesiones"}
+                              .
+                            </span>
+                            <Button
+                              variant="outline"
+                              onClick={() => void act(retry, "Cambio pendiente confirmado")}
+                            >
+                              Reintentar cambio pendiente
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-body-s">
+                            {pendingAccounts.data?.creatingUserId === account.id
+                              ? "Hay una creación pendiente. Reabre Nueva cuenta para continuarla."
+                              : "Hay un cambio pendiente. Reabre Editar para continuarlo."}
+                          </span>
+                        );
+                      })()}
                       <Button
                         variant="ghost"
                         disabled={
@@ -223,34 +227,52 @@ function UsersPage() {
                         }
                         onClick={() =>
                           void act(
-                            () => reactivateAccount(account.id, { actorId: user.id }),
-                            "Cuenta reactivada",
+                            () => endSessions(account.id, { actorId: user.id }),
+                            "Sesiones cerradas",
                           )
                         }
                       >
-                        Reactivar
+                        Cerrar sesiones
                       </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        disabled={
-                          pendingAccounts.isPending ||
-                          pendingAccounts.isError ||
-                          Boolean(pendingAccounts.data.intents.get(account.id))
-                        }
-                        onClick={() => {
-                          setDeactivating(account);
-                        }}
-                      >
-                        Desactivar
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                      {account.banned ? (
+                        <Button
+                          variant="ghost"
+                          disabled={
+                            pendingAccounts.isPending ||
+                            pendingAccounts.isError ||
+                            Boolean(pendingAccounts.data.intents.get(account.id))
+                          }
+                          onClick={() =>
+                            void act(
+                              () => reactivateAccount(account.id, { actorId: user.id }),
+                              "Cuenta reactivada",
+                            )
+                          }
+                        >
+                          Reactivar
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          disabled={
+                            pendingAccounts.isPending ||
+                            pendingAccounts.isError ||
+                            Boolean(pendingAccounts.data.intents.get(account.id))
+                          }
+                          onClick={() => {
+                            setDeactivating(account);
+                          }}
+                        >
+                          Desactivar
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ListSheet>
       )}
 
       <AlertDialog

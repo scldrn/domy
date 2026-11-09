@@ -140,3 +140,56 @@ export function formatAuditValue(field: string, item: unknown): string {
 
   return JSON.stringify(item);
 }
+
+/** What a change did, as the approved «Auditoría» reads it (feature 006, US5, T066). */
+const verbs: Record<AuditEvent["action"], string> = {
+  created: "creó",
+  updated: "cambió",
+  deactivated: "desactivó",
+  reactivated: "reactivó",
+  link_replaced: "reemplazó el enlace de",
+};
+
+/** The record as the sentence names it, before its label («el barrio», «la cuenta de»). */
+const subjects: Record<string, string> = {
+  company_settings: "la configuración",
+  user: "la cuenta de",
+  merchant: "el cliente",
+  pickup_point: "el punto de recogida",
+  courier: "al mensajero",
+  carrier: "la transportadora",
+  neighborhood: "el barrio",
+  rate_zone: "la zona",
+  rate_card_entry: "la tarifa",
+};
+
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * An audit event as one sentence and its changes, with the names the server resolved for the
+ * record and for every field that points to another record (research R10; T059). A value
+ * that still looks like an identifier is never shown.
+ */
+export function describeAuditEvent(event: AuditEvent): {
+  who: string;
+  verb: string;
+  what: string;
+  changes: string[];
+} {
+  const subject = subjects[event.entityType] ?? "el registro";
+  const what =
+    event.entityType === "company_settings" ? subject : `${subject} ${event.entityLabel}`;
+  const value = (field: string, item: unknown, label: string | null | undefined) => {
+    if (label !== undefined) return label ?? "—";
+    if (typeof item === "string" && uuid.test(item)) return "Registro eliminado";
+    return formatAuditValue(field, item);
+  };
+  const changes = Object.entries(event.changes ?? {}).map(([field, [before, after]]) => {
+    const labels = event.changeLabels[field];
+    const now = value(field, after, labels?.[1]);
+    return event.action === "created"
+      ? `${formatAuditField(field)}: ${now}`
+      : `${formatAuditField(field)}: ${value(field, before, labels?.[0])} → ${now}`;
+  });
+  return { who: event.actor.name, verb: verbs[event.action], what, changes };
+}

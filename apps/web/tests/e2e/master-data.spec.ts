@@ -114,3 +114,25 @@ test("warns about open shipments when a merchant is deactivated (US6 scenario 7)
   await expect(page.getByText("Inactivo", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Reactivar cliente" })).toBeVisible();
 });
+
+// Feature 006, T059/T066: the audit log reads one sentence per change, with names.
+test("reads each change of master data as a sentence with names (US5)", async ({
+  ownerPage: page,
+}) => {
+  const id = crypto.randomUUID();
+  const name = `Tienda Auditada ${String(Date.now()).slice(-5)}`;
+  const created = await page.request.post("/api/merchants", {
+    data: { id, name, whatsappPhone: "3005550101", aliases: [] },
+  });
+  expect(created.status()).toBe(201);
+  const renamed = await page.request.patch(`/api/merchants/${id}`, {
+    data: { actionId: crypto.randomUUID(), name: `${name} Norte` },
+  });
+  expect(renamed.ok()).toBe(true);
+
+  await page.goto("/auditoria");
+  const changes = page.getByRole("region", { name: "Cambios" });
+  await expect(changes).toContainText(`creó el cliente ${name}`);
+  await expect(changes).toContainText(`cambió el cliente ${name} Norte`);
+  await expect(changes).toContainText(`Nombre: ${name} → ${name} Norte`);
+});
