@@ -1,25 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  actionLabels,
-  entityLabels,
-  fieldLabels,
-  formatAuditField,
-  formatAuditValue,
-} from "./audit-formatting";
+import { actionLabels, fieldLabels, formatAuditField, formatAuditValue } from "./audit-formatting";
 
 describe("audit-formatting (Finding IV-25, 001/T140)", () => {
-  it("translates every known master data entity type to Spanish", () => {
-    expect(entityLabels["company_settings"]).toBe("Configuración");
-    expect(entityLabels["user"]).toBe("Usuario");
-    expect(entityLabels["merchant"]).toBe("Cliente");
-    expect(entityLabels["pickup_point"]).toBe("Punto de recogida");
-    expect(entityLabels["courier"]).toBe("Mensajero");
-    expect(entityLabels["carrier"]).toBe("Transportadora");
-    expect(entityLabels["neighborhood"]).toBe("Barrio");
-    expect(entityLabels["rate_zone"]).toBe("Zona tarifaria");
-    expect(entityLabels["rate_card_entry"]).toBe("Tarifa");
-  });
-
   it("translates all audit action types to Spanish", () => {
     expect(actionLabels["created"]).toBe("Creado");
     expect(actionLabels["updated"]).toBe("Editado");

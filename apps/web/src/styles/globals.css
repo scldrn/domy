@@ -305,14 +305,6 @@
   }
 }
 
-/* The board's windows draw in once, from their start (design-system.md §6). */
-@keyframes ribbon-draw {
-  from {
-    transform: scaleX(0);
-    opacity: 0;
-  }
-}
-
 /* The stage bar draws in once (design-system.md §6, §8). */
 @keyframes stage-draw {
   from {

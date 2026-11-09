@@ -184,8 +184,8 @@ primary action, high contrast kept (clarification Q2).
 
 - [ ] T068 Final coherence review: render every screen together for the owner and record the sign-off of the whole set in `proposals.md` (SC-001)
 - [ ] T069 [P] Timed walkthrough of SC-003 (the dispatcher, on the demo data, 5 trials, from opening the board to pressing the first item's action; median under 10 s) and step counts of SC-006 against the step counts recorded in T001, recorded in `specs/006-ui-redesign/acceptance-results.md`
-- [ ] T070 [P] Update `CLAUDE.md` (Architecture, `apps/web`) and `docs/status.md` with the new components and the theme switch
-- [ ] T071 Delete components and styles left unused by the redesign (Constitution VIII), confirm sizes against `baselines.md`, and run every gate
+- [X] T070 [P] Update `CLAUDE.md` (Architecture, `apps/web`) and `docs/status.md` with the new components and the theme switch — Done on 2026-11-09
+- [X] T071 Delete components and styles left unused by the redesign (Constitution VIII), confirm sizes against `baselines.md`, and run every gate — Done on 2026-11-09: removed the day ribbon's animation, `PageHeader`'s old props, `entityLabels`, and earlier `ChipRow` and the dead domain functions (#72); sizes in `baselines.md`, 1.2 points over the R12 budget (recorded there, with what every page loads unchanged since #66)
 
 ---
 

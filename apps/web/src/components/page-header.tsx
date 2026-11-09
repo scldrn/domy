@@ -2,49 +2,28 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * The title of a panel page, what the person needs to know under it (FR-007), the page's one
- * emphasized action, and an aside on the right. `description` and `actions` are the older
- * names of `sentence` and `action`, kept until every screen is redesigned (feature 006).
+ * The title of a form screen, its marks beside it, and what the person needs to know under it
+ * (FR-007), as the approved shipment form, edit, and bulk registration open (feature 006).
  */
 export function PageHeader({
   title,
   sentence,
-  description,
-  action,
-  actions,
-  aside,
   children,
   className,
 }: {
   title: ReactNode;
   sentence?: ReactNode;
-  description?: ReactNode;
-  action?: ReactNode;
-  actions?: ReactNode;
-  aside?: ReactNode;
-  /** Marks shown next to the title (status chip, badges). */
+  /** Marks shown next to the title (the shipment's state). */
   children?: ReactNode;
   className?: string;
 }) {
-  const line = sentence ?? description;
-  const right = action ?? actions;
   return (
-    <header
-      className={cn("flex flex-wrap items-center justify-between gap-x-6 gap-y-3", className)}
-    >
-      <div className="flex min-w-0 flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-headline-m text-on-surface">{title}</h1>
-          {children}
-        </div>
-        {line && <div className="text-body-l text-on-surface-variant">{line}</div>}
+    <header className={cn("flex min-w-0 flex-col gap-1", className)}>
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="text-headline-m text-on-surface">{title}</h1>
+        {children}
       </div>
-      {(right ?? aside) && (
-        <div className="flex flex-wrap items-center gap-2">
-          {aside}
-          {right}
-        </div>
-      )}
+      {sentence && <div className="text-body-l text-on-surface-variant">{sentence}</div>}
     </header>
   );
 }

@@ -9,18 +9,6 @@ import {
 } from "@domy/domain";
 import { formatCop, formatDate } from "@/lib/format";
 
-export const entityLabels: Record<string, string> = {
-  company_settings: "Configuración",
-  user: "Usuario",
-  merchant: "Cliente",
-  pickup_point: "Punto de recogida",
-  courier: "Mensajero",
-  carrier: "Transportadora",
-  neighborhood: "Barrio",
-  rate_zone: "Zona tarifaria",
-  rate_card_entry: "Tarifa",
-};
-
 export const actionLabels: Record<AuditEvent["action"], string> = {
   created: "Creado",
   updated: "Editado",

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   actionLabels,
   describeAuditEvent,
-  entityLabels,
   formatAuditField,
   formatAuditValue,
 } from "@/features/master-data/audit-formatting";
@@ -28,7 +27,6 @@ describe("audit-log page Spanish formatting (Finding IV-25, 001/T140)", () => {
       changeLabels: {},
     };
 
-    expect(entityLabels[mockEvent.entityType]).toBe("Cliente");
     expect(actionLabels[mockEvent.action]).toBe("Editado");
 
     const formattedChanges = Object.entries(mockEvent.changes ?? {}).map(
