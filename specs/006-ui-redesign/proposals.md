@@ -34,3 +34,9 @@ only when its row says `approved`.
 | Auditoría `/auditoria` | Administration | [Design artifact v28](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), «Datos maestros y administración», desktop and phone in dark | implemented | 2026-11-09: «Apruebo»; implemented the same day without the filters by area and author, which wait for the server to filter the log |
 | Mi cuenta `/cuenta` | Administration | [Design artifact v28](https://claude.ai/artifact/CWwBmieLM6FTk6dRTdJrfk), «Datos maestros y administración» | implemented | 2026-11-09: «Apruebo»; implemented the same day without «Sesión abierta», which the panel does not keep |
 | Panel shell (rail, top bar, search, theme) | Panel shell | Part of the board proposal | approved with the board | 2026-11-02 |
+
+## Sign-off of the whole set (T068)
+
+2026-11-09: «Apruebo el conjunto». The owner reviewed every implemented screen together, in 28
+screenshots of the demo ([review gallery](https://claude.ai/artifact/E3oFBbjtFEzsKsAs4eF6xq)),
+including where each differs from its proposal.
