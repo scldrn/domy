@@ -33,6 +33,10 @@ loads with every public page. Each passing e2e test checks its last screen in da
 narrow widths (`checkScreen` in `fixtures.ts`), and test data never embeds a whole UUID.
 The [load test](load-test.md) of 2026-11-09 holds ten times Cohex's busiest day with no errors;
 rerun it on the production machine before go-live.
+`pnpm audit --prod` reports two moderate advisories in `glob` and `minimatch` under
+`@sentry/node` 11.1.0's bundler plugins, a path the server never feeds outside input; Sentry
+11.11.0 (released 2026-11-05) fixes them, so upgrade `@sentry/node` and `@sentry/react` together
+once that release has aged.
 
 ## History
 
