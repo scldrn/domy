@@ -32,6 +32,27 @@ const patch = (id: string, body: Record<string, unknown>, cookie = dispatcher.co
   call("PATCH", `/api/neighborhoods/${id}`, { actionId: crypto.randomUUID(), ...body }, cookie);
 
 describe("neighborhood catalog (FR-026, FR-036)", () => {
+  it("summarizes the active catalog and what waits for review (006 US5)", async () => {
+    const before = (await call("GET", "/api/neighborhoods/summary")).body as {
+      active: number;
+      municipalities: number;
+      toReview: number;
+    };
+    await call("POST", "/api/neighborhoods", {
+      id: crypto.randomUUID(),
+      name: "La Castellana",
+      municipalityId: catalog.municipality.medellin,
+      rateZoneId: catalog.zone.medellin,
+    });
+    const after = (await call("GET", "/api/neighborhoods/summary")).body;
+    expect(after).toEqual({
+      active: before.active + 1,
+      municipalities: before.municipalities,
+      toReview: before.toReview + 1,
+    });
+    expect(before.active).toBeGreaterThan(0);
+  });
+
   it("lets the dispatcher add a neighborhood for the owner's review (scenario 5)", async () => {
     const created = await call("POST", "/api/neighborhoods", {
       id: crypto.randomUUID(),

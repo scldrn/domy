@@ -36,7 +36,7 @@ export function ListSheet({
   id: string;
   title: string;
   count?: number;
-  note?: string;
+  note?: string | undefined;
   children: ReactNode;
 }) {
   return (
