@@ -86,7 +86,7 @@ export function FilterBar<Key extends string>({
       <div
         role="group"
         aria-label="Envíos por etapa"
-        className="flex overflow-x-auto px-3 [scrollbar-width:none]"
+        className="relative flex overflow-x-auto px-3 [scrollbar-width:none]"
       >
         {tabs.map((tab) => (
           <button

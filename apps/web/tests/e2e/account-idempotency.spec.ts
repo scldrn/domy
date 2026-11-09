@@ -82,7 +82,7 @@ test("keeps actor A's fresh account draft when a second tab signs in as owner B"
   const actorId = await currentActorId(page);
   expect(actorId).not.toBeNull();
   if (!actorId) throw new Error("No se pudo verificar la sesión de la cuenta propietaria.");
-  const secondOwnerEmail = `actor-b-${crypto.randomUUID()}@example.com`;
+  const secondOwnerEmail = `actor-b-${crypto.randomUUID().slice(0, 8)}@example.com`;
   const secondOwnerPassword = "contrasena-actor-b-prueba";
   const createOwner = await nativeAdminPost(page, "admin/create-user", actorId, {
     id: crypto.randomUUID(),
@@ -93,7 +93,7 @@ test("keeps actor A's fresh account draft when a second tab signs in as owner B"
   });
   expect(createOwner, JSON.stringify(createOwner)).toMatchObject({ ok: true });
 
-  const email = `actor-draft-${crypto.randomUUID()}@example.com`;
+  const email = `actor-draft-${crypto.randomUUID().slice(0, 8)}@example.com`;
   const dialog = await openNew(page, "Borrador de la sesión A", email);
   const other = await page.context().newPage();
   try {
@@ -192,7 +192,7 @@ test("keeps actor A's fresh account draft when a second tab signs in as owner B"
 test("retains a committed creation identity across response loss and reload", async ({
   ownerPage: page,
 }) => {
-  const email = `durable-${crypto.randomUUID()}@example.com`;
+  const email = `durable-${crypto.randomUUID().slice(0, 8)}@example.com`;
   const ids: string[] = [];
   let drop = true;
   await page.route("**/api/auth/admin/create-user", async (route) => {
@@ -236,7 +236,7 @@ test("retains a committed creation identity across response loss and reload", as
 test("resumes an acknowledged create and lost link ACK without recreating or requesting a password", async ({
   ownerPage: page,
 }) => {
-  const tag = crypto.randomUUID();
+  const tag = crypto.randomUUID().slice(0, 8);
   const name = `Mensajera durable ${tag}`;
   const email = `link-${tag}@example.com`;
   const created = await page.request.post("/api/couriers", {
@@ -311,7 +311,7 @@ test("refuses networking when local persistence is blocked", async ({ ownerPage:
   const dialog = await openNew(
     page,
     "Sin almacenamiento",
-    `blocked-${crypto.randomUUID()}@example.com`,
+    `blocked-${crypto.randomUUID().slice(0, 8)}@example.com`,
   );
   await dialog.getByRole("button", { name: "Crear cuenta" }).click();
   await expect(dialog.getByRole("alert")).toContainText("almacenamiento");
@@ -322,7 +322,7 @@ test("shares a creation UUID across two tabs while both network requests are pen
   ownerPage: page,
 }) => {
   const other = await page.context().newPage();
-  const email = `tabs-${crypto.randomUUID()}@example.com`;
+  const email = `tabs-${crypto.randomUUID().slice(0, 8)}@example.com`;
   const ids: string[] = [];
   let release: (() => void) | undefined;
   const barrier = new Promise<void>((resolve) => {
@@ -371,7 +371,7 @@ test("shares a creation UUID across two tabs while both network requests are pen
 test("recovers an uncertain ban before unban and a genuinely new ban after reload", async ({
   ownerPage: page,
 }) => {
-  const email = `ban-cycle-${crypto.randomUUID()}@example.com`;
+  const email = `ban-cycle-${crypto.randomUUID().slice(0, 8)}@example.com`;
   const dialog = await openNew(page, "Ciclo de cuenta", email);
   await dialog.getByRole("button", { name: "Crear cuenta" }).click();
   await expect(dialog).toHaveCount(0);

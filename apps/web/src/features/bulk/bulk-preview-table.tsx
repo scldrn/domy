@@ -98,7 +98,7 @@ export function BulkPreviewTable({
       <div
         role="group"
         aria-label="Filas por estado"
-        className="-mx-1.5 mb-1 flex overflow-x-auto border-b border-outline-variant [scrollbar-width:none]"
+        className="relative -mx-1.5 mb-1 flex overflow-x-auto border-b border-outline-variant [scrollbar-width:none]"
       >
         {tabs.map((tab) => (
           <button

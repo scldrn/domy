@@ -14,7 +14,7 @@ function AccountPage() {
   return (
     <div className="flex max-w-3xl flex-col gap-6">
       <PageHeader title="Mi cuenta" />
-      <dl className="grid grid-cols-[8rem_1fr] gap-x-4 gap-y-3 rounded-md border border-outline-variant bg-sheet p-6 text-body-l">
+      <dl className="grid grid-cols-[8rem_minmax(0,1fr)] gap-x-4 gap-y-3 rounded-md border border-outline-variant bg-sheet p-6 text-body-l wrap-anywhere">
         <dt className="text-on-surface-variant">Nombre</dt>
         <dd>{user.name}</dd>
         <dt className="text-on-surface-variant">Correo</dt>

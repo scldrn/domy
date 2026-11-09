@@ -76,8 +76,10 @@ export function DataList<Row>({
   if (rows.length === 0) return <>{empty}</>;
   return (
     <div>
+      {/* Relative, so absolutely positioned text inside a row (sr-only labels) scrolls with the
+          table instead of widening the page at 1024 px (FR-012). */}
       <div
-        className="overflow-x-auto [scrollbar-width:thin]"
+        className="relative overflow-x-auto [scrollbar-width:thin]"
         tabIndex={0}
         role="region"
         aria-label={`${label}, desplazable`}
