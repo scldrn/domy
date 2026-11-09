@@ -421,7 +421,7 @@ function CourierLayout() {
                   <Link
                     to={destination.to}
                     aria-current={active ? "page" : undefined}
-                    className="flex flex-1 flex-col items-center justify-center gap-1 rounded-sm text-label-m text-on-rail-variant outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent aria-[current=page]:text-on-rail"
+                    className="flex flex-1 flex-col items-center justify-center gap-1 rounded-sm text-label-m text-on-rail-variant outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:-outline-offset-2 focus-visible:outline-accent aria-[current=page]:text-on-rail"
                   >
                     <span
                       className={cn(

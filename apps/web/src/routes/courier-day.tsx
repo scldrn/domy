@@ -95,7 +95,7 @@ function CourierDay() {
             {/* 48 px tall like every courier target (FR-038). */}
             <Link
               to="/mensajero/pendientes"
-              className="flex min-h-12 items-center font-bold underline underline-offset-3 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-strong"
+              className="flex min-h-12 items-center font-bold underline underline-offset-3 outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-accent-strong"
             >
               Ver pendientes
             </Link>
