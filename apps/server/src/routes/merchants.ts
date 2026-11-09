@@ -9,6 +9,7 @@ import {
   type Merchant,
   type MerchantDetail,
   type PickupPoint,
+  type MerchantListItem,
 } from "@domy/domain";
 import { and, asc, count, desc, eq, ilike, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
@@ -286,12 +287,49 @@ export const merchantRoutes = new Hono<AppEnv>()
               ),
             )
         : [];
-    return c.json({
-      items: rows.map((row) => ({
+    const ids = rows.map((row) => row.id);
+    // One grouped query each for open shipments and active pickup points (feature 006, US5).
+    const [open, points] =
+      ids.length > 0
+        ? await Promise.all([
+            db
+              .select({ merchantId: shipments.merchantId, open: count() })
+              .from(shipments)
+              .where(
+                and(
+                  inArray(shipments.merchantId, ids),
+                  notInArray(shipments.status, [...finalStatuses]),
+                ),
+              )
+              .groupBy(shipments.merchantId),
+            db
+              .select({
+                merchantId: pickupPoints.merchantId,
+                label: pickupPoints.label,
+                isDefault: pickupPoints.isDefault,
+                neighborhood: neighborhoods.name,
+              })
+              .from(pickupPoints)
+              .innerJoin(neighborhoods, eq(neighborhoods.id, pickupPoints.neighborhoodId))
+              .where(and(inArray(pickupPoints.merchantId, ids), eq(pickupPoints.isActive, true))),
+          ])
+        : [[], []];
+    const items: MerchantListItem[] = rows.map((row) => {
+      const own = points.filter((point) => point.merchantId === row.id);
+      const preferred = own.find((point) => point.isDefault);
+      return {
         ...row,
         aliases: aliases.filter((alias) => alias.merchantId === row.id).map((alias) => alias.alias),
-      })),
+        openShipments: open.find((entry) => entry.merchantId === row.id)?.open ?? 0,
+        pickupPoints: own.length,
+        defaultPickupPoint: preferred
+          ? { label: preferred.label, neighborhood: preferred.neighborhood }
+          : null,
+      };
     });
+    // The busiest merchants first, then by name, as the approved «Clientes» reads.
+    items.sort((a, b) => b.openShipments - a.openShipments);
+    return c.json({ items });
   })
   .post("/", validate("json", merchantCreateInput), async (c) => {
     const { id, aliases, ...input } = c.req.valid("json");

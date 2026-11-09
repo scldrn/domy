@@ -7,7 +7,7 @@ import type {
   CourierCreateInput,
   CourierUpdateInput,
   MerchantLinkReplacementInput,
-  Merchant,
+  MerchantListItem,
   MerchantCreateInput,
   MerchantUpdateInput,
   NeighborhoodUpdateInput,
@@ -28,7 +28,7 @@ export const getCompanySettings = () => unwrap(api.api.settings.$get());
 export const updateCompanySettings = (input: CompanySettingsInput) =>
   unwrap(api.api.settings.$patch({ json: input }));
 
-export async function listMerchants(q: string, active?: Active): Promise<Merchant[]> {
+export async function listMerchants(q: string, active?: Active): Promise<MerchantListItem[]> {
   const { items } = await unwrap(
     api.api.merchants.$get({ query: { q, ...(active && { active }) } }),
   );
