@@ -25,7 +25,7 @@ a short-lived branch, so the specification and implementation of every feature l
 
 ## Next step
 
-Feature 006: US4 is complete (T053–T057). Next, the US5 proposals (T061, T063, T065) for the owner, then their screens. US5 started apart: the audit
+Feature 006: US4 is complete (T053–T057); the top bar's search results and «Actualizado hace» (T019) and the restyled marks and states (T018) are on `main`. The US5 proposals (T061, T063, T065) are published for the owner (artifact v28); their screens follow his decision. US5 started apart: the audit
 log's names come from the server (T058, T060); the screens wait for their proposals (T061–T066). Every public
 change keeps the 3-second cold start of `tracking-page.spec.ts` green (#66 left ~700 ms).
 Route files export only `Route`, and `routes/root.tsx` stays empty of UI: anything else there

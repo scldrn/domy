@@ -28,6 +28,10 @@ export function TableSkeleton({
   );
 }
 
+/**
+ * A list that failed to load: the empty state's pattern with the error tone, what happened,
+ * and «Reintentar» (design-system.md §8, "Error and not-found screens"; feature 006, T018).
+ */
 export function QueryErrorAlert({
   title = "No pudimos cargar la información",
   message = "Revisa tu conexión e inténtalo de nuevo. Si el problema continúa, avísale al administrador.",
@@ -40,14 +44,14 @@ export function QueryErrorAlert({
   return (
     <div
       role="alert"
-      className="flex flex-col items-start gap-3 rounded-md border border-error/30 bg-error/5 p-6 text-on-surface"
+      className="flex flex-col items-center gap-2 rounded-lg border border-outline-variant bg-sheet px-6 py-11 text-center"
     >
-      <div className="flex items-center gap-2 text-title-s text-error">
-        <Icon symbol={ErrorIcon} />
-        <p className="font-semibold">{title}</p>
-      </div>
-      <p className="text-body-m text-on-surface-variant">{message}</p>
-      <Button variant="outline" onClick={onRetry} className="mt-1">
+      <span className="mb-1 flex size-14 items-center justify-center rounded-full bg-error-container text-on-error-container">
+        <Icon symbol={ErrorIcon} className="size-7" />
+      </span>
+      <p className="text-title-l font-semibold text-on-surface">{title}</p>
+      <p className="max-w-[46ch] text-body-m text-on-surface-variant">{message}</p>
+      <Button variant="outline" onClick={onRetry} className="mt-2">
         Reintentar
       </Button>
     </div>
