@@ -6,7 +6,6 @@ import { calendarDate } from "./shipment.ts";
 
 /** Board filters (FR-023); `fee_review` marks shipments whose fee the owner must confirm. */
 export const boardFlag = z.enum(["at_risk", "late", "fee_review"]);
-export type BoardFlag = z.infer<typeof boardFlag>;
 
 export const boardQuery = z.object({
   date: calendarDate.optional(),

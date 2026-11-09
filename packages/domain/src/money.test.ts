@@ -4,7 +4,6 @@ import {
   formatCop,
   maxAggregateCop,
   maxCop,
-  maxFieldCop,
   minCop,
   needsAmountConfirmation,
   parseCop,
@@ -15,7 +14,6 @@ describe("monetary constants and bounds", () => {
   it("defines standard PostgreSQL int4 field bounds and safe aggregate bounds", () => {
     expect(minCop).toBe(0);
     expect(maxCop).toBe(2_147_483_647);
-    expect(maxFieldCop).toBe(2_147_483_647);
     expect(maxAggregateCop).toBe(Number.MAX_SAFE_INTEGER);
     expect(maxAggregateCop).toBe(9_007_199_254_740_991);
   });

@@ -59,7 +59,6 @@ export const notificationMarkInput = z.strictObject({
   shipmentIds,
 });
 
-export type NotificationListQuery = z.infer<typeof notificationListQuery>;
 export type NotificationShipment = z.infer<typeof notificationShipmentSchema>;
 export type NotificationMerchant = z.infer<typeof notificationMerchantSchema>;
 export type NotificationList = z.infer<typeof notificationListSchema>;

@@ -126,7 +126,7 @@ operations and did not mutate services. First evidence remains preserved.
 
 The final source manifest still exactly matches the four-gate identity above after
 all image/runtime probes. Historical-schema container upgrade is only
-[planned](../../docs/local-image-upgrade-plan.md). Authenticated account creation,
+[planned](../../docs/archive/local-image-upgrade-plan.md). Authenticated account creation,
 photo upload through this new image, real providers, scheduled backup/object recovery,
 physical/offline installed-device acceptance and production deployment are not
 claimed by this receipt. Existing repository tests and earlier synthetic restore

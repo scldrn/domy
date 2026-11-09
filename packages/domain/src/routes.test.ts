@@ -7,7 +7,6 @@ import {
   canUndoDispatch,
   isRouteFinished,
   largeRouteThreshold,
-  moveStop,
   needsLargeRouteConfirmation,
   relocateShipment,
   removeShipmentFromStops,
@@ -311,7 +310,15 @@ describe("relocateShipment (FR-013)", () => {
   });
 });
 
-describe("moveStop and validateStopOrder (FR-006)", () => {
+/** The order after dragging one stop to a new position, as the route screen does. */
+function moveStop(stops: RouteStopPlan[], stopId: string, toIndex: number): RouteStopPlan[] {
+  const moving = stops.find((existing) => existing.id === stopId);
+  if (!moving) return stops;
+  const rest = stops.filter((existing) => existing !== moving);
+  return [...rest.slice(0, toIndex), moving, ...rest.slice(toIndex)];
+}
+
+describe("validateStopOrder (FR-006)", () => {
   const stops = buildStops([delivery("a"), delivery("b", local)], newId);
   // pickup:a, pickup:b, delivery:a, delivery:b
 

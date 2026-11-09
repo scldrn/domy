@@ -320,13 +320,6 @@ export function relocateShipment(
   return changed ? next : stops;
 }
 
-export function moveStop(stops: RouteStopPlan[], stopId: string, toIndex: number): RouteStopPlan[] {
-  const moving = stops.find((existing) => existing.id === stopId);
-  if (!moving) return stops;
-  const rest = stops.filter((existing) => existing !== moving);
-  return [...rest.slice(0, toIndex), moving, ...rest.slice(toIndex)];
-}
-
 /**
  * Why a new stop order is refused (FR-006), or null when it is valid: it must hold the same
  * stops, completed stops keep their place, and each delivery stays after its pickup.

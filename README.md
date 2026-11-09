@@ -10,11 +10,11 @@ public tracking page.
 - [Business master](docs/business-master.md): how the business works and every decision taken
 - [Glossary](docs/glossary.md): English names in code, Spanish names in the interface
 - [Design system](docs/design-system.md): Material Design 3 over Tailwind CSS and shadcn/ui
-- [Specifications](specs/): one folder per feature, written with GitHub Spec Kit
+- [Specifications](specs): one folder per feature, written with GitHub Spec Kit
 - [Project status](docs/status.md): where each feature stands and the next step
 - [Engineering handoff](docs/engineering-handoff.md): the canonical verified candidate,
   local validation evidence and remaining acceptance
-- [Detailed execution backlog](docs/integral-execution-backlog.md): all open tasks,
+- [Detailed execution backlog](docs/archive/integral-execution-backlog.md): all open tasks,
   preserved work, dependencies, verification criteria, and operational acceptance
 - [Owner requests](OWNER-REQUESTS.md): questions and items the owner must answer or provide,
   in Spanish
@@ -78,10 +78,10 @@ worker; offline cases use independent courier accounts and disposable test data.
 ## Production
 
 Use the [current engineering handoff](docs/engineering-handoff.md),
-[release review](docs/release-change-review-results.md) and tracked
+[release review](docs/archive/release-change-review-results.md) and tracked
 `Dockerfile`/`compose.production.yaml`/`Caddyfile` for the reviewed container path.
 The courier app must work without signal; the dispatch panel requires internet (owner decision of
-2026-11-02, [scope record](docs/online-release-scope.md)).
+2026-11-02, [scope record](docs/archive/online-release-scope.md)).
 Set matching canonical HTTPS `APP_URL` and `PUBLIC_BASE_URL` at runtime and build
 the web app with that public origin. Replace the sample authentication secret.
 

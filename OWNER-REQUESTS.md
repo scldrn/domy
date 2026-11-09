@@ -30,7 +30,7 @@ el sistema funcione sin conexión [...] no es algo que el cliente necesita en es
 momento». Se retiran de esta salida las pruebas físicas sin conexión y su diagnóstico;
 se continúa con la entrega para uso con internet. Se conserva el código, los datos
 pendientes y las pruebas automatizadas. El fallo observado en iPhone queda aplazado,
-sin declararlo aprobado. [Alcance vigente y evidencia](docs/online-release-scope.md).
+sin declararlo aprobado. [Alcance vigente y evidencia](docs/archive/online-release-scope.md).
 El 94% corresponde al catálogo original, no al desarrollo restante de esta salida.
 Infraestructura y despliegue siguen a cargo del propietario.
 
@@ -67,7 +67,7 @@ La PR #32 falló en CI:95 aprobadas, una fallida y una intermitente; sigue sin f
 También confirmé en un entorno desechable que el correo de desarrollo registra su
 enlace con token: se añadió T155, pendiente, sin afirmar un incidente de datos reales.
 No se requiere una nueva decisión de alcance para cumplir la prohibición de registrar
-secretos. El documento `docs/integral-execution-backlog.md` detalla las81 tareas abiertas,
+secretos. El documento `docs/archive/integral-execution-backlog.md` detalla las81 tareas abiertas,
 dependencias, pruebas y condiciones de cierre, además de los pendientes operativos.
 Ya aprobaste CSV seguro para Excel y fotos propias del trabajo aún disponible en la app;
 no son preguntas pendientes. Los demás párrafos de ejecución conservan evidencia histórica.
@@ -80,7 +80,7 @@ después se abre la siguiente rama. La investigación D4 aporta seis casos explo
 con PostgreSQL real, no una implementación ni una tarea adicional completada.
 
 **Ejecución autorizada:** con «Empieza, todo lo recomendado» y «continúa» aprobaste
-iniciar las correcciones locales. El plan está en `docs/integral-remediation-plan.md`:
+iniciar las correcciones locales. El plan está en `docs/archive/integral-remediation-plan.md`:
 76 tareas pendientes al iniciar, ordenadas por dependencias y riesgo. La rama actual
 es `001-fix-keyboard-readiness`; el primer alcance es T141, no todos los arreglos en
 una sola rama. La prueba controlada reprodujo el fallo y la corrección de navegación
@@ -101,7 +101,7 @@ sustituyó por otra corrida. No hay arreglos de aplicación ni publicación en e
 
 **Etapa integral actual:** pediste verificar el proyecto completo, incluidas las ideas
 aprobadas, incidencias históricas, conexiones y deuda técnica, y confirmaste incluir
-también terminar la 004. El informe local está en `docs/integral-verification.md`, rama
+también terminar la 004. El informe local está en `docs/archive/integral-verification.md`, rama
 `chore/integral-verification`. No está declarado todo listo ni hay cambios de aplicación
 o publicación en esta revisión. La PR #28 ya fue fusionada como `9006db3` y su CI de
 main pasó limpio; los párrafos siguientes conservan el contexto histórico.

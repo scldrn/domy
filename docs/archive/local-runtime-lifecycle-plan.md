@@ -167,7 +167,7 @@ the policy globally.
 ## Causal RED and verification plan
 
 The focused causal RED and GREEN evidence is recorded in the
-[deployment lifecycle receipt](../specs/004-tracking-merchant-link/deployment-lifecycle-results.md).
+[deployment lifecycle receipt](../../specs/004-tracking-merchant-link/deployment-lifecycle-results.md).
 The cases below retain the broader validation intent. All PostgreSQL cases use the existing
 Testcontainers PostgreSQL 18 fixture; no database mock may stand in for the probe. Native
 HTTP cases use an ephemeral loopback listener and real `fetch`/Node HTTP requests, not only

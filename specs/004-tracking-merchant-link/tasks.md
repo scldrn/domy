@@ -7,14 +7,14 @@ description: "Task list for Tracking Page, Merchant Link, and WhatsApp Message"
 
 **Input**: Design documents from `/specs/004-tracking-merchant-link/`
 
-**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
+**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts), [quickstart.md](quickstart.md)
 
 **Development prerequisites**: verified technical implementations/contracts of features
 [001](../001-shipment-registration/tasks.md), [002](../002-routes-dispatch/tasks.md),
 and [003](../003-courier-app/tasks.md). Owner sequencing decision (2026-10-21,
 “omite y continuemos”) defers physical 003/T093/T087 and final T088 while local 004
 work proceeds. Those tasks remain open and gate final delivery, not local development.
-See [local orchestration](../../docs/local-orchestration.md).
+See [local orchestration](../../docs/archive/local-orchestration.md).
 
 **Tests**: REQUIRED (Constitution VI). In every phase, test tasks come first and MUST fail
 before their implementation tasks start. Integration tests run against real PostgreSQL.

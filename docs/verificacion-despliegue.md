@@ -8,7 +8,7 @@ otro documento.
 - Rama: `chore/release-verification`, recreada desde `main` `6a5ac78`. La línea base de la
   verificación fue `6b0256d`; `6a5ac78` unifica las correcciones de la Fase 3 que hicieron
   los subagentes de esta verificación, revisadas y completadas por el propietario
-  ([revisión de cambios](release-change-review-results.md)). Cada corrección se marca
+  ([revisión de cambios](archive/release-change-review-results.md)). Cada corrección se marca
   **Corregido** solo después de que el líder la revisa y corre sus pruebas.
 - Historia: la verificación empezó en `chore/deployment-readiness-verification` sobre
   `f0bc5ac`. A las 12:56 el rewind del editor había vuelto a pisar 16 archivos y se
@@ -17,7 +17,7 @@ otro documento.
   base (corrida durante esos cambios) se descartó por contaminada.
 - Alcance: las especificaciones que existen en el repositorio, 001 a 004. No hay
   especificaciones 005, 006 ni 007 (pregunta 9 de `OWNER-REQUESTS.md`).
-- Decisión del propietario (`docs/online-release-scope.md`): la entrega inmediata es solo en
+- Decisión del propietario (`docs/archive/online-release-scope.md`): la entrega inmediata es solo en
   línea. La aceptación física sin señal queda diferida y no bloquea; el código y las
   pruebas sin señal se conservan y no deben retroceder.
 - **Actualización 2026-11-02:** el propietario revierte esa decisión para la app del mensajero, que
@@ -25,8 +25,8 @@ otro documento.
   del propietario)» vuelve a estar abierto: 003/T087, 003/T131 y 003 US2. C003-5 se revisó en 003/T138:
   cumple FR-023, sin cambio de código. Hallazgos posteriores en
   [la auditoría](production-readiness-audit-2026-11-02.md).
-- Las «81 tareas» son el catálogo de `docs/integral-execution-backlog.md` (secciones 6 a 9),
-  que remite a los hallazgos IV-01 a IV-41 de `docs/integral-verification.md`.
+- Las «81 tareas» son el catálogo de `docs/archive/integral-execution-backlog.md` (secciones 6 a 9),
+  que remite a los hallazgos IV-01 a IV-41 de `docs/archive/integral-verification.md`.
 
 Estados: **Sin verificar**, **Verificado** (con evidencia), **Corregido** (con prueba que
 fallaba antes y pasa después), **Pendiente** (con razón), **Requiere al propietario**.
@@ -194,7 +194,7 @@ Sobre `6a5ac78` (corrida del líder, máquina sin subagentes):
 | F001-3 | Bajo | 001 | `specs/001-shipment-registration/contracts/http-api.md:223` | FR-025 exige documentar la neutralización de fórmulas del CSV | Corregido (`d9525c9`): `contracts/http-api.md:224-231` |
 | F001-4 | Bajo | 001 | `lib/master-data.ts` | T134 probada en 2 de 7 llamadores de `auditedCreate` | Corregido (`2a7a54a`): `master-data-idempotency.test.ts` 25/25, las 7 entidades |
 | F001-5 | Bajo | 001 | `routes/bulk.ts:264` | Un lote nuevo que reutiliza ids existentes los reporta como creados, aun de otro comercio | Corregido (`8f2f28f`): `bulk-foreign-ids.test.ts` (400 y nada creado) |
-| F001-6 | Bajo | Docs | `docs/integral-execution-backlog.md:614` | T136 sin marca `[COMPLETED]` | Corregido (`d9525c9`) |
+| F001-6 | Bajo | Docs | `docs/archive/integral-execution-backlog.md:614` | T136 sin marca `[COMPLETED]` | Corregido (`d9525c9`) |
 | C003-1 | Alto | 003 / privacidad | `routes/photos.ts:170-193`, `tests/photos.test.ts:300` | Un mensajero que recibe el paquete por traspaso o reasignación descarga fotos de otro mensajero (entregas, novedades, recibos); FR-036 y D2 dicen «solo las propias»; la prueba fija el comportamiento incorrecto | Corregido (`6a5ac78`): `photos.ts` exige autor del registro; `photos.test.ts` «refuses the courier who received the package through a handover» y Beto 403 tras reasignar (`:316`) |
 | C003-2 | Medio | 003 | web `lib/offline/sync.ts:155` | Un 409 `photo_immutable` al subir una foto aborta la sincronización: los registros aceptados no salen de la bandeja y la instantánea no se refresca | Corregido (`6a5ac78`): `sync.test.ts` «C003-2 retains a conflicting photo while committing records and refreshing the route» |
 | C003-3 | Medio | 003 | `routes/courier.ts:343` | Un registro que lanza error bloquea el lote completo (mismo defecto que ROB-3) | Corregido con ROB-3 (`2bc9d62`) |

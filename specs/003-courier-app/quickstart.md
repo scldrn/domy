@@ -17,7 +17,7 @@ endpoints in [contracts/http-api.md](contracts/http-api.md). Setup and gates are
   launcher's private, per-run configuration and synthetic credentials. Do not create a
   `.env` for that target or copy production secrets into it. Local push is disabled by
   default; its explicit opt-in generates per-run local keys and is not evidence of
-  production push delivery. See the [local deployment inventory](../../docs/local-deployment-inventory.md).
+  production push delivery. See the [local deployment inventory](../../docs/archive/local-deployment-inventory.md).
 - A phone on the same network, or Chrome's device toolbar with "Offline" in the Network tab
 
 ### Manual acceptance preparation

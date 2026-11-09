@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  canChangeStatus,
   exceptionDecisionState,
   isHeldForRouting,
   officeReceiptStatus,
@@ -124,7 +123,6 @@ describe("contextual record reversion (T072, FR-035)", () => {
         taskKind: "errand",
       });
     }
-    expect(canChangeStatus({ kind: "errand", status: "delivered" }, "dispatched")).toBe(false);
     expect(canTransition("delivered", "registered")).toBe(false);
   });
   it("rejects stale, reverted, unapplied, non-final records and changed package operations", () => {
@@ -226,7 +224,6 @@ describe("shipment lifecycle", () => {
     expect(officeReceiptStatus({ ...held, routeId: "route-one" })).toBeNull();
     expect(officeReceiptStatus({ ...held, custodyCourierId: null })).toBeNull();
     expect(canTransition("picked_up", "registered")).toBe(false);
-    expect(canChangeStatus({ kind: "delivery", status: "picked_up" }, "registered")).toBe(false);
   });
 
   it("receives an exception without deciding a new attempt and rejects other statuses", () => {
@@ -275,15 +272,6 @@ describe("shipment lifecycle", () => {
     }
     expect(canTransition("dispatched", "assigned"), "dispatch undone").toBe(true);
     expect(canTransition("dispatched", "registered"), "removed before pickup").toBe(true);
-  });
-
-  it("delivers straight from «En ruta» only an errand, which has no pickup (feature 003)", () => {
-    expect(canChangeStatus({ kind: "errand", status: "dispatched" }, "delivered")).toBe(true);
-    for (const kind of ["delivery", "reverse_pickup", "carrier_handoff"] as const) {
-      expect(canChangeStatus({ kind, status: "dispatched" }, "delivered"), kind).toBe(false);
-      expect(canChangeStatus({ kind, status: "picked_up" }, "delivered"), kind).toBe(true);
-    }
-    expect(canChangeStatus({ kind: "errand", status: "picked_up" }, "voided")).toBe(false);
   });
 
   it("treats registered, assigned, and dispatched as editable", () => {

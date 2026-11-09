@@ -2,7 +2,7 @@
 
 This receipt records a narrowly scoped cold-load optimization. It does not close an OP-01 task
 or claim Caddy, production-container, phone, or production verification. The aligned rationale is
-in the [local runtime lifecycle plan](../../docs/local-runtime-lifecycle-plan.md).
+in the [local runtime lifecycle plan](../../docs/archive/local-runtime-lifecycle-plan.md).
 
 ## Finding and correction
 

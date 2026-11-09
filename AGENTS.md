@@ -2,7 +2,7 @@
 
 ## Authority & Workflow
 
-Read `.specify/memory/constitution.md`, `CLAUDE.md`, `docs/status.md`, and `docs/integral-execution-backlog.md`. The constitution governs; approved decisions and newer verified receipts supersede historical status paragraphs.
+Read `.specify/memory/constitution.md`, `CLAUDE.md`, `docs/status.md`, and `docs/archive/integral-execution-backlog.md`. The constitution governs; approved decisions and newer verified receipts supersede historical status paragraphs.
 
 Follow Spec Kit: specify → clarify → plan → checklist → tasks → analyze → implement → converge. Align feature artifacts before behavioral changes; resolve CRITICAL/HIGH analysis findings first. Feature-qualified tasks (`001/T147`) are canonical. Treat reviewer-owned checklists as read-only requirements gates, never implementation progress. Close tasks only with passing evidence.
 

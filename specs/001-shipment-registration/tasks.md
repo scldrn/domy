@@ -7,7 +7,7 @@ description: "Task list for Shipment Registration and Dispatch Board"
 
 **Input**: Design documents from `/specs/001-shipment-registration/`
 
-**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
+**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts), [quickstart.md](quickstart.md)
 
 **Tests**: REQUIRED. Constitution VI makes test-first non-negotiable for business rules, state
 transitions, money, and idempotency. In every phase, test tasks come first and MUST fail

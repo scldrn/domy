@@ -102,7 +102,6 @@ export const courierAccountInput = z.object({
   actionId,
   courierId: z.uuid("Elige el mensajero.").nullable(),
 });
-export type CourierAccountInput = z.input<typeof courierAccountInput>;
 
 export const carrierCreateInput = z.object({
   id: z.uuid(),
@@ -142,14 +141,12 @@ export const rateZoneCreateInput = z.object({
   id: z.uuid(),
   name: name("Escribe el nombre de la zona."),
 });
-export type RateZoneCreateInput = z.input<typeof rateZoneCreateInput>;
 
 export const rateZoneUpdateInput = z.object({
   actionId,
   name: name("Escribe el nombre de la zona.").optional(),
   isActive: z.boolean().optional(),
 });
-export type RateZoneUpdateInput = z.input<typeof rateZoneUpdateInput>;
 
 /**
  * A new rate card entry (FR-028): effective from 00:00 in Bogotá of `effectiveFrom`.

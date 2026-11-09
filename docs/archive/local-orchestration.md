@@ -19,8 +19,8 @@ without subagents; infrastructure/public deployment remains owner-managed.
 Root implemented and separately inspected the final corrections, ran all four
 gates (1,626 tests, 154 zero-retry browser cases), built the new immutable image
 and completed the representative upgrade/session/replay/fresh-data rehearsal.
-[Regression receipt](../specs/001-shipment-registration/solo-production-regression-results.md)
-and [upgrade receipt](../specs/004-tracking-merchant-link/local-image-upgrade-results.md)
+[Regression receipt](../../specs/001-shipment-registration/solo-production-regression-results.md)
+and [upgrade receipt](../../specs/004-tracking-merchant-link/local-image-upgrade-results.md)
 record the 540-file source `36ef1cd6` and actual scope. No independent-agent review
 is claimed for this continuation. Progress is 76/81 (94%); physical/final tasks
 and actual provider/production obligations remain open. Earlier entries follow.
@@ -561,7 +561,7 @@ and complete executor N1 are still pending. No new task closure is implied.
 The launcher executor independently reran scoped format/lint/server typecheck,
 CLI/state negative smoke and native dry-run, all exit 0; logs under
 `.git/local-orchestration/phone-target-source/n1-*.log` and the
-[receipt](../specs/003-courier-app/local-target-source-results.md). Root reviewed
+[receipt](../../specs/003-courier-app/local-target-source-results.md). Root reviewed
 these separately from its own results. Real isolated-target lifecycle remains
 unexecuted and OP-test-target remains in progress. Catalog: 41/81 verified (51%),
 40 open; T084, G0, physical acceptance and 004 retain their prerequisite gates.
@@ -1399,19 +1399,19 @@ pending. Local synthetic validation continues, with no repeated approval request
 
 ## T032 closed — 2026-10-22
 
-**Public accessibility verified — 2026-10-22:** T032 passes both-level focused checks, executor35 repeated native cases and root final check/1566tests/153E2E9.7min/retries0/build. Frozen523-file source2a885083; cold tracking2847.5ms. Original defects, harness failures and interruption retained. **75/81 verified (93%),6 open**. T033 documentation is eligible. [Accessibility results](../specs/004-tracking-merchant-link/public-accessibility-results.md).
+**Public accessibility verified — 2026-10-22:** T032 passes both-level focused checks, executor35 repeated native cases and root final check/1566tests/153E2E9.7min/retries0/build. Frozen523-file source2a885083; cold tracking2847.5ms. Original defects, harness failures and interruption retained. **75/81 verified (93%),6 open**. T033 documentation is eligible. [Accessibility results](../../specs/004-tracking-merchant-link/public-accessibility-results.md).
 
 No physical or production acceptance is inferred. Owner feature authorization remains recorded; individual courier evidence is still pending before real disclosure.
 
 ## T033 documentation closed — 2026-10-22
 
-**Public go-live documentation verified — 2026-10-22:** T033 README origin/support/individual-consent instructions pass executor/root contract review, diff check and32relative links. **76/81 verified (94%),5 open**. Documentation closure does not certify actual courier consent or G1; OP-release-evidence remains pending. [Documentation results](../specs/004-tracking-merchant-link/public-go-live-documentation-results.md).
+**Public go-live documentation verified — 2026-10-22:** T033 README origin/support/individual-consent instructions pass executor/root contract review, diff check and32relative links. **76/81 verified (94%),5 open**. Documentation closure does not certify actual courier consent or G1; OP-release-evidence remains pending. [Documentation results](../../specs/004-tracking-merchant-link/public-go-live-documentation-results.md).
 
 Strict DAG next: OP-release-evidence → G1 → 004/T034; deferred003 physical/final gates also remain. No dependent task may start before the operational prerequisites are verified. Read-only OP-01/OP-04 preparation remains authorized.
 
 ## Operational preparation — owner confirms LAN only, 2026-10-22
 
-Owner: “No hemos comprado dominio aun. solo red local”. Existing safe synthetic LAN authorization persists; no repeat permission request or domain purchase is required by this preparation. N1/root read-only inventory and9relative links/diff checks pass; [readiness receipt](../specs/004-tracking-merchant-link/release-readiness-results.md). OP-release-evidence stays in progress, G1 pending; no physical/final task or production readiness is inferred.
+Owner: “No hemos comprado dominio aun. solo red local”. Existing safe synthetic LAN authorization persists; no repeat permission request or domain purchase is required by this preparation. N1/root read-only inventory and9relative links/diff checks pass; [readiness receipt](../../specs/004-tracking-merchant-link/release-readiness-results.md). OP-release-evidence stays in progress, G1 pending; no physical/final task or production readiness is inferred.
 
 ## New004 LAN preparation verified — 2026-10-22
 
@@ -1420,7 +1420,7 @@ phone-20261022-public-a at10.12.117.118:8444. Root publicAPI/schema/cache/role
 probes pass;523-file source2a885083 unchanged, build e5ada0e7. Both native
 verifiers explicitly record one permitted BetterAuth429/10s retry each; failed
 preflight/detached-wrapper attempts are retained. Old003 target/data untouched.
-[Receipt](../specs/004-tracking-merchant-link/local-target-preparation-results.md).
+[Receipt](../../specs/004-tracking-merchant-link/local-target-preparation-results.md).
 Catalog76/81(94%); OP evidence in progress/G1 pending; no physical/production
 acceptance. Safe synthetic LAN review is already authorized.
 
@@ -1429,7 +1429,7 @@ acceptance. Safe synthetic LAN review is already authorized.
 Owner:“hazlo tu, como la otra vez”. The agent completed the local UI walkthrough
 and independently confirmed persisted synthetic notification/actor and unchanged
 shipment status. Courier route/pending/day screens verified; left on Mi ruta.
-[Detailed evidence](../specs/004-tracking-merchant-link/local-target-preparation-results.md#direct-browser-review--owner-requested-2026-10-22).
+[Detailed evidence](../../specs/004-tracking-merchant-link/local-target-preparation-results.md#direct-browser-review--owner-requested-2026-10-22).
 76/81(94%)unchanged; no physical/provider/G1 closure.
 
 ### Current-network 004 candidate verified — 2026-10-22
@@ -1441,7 +1441,7 @@ per invocation; root strict public API/header/privacy probes pass on first attem
 Root rechecked healthy loopback-only PostgreSQL/S3 bindings, the detached listener,
 and the unchanged 523-file source identity `2a885083`. Prior003 and public-a
 resources remain intact; public-a is the separate read-only source for the
-OP-02 rehearsal, not the current network candidate. [Current-network evidence](../specs/004-tracking-merchant-link/local-target-current-network-results.md).
+OP-02 rehearsal, not the current network candidate. [Current-network evidence](../../specs/004-tracking-merchant-link/local-target-current-network-results.md).
 G1, operational/provider/consent requirements and physical/final acceptance remain open.
 
 
@@ -1455,7 +1455,7 @@ Root independently restored the same archive into a second empty database and
 compared every table hash, including complete auth/user rows. Prior history and
 source business fingerprints remain unchanged. First harness failures and the
 root result-writer failure/read-only completion are retained in the
-[restore receipt](../specs/004-tracking-merchant-link/local-database-restore-results.md).
+[restore receipt](../../specs/004-tracking-merchant-link/local-database-restore-results.md).
 No application source changed. Agreed recovery objectives, scheduled client-owned
 backups, retention/alerts, provider/object recovery, consent and physical/final
 requirements remain outstanding; OP-release-evidence stays in progress and G1 pending.
@@ -1468,7 +1468,7 @@ to75085 without restarting containers. N1 and root's independent UTC snapshots
 match all31 complete tables, including auth/session rows, and the migration
 sequence. Root subsequent native verification passes with one bounded10s429 retry;
 strict public probes pass on the first attempt. Source523/SHA2a885083 unchanged.
-[Restart receipt](../specs/004-tracking-merchant-link/local-restart-results.md).
-The [recovery handoff](local-recovery-runbook.md) and [deployment-artifact design](local-deployment-artifact-plan.md)
+[Restart receipt](../../specs/004-tracking-merchant-link/local-restart-results.md).
+The [recovery handoff](../local-recovery-runbook.md) and [deployment-artifact design](local-deployment-artifact-plan.md)
 identify the remaining production packaging/proxy/lifecycle work. Artifact implementation
 is a separate local batch after design alignment; G1 and physical/final gates remain pending.

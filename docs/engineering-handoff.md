@@ -40,7 +40,7 @@ offline reopening failure of 2026-10-23 stays open until retested there.
 ## Deployment handoff
 
 Use tracked `Dockerfile`, `compose.production.yaml`, `Caddyfile`, `scripts/backup.sh`,
-`scripts/restore.sh`, the [artifact plan](local-deployment-artifact-plan.md) and the
+`scripts/restore.sh`, the [artifact plan](archive/local-deployment-artifact-plan.md) and the
 [recovery runbook](local-recovery-runbook.md). Run migrations, then the seed, then start `app`.
 
 The owner supplies origin and TLS, secrets, private storage with its 12-month lifecycle rule,

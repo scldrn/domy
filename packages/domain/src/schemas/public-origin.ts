@@ -33,5 +33,3 @@ export const publicOriginSchema = z.string().transform((value, context) => {
     return z.NEVER;
   }
 });
-
-export type PublicOrigin = z.infer<typeof publicOriginSchema>;

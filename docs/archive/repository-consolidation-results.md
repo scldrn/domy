@@ -7,7 +7,7 @@ of the verified candidate. The release source is `main`; short-lived review bran
 are removed after squash. No trunk history rewrite or production deployment.
 Historical receipts, migrations and reviewer checklists remain traceability evidence,
 not competing application implementations. The current entry point is the
-[engineering handoff](engineering-handoff.md).
+[engineering handoff](../engineering-handoff.md).
 
 ## Code and branch review
 

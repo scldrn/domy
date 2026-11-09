@@ -864,7 +864,7 @@ every browser scenario, deadline, worker, retry and accessibility assertion.
 No production listener, Testcontainers host, domain rule or schema changes.
 The owner requires one clean GitHub/main and local-only QA; use a single squash
 PR with skip annotations, no remote workflow invocation or waiting. See
-[consolidation plan](../../docs/repository-consolidation-plan.md).
+[consolidation plan](../../docs/archive/repository-consolidation-plan.md).
 
 ## Release review alignment — 2026-10-23 (003/T137)
 

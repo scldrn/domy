@@ -58,7 +58,7 @@ lab interpolation file remains historical and pins the older image. Do not reuse
 that historical wrapper as a current-image deployment command.
 
 This completes the bounded local upgrade rehearsal in the
-[plan](../../docs/local-image-upgrade-plan.md). Existing restore/proxy/privacy
+[plan](../../docs/archive/local-image-upgrade-plan.md). Existing restore/proxy/privacy
 receipts retain their own source identities and scope. Public origin, target-platform
 validation, provider delivery/retention, scheduled backups, consent and real-device
 acceptance remain deployment/owner obligations. G1/G2 and the five catalog tasks

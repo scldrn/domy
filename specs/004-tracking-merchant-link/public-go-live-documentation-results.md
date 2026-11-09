@@ -9,9 +9,9 @@ closure or production-readiness approval.
   `PUBLIC_BASE_URL` requirements, owner-managed support contact, courier disclosure scope,
   and individual-consent prerequisite.
 - Linked [owner requests and outstanding courier consent](../../OWNER-REQUESTS.md), [OP-01
-  deployment runbook requirements](../../docs/integral-execution-backlog.md#op-01--deployment-upgrade-and-recovery-runbook),
-  [OP-04 ownership and privacy prerequisites](../../docs/integral-execution-backlog.md#op-04--business-ownership-privacy-and-visual-inputs),
-  and [local deployment inventory](../../docs/local-deployment-inventory.md).
+  deployment runbook requirements](../../docs/archive/integral-execution-backlog.md#op-01--deployment-upgrade-and-recovery-runbook),
+  [OP-04 ownership and privacy prerequisites](../../docs/archive/integral-execution-backlog.md#op-04--business-ownership-privacy-and-visual-inputs),
+  and [local deployment inventory](../../docs/archive/local-deployment-inventory.md).
 
 ## Contract checked
 
@@ -42,7 +42,7 @@ the [shared origin schema](../../packages/domain/src/schemas/public-origin.ts), 
 - Relative Markdown targets in `README.md` and this receipt: pass (external URLs and
   fragments were skipped).
 - No runtime, provider, database, device, or production deployment checks were run for this
-  documentation-only change. The [local deployment inventory](../../docs/local-deployment-inventory.md)
+  documentation-only change. The [local deployment inventory](../../docs/archive/local-deployment-inventory.md)
   is preparatory and is not a completed deployment rehearsal.
 - Individual courier consent remains a go-live prerequisite. Do not disclose real courier
   details through production tracking links until those authorizations are collected and

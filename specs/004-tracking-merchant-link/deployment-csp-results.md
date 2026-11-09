@@ -3,7 +3,7 @@
 This receipt records a bounded browser compatibility correction for the strict Hono CSP. It
 does not close an OP-01 task or claim Caddy, container, deployment, phone, or production
 verification. The aligned rationale is in
-[`local-runtime-lifecycle-plan.md`](../../docs/local-runtime-lifecycle-plan.md).
+[`local-runtime-lifecycle-plan.md`](../../docs/archive/local-runtime-lifecycle-plan.md).
 
 ## Finding and correction
 

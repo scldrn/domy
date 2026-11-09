@@ -7,7 +7,7 @@ description: "Task list for Routes and Dispatch"
 
 **Input**: Design documents from `/specs/002-routes-dispatch/`
 
-**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
+**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts), [quickstart.md](quickstart.md)
 
 **Depends on**: every task of [feature 001](../001-shipment-registration/tasks.md) (foundation,
 shipments, dispatch board, couriers, roles, audit, `lib/action-id.ts`)
