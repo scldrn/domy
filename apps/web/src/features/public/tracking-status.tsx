@@ -1,6 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { bogotaToday, publicTrackingStage, type PublicTracking } from "@domy/domain";
+import {
+  bogotaToday,
+  formatTrackingNumber,
+  publicTrackingStage,
+  type PublicTracking,
+} from "@domy/domain";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { publicTrackingQuery } from "@/features/public/api";
@@ -161,7 +166,7 @@ function FullTrackingView({ tracking }: { tracking: FullTracking }) {
           </h2>
           <dl>
             <Fact term="Número de seguimiento">
-              <span className="guia">{tracking.trackingNumber}</span>
+              <span className="guia">{formatTrackingNumber(tracking.trackingNumber)}</span>
             </Fact>
             <Fact term="Fecha programada">{formatDate(tracking.serviceDate)}</Fact>
             {window && stage === "problem" && <Fact term="Franja de entrega">{window}</Fact>}
