@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OutboxItem } from "@/lib/offline/db";
-import { hasOldPending, pendingLabel, sessionWarning } from "./sync-status";
+import { awaitingLink, hasOldPending, pendingLabel, sessionWarning } from "./sync-status";
 
 const expiry = "2026-10-31T15:00:00Z";
 describe("courier synchronization status (US2 T046, FR-003, FR-020)", () => {
@@ -43,5 +43,29 @@ describe("courier synchronization status (US2 T046, FR-003, FR-020)", () => {
     expect(pendingLabel(0)).toBe("0 pendientes por sincronizar");
     expect(pendingLabel(1)).toBe("1 pendiente por sincronizar");
     expect(pendingLabel(2)).toBe("2 pendientes por sincronizar");
+  });
+});
+
+describe("awaitingLink (feature 006, US4)", () => {
+  const fresh = {
+    refusalCode: "courier_not_linked",
+    pending: [],
+    pendingPhotos: 0,
+    lastSyncedAt: null,
+  };
+
+  it("waits for a never-linked account with nothing on the phone", () => {
+    expect(awaitingLink(fresh)).toBe(true);
+  });
+
+  it("keeps the app for any other refusal", () => {
+    expect(awaitingLink({ ...fresh, refusalCode: "forbidden" })).toBe(false);
+    expect(awaitingLink({ ...fresh, refusalCode: null })).toBe(false);
+  });
+
+  it("keeps the app, and its pending work, for an account unlinked after working", () => {
+    expect(awaitingLink({ ...fresh, lastSyncedAt: "2026-10-01T15:00:00Z" })).toBe(false);
+    expect(awaitingLink({ ...fresh, pending: [{}] })).toBe(false);
+    expect(awaitingLink({ ...fresh, pendingPhotos: 1 })).toBe(false);
   });
 });

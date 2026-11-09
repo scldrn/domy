@@ -210,6 +210,8 @@ describe("an account without a courier", () => {
       "/api/courier/route",
     );
     expect(result.status).toBe(403);
+    // Its own code, so the phone can tell a never-linked account from withdrawn access (006 US4).
+    expect(result.body.error.code).toBe("courier_not_linked");
     expect(result.body.error.message).toBe(
       "Tu cuenta no está vinculada a un mensajero. Pide al propietario que la vincule.",
     );

@@ -20,16 +20,26 @@ import {
 export class SyncError extends Error {
   readonly status: number;
   readonly serverTime: string | null;
-  constructor(status: number, message: string, serverTime: string | null = null) {
+  /** The API's error code, such as `courier_not_linked`, when the server sent one. */
+  readonly code: string | null;
+  constructor(
+    status: number,
+    message: string,
+    serverTime: string | null = null,
+    code: string | null = null,
+  ) {
     super(message);
     this.status = status;
     this.serverTime = serverTime;
+    this.code = code;
   }
 }
 
 type Fetch = typeof fetch;
 type Entry = { key: number; item: OutboxItem };
-const errorBody = z.object({ error: z.object({ message: z.string() }) });
+const errorBody = z.object({
+  error: z.object({ code: z.string().optional(), message: z.string() }),
+});
 
 /** ROB-4: a stalled request fails like a lost connection instead of holding the sync forever. */
 export const requestTimeoutMs = 20_000;
@@ -83,6 +93,7 @@ async function exchange(
         ? parsed.data.error.message
         : "No se pudo sincronizar. Tus registros siguen guardados.",
       response.headers.get("date"),
+      parsed.success ? (parsed.data.error.code ?? null) : null,
     );
   }
   return body;

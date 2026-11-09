@@ -1,69 +1,103 @@
+import ArrowBackIcon from "@material-symbols/svg-400/rounded/arrow_back.svg?react";
+import MarkEmailReadIcon from "@material-symbols/svg-400/rounded/mark_email_read.svg?react";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/icon";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ApiError } from "@/lib/api-client";
+import { cn } from "@/lib/cn";
+import { AuthCard, authLink } from "./auth-card";
 import { requestPasswordReset } from "./session";
 
 /**
- * Asks for a recovery link. The answer is the same whether or not the email is registered
- * (FR-030).
+ * «Recuperar contraseña» as approved in feature 006 (T055): the email, then «Revisa tu
+ * correo». The answer is the same whether or not the email is registered (FR-030); the link
+ * lasts one hour (`resetPasswordTokenExpiresIn`).
  */
-export function RecoveryRequestForm() {
+export function RecoveryRequest() {
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
-  if (sent) {
+  if (sentTo) {
     return (
-      <p role="status" className="text-body-l text-on-surface">
-        Si el correo está registrado, te enviamos un enlace para restablecer la contraseña. Revisa
-        tu bandeja de entrada; el enlace sirve una vez durante 60 minutos.
-      </p>
+      <AuthCard
+        title="Revisa tu correo"
+        icon={MarkEmailReadIcon}
+        tone="success"
+        description={
+          <span role="status">
+            Si <strong className="font-semibold text-on-surface">{sentTo}</strong> está registrado,
+            te enviamos un enlace para crear una contraseña nueva. Vence en una hora.
+          </span>
+        }
+      >
+        <Link to="/ingresar" className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
+          <Icon symbol={ArrowBackIcon} size={20} />
+          Volver a ingresar
+        </Link>
+        <p className="text-body-m text-on-surface-variant">
+          ¿No llega? Revisa la carpeta de correo no deseado o pide otro enlace en unos minutos.
+        </p>
+      </AuthCard>
     );
   }
   return (
-    <form
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
-          setError("Escribe un correo válido.");
-          return;
-        }
-        setSending(true);
-        setError(null);
-        requestPasswordReset(email.trim())
-          .then(() => {
-            setSent(true);
-          })
-          .catch((caught: unknown) => {
-            setError(caught instanceof ApiError ? caught.message : "No pudimos enviar el enlace.");
-          })
-          .finally(() => {
-            setSending(false);
-          });
-      }}
+    <AuthCard
+      title="Recuperar contraseña"
+      description="Te enviamos a tu correo un enlace para crear una contraseña nueva."
     >
-      <FieldGroup>
-        <Field data-invalid={Boolean(error)}>
-          <FieldLabel htmlFor="recovery-email">Correo</FieldLabel>
-          <Input
-            id="recovery-email"
-            type="email"
-            autoComplete="username"
-            value={email}
-            onChange={(event) => {
-              setEmail(event.target.value);
-            }}
-          />
-          {error && <FieldError>{error}</FieldError>}
-        </Field>
-        <Button type="submit" disabled={sending}>
-          Enviar enlace
-        </Button>
-      </FieldGroup>
-    </form>
+      <form
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          const typed = email.trim();
+          if (!/^\S+@\S+\.\S+$/.test(typed)) {
+            setError("Escribe un correo válido.");
+            return;
+          }
+          setSending(true);
+          setError(null);
+          requestPasswordReset(typed)
+            .then(() => {
+              setSentTo(typed);
+            })
+            .catch((caught: unknown) => {
+              setError(
+                caught instanceof ApiError ? caught.message : "No pudimos enviar el enlace.",
+              );
+            })
+            .finally(() => {
+              setSending(false);
+            });
+        }}
+      >
+        <FieldGroup>
+          <Field data-invalid={Boolean(error)}>
+            <FieldLabel htmlFor="recovery-email">Correo</FieldLabel>
+            <Input
+              id="recovery-email"
+              type="email"
+              autoComplete="username"
+              aria-invalid={Boolean(error)}
+              value={email}
+              onChange={(event) => {
+                setEmail(event.target.value);
+              }}
+            />
+            {error && <FieldError>{error}</FieldError>}
+          </Field>
+          <Button type="submit" variant="accent" disabled={sending}>
+            Enviar enlace
+          </Button>
+        </FieldGroup>
+      </form>
+      <Link to="/ingresar" className={authLink}>
+        Volver a ingresar
+      </Link>
+    </AuthCard>
   );
 }

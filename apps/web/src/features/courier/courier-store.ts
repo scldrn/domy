@@ -44,6 +44,8 @@ export type CourierState = {
   offline: boolean;
   /** The server's explanation when it refused the phone, such as an account not linked. */
   refusal: string | null;
+  /** The refusal's API code, which tells a never-linked account apart (feature 006, US4). */
+  refusalCode: string | null;
 };
 
 const emptyState: CourierState = {
@@ -59,6 +61,7 @@ const emptyState: CourierState = {
   syncing: false,
   offline: false,
   refusal: null,
+  refusalCode: null,
 };
 let state = emptyState;
 const listeners = new Set<() => void>();
@@ -153,11 +156,12 @@ export function synchronizeNow(userId: string): Promise<void> {
       rerunRequested = false;
       try {
         await synchronize(await courierDatabase(), { userId });
-        update({ offline: false, refusal: null });
+        update({ offline: false, refusal: null, refusalCode: null });
       } catch (error) {
         const offline = error instanceof SyncError && error.status === 0;
         update({
           offline,
+          refusalCode: error instanceof SyncError ? error.code : null,
           refusal: offline
             ? null
             : error instanceof SyncError || error instanceof CourierDataError
@@ -169,6 +173,7 @@ export function synchronizeNow(userId: string): Promise<void> {
           update({
             loaded: true,
             view: null,
+            refusalCode: null,
             refusal:
               "No pudimos leer los datos guardados. No los borres; comunícate con el coordinador.",
           });
@@ -258,6 +263,7 @@ export function useSynchronization(userId: string | null): void {
           update({
             loaded: true,
             view: null,
+            refusalCode: null,
             refusal:
               error instanceof CourierDataError
                 ? error.message
