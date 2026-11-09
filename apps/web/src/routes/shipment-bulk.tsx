@@ -10,7 +10,7 @@ import {
 } from "@domy/domain";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { FormSection, SectionNumber } from "@/components/form-section";
 import { PageHeader } from "@/components/page-header";
@@ -131,6 +131,10 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  // FR-020: the preview describes the list in the box. Each review takes the next run, and a
+  // change to the list, client, or pickup point takes one too, so an older answer is dropped.
+  const reviewRun = useRef(0);
   const [pendingSnapshotRaw, setPendingSnapshotRaw] = useState<string | null>(draft.sourceRaw);
   const [pendingRequiresReview, setPendingRequiresReview] = useState(false);
   const [reviewedPendingRelease, setReviewedPendingRelease] = useState(false);
@@ -151,11 +155,19 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
     enabled: Boolean(merchant) && pending === null,
   });
 
+  function discardPreview() {
+    reviewRun.current += 1;
+    setReviewing(false);
+    setPreview(null);
+  }
+
   async function review(
     cellsOrText: string[][] | string,
     places = new Map<number, string>(),
     afterAcknowledgedBatch = false,
   ) {
+    const run = (reviewRun.current += 1);
+    setReviewing(false);
     setError(null);
     if (pending && !afterAcknowledgedBatch) {
       setError("Resuelve primero la creación pendiente antes de revisar otro lote.");
@@ -173,7 +185,7 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
       setError(table.error);
       return;
     }
-    setBusy(true);
+    setReviewing(true);
     try {
       const rows = await previewBulk({
         merchantId: merchant.id,
@@ -183,6 +195,7 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
           return neighborhoodId ? { cells, neighborhoodId } : { cells };
         }),
       });
+      if (run !== reviewRun.current) return;
       setPreview({
         cells: table.rows,
         rows,
@@ -193,10 +206,11 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
         batch: { id: crypto.randomUUID(), rowIds: rows.map(() => crypto.randomUUID()) },
       });
     } catch (caught) {
+      if (run !== reviewRun.current) return;
       setPreview(null);
       setError(caught instanceof ApiError ? caught.message : "No pudimos revisar la lista.");
     } finally {
-      setBusy(false);
+      if (run === reviewRun.current) setReviewing(false);
     }
   }
 
@@ -243,7 +257,7 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
         variant="accent"
         size="lg"
         className={className}
-        disabled={busy || creatable.length === 0 || draft.writeFailed}
+        disabled={busy || reviewing || creatable.length === 0 || draft.writeFailed}
         onClick={() => void create()}
       >
         {creatable.length === 0
@@ -255,7 +269,7 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
         variant="accent"
         size="lg"
         className={className}
-        disabled={busy}
+        disabled={busy || reviewing}
         onClick={() => void review(text)}
       >
         Revisar lista
@@ -315,7 +329,8 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
           "La creación quedó confirmada, pero no pudimos guardar un identificador nuevo. Reintenta el guardado antes de enviar otro lote.",
         );
       } else if (remainingText !== "") {
-        await review(remainingText, new Map(), true);
+        // Not awaited: the creation is done, and editing the rows left over drops this review.
+        void review(remainingText, new Map(), true);
       }
     } catch (caught) {
       if (caught instanceof ApiError && caught.code === "invalid_request") {
@@ -490,7 +505,7 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
                     onChange={(next) => {
                       setMerchant(next);
                       setPickupPointId(null);
-                      setPreview(null);
+                      discardPreview();
                     }}
                     itemKey={(option) => option.id}
                     itemLabel={(option) => option.name}
@@ -507,7 +522,7 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
                     }
                     onChange={(value) => {
                       setPickupPointId(value);
-                      setPreview(null);
+                      discardPreview();
                     }}
                     options={(points.data ?? []).map((point) => ({
                       value: point.id,
@@ -528,7 +543,7 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
                 text={text}
                 onTextChange={(next) => {
                   setText(next);
-                  setPreview(null);
+                  discardPreview();
                 }}
                 onFileRead={(rows) => {
                   setText(rowsToText(rows));
@@ -538,7 +553,11 @@ function ShipmentBulkBody({ draft }: { draft: ReadyFormDraft<BulkDraft> }) {
               />
               {preview && (
                 <div className="mt-3.5 flex justify-end">
-                  <Button variant="outline" disabled={busy} onClick={() => void review(text)}>
+                  <Button
+                    variant="outline"
+                    disabled={busy || reviewing}
+                    onClick={() => void review(text)}
+                  >
                     Revisar de nuevo
                   </Button>
                 </div>
