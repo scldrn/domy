@@ -429,7 +429,7 @@ function PanelLayout() {
 function PhoneDestinations({ role, pathname }: { role: UserRole; pathname: string }) {
   return (
     <nav aria-label="Destinos" className="bg-rail md:hidden">
-      <ul className="flex gap-1 overflow-x-auto px-3 py-2 [scrollbar-width:none]">
+      <ul className="relative flex gap-1 overflow-x-auto px-3 py-2 [scrollbar-width:none]">
         {navigation
           .flatMap((group) => group.items)
           .filter((item) => item.roles.includes(role))

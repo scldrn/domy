@@ -15,7 +15,9 @@ export async function ownSession(page: Page, owner: Page) {
     .object({ user: z.object({ id: z.uuid() }) })
     .parse((await session.json()) as unknown).user.id;
   const id = crypto.randomUUID();
-  const email = `offline-${id}@example.com`;
+  // A short tag keeps the names unique without showing a UUID on screen (SC-005, T003).
+  const tag = id.slice(0, 8);
+  const email = `offline-${tag}@example.com`;
   const created = await owner.request.post("/api/auth/admin/create-user", {
     headers: {
       origin: `http://127.0.0.1:${String(webPort)}`,
@@ -30,7 +32,7 @@ export async function ownSession(page: Page, owner: Page) {
   expect(
     (
       await owner.request.post("/api/couriers", {
-        data: { id, name: `Mensajero ${id}`, phone: "3004445566", aliases: [] },
+        data: { id, name: `Mensajero ${tag}`, phone: "3004445566", aliases: [] },
       })
     ).status(),
   ).toBe(201);

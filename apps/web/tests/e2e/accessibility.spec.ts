@@ -1,7 +1,7 @@
 import { formatTrackingNumber } from "@domy/domain";
 import type { Page } from "@playwright/test";
 import { register } from "./api";
-import { accessibilityViolations, expect, test } from "./fixtures";
+import { accessibilityViolations, expect, sidewaysScroll, test } from "./fixtures";
 
 /** Every panel screen, as the owner sees it (FR-034, design-system.md §2). */
 const panelScreens = [
@@ -35,19 +35,6 @@ const sizes: [width: number, scheme: "light" | "dark"][] = [
   [1440, "dark"],
   [390, "dark"],
 ];
-
-/** Usable at this width: the page itself never scrolls sideways (wide tables scroll inside). */
-const sidewaysScroll = (page: Page) =>
-  page.evaluate(() => {
-    const width = document.documentElement.clientWidth;
-    const extra = document.documentElement.scrollWidth - width;
-    const wide = [...document.querySelectorAll("body *")].find(
-      (element) =>
-        element.getBoundingClientRect().right > width + 1 &&
-        !element.closest("[data-slot=table-container]"),
-    );
-    return extra > 0 ? `${String(extra)} px (${wide?.outerHTML.slice(0, 120) ?? "?"})` : null;
-  });
 
 for (const [width, scheme] of sizes) {
   test(`panel screens meet WCAG 2.2 AA at ${String(width)} px, ${scheme}`, async ({

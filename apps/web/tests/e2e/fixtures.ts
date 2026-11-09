@@ -131,6 +131,27 @@ export async function accessibilityViolations(
   }
 }
 
+/**
+ * Internal identifiers the screen shows as text (T003, SC-005, research R8): a person reads
+ * names, tracking numbers, and dates, never a record's UUID. Attributes and URLs are not text,
+ * and hidden nodes are not shown. Each finding names the text it sits in. Test data must not
+ * embed a whole UUID in a name or email either, or it would be reported here.
+ */
+export async function visibleIdentifiers(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const uuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+    const found = new Set<string>();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const parent = node.parentElement;
+      const text = node.textContent ?? "";
+      if (parent && uuid.test(text) && parent.checkVisibility({ visibilityProperty: true }))
+        found.add(`<${parent.tagName.toLowerCase()}> ${text.trim().slice(0, 120)}`);
+    }
+    return [...found];
+  });
+}
+
 /** The courier app uses 48 px hit areas even where WCAG's minimum target is smaller (FR-038). */
 export async function courierTargetViolations(page: Page): Promise<string[]> {
   const controls = await page
@@ -549,18 +570,95 @@ export async function assertCourierScreen(
   expect(await courierTargetViolations(page), `48 px visible targets in ${scheme}`).toEqual([]);
 }
 
+/** Whether the test passed and left a loaded screen to check. */
+function endedOnScreen(page: Page): boolean {
+  const info = test.info();
+  return info.status === info.expectedStatus && !page.isClosed() && page.url().startsWith("http");
+}
+
+type Surface = "panel" | "courier" | "public";
+
+/** The surface a screen belongs to, which decides the variants it is checked in (research R9). */
+function surfaceOf(url: string): Surface {
+  const { pathname } = new URL(url);
+  if (pathname.startsWith("/mensajero")) return "courier";
+  if (/^\/(seguimiento|cliente|ingresar|recuperar|restablecer)(\/|$)/.test(pathname))
+    return "public";
+  return "panel";
+}
+
 /**
- * A page signed in as a role. When the test passed, the screen it ended on is checked for
- * accessibility, so every end-to-end scenario also checks its screens.
+ * How far the page itself scrolls sideways, naming the outermost element that sticks out of
+ * it; what overflows inside its own scroll container (a wide table, a row of tabs) does not
+ * count.
+ */
+export async function sidewaysScroll(page: Page): Promise<string | null> {
+  return page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    const extra = document.documentElement.scrollWidth - width;
+    if (extra <= 0) return null;
+    const clips = (element: Element) =>
+      ["auto", "scroll", "hidden", "clip"].includes(window.getComputedStyle(element).overflowX);
+    const sticksOut = (element: Element) => {
+      if (element.getBoundingClientRect().right <= width + 1) return false;
+      for (let parent = element.parentElement; parent && parent !== document.body;) {
+        if (clips(parent)) return false;
+        parent = parent.parentElement;
+      }
+      return true;
+    };
+    const wide = [...document.querySelectorAll("body *")].find(sticksOut);
+    const where = wide
+      ? `<${wide.tagName.toLowerCase()} class="${wide.getAttribute("class")?.slice(0, 100) ?? ""}">`
+      : "?";
+    return `${String(extra)} px (${where})`;
+  });
+}
+
+/**
+ * The screen a test ended on, checked as it is and in the variants its surface owes (T004,
+ * research R9, SC-004, FR-012): dark on panel and public pages, 390 px on courier and public
+ * pages, 1024 and 360 px on panel pages, never scrolling sideways at those widths. Then, at
+ * the test's own size, no internal identifier on screen (T003, SC-005).
+ */
+async function checkScreen(page: Page): Promise<void> {
+  const url = page.url();
+  const surface = surfaceOf(url);
+  const problems = await accessibilityViolations(page);
+  if (surface !== "courier") {
+    const previous = await page.evaluate(() => {
+      const value = document.documentElement.getAttribute("data-scheme");
+      document.documentElement.setAttribute("data-scheme", "dark");
+      return value;
+    });
+    problems.push(...(await accessibilityViolations(page)).map((found) => `dark: ${found}`));
+    await page.evaluate((value) => {
+      if (value === null) document.documentElement.removeAttribute("data-scheme");
+      else document.documentElement.setAttribute("data-scheme", value);
+    }, previous);
+  }
+  const size = page.viewportSize();
+  for (const width of surface === "panel" ? [1024, 360] : [390]) {
+    await page.setViewportSize({ width, height: size?.height ?? 900 });
+    const at = `${String(width)} px`;
+    problems.push(...(await accessibilityViolations(page)).map((found) => `${at}: ${found}`));
+    const overflow = await sidewaysScroll(page);
+    if (overflow) problems.push(`${at}: the page scrolls sideways by ${overflow}`);
+  }
+  if (size) await page.setViewportSize(size);
+  expect(problems, `accessibility of ${url}`).toEqual([]);
+  expect(await visibleIdentifiers(page), `identifiers shown on ${url}`).toEqual([]);
+}
+
+/**
+ * A page signed in as a role. When the test passed, the screen it ended on is checked, so
+ * every end-to-end scenario also checks its screens.
  */
 async function rolePage(browser: Browser, role: Role, use: (page: Page) => Promise<void>) {
   const context = await browser.newContext({ storageState: authFile(role) });
   const page = await context.newPage();
   await use(page);
-  const info = test.info();
-  if (info.status === info.expectedStatus && !page.isClosed() && page.url().startsWith("http")) {
-    expect(await accessibilityViolations(page), `accessibility of ${page.url()}`).toEqual([]);
-  }
+  if (endedOnScreen(page)) await checkScreen(page);
   await context.close();
 }
 
@@ -571,6 +669,11 @@ export const test = base.extend<{
   courierPage: Page;
   setServerNow: (instant: string) => Promise<void>;
 }>({
+  // The signed-out page (public pages, sign-in) is checked the same way.
+  page: async ({ page }, use) => {
+    await use(page);
+    if (endedOnScreen(page)) await checkScreen(page);
+  },
   ownerPage: async ({ browser }, use) => {
     await rolePage(browser, "owner", use);
   },
