@@ -1,6 +1,6 @@
 import type { Browser, Page } from "@playwright/test";
 import { accessibilityViolations, expect, test } from "./fixtures";
-import { apiPort } from "./ports";
+import { apiPort, webPort } from "./ports";
 
 const password = "contrasena-de-prueba";
 const unique = () => String(Date.now()).slice(-6);
@@ -33,7 +33,7 @@ async function signInAs(browser: Browser, email: string, secret = password) {
   const page = await context.newPage();
   await page.goto("/ingresar");
   await page.getByLabel("Correo").fill(email);
-  await page.getByLabel("Contraseña").fill(secret);
+  await page.getByLabel("Contraseña", { exact: true }).fill(secret);
   await page.getByRole("button", { name: "Ingresar" }).click();
   return page;
 }
@@ -61,16 +61,9 @@ test("gives each role its own access (scenario 13)", async ({ ownerPage, browser
 
   const courier = await signInAs(browser, `mensajero${run}@example.com`);
   await expect(courier).toHaveURL(/\/mensajero$/);
-  // The courier app (feature 003), not the panel.
-  await expect(courier.getByRole("heading", { name: "Mi ruta" })).toBeVisible();
-  // A new account is not linked to its courier yet: the app says so (FR-002).
-  await expect(courier.getByText("Tu cuenta no está vinculada a un mensajero.")).toBeVisible();
-  const navigation = courier.getByRole("navigation", { name: "Navegación principal" });
-  await expect(navigation.getByRole("link", { name: "Mi ruta" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  await expect(navigation.getByRole("link", { name: "Mi día" })).toBeVisible();
+  // The courier app (feature 003), not the panel: a new account is not linked to its courier
+  // yet, so it waits on its own page (FR-002; feature 006, approved T055).
+  await expect(courier.getByRole("heading", { name: "Falta vincular tu cuenta" })).toBeVisible();
   await courier.goto("/historial");
   await expect(courier).toHaveURL(/\/mensajero$/);
 });
@@ -109,53 +102,64 @@ test("links a courier account to its courier (feature 003, FR-002)", async ({
   );
 });
 
-// T099: observe the transient synchronization frame, not just its settled result (FR-002).
-test("presents an unlinked account's refusal once during and after synchronization", async ({
+// Feature 006, approved T055: an account never linked waits on its own page, with no refusal
+// alerts, until the owner links it (FR-002).
+test("shows a never-linked account its waiting page until the owner links it", async ({
   ownerPage,
   browser,
 }) => {
   const run = unique();
   const email = `sinvinculo${run}@example.com`;
-  await createAccount(ownerPage, `Sin vínculo ${run}`, email, "Mensajero");
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await page.addInitScript(() => {
-    const refusal = "Tu cuenta no está vinculada a un mensajero.";
-    new MutationObserver(() => {
-      const count = Array.from(document.querySelectorAll("p")).filter((p) =>
-        p.textContent.includes(refusal),
-      ).length;
-      document.documentElement.dataset["maxRefusals"] = String(
-        Math.max(Number(document.documentElement.dataset["maxRefusals"] ?? 0), count),
-      );
-    }).observe(document, { childList: true, subtree: true });
+  await ownerPage.goto("/usuarios");
+  const session = (await (await ownerPage.request.get("/api/auth/get-session")).json()) as {
+    user: { id: string };
+  };
+  const headers = {
+    origin: `http://127.0.0.1:${String(webPort)}`,
+    "X-Domy-Actor-Id": session.user.id,
+  };
+  const created = await ownerPage.request.post("/api/auth/admin/create-user", {
+    headers,
+    data: { id: crypto.randomUUID(), email, password, name: `Sin vínculo ${run}`, role: "courier" },
   });
-  await page.goto("/ingresar");
-  await page.getByLabel("Correo").fill(email);
-  await page.getByLabel("Contraseña").fill(password);
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page.getByText(/Tu acceso fue retirado/)).toBeVisible();
-  await expect(page.getByText("Tu cuenta no está vinculada a un mensajero.")).toBeVisible();
-  await expect(page.locator("html")).toHaveAttribute("data-max-refusals", "1");
-  await page.getByRole("link", { name: "Pendientes", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Pendientes", exact: true })).toBeVisible();
-  await expect(page.getByText("Tu cuenta no está vinculada a un mensajero.")).toBeVisible();
-  // T102: the pending page has its own retry; exercise the refusal's unique action.
-  const refusal = page
-    .getByRole("alert")
-    .filter({ hasText: "Tu cuenta no está vinculada a un mensajero." });
-  await expect(refusal).toHaveCount(1);
-  const retry = refusal.getByRole("button", { name: "Reintentar sincronización", exact: true });
-  await expect(retry).toBeVisible();
-  const retried = page.waitForResponse(
+  expect(created.ok()).toBe(true);
+  const account = (await created.json()) as { user: { id: string } };
+
+  const page = await signInAs(browser, email);
+  await expect(page.getByRole("heading", { name: "Falta vincular tu cuenta" })).toBeVisible();
+  await expect(page.getByText(email)).toBeVisible();
+  await expect(page.getByText(/Tu acceso fue retirado/)).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Navegación principal" })).toHaveCount(0);
+  expect(await accessibilityViolations(page)).toEqual([]);
+
+  // Checking again before the link still waits.
+  const refused = page.waitForResponse(
     (response) => response.url().endsWith("/api/courier/route") && response.status() === 403,
   );
-  await retry.click();
-  await retried;
-  await expect(refusal).toBeVisible();
-  await expect(page.locator("html")).toHaveAttribute("data-max-refusals", "1");
-  expect(await accessibilityViolations(page)).toEqual([]);
-  await context.close();
+  await page.getByRole("button", { name: "Volver a revisar" }).click();
+  await refused;
+  await expect(page.getByRole("heading", { name: "Falta vincular tu cuenta" })).toBeVisible();
+
+  const courierId = crypto.randomUUID();
+  expect(
+    (
+      await ownerPage.request.post("/api/couriers", {
+        data: { id: courierId, name: `Mensajero ${run}`, phone: "3004445566", aliases: [] },
+      })
+    ).status(),
+  ).toBe(201);
+  expect(
+    (
+      await ownerPage.request.put(`/api/couriers/accounts/${account.user.id}`, {
+        headers,
+        data: { actionId: crypto.randomUUID(), courierId },
+      })
+    ).ok(),
+  ).toBe(true);
+  await page.getByRole("button", { name: "Volver a revisar" }).click();
+  await expect(page.getByText("No tienes una ruta despachada")).toBeVisible();
+  await expect(page.getByText(/Tu acceso fue retirado/)).toHaveCount(0);
+  await page.context().close();
 });
 
 // T100: advance beyond the real notification's lifetime while axe is about to scan it.
@@ -522,7 +526,10 @@ test("recovers access with the emailed link", async ({ ownerPage, browser }) => 
   await expect(page.getByRole("heading", { name: "Recuperar contraseña" })).toBeVisible();
   await page.getByLabel("Correo").fill(email);
   await page.getByRole("button", { name: "Enviar enlace" }).click();
-  await expect(page.getByText(/Si el correo está registrado, te enviamos un enlace/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Revisa tu correo" })).toBeVisible();
+  await expect(
+    page.getByText(/te enviamos un enlace para crear una contraseña nueva/),
+  ).toBeVisible();
 
   const emails = (await (
     await fetch(`http://127.0.0.1:${String(apiPort)}/api/test/emails`)
@@ -532,10 +539,10 @@ test("recovers access with the emailed link", async ({ ownerPage, browser }) => 
   const link = emails.items.findLast((item) => item.email === email)?.url ?? "";
   await page.goto(link);
   await expect(page).toHaveURL(/\/restablecer\?token=/);
-  await page.getByLabel("Nueva contraseña").fill("contrasena-renovada");
-  await page.getByLabel("Repite la contraseña").fill("contrasena-renovada");
+  await page.getByLabel("Nueva contraseña", { exact: true }).fill("contrasena-renovada");
+  await page.getByLabel("Repite la contraseña", { exact: true }).fill("contrasena-renovada");
   await page.getByRole("button", { name: "Guardar contraseña" }).click();
-  await expect(page.getByText("Tu contraseña se actualizó.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tu contraseña se actualizó" })).toBeVisible();
 
   const signedIn = await signInAs(browser, email, "contrasena-renovada");
   await expect(signedIn.getByRole("heading", { name: "Tablero de despacho" })).toBeVisible();

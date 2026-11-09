@@ -1,70 +1,104 @@
+import CheckCircleIcon from "@material-symbols/svg-400/rounded/check_circle.svg?react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { FieldError, FieldGroup } from "@/components/ui/field";
 import { ApiError } from "@/lib/api-client";
+import { cn } from "@/lib/cn";
+import { AuthCard, AuthNotice, authLink } from "./auth-card";
 import { checkNewPassword, PasswordField } from "./password-field";
 import { resetPassword } from "./session";
 
-/** Sets a new password with the emailed token; it ends every earlier session (FR-030). */
-export function ResetPasswordForm({ token }: { token: string | undefined }) {
+/**
+ * «Nueva contraseña» as approved in feature 006 (T055): sets a new password with the emailed
+ * token, which ends every earlier session (FR-030); a missing or expired link says so and
+ * offers another.
+ */
+export function ResetPassword({ token }: { token: string | undefined }) {
   const [password, setPassword] = useState("");
   const [repeated, setRepeated] = useState("");
-  const [error, setError] = useState<string | null>(
-    token ? null : "El enlace no es válido o venció.",
-  );
+  const [shown, setShown] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
   if (done) {
     return (
-      <p role="status" className="text-body-l text-on-surface">
-        Tu contraseña se actualizó.{" "}
-        <Link to="/ingresar" className="text-primary underline">
-          Ingresa con la nueva
+      <AuthCard
+        title="Tu contraseña se actualizó"
+        icon={CheckCircleIcon}
+        tone="success"
+        description={<span role="status">Ya puedes ingresar con la nueva.</span>}
+      >
+        <Link to="/ingresar" className={cn(buttonVariants({ variant: "accent" }), "w-full")}>
+          Ingresar
         </Link>
-        .
-      </p>
+      </AuthCard>
     );
   }
   if (!token) {
     return (
-      <p className="text-body-l text-error">
-        El enlace no es válido o venció.{" "}
-        <Link to="/recuperar" className="text-primary underline">
-          Pide uno nuevo
+      <AuthCard title="Nueva contraseña">
+        <AuthNotice tone="error" title="El enlace no es válido o venció">
+          Cada enlace sirve una vez y dura una hora. Pide uno nuevo.
+        </AuthNotice>
+        <Link to="/recuperar" className={cn(buttonVariants({ variant: "accent" }), "w-full")}>
+          Pedir otro enlace
         </Link>
-        .
-      </p>
+        <Link to="/ingresar" className={authLink}>
+          Volver a ingresar
+        </Link>
+      </AuthCard>
     );
   }
   return (
-    <form
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        const problem = checkNewPassword(password, repeated);
-        if (problem) {
-          setError(problem);
-          return;
-        }
-        resetPassword(token, password).then(
-          () => {
-            setDone(true);
-          },
-          (caught: unknown) => {
-            setError(
-              caught instanceof ApiError ? caught.message : "No pudimos guardar la contraseña.",
-            );
-          },
-        );
-      }}
+    <AuthCard
+      title="Nueva contraseña"
+      description="Al guardarla se cierran tus sesiones abiertas en otros equipos."
     >
-      <FieldGroup>
-        <PasswordField label="Nueva contraseña" value={password} onChange={setPassword} />
-        <PasswordField label="Repite la contraseña" value={repeated} onChange={setRepeated} />
-        {error && <FieldError>{error}</FieldError>}
-        <Button type="submit">Guardar contraseña</Button>
-      </FieldGroup>
-    </form>
+      <form
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          const problem = checkNewPassword(password, repeated);
+          if (problem) {
+            setError(problem);
+            return;
+          }
+          resetPassword(token, password).then(
+            () => {
+              setDone(true);
+            },
+            (caught: unknown) => {
+              setError(
+                caught instanceof ApiError ? caught.message : "No pudimos guardar la contraseña.",
+              );
+            },
+          );
+        }}
+      >
+        <FieldGroup>
+          <PasswordField
+            label="Nueva contraseña"
+            value={password}
+            onChange={setPassword}
+            hint="Al menos 8 caracteres. Una frase corta es fácil de recordar."
+            shown={shown}
+            reveal={() => {
+              setShown((on) => !on);
+            }}
+          />
+          <PasswordField
+            label="Repite la contraseña"
+            value={repeated}
+            onChange={setRepeated}
+            shown={shown}
+          />
+          {error && <FieldError>{error}</FieldError>}
+          <Button type="submit" variant="accent">
+            Guardar contraseña
+          </Button>
+        </FieldGroup>
+      </form>
+    </AuthCard>
   );
 }

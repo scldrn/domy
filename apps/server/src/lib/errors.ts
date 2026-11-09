@@ -24,6 +24,11 @@ const errorCatalog = {
   notification_date_in_future: [422, "Elige hoy o una fecha anterior."],
   unauthenticated: [401, "Tu sesión terminó. Ingresa de nuevo."],
   forbidden: [403, "No tienes permiso para esta acción."],
+  // A courier account the owner has not linked yet: the phone shows its waiting page (006 US4).
+  courier_not_linked: [
+    403,
+    "Tu cuenta no está vinculada a un mensajero. Pide al propietario que la vincule.",
+  ],
   not_found: [404, "No encontramos lo que buscas."],
   // Public links and abuse guard (feature 004, FR-011, research R6/R14).
   link_not_found: [404, "Este enlace no es válido"],

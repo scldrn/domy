@@ -32,7 +32,13 @@ import {
   useSynchronization,
 } from "@/features/courier/courier-store";
 import { InstallHint } from "@/features/courier/install-hint";
-import { hasOldPending, pendingLabel, sessionWarning } from "@/features/courier/sync-status";
+import { CourierWaitingPage } from "@/features/courier/courier-waiting-page";
+import {
+  awaitingLink,
+  hasOldPending,
+  pendingLabel,
+  sessionWarning,
+} from "@/features/courier/sync-status";
 import { courierScheme, readHighContrast, saveHighContrast } from "@/features/courier/scheme";
 import { cn } from "@/lib/cn";
 import { now } from "@/lib/clock";
@@ -251,6 +257,29 @@ function CourierLayout() {
       toast.success("Pendientes sincronizados.", { id: "courier-sync" });
     }
   }, [status.syncing, status.offline, status.refusal, totalPending, user]);
+
+  // An account never linked waits on its own page instead of an empty route (approved T055).
+  if (
+    user &&
+    awaitingLink({
+      refusalCode: status.refusalCode,
+      pending: status.pending,
+      pendingPhotos: status.pendingPhotos,
+      lastSyncedAt: status.meta?.lastSyncedAt,
+    })
+  )
+    return (
+      <>
+        <CourierWaitingPage
+          account={"email" in user ? { name: user.name, email: user.email } : null}
+          checking={status.syncing}
+          signingOut={signingOut}
+          onRetry={() => void synchronizeNow(user.id)}
+          onSignOut={() => void onSignOut()}
+        />
+        <Toaster className="toaster group !z-40" />
+      </>
+    );
 
   return (
     <>

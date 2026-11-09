@@ -109,12 +109,33 @@ describe("synchronize", () => {
         ),
       );
 
-      await expect(run(fetcher)).rejects.toMatchObject({ status: 403 });
+      await expect(run(fetcher)).rejects.toMatchObject({ status: 403, code: null });
       expect(await db.get("snapshot", "current")).toBeUndefined();
       expect(await remaining()).toEqual([id(1)]);
       expect(await db.get("meta", "current")).toMatchObject({ sessionStatus: "withdrawn" });
     },
   );
+
+  it("keeps the server's code on a refusal, such as an account not linked (feature 006, US4)", async () => {
+    const fetcher = vi.fn((input: RequestInfo | URL) =>
+      Promise.resolve(
+        pathOf(input).endsWith("/route")
+          ? Response.json(
+              {
+                error: {
+                  code: "courier_not_linked",
+                  message:
+                    "Tu cuenta no está vinculada a un mensajero. Pide al propietario que la vincule.",
+                },
+              },
+              { status: 403 },
+            )
+          : json(snapshot),
+      ),
+    );
+
+    await expect(run(fetcher)).rejects.toMatchObject({ status: 403, code: "courier_not_linked" });
+  });
   it("refuses a malformed snapshot without replacing the last usable data or removing records", async () => {
     await queue(1);
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

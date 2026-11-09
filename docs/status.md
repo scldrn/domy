@@ -21,13 +21,11 @@ a short-lived branch, so the specification and implementation of every feature l
 | 002 Routes and dispatch | 2 integral catalog tasks verified locally, including aggregate overflow and traceability; retain historical feature receipts |
 | 003 Courier app | T093/T087 physical acceptance, now including offline, and dependent T088 closure remain open |
 | 004 Tracking page and merchant link | T034 physical acceptance and dependent T035 closure remain open |
-| 006 UI redesign | US1 (board, #53–#56) and US2 (shipment form #57, bulk #58, detail #59, «Rutas» #60, «Historial» #62, «Notificar clientes» #63) on `main`; US3 courier shell, «Mi ruta», «Parada» (#64), «Mi día» and «Pendientes» (#65) on `main`. The public cold start has ~700 ms of margin under 3 s (#66). Every e2e screen is checked for identifiers, dark, and narrow widths (T003, T004, #69). US4 «Seguimiento» and «Enlace del cliente» (T053, T054). Open: US3 T052 (phone measurement), US4 T055–T057, US5, polish, the top bar's search results and last-update status (T019), state marks restyle (T018), setup T001 |
+| 006 UI redesign | US1 (board, #53–#56) and US2 (shipment form #57, bulk #58, detail #59, «Rutas» #60, «Historial» #62, «Notificar clientes» #63) on `main`; US3 courier shell, «Mi ruta», «Parada» (#64), «Mi día» and «Pendientes» (#65) on `main`. The public cold start has ~700 ms of margin under 3 s (#66). Every e2e screen is checked for identifiers, dark, and narrow widths (T003, T004, #69). US4 complete: «Seguimiento» and «Enlace del cliente» (T053, T054), sign-in screens and the courier waiting page (T055–T057). Open: US3 T052 (phone measurement), US5, polish, the top bar's search results and last-update status (T019), state marks restyle (T018), setup T001 |
 
 ## Next step
 
-Feature 006, US4: «Seguimiento» and «Enlace del cliente» are implemented as approved (T053,
-T054; cold start 2.3 s). Next, propose «Ingresar», «Recuperar», «Restablecer» and the courier
-waiting page to the owner (T055), then implement them (T056, T057). US5 started apart: the audit
+Feature 006: US4 is complete (T053–T057). Next, the US5 proposals (T061, T063, T065) for the owner, then their screens. US5 started apart: the audit
 log's names come from the server (T058, T060); the screens wait for their proposals (T061–T066). Every public
 change keeps the 3-second cold start of `tracking-page.spec.ts` green (#66 left ~700 ms).
 Route files export only `Route`, and `routes/root.tsx` stays empty of UI: anything else there
