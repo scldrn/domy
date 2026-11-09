@@ -25,10 +25,10 @@ a short-lived branch, so the specification and implementation of every feature l
 
 ## Next step
 
-Feature 006: every user story is implemented (US1–US5, the last on 2026-11-09). What remains is
-the polish phase (T068 coherence review with the owner, T069 timed walkthrough, T070 docs, T071
-deleting what the redesign left unused and the size comparison), T052 and T001 (the physical
-phone measurement), and one full CI run on `main` to close the feature. Every public change
+Feature 006: every user story is implemented (US1–US5, the last on 2026-11-09). The owner signed off the whole set (T068), and the polish is done (T070, T071: the bundle is
+1.2 points over the R12 budget, see `specs/006-ui-redesign/baselines.md`). What remains needs
+the owner: T069 (timed walkthrough with the dispatcher) and T001/T052 (the physical phone
+measurement). Every public change
 keeps the 3-second cold start of `tracking-page.spec.ts` green (~2.3 s now). Route files export
 only `Route`, never reference an imported value at module level (helpers and `typeof` in types
 go in `features/`), and `routes/root.tsx` stays empty of UI: anything else there loads with
